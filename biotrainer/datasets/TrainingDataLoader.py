@@ -1,15 +1,15 @@
-import itertools
-import logging
-import torch
 import h5py
 import time
+import torch
+import logging
+import itertools
 
 import numpy as np
 
-from collections import Counter
 from pathlib import Path
+from collections import Counter
+from torch.utils.data import Dataset
 from typing import Union, List, Dict, Tuple, Set
-
 from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 
 from ..utilities import get_device, read_FASTA, attributes_from_seqrecords
@@ -17,7 +17,23 @@ from ..utilities import get_device, read_FASTA, attributes_from_seqrecords
 logger = logging.getLogger(__name__)
 
 
-class TrainingDataLoader:
+class ResidueEmbeddingsDataset(Dataset):
+    def __init__(self, samples):
+        self.ids, self.inputs, self.targets = zip(
+            *[(seq_id, inputs, targets) for seq_id, (inputs, targets) in samples.items()]
+        )
+
+    def __len__(self):
+        return len(self.inputs)
+
+    def __getitem__(self, index: int) -> Tuple[str, torch.FloatTensor, torch.LongTensor]:
+        seq_id = self.ids[index]
+        x = self.inputs[index].float()
+        y = self.targets[index].long()
+        return seq_id, x, y
+
+
+class TrainingDatasetLoader:
 
     # The set of classes
     _class_labels: Set
@@ -175,16 +191,20 @@ class TrainingDataLoader:
 
         return torch.FloatTensor(class_weights).to(self._device)
 
-    def get_training_embeddings(self) -> Dict[str, Tuple[torch.Tensor, torch.Tensor]]:
-        return {idx: (torch.tensor(self._id2emb[idx]), torch.tensor(self._id2label[idx])) for idx in self._training_ids}
+    def get_training_dataset(self) -> ResidueEmbeddingsDataset:
+        return ResidueEmbeddingsDataset({
+            idx: (torch.tensor(self._id2emb[idx]), torch.tensor(self._id2label[idx])) for idx in self._training_ids
+        })
 
-    def get_validation_embeddings(self) -> Dict[str, Tuple[torch.Tensor, torch.Tensor]]:
-        return {
+    def get_validation_dataset(self) -> ResidueEmbeddingsDataset:
+        return ResidueEmbeddingsDataset({
             idx: (torch.tensor(self._id2emb[idx]), torch.tensor(self._id2label[idx])) for idx in self._validation_ids
-        }
+        })
 
-    def get_testing_embeddings(self) -> Dict[str, Tuple[torch.Tensor, torch.Tensor]]:
-        return {idx: (torch.tensor(self._id2emb[idx]), torch.tensor(self._id2label[idx])) for idx in self._testing_ids}
+    def get_testing_dataset(self) -> ResidueEmbeddingsDataset:
+        return ResidueEmbeddingsDataset({
+            idx: (torch.tensor(self._id2emb[idx]), torch.tensor(self._id2label[idx])) for idx in self._testing_ids
+        })
 
     def get_number_of_classes(self) -> int:
         return len(self._class_labels)

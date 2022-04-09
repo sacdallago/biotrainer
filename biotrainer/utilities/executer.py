@@ -43,9 +43,20 @@ def execute(
         model_choice: str = "CNN", num_epochs: int = 200,
         use_class_weights: bool = False, learning_rate: float = 1e-3,
         batch_size: int = 128, embedder_name: str = "prottrans_t5_xl_u50",
+        output_dir: str = "output",
 ):
     seed_all()
-    root = Path.cwd()
+    output_dir = Path(output_dir)
+
+    experiment_name = f"{embedder_name}_{model_choice}"
+
+    # create log directory if it does not exist yet
+    logger.info(f'########### Experiment: {experiment_name} ###########')
+    log_dir = output_dir / model_choice / embedder_name
+
+    if not log_dir.is_dir():
+        logger.info("Creating new log-directory: {}".format(log_dir))
+        log_dir.mkdir(parents=True)
 
     training_data_loader = TrainingDataLoader(
         sequence_file,
@@ -62,26 +73,11 @@ def execute(
     if use_class_weights:
         class_weights = training_data_loader.get_class_weights()
 
-    # create log directory if it does not exist yet
-    log_root = root / 'log_CNN'
-    if not log_root.is_dir():
-        logger.info("Creating new log-directory: {}".format(log_root))
-        log_root.mkdir()
-
-    # experiment name will always hold information on model_name and architecture
-    experiment_name = f"{embedder_name}_{model_choice}"
-    logger.info(f'########### Experiment: {experiment_name} ###########')
-    # Create directory for experiment logging results
-    log_dir = log_root / experiment_name
-    if not log_dir.is_dir():
-        logger.info(f"Creating new log-directory: {log_dir}")
-        log_dir.mkdir()
-
     train_loader = get_dataloader(train, batch_size=batch_size)
     test_loader = get_dataloader(test, batch_size=batch_size)
     val_loader = get_dataloader(val, batch_size=batch_size)
 
-    early_stopper = EarlyStopper(log_dir)
+    early_stopper = EarlyStopper(log_dir.name)
     model = get_model(model_choice, n_classes, n_features)
 
     n_free_paras = count_parameters(model)
