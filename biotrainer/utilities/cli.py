@@ -14,14 +14,12 @@ def main():
     # Jax likes to print warnings
     logging.captureWarnings(True)
 
-    parser = argparse.ArgumentParser(description='Embeds protein sequences.')
-    parser.add_argument('-o', '--overwrite', dest='overwrite', required=False, action='store_true',
-                        help='Will force overwrite of previously existing results.')
+    parser = argparse.ArgumentParser(description='Trains models on protein embeddings.')
     parser.add_argument('config_path', metavar='/path/to/pipeline_definition.yml', type=str, nargs=1,
                         help='The path to the config. For examples, see folder "parameter examples".')
     arguments = parser.parse_args()
 
-    parse_config_file_and_execute_run(arguments.config_path[0], overwrite=arguments.overwrite)
+    parse_config_file_and_execute_run(arguments.config_path[0])
 
 
 if __name__ == '__main__':

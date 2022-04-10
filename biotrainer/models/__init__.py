@@ -3,16 +3,18 @@ from .CNN import CNN
 from .LogReg import LogReg
 from .ConvNeXt import ConvNeXt
 
-_models = {
-    'CNN': CNN,
-    'ConvNeXt': ConvNeXt,
-    'FNN': FNN,
-    'LogReg': LogReg,
+__MODELS = {
+    'residue_to_class': {
+        'CNN': CNN,
+        'ConvNeXt': ConvNeXt,
+        'FNN': FNN,
+        'LogReg': LogReg,
+    }
 }
 
 
-def get_model(model_choice: str, n_classes: int, n_features: int):
-    model = _models.get(model_choice)
+def get_model(protocol: str, model_choice: str, n_classes: int, n_features: int):
+    model = __MODELS.get(protocol).get(model_choice)
 
     if not model:
         raise NotImplementedError
@@ -21,8 +23,5 @@ def get_model(model_choice: str, n_classes: int, n_features: int):
 
 
 __all__ = [
-    "FNN",
-    "CNN",
-    "LogReg",
     "get_model"
 ]
