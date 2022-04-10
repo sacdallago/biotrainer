@@ -1,0 +1,7 @@
+embeddings:
+  protocol: prottrans_t5_xl_u50
+  type: embed
+global:
+  prefix: bio_embeddings_run
+  sequences_file: sequences.fasta
+  simple_remapping: true

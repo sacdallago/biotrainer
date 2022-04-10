@@ -1,0 +1,9 @@
+mapping_file: bio_embeddings_run/mapping_file.csv
+prefix: bio_embeddings_run
+protocol: prottrans_t5_xl_u50
+remapped_sequences_file: bio_embeddings_run/remapped_sequences_file.fasta
+sequences_file: bio_embeddings_run/sequences_file.fasta
+simple_remapping: true
+stage_name: embeddings
+start_time: '2022-04-10 08:24:29.864286+02:00'
+type: embed

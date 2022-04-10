@@ -1,12 +1,12 @@
 from .FNN import FNN
 from .CNN import CNN
 from .LogReg import LogReg
-from .ConvNeXt import ConvNeXt
+#from .ConvNeXt import ConvNeXt
 
 __MODELS = {
     'residue_to_class': {
         'CNN': CNN,
-        'ConvNeXt': ConvNeXt,
+#        'ConvNeXt': ConvNeXt,
         'FNN': FNN,
         'LogReg': LogReg,
     }

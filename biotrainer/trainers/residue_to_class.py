@@ -24,6 +24,7 @@ def residue_to_class(
         model_choice: str = "CNN", num_epochs: int = 200,
         use_class_weights: bool = False, learning_rate: float = 1e-3,
         batch_size: int = 128, embedder_name: str = "prottrans_t5_xl_u50",
+        embeddings_file_path: str = None,
         shuffle: bool = True, seed: int = 42, loss_choice: str = "cross_entropy_loss",
         optimizer_choice: str = "adam", patience: int = 10, epsilon: float = 0.001,
         # Everything else
@@ -50,7 +51,7 @@ def residue_to_class(
         sequence_file,
         labels_file,
         embedder_name=embedder_name,
-        embeddings_file_path=None,
+        embeddings_file_path=embeddings_file_path,
         device=None
     )
 

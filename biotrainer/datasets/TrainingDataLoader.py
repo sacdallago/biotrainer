@@ -146,10 +146,10 @@ class TrainingDatasetLoader:
             embeddings_file_path: Union[None, str] = None):
 
         # If embeddings don't exist, create them using the bio_embeddings pipeline
-        if not Path(embeddings_file_path).is_file():
+        if not embeddings_file_path or not Path(embeddings_file_path).is_file():
             out_config = execute_pipeline_from_config({
                 "global": {
-                    "sequence_file": self._sequence_file,
+                    "sequences_file": self._sequence_file,
                     "prefix": "bio_embeddings_run",
                     "simple_remapping": True
                 },
