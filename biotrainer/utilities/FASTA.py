@@ -1,7 +1,7 @@
 import re
 import logging
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 def attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict[str, str]]:
     """
-
     :param sequences: a list of SeqRecords
     :return: A dictionary if ids and their attributes
     """
@@ -21,6 +20,45 @@ def attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict[str
         result[sequence.id] = {key: value for key, value in re.findall(r"([A-Z_]+)=([A-z0-9]+)", sequence.description)}
 
     return result
+
+
+def get_sets_from_labels(label_sequences: List[SeqRecord]) -> Tuple[List[str], List[str], List[str]]:
+    id2label = {label.id: str(label.seq) for label in label_sequences}
+    id2attributes = attributes_from_seqrecords(label_sequences)
+
+    training_ids = list()
+    validation_ids = list()
+    testing_ids = list()
+
+    # Sanity check: labels must contain SET and VALIDATION attributes
+    for idx in id2label.keys():
+        split = id2attributes[idx].get("SET")
+
+        if split == 'train':
+            val = id2attributes[idx].get("VALIDATION")
+
+            try:
+                val = eval(val)
+            except NameError:
+                pass
+
+            if val is True:
+                validation_ids.append(idx)
+            elif val is False:
+                training_ids.append(idx)
+            else:
+                Exception(
+                    f"Sample in SET train must contain VALIDATION attribute. "
+                    f"Validation must be True or False. "
+                    f"Id: {idx}; VALIDATION={val}")
+
+        elif split == 'test':
+            testing_ids.append(idx)
+        else:
+            Exception(f"Labels FASTA header must contain SET. SET must be either 'train' or 'test'. "
+                      f"Id: {idx}; SET={split}")
+
+        return training_ids, validation_ids, testing_ids
 
 
 def read_FASTA(path: str) -> List[SeqRecord]:

@@ -11,6 +11,7 @@ def pad_sequences(batch, padding_value=-100, batch_first=True):
     Y = pad_sequence(Y, batch_first=batch_first, padding_value=padding_value)
     return list(seq_ids), X, Y
 
+
 # TODO: use this padding function instead of above
 def pad_embeddings(batch: List[Tuple[torch.Tensor, torch.Tensor]], padding_value=-100, batch_first=True) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, bool]:
     """
