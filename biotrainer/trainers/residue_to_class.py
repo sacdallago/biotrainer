@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Dict
 from collections import Counter
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 
 from ..solvers import ResidueSolver
@@ -185,10 +186,23 @@ def residue_to_class(
         learning_rate=learning_rate, model_parameters=model.parameters()
     )
 
-    # The actual solver
+    # Tensorboard stuff
+    writer = SummaryWriter(log_dir=(log_dir / "runs").name)
+    writer.add_hparams({
+        'model': model_choice,
+        'num_epochs': num_epochs,
+        'use_class_weights': use_class_weights,
+        'learning_rate': learning_rate,
+        'batch_size': batch_size,
+        'embedder_name': embedder_name,
+        'seed': seed,
+        'loss': loss_choice,
+        'optimizer': optimizer_choice,
+    }, {})
+
     solver = ResidueSolver(
         network=model, optimizer=optimizer, loss_function=loss_function,
-        number_of_epochs=num_epochs, patience=patience, epsilon=epsilon
+        number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer
     )
 
     # Count and log number of free params
@@ -200,17 +214,17 @@ def residue_to_class(
     epoch_iteration_results = solver.train(train_loader, val_loader)
     output_vars['training_iteration_results'] = epoch_iteration_results
 
-    # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
-    solver.load_checkpoint()
-
-    test_results = solver.inference(test_loader)
-    output_vars['test_iterations_results'] = test_results
-
     end = time.time()
     logger.info(f'Total training time: {(end - start) / 60:.1f}[m]')
-    logger.info('Running final evaluation on the best checkpoint.')
     output_vars['start_time'] = start
     output_vars['end_time'] = end
     output_vars['elapsed_time'] = end-start
+
+    # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
+    solver.load_checkpoint()
+
+    logger.info('Running final evaluation on the best checkpoint.')
+    test_results = solver.inference(test_loader)
+    output_vars['test_iterations_results'] = test_results
 
     return output_vars
