@@ -66,6 +66,9 @@ def residue_to_class(
     seed_all(seed)
     output_dir = Path(output_dir)
 
+    if embeddings_file_path:
+        embedder_name = f"precomputed_{Path(embeddings_file_path).stem}_{embedder_name}"
+
     experiment_name = f"{embedder_name}_{model_choice}"
 
     # create log directory if it does not exist yet

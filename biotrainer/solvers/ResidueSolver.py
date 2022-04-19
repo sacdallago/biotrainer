@@ -51,9 +51,9 @@ class ResidueSolver:
         if checkpoint_path:
             state = torch.load(checkpoint_path)
         elif self.experiment_dir:
-            state = torch.load((Path(self.experiment_dir) / "checkpoint.pt").name)
+            state = torch.load(str(Path(self.experiment_dir) / "checkpoint.pt"))
         else:
-            state = torch.load((Path(self._tempdir.name) / "checkpoint.pt").name)
+            state = torch.load(str(Path(self._tempdir.name) / "checkpoint.pt"))
 
         self.network.load_state_dict(state['state_dict'])
         logger.info(f"Loaded model from epoch: {state['epoch']}")
@@ -67,9 +67,9 @@ class ResidueSolver:
         }
 
         if self.experiment_dir:
-            torch.save(state, (Path(self.experiment_dir) / "checkpoint.pt").name)
+            torch.save(state, str(Path(self.experiment_dir) / "checkpoint.pt"))
         else:
-            torch.save(state, (Path(self._tempdir.name) / "checkpoint.pt").name)
+            torch.save(state, str(Path(self._tempdir.name) / "checkpoint.pt"))
 
     def early_stop(self, current_loss: float, epoch: int):
         if current_loss < (self._min_loss - self.epsilon):
