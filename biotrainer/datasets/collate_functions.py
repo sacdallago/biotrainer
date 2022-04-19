@@ -13,9 +13,13 @@ def pad_sequences(batch, padding_value=-100, batch_first=True):
 
 
 # TODO: use this padding function instead of above
-def pad_embeddings(batch: List[Tuple[torch.Tensor, torch.Tensor]], padding_value=-100, batch_first=True) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, bool]:
+def pad_embeddings(
+        batch: List[Tuple[torch.Tensor, torch.Tensor]], padding_value=-100, batch_first=True
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.LongTensor, bool]:
     """
 
+    :param batch_first: first dimension of return value will be batch
+    :param padding_value: the value used for padding positions
     :param batch: An iteration batch from the ResidueEmbeddingsDataset class [(ID, emnbedding, label)]
     :return: Returns padded embeddings, labels, lengths and True/False mask for padding of input embeddings.
     """

@@ -3,7 +3,7 @@ import math
 
 import torch
 
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 from tempfile import TemporaryDirectory
 from pathlib import Path
 from itertools import chain
@@ -11,13 +11,16 @@ from itertools import chain
 from contextlib import nullcontext as _nullcontext
 from sklearn import metrics
 
+from ..utilities import get_device
+
 logger = logging.getLogger(__name__)
 
 
 class ResidueSolver:
 
-    def __init__(self, network, optimizer, loss_function, experiment_dir: str = None, log_writer=None, number_of_epochs: int = 1000,
-                 patience: int = 20, epsilon: float = 0.001):
+    def __init__(self, network, optimizer, loss_function, experiment_dir: str = None, log_writer=None,
+                 number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
+                 device: Union[None, str, torch.device] = None):
 
         self.network = network
         self.optimizer = optimizer
@@ -27,6 +30,7 @@ class ResidueSolver:
         self.patience = patience
         self.epsilon = epsilon
         self.experiment_dir = experiment_dir
+        self.device = get_device(device)
 
         # Early stopping internal variables
         self._min_loss = math.inf

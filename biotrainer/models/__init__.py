@@ -2,6 +2,7 @@ from .FNN import FNN
 from .CNN import CNN
 from .LogReg import LogReg
 #from .ConvNeXt import ConvNeXt
+from .model_params import count_parameters
 
 __MODELS = {
     'residue_to_class': {
@@ -23,5 +24,6 @@ def get_model(protocol: str, model_choice: str, n_classes: int, n_features: int)
 
 
 __all__ = [
-    "get_model"
+    "get_model",
+    "count_parameters",
 ]

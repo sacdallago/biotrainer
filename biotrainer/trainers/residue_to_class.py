@@ -7,7 +7,7 @@ import numpy as np
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Union
 from collections import Counter
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -15,8 +15,8 @@ from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 
 from ..solvers import ResidueSolver
 from ..datasets import pad_sequences, ResidueEmbeddingsDataset
-from ..utilities import seed_all, count_parameters, get_device, read_FASTA, get_sets_from_labels
-from ..models import get_model
+from ..utilities import seed_all, get_device, read_FASTA, get_sets_from_labels
+from ..models import get_model, count_parameters
 from ..losses import get_loss
 from ..optimizers import get_optimizer
 
@@ -56,6 +56,7 @@ def residue_to_class(
         embeddings_file_path: str = None,
         shuffle: bool = True, seed: int = 42, loss_choice: str = "cross_entropy_loss",
         optimizer_choice: str = "adam", patience: int = 10, epsilon: float = 0.001,
+        device: Union[None, str, torch.device] = None,
         # Everything else
         **kwargs
 ):
@@ -75,6 +76,10 @@ def residue_to_class(
         logger.info(f"Creating log-directory: {log_dir}")
         log_dir.mkdir(parents=True)
         output_vars['log_dir'] = str(log_dir)
+
+    # Get device
+    device = get_device(device)
+    output_vars['device'] = str(device)
 
     # Parse FASTA protein sequences
     protein_sequences = read_FASTA(sequence_file)
@@ -209,7 +214,7 @@ def residue_to_class(
     }, {})
 
     solver = ResidueSolver(
-        network=model, optimizer=optimizer, loss_function=loss_function,
+        network=model, optimizer=optimizer, loss_function=loss_function, device=device,
         number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer
     )
 
