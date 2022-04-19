@@ -74,7 +74,7 @@ def residue_to_class(
     if not log_dir.is_dir():
         logger.info(f"Creating log-directory: {log_dir}")
         log_dir.mkdir(parents=True)
-        output_vars['log_dir'] = log_dir.name
+        output_vars['log_dir'] = str(log_dir)
 
     # Parse FASTA protein sequences
     protein_sequences = read_FASTA(sequence_file)
@@ -86,6 +86,13 @@ def residue_to_class(
 
     # Get the sets of training, validation and testing samples
     training_ids, validation_ids, testing_ids = get_sets_from_labels(label_sequences)
+
+    if len(training_ids) < 1 or len(validation_ids) < 1 or len(testing_ids) < 1:
+        raise ValueError("Not enough samples for training, validation and testing!")
+
+    output_vars['training_ids'] = training_ids
+    output_vars['validation_ids'] = validation_ids
+    output_vars['testing_ids'] = testing_ids
 
     # Infer classes from data
     class_labels = set()
@@ -110,7 +117,7 @@ def residue_to_class(
         in_config = {
             "global": {
                 "sequences_file": sequence_file,
-                "prefix": (output_dir / "bio_embeddings_run").name,
+                "prefix": str(log_dir / "bio_embeddings_run"),
                 "simple_remapping": True
             },
             "embeddings": {
@@ -118,8 +125,9 @@ def residue_to_class(
                 "protocol": embedder_name
             }
         }
+
         # Check if bio-embeddings has already been run
-        embeddings_file_path = in_config['embeddings']['embeddings_file']
+        embeddings_file_path = str(Path(in_config['global']['prefix']) / "embeddings" / "embeddings_file.h5")
 
         if not Path(embeddings_file_path).is_file():
             _ = execute_pipeline_from_config(in_config, overwrite=False)
@@ -187,7 +195,7 @@ def residue_to_class(
     )
 
     # Tensorboard stuff
-    writer = SummaryWriter(log_dir=(log_dir / "runs").name)
+    writer = SummaryWriter(log_dir=str(output_dir / "runs"))
     writer.add_hparams({
         'model': model_choice,
         'num_epochs': num_epochs,

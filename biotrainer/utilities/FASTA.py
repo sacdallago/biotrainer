@@ -58,7 +58,7 @@ def get_sets_from_labels(label_sequences: List[SeqRecord]) -> Tuple[List[str], L
             Exception(f"Labels FASTA header must contain SET. SET must be either 'train' or 'test'. "
                       f"Id: {idx}; SET={split}")
 
-        return training_ids, validation_ids, testing_ids
+    return training_ids, validation_ids, testing_ids
 
 
 def read_FASTA(path: str) -> List[SeqRecord]:
