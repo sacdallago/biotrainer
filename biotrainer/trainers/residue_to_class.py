@@ -125,7 +125,7 @@ def residue_to_class(
         in_config = {
             "global": {
                 "sequences_file": sequence_file,
-                "prefix": str(log_dir / "bio_embeddings_run"),
+                "prefix": str(output_dir / "bio_embeddings_run" / embedder_name),
                 "simple_remapping": True
             },
             "embeddings": {
