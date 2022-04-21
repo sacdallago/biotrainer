@@ -111,6 +111,9 @@ def residue_to_class(
     class_str2int = {letter: idx for idx, letter in enumerate(class_labels)}
     class_int2str = {idx: letter for idx, letter in enumerate(class_labels)}
 
+    output_vars['class_int_to_string'] = class_int2str
+    output_vars['class_string_to_integer'] = class_str2int
+
     # Convert label values to lists of numbers based on the maps
     id2label = {identifier: np.array([class_str2int[label] for label in labels])
                 for identifier, labels in id2label.items()}  # classes idxs (zero-based)
@@ -185,11 +188,11 @@ def residue_to_class(
     test_dataset = ResidueEmbeddingsDataset({
         idx: (torch.tensor(id2emb[idx]), torch.tensor(id2label[idx])) for idx in testing_ids
     })
-
     test_loader = DataLoader(
         dataset=test_dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False, collate_fn=pad_sequences
     )
 
+    # Model and training parameters
     model = get_model(
         protocol=protocol, model_choice=model_choice,
         n_classes=output_vars['n_classes'], n_features=output_vars['n_features']
@@ -226,11 +229,11 @@ def residue_to_class(
     logger.info(f'Experiment: {experiment_name}. Number of free parameters: {n_free_parameters}')
     output_vars['n_free_parameters'] = n_free_parameters
 
+    # The actual training
     start = time.time()
-    epoch_iteration_results = solver.train(train_loader, val_loader)
-    output_vars['training_iteration_results'] = epoch_iteration_results
-
+    _ = solver.train(train_loader, val_loader)
     end = time.time()
+
     logger.info(f'Total training time: {(end - start) / 60:.1f}[m]')
     output_vars['start_time'] = start
     output_vars['end_time'] = end
