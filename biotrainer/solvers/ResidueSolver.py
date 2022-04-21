@@ -30,12 +30,15 @@ class ResidueSolver:
         self.patience = patience
         self.epsilon = epsilon
         self.experiment_dir = experiment_dir
-        self.device = get_device(device)
 
         # Early stopping internal variables
         self._min_loss = math.inf
         self._stop_count = patience
         self._tempdir = TemporaryDirectory()
+
+        # Device handling
+        self.device = get_device(device)
+        self.network = network.to(self.device)
 
     def __del__(self):
         self._tempdir.cleanup()
@@ -169,12 +172,12 @@ class ResidueSolver:
             if do_loss_propagation:
                 self.optimizer.zero_grad()
 
-            prediction = self.network(x)
+            prediction = self.network(x.to(self.device))
             prediction_probabilities = torch.softmax(prediction, dim=1)
             _, predicted_classes = torch.max(prediction_probabilities, dim=1)
 
             # Compute metrics
-            loss = self.loss_function(prediction, y)
+            loss = self.loss_function(prediction, y.to(self.device))
 
             # Flatten and compute numbers for later use
             flat_y = y.flatten()
@@ -182,7 +185,7 @@ class ResidueSolver:
 
             # TODO: The value of the mask should be optionable!!!!
             total_to_consider = int(torch.sum(y == -100))
-            flat_predicted_classes = predicted_classes.flatten()
+            flat_predicted_classes = predicted_classes.flatten().cpu()
 
             # Count how many match
             unmasked_accuracy = metrics.accuracy_score(flat_y, flat_predicted_classes, normalize=False)
