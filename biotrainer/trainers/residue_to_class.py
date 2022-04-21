@@ -16,10 +16,10 @@ from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 from ..solvers import ResidueSolver
 from ..datasets import pad_sequences, ResidueEmbeddingsDataset
 from ..utilities import seed_all, get_device, read_FASTA, get_sets_from_labels
+from ..utilities.config import write_config_file
 from ..models import get_model, count_parameters
 from ..losses import get_loss
 from ..optimizers import get_optimizer
-
 
 logger = logging.getLogger(__name__)
 
@@ -245,5 +245,10 @@ def residue_to_class(
     logger.info('Running final evaluation on the best checkpoint.')
     test_results = solver.inference(test_loader)
     output_vars['test_iterations_results'] = test_results
+
+    write_config_file(
+        str(log_dir / "out.yml"),
+        output_vars
+    )
 
     return output_vars

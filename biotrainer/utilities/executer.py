@@ -58,6 +58,6 @@ def parse_config_file_and_execute_run(config_file_path: str):
     original_config = deepcopy(config)
     out_config = execute(**original_config)
     write_config_file(
-        (Path(out_config['output_dir']) / "out.yml").name,
+        str(Path(out_config['output_dir']) / "out.yml"),
         out_config
     )
