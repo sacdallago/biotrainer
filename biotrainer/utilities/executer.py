@@ -6,7 +6,7 @@ from typing import Dict, Any
 from pathlib import Path
 
 from .config import read_config_file, write_config_file
-from ..trainers import residue_to_class
+from ..trainers import residue_to_class, sequence_to_class
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,8 @@ def _validate_file(file_path: str):
 
 
 __PROTOCOLS = {
-    'residue_to_class': residue_to_class
+    'residue_to_class': residue_to_class,
+    'sequence_to_class': sequence_to_class
 }
 
 
