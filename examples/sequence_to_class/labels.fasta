@@ -1,0 +1,8 @@
+>Seq1 SET=train VALIDATION=False
+Glob
+>Seq2 SET=train VALIDATION=True
+GlobSP
+>Seq3 SET=test VALIDATION=False
+TM
+>Seq4 SET=test VALIDATION=False
+TMSP
