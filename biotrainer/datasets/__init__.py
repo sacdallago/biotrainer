@@ -1,8 +1,10 @@
-from .ResidueEmbeddingsDataset import ResidueEmbeddingsDataset
 from .collate_functions import pad_sequences
+from .ResidueEmbeddingsDataset import ResidueEmbeddingsDataset
+from .SequenceEmbeddingsDataset import SequenceEmbeddingsDataset
 
 
 __all__ = [
-    'ResidueEmbeddingsDataset',
     'pad_sequences',
+    'ResidueEmbeddingsDataset',
+    'SequenceEmbeddingsDataset',
 ]
