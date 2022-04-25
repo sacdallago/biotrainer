@@ -3,7 +3,7 @@
 import argparse
 import logging
 
-from .executer import parse_config_file_and_execute_run
+from biotrainer.utilities.executer import parse_config_file_and_execute_run
 
 
 def main():
