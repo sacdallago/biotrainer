@@ -24,5 +24,4 @@ class FNN(nn.Module):
         """
         # IN: X = (B x L x F)
         Yhat = self.classifier(x)  # OUT: Yhat_consurf = (B x L x N)
-        # TODO: Decide how to handle output permutation
-        return Yhat#.permute(0, 2, 1)  # OUT: Yhat_consurf = (B x N x L)
+        return Yhat
