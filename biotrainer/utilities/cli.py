@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-
 import argparse
 import logging
 
 from .executer import parse_config_file_and_execute_run
 
 
-def main():
+def main(args=None):
     """
     Pipeline commandline entry point
     """

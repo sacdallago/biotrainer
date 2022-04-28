@@ -54,9 +54,12 @@ def parse_config_file_and_execute_run(config_file_path: str):
 
     # read configuration and execute
     config = read_config_file(config_file_path)
+    input_file_path = Path(os.path.dirname(os.path.abspath(config_file_path)))
+    config["labels_file"] = input_file_path / config["labels_file"]
+    config["sequence_file"] = input_file_path / config["sequence_file"]
 
     original_config = deepcopy(config)
-    out_config = execute(**original_config)
+    out_config = execute(output_dir=str(input_file_path / "output"), **original_config)
     write_config_file(
         str(Path(out_config['output_dir']) / "out.yml"),
         out_config
