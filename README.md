@@ -35,6 +35,7 @@ use_class_weights: False # Balance class weights by using class sample size in t
 learning_rate: 1e-3 # 0-n : Model learning rate
 batch_size: 128 # 1-n : Batch size
 embedder_name: prottrans_t5_xl_u50 # one_hot_encoding | word2vec | prottrans_t5_xl_u50 | ... : Sequence embedding method (see below)
+embeddings_file_path: /path/to/embeddings.h5 # optional, if defined will use 'embedder_name' to name experiment
 ```
 
 ### Available embedding methods
