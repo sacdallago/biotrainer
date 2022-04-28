@@ -17,4 +17,4 @@ class LogReg(nn.Module):
             N = number of classes (9 for conservation)
         """
         Yhat = self.classifier(x)  # IN: X = (B x L x F); OUT: Yhat_consurf = (B x L x N)
-        return Yhat.permute(0,2,1)  # OUT: Yhat_consurf = (B x N x L)
+        return Yhat
