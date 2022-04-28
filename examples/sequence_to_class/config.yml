@@ -1,5 +1,5 @@
-sequence_file: sequences_tmh_full.fasta
-labels_file: labels_tmh_full.fasta
+sequence_file: sequences.fasta
+labels_file: labels.fasta
 protocol: sequence_to_class
 model_choice: FNN
 optimizer_choice: adam
