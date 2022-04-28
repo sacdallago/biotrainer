@@ -2,14 +2,21 @@
 
 ## Basic usage
 
-*Residue-to-class*:
+### Using pip
 ```bash
-python biotrainer.py examples/residue_to_class/config.yml
+# In the base directory:
+pip install -e .
+# Now use biotrainer anywhere:
+cd examples/residue_to_class
+biotrainer config.yml
 ```
 
-*Sequence-to-class*:
+### Using python and biotrainer.py 
 ```bash
-python biotrainer.py examples/sequence_to_class/config.yml
+# Residue -> Class
+python3 biotrainer.py examples/residue_to_class/config.yml
+# Sequence -> Class
+python3 biotrainer.py examples/sequence_to_class/config.yml
 ```
 
 Output can be found afterwards in the dataset directory.
