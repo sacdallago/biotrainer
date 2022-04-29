@@ -15,7 +15,7 @@ from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 
 from ..solvers import SequenceSolver
 from ..datasets import pad_sequences, SequenceEmbeddingsDataset
-from ..utilities import seed_all, get_device, read_FASTA, get_sets_from_labels
+from ..utilities import seed_all, get_device, read_FASTA, get_sets_from_single_fasta
 from ..utilities.config import write_config_file
 from ..models import get_model, count_parameters
 from ..losses import get_loss
@@ -46,7 +46,7 @@ def get_class_weights(id2label: Dict[str, str], class_str2int: Dict[str, int], c
 
 def sequence_to_class(
         # Needed
-        sequence_file: str, labels_file: str,
+        sequence_file: str,
         # Defined previously
         protocol: str, output_dir: str,
         # Optional with defaults
@@ -84,16 +84,12 @@ def sequence_to_class(
     device = get_device(device)
     output_vars['device'] = str(device)
 
-    # Parse FASTA protein sequences
+    # Parse FASTA protein sequences and labels
     protein_sequences = read_FASTA(sequence_file)
     id2fasta = {protein.id: str(protein.seq) for protein in protein_sequences}
 
-    # Parse label sequences
-    label_sequences = read_FASTA(labels_file)
-    id2label = {label.id: str(label.seq) for label in label_sequences}
-
-    # Get the sets of training, validation and testing samples
-    training_ids, validation_ids, testing_ids = get_sets_from_labels(label_sequences)
+    # Get the sets of labels, training, validation and testing samples
+    id2label, training_ids, validation_ids, testing_ids = get_sets_from_single_fasta(protein_sequences)
 
     if len(training_ids) < 1 or len(validation_ids) < 1 or len(testing_ids) < 1:
         raise ValueError("Not enough samples for training, validation and testing!")
