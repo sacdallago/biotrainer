@@ -95,6 +95,9 @@ PRO:
 + Only one file
 + Readability
 
+CON:
+- Conversion from FLIP to biotrainer needed
+
 **3. 1 single CSV file**
 ```csv
 sequence, label, set, validation
