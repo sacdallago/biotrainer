@@ -1,5 +1,6 @@
 import os
 import logging
+import sys
 
 from copy import deepcopy
 from typing import Dict, Any
@@ -31,6 +32,40 @@ def _validate_file(file_path: str):
         raise Exception(f"The configuration file at '{file_path}' does not exist") from e
 
 
+def _verify_config(config: dict):
+    protocol = config["protocol"]
+
+    def exit_with_error(error):
+        error_message = "Correct files not available for protocol: " + protocol
+        print(error_message)
+        print(error)
+        sys.exit(1)
+
+    if protocol == 'residue_to_class':
+        try:
+            labels_file = config["labels_file"]
+            sequence_file = config["sequence_file"]
+        except KeyError as e:
+            exit_with_error(e)
+
+    elif protocol == 'sequence_to_class':
+        try:
+            sequence_file = config["sequence_file"]
+        except KeyError as e:
+            exit_with_error(e)
+        if "labels_file" in config.keys():
+            logger.warning("Labels are expected to be found in the sequence_file for protocol " + protocol
+                           + ". File will be ignored!")
+
+
+def _convert_paths_to_absolute(config: dict, input_file_path: Path):
+    if "labels_file" in config.keys():
+        config["labels_file"] = input_file_path / config["labels_file"]
+    if "sequence_file" in config.keys():
+        config["sequence_file"] = input_file_path / config["sequence_file"]
+    return config
+
+
 __PROTOCOLS = {
     'residue_to_class': residue_to_class,
     'sequence_to_class': sequence_to_class
@@ -55,9 +90,10 @@ def parse_config_file_and_execute_run(config_file_path: str):
 
     # read configuration and execute
     config = read_config_file(config_file_path)
+    _verify_config(config)
+
     input_file_path = Path(os.path.dirname(os.path.abspath(config_file_path)))
-    config["labels_file"] = input_file_path / config["labels_file"]
-    config["sequence_file"] = input_file_path / config["sequence_file"]
+    config = _convert_paths_to_absolute(config, input_file_path)
 
     original_config = deepcopy(config)
     out_config = execute(output_dir=str(input_file_path / "output"), **original_config)
