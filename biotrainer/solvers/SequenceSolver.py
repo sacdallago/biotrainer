@@ -178,18 +178,7 @@ class SequenceSolver:
 
             # Compute metrics
             loss = self.loss_function(prediction, y.to(self.device))
-
-            # Flatten and compute numbers for later use
-            flat_y = y.flatten()
-            total_y = len(y)
-
-            # TODO: The value of the mask should be optionable!!!!
-            total_to_consider = int(torch.sum(y == -100))
-            flat_predicted_classes = predicted_classes.flatten().cpu()
-
-            # Count how many match
-            unmasked_accuracy = metrics.accuracy_score(flat_y, flat_predicted_classes, normalize=False)
-            accuracy = (unmasked_accuracy - total_to_consider) / (total_y - total_to_consider)
+            accuracy = metrics.accuracy_score(y, predicted_classes, normalize=True)
 
             if do_loss_propagation:
                 # Do a forward pass & update weights
