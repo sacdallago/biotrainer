@@ -1,0 +1,11 @@
+sequence_file: s2c/sequences.fasta
+labels_file: ''
+protocol: sequence_to_class
+model_choice: LogReg
+optimizer_choice: adam
+loss_choice: cross_entropy_loss
+num_epochs: 200
+use_class_weights: false
+learning_rate: 1e-3
+batch_size: 128
+embedder_name: word2vec
