@@ -69,7 +69,7 @@ def get_sets_from_labels(label_sequences: List[SeqRecord]) -> Tuple[List[str], L
 def get_sets_from_single_fasta(sequences_file: List[SeqRecord]) -> Tuple[Dict, List[str], List[str], List[str]]:
     id2attributes = attributes_from_seqrecords(sequences_file)
 
-    seq_labels = {seq_id: seq_vals["LABEL"] for seq_id, seq_vals in id2attributes.items()}
+    seq_labels = {seq_id: seq_vals["TARGET"] for seq_id, seq_vals in id2attributes.items()}
     training_ids, validation_ids, testing_ids = _get_split_lists(id2attributes)
 
     return seq_labels, training_ids, validation_ids, testing_ids
