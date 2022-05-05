@@ -7,11 +7,15 @@ We will list all possibilities we considered and justify the final decision we m
 
 ### Residue -> Class
 **2 Fasta files (sequence.fasta, label.fasta)**
+
+sequences.fasta
 ```fasta
-# sequences.fasta
 >Seq1
 SEQWENCE
-# labels.fasta
+```
+
+labels.fasta
+```fasta
 >Seq1 SET=train VALIDATION=False
 DVCDVVDD
 ```
@@ -31,11 +35,15 @@ SEQWENCE
 <summary>Residue -> Class standardisation</summary>
 
 **1. 2 Fasta files (sequence.fasta, label.fasta)**
+
+sequences.fasta
 ```fasta
-# sequences.fasta
 >Seq1
 SEQWENCE
-# labels.fasta
+```
+
+labels.fasta
+```fasta
 >Seq1 SET=train VALIDATION=False
 DVCDVVDD
 ```
