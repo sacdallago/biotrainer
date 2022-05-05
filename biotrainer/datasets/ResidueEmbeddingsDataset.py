@@ -4,7 +4,7 @@ from typing import Tuple
 
 
 class ResidueEmbeddingsDataset(torch.utils.data.Dataset):
-    def __init__(self, samples):
+    def __init__(self, samples: dict):
         self.ids, self.inputs, self.targets = zip(
             *[(seq_id, inputs, targets) for seq_id, (inputs, targets) in samples.items()]
         )
