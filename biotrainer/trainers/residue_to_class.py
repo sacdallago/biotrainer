@@ -14,7 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 
 from ..solvers import ResidueSolver
-from ..datasets import pad_sequences, ResidueEmbeddingsDataset
+from ..datasets import pad_sequences, get_dataset
 from ..utilities import seed_all, get_device, read_FASTA, get_sets_from_labels
 from ..utilities.config import write_config_file
 from ..models import get_model, count_parameters
@@ -169,7 +169,7 @@ def residue_to_class(
 
     # Load datasets and data loaders
     # Train
-    train_dataset = ResidueEmbeddingsDataset({
+    train_dataset = get_dataset(protocol, {
         idx: (torch.tensor(id2emb[idx]), torch.tensor(id2label[idx])) for idx in training_ids
     })
     train_loader = DataLoader(
@@ -177,7 +177,7 @@ def residue_to_class(
     )
 
     # Validation
-    val_dataset = ResidueEmbeddingsDataset({
+    val_dataset = get_dataset(protocol, {
         idx: (torch.tensor(id2emb[idx]), torch.tensor(id2label[idx])) for idx in validation_ids
     })
     val_loader = DataLoader(
@@ -185,7 +185,7 @@ def residue_to_class(
     )
 
     # Test
-    test_dataset = ResidueEmbeddingsDataset({
+    test_dataset = get_dataset(protocol, {
         idx: (torch.tensor(id2emb[idx]), torch.tensor(id2label[idx])) for idx in testing_ids
     })
     test_loader = DataLoader(

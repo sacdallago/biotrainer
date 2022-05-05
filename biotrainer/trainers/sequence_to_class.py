@@ -14,7 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 
 from ..solvers import SequenceSolver
-from ..datasets import pad_sequences, SequenceEmbeddingsDataset
+from ..datasets import get_dataset
 from ..utilities import seed_all, get_device, read_FASTA, get_sets_from_single_fasta
 from ..utilities.config import write_config_file
 from ..models import get_model, count_parameters
@@ -157,7 +157,7 @@ def sequence_to_class(
 
     # Load datasets and data loaders
     # Train
-    train_dataset = SequenceEmbeddingsDataset({
+    train_dataset = get_dataset(protocol, {
         idx: (torch.tensor(id2emb[idx]), torch.tensor(id2label[idx])) for idx in training_ids
     })
     train_loader = DataLoader(
@@ -165,7 +165,7 @@ def sequence_to_class(
     )
 
     # Validation
-    val_dataset = SequenceEmbeddingsDataset({
+    val_dataset = get_dataset(protocol, {
         idx: (torch.tensor(id2emb[idx]), torch.tensor(id2label[idx])) for idx in validation_ids
     })
     val_loader = DataLoader(
@@ -173,7 +173,7 @@ def sequence_to_class(
     )
 
     # Test
-    test_dataset = SequenceEmbeddingsDataset({
+    test_dataset = get_dataset(protocol, {
         idx: (torch.tensor(id2emb[idx]), torch.tensor(id2label[idx])) for idx in testing_ids
     })
     test_loader = DataLoader(
