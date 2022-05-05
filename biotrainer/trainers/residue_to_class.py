@@ -244,6 +244,12 @@ def residue_to_class(
 
     logger.info('Running final evaluation on the best checkpoint.')
     test_results = solver.inference(test_loader)
+
+    # Re-map the labels to the metrics
+    test_results['predictions'] = ["".join(
+        [class_int2str[p] for p in prediction]
+    ) for prediction in test_results['predictions']]
+
     output_vars['test_iterations_results'] = test_results
 
     write_config_file(
