@@ -27,6 +27,8 @@ webcrawling/__pycache__/*
 *.eggs/
 .installed.cfg
 *.egg-info
+node_modules/
+package-lock.json
 
 # Unittest and coverage
 htmlcov/*
