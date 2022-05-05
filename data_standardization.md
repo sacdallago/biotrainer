@@ -6,6 +6,11 @@ We will list all possibilities we considered and justify the final decision we m
 ## Standardization decisions
 
 ### Residue -> Class
+
+>You have an input protein sequence and want to predict 
+for each residue (amino acid) in the sequence a categorical property 
+(e.g., residue 4, which is an Alanine, is predicted to be part of an alpha-helix).
+
 **2 Fasta files (sequence.fasta, label.fasta)**
 
 sequences.fasta
@@ -20,7 +25,23 @@ labels.fasta
 DVCDVVDD
 ```
 
-### Sequence -> Class && Sequence -> Value
+### Sequence -> Class
+
+>You have an input protein sequence and want to predict a property for the whole sequence
+(e.g. if the sequence is a trans-membrane protein or not).
+
+**1 single Fasta file**
+```fasta
+# sequences.fasta
+>Seq1 TARGET=Glob SET=train VALIDATION=False 
+SEQWENCE
+```
+
+### Sequence -> Value
+
+>You have an input protein sequence and want to predict the value of a property for the whole sequence
+(e.g. the melting temperature of the protein).
+
 **1 single Fasta file**
 ```fasta
 # sequences.fasta
