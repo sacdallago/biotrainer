@@ -4,7 +4,7 @@ from typing import Tuple
 
 
 class SequenceEmbeddingsDataset(torch.utils.data.Dataset):
-    def __init__(self, samples):
+    def __init__(self, samples:dict):
         self.ids = list()
         self.inputs = list()
         self.targets = list()
