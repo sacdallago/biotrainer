@@ -24,7 +24,7 @@ DVCDVVDD
 **1 single Fasta file**
 ```fasta
 # sequences.fasta
->Seq1 Label=Glob SET=train VALIDATION=False 
+>Seq1 TARGET=Glob SET=train VALIDATION=False 
 SEQWENCE
 ```
 
@@ -95,7 +95,7 @@ CON:
 **2. 1 single Fasta file**
 ```fasta
 # sequences.fasta
->Seq1 Label=Glob SET=train VALIDATION=False 
+>Seq1 TARGET=Glob SET=train VALIDATION=False 
 SEQWENCE
 ```
 
