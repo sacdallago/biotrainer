@@ -1,0 +1,15 @@
+embeddings:
+  protocol: prottrans_t5_xl_u50
+  type: embed
+global:
+  prefix: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output/prottrans_t5_xl_u50
+  sequences_file: !!python/object/apply:pathlib.PosixPath
+  - /
+  - mnt
+  - home
+  - cdallago
+  - biotrainer
+  - examples
+  - residue_to_class
+  - sequences.fasta
+  simple_remapping: true

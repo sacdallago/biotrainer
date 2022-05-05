@@ -1,0 +1,16 @@
+discard_per_amino_acid_embeddings: false
+elapsed_time: 0:02:11.414093
+embeddings_file: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output/prottrans_t5_xl_u50/embeddings/embeddings_file.h5
+embeddings_transformer_function: null
+end_time: '2022-05-05 15:16:39.357281+02:00'
+mapping_file: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output/prottrans_t5_xl_u50/mapping_file.csv
+max_amino_acids: 3000
+prefix: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output/prottrans_t5_xl_u50
+protocol: prottrans_t5_xl_u50
+reduce: false
+remapped_sequences_file: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output/prottrans_t5_xl_u50/remapped_sequences_file.fasta
+sequences_file: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output/prottrans_t5_xl_u50/sequences_file.fasta
+simple_remapping: true
+stage_name: embeddings
+start_time: '2022-05-05 15:14:27.943188+02:00'
+type: embed

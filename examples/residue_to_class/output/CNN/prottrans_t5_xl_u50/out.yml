@@ -1,0 +1,92 @@
+batch_size: 128
+class_int_to_string:
+  0: C
+  1: E
+  2: F
+  3: V
+  4: D
+class_string_to_integer:
+  C: 0
+  D: 4
+  E: 1
+  F: 2
+  V: 3
+device: cpu
+elapsed_time: 13.999646425247192
+embedder_name: prottrans_t5_xl_u50
+embeddings_file_path: null
+end_time: 1651756613.8653822
+epsilon: 0.001
+labels_file: !!python/object/apply:pathlib.PosixPath
+- /
+- mnt
+- home
+- cdallago
+- biotrainer
+- examples
+- residue_to_class
+- labels.fasta
+learning_rate: !!python/object/new:ruamel.yaml.scalarfloat.ScalarFloat
+  args:
+  - 0.001
+  state:
+    _e_sign: true
+    _e_width: 2
+    _exp: e
+    _m_lead0: 0
+    _m_sign: false
+    _prec: -1
+    _underscore: null
+    _width: 1
+log_dir: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output/CNN/prottrans_t5_xl_u50
+loss_choice: cross_entropy_loss
+model_choice: CNN
+n_classes: 5
+n_features: 1024
+n_free_parameters: 230533
+num_epochs: 200
+optimizer_choice: adam
+output_dir: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output
+patience: 10
+protocol: residue_to_class
+seed: 42
+sequence_file: !!python/object/apply:pathlib.PosixPath
+- /
+- mnt
+- home
+- cdallago
+- biotrainer
+- examples
+- residue_to_class
+- sequences.fasta
+shuffle: true
+start_time: 1651756599.8657358
+test_iterations_results:
+  metrics:
+    accuracy: !!python/object/apply:numpy.core.multiarray.scalar
+    - !!python/object/apply:numpy.dtype
+      args:
+      - f8
+      - false
+      - true
+      state: !!python/tuple
+      - 3
+      - <
+      - null
+      - null
+      - null
+      - -1
+      - -1
+      - 0
+    - !!binary |
+      AAAAAAAAFEA=
+    loss: 3.985261917114258
+  predictions:
+  - DVCDVVDDDDDDDD
+testing_ids:
+- Seq3
+training_ids:
+- Seq1
+use_class_weights: false
+validation_ids:
+- Seq2
