@@ -57,6 +57,6 @@ SEQWENCE
 **1 single Fasta file**
 ```fasta
 # sequences.fasta
->Seq1 TARGET=Glob SET=train VALIDATION=False 
+>Seq1 TARGET=37.3452 SET=train VALIDATION=False 
 SEQWENCE
 ```
