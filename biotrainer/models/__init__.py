@@ -12,7 +12,6 @@ __MODELS = {
         'LogReg': LogReg,
     },
     'sequence_to_class': {
-        'CNN': CNN,
         'FNN': FNN,
         'LogReg': LogReg
     }
