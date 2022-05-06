@@ -12,6 +12,10 @@ from ..trainers import residue_to_class, sequence_to_class
 logger = logging.getLogger(__name__)
 
 
+class ConfigurationException(Exception):
+    pass
+
+
 def _validate_file(file_path: str):
     """
     Verify if a file exists and is not empty.
@@ -27,9 +31,9 @@ def _validate_file(file_path: str):
     """
     try:
         if os.stat(file_path).st_size == 0:
-            raise Exception(f"The file at '{file_path}' is empty")
+            raise ConfigurationException(f"The file at '{file_path}' is empty")
     except (OSError, TypeError) as e:
-        raise Exception(f"The configuration file at '{file_path}' does not exist") from e
+        raise ConfigurationException(f"The configuration file at '{file_path}' does not exist") from e
 
 
 def _verify_config(config: dict):
@@ -46,16 +50,17 @@ def _verify_config(config: dict):
             labels_file = config["labels_file"]
             sequence_file = config["sequence_file"]
         except KeyError as e:
-            exit_with_error(e)
+            raise ConfigurationException("Correct files not available for protocol: " + protocol)
 
     elif protocol == 'sequence_to_class':
         try:
             sequence_file = config["sequence_file"]
         except KeyError as e:
-            exit_with_error(e)
+            raise ConfigurationException("Correct files not available for protocol: " + protocol)
+
         if "labels_file" in config.keys():
-            logger.warning("Labels are expected to be found in the sequence_file for protocol " + protocol
-                           + ". File will be ignored!")
+            raise ConfigurationException("Labels are expected to be found in the sequence file for protocol: "
+                                         + protocol)
 
 
 def _convert_paths_to_absolute(config: dict, input_file_path: Path):
