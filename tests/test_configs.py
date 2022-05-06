@@ -1,8 +1,6 @@
 import os
-import sys
 import yaml
 import shutil
-import pytest
 
 from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
 
@@ -28,7 +26,7 @@ def setup_config(protocol: str, model_choice: str, embedder_name: str) -> str:
     return config_file_path
 
 
-def test_config(protocol, model, embedder_name):
+def test_config(protocol: str, model: str, embedder_name: str, should_fail: bool):
     # Clean up before test
     if os.path.exists("output"):
         shutil.rmtree("output")
@@ -37,7 +35,11 @@ def test_config(protocol, model, embedder_name):
     config_file_path = setup_config(protocol=protocol,
                                     model_choice=model,
                                     embedder_name=embedder_name)
-    biotrainer_headless_main(config_file_path=os.path.abspath(config_file_path))
-    assert os.path.exists("output/out.yml"), "No output file generated, run failed!"
+    try:
+        biotrainer_headless_main(config_file_path=os.path.abspath(config_file_path))
+        assert os.path.exists("output/out.yml"), "No output file generated, run failed!"
+    except Exception:
+        assert should_fail, "No exception was thrown although run should have failed!"
+
     # Clean up after test
     shutil.rmtree("output")
