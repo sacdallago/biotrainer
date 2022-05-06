@@ -1,11 +1,11 @@
 import os
 import logging
-import sys
 
 from copy import deepcopy
 from typing import Dict, Any
 from pathlib import Path
 
+from ..models import __MODELS
 from .config import read_config_file, write_config_file
 from ..trainers import residue_to_class, sequence_to_class
 
@@ -38,12 +38,7 @@ def _validate_file(file_path: str):
 
 def _verify_config(config: dict):
     protocol = config["protocol"]
-
-    def exit_with_error(error):
-        error_message = "Correct files not available for protocol: " + protocol
-        print(error_message)
-        print(error)
-        sys.exit(1)
+    model = config["model_choice"]
 
     if protocol == 'residue_to_class':
         try:
@@ -61,6 +56,9 @@ def _verify_config(config: dict):
         if "labels_file" in config.keys():
             raise ConfigurationException("Labels are expected to be found in the sequence file for protocol: "
                                          + protocol)
+
+    if model not in __MODELS.get(protocol):
+        raise ConfigurationException( "Model " + model + " not available for protocol: " + protocol)
 
 
 def _convert_paths_to_absolute(config: dict, input_file_path: Path):
