@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 
-from ..solvers import SequenceSolver
+from ..solvers import get_solver
 from ..datasets import get_dataset
 from ..utilities import seed_all, get_device, read_FASTA, get_sets_from_single_fasta
 from ..utilities.config import write_config_file
@@ -24,7 +24,8 @@ from ..optimizers import get_optimizer
 logger = logging.getLogger(__name__)
 
 
-def get_class_weights(id2label: Dict[str, str], class_str2int: Dict[str, int], class_int2str: Dict[int, str]) -> torch.FloatTensor:
+def get_class_weights(id2label: Dict[str, str], class_str2int: Dict[str, int],
+                      class_int2str: Dict[int, str]) -> torch.FloatTensor:
     # concatenate all labels irrespective of protein to count class sizes
     counter = Counter(list(itertools.chain.from_iterable(
         [list(labels) for labels in id2label.values()]
@@ -163,7 +164,7 @@ def sequence_to_class(
         idx: (torch.tensor(id2emb[idx]), torch.tensor(id2label[idx])) for idx in training_ids
     })
     train_loader = DataLoader(
-        dataset=train_dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False#, collate_fn=pad_sequences
+        dataset=train_dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False  # , collate_fn=pad_sequences
     )
 
     # Validation
@@ -171,7 +172,7 @@ def sequence_to_class(
         idx: (torch.tensor(id2emb[idx]), torch.tensor(id2label[idx])) for idx in validation_ids
     })
     val_loader = DataLoader(
-        dataset=val_dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False#, collate_fn=pad_sequences
+        dataset=val_dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False  # , collate_fn=pad_sequences
     )
 
     # Test
@@ -179,7 +180,7 @@ def sequence_to_class(
         idx: (torch.tensor(id2emb[idx]), torch.tensor(id2label[idx])) for idx in testing_ids
     })
     test_loader = DataLoader(
-        dataset=test_dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False#, collate_fn=pad_sequences
+        dataset=test_dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False  # , collate_fn=pad_sequences
     )
 
     # Model and training parameters
@@ -209,10 +210,10 @@ def sequence_to_class(
         'optimizer': optimizer_choice,
     }, {})
 
-    solver = SequenceSolver(
-        network=model, optimizer=optimizer, loss_function=loss_function, device=device,
-        number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer
-    )
+    solver = get_solver(protocol,
+                        network=model, optimizer=optimizer, loss_function=loss_function, device=device,
+                        number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer
+                        )
 
     # Count and log number of free params
     n_free_parameters = count_parameters(model)
@@ -227,7 +228,7 @@ def sequence_to_class(
     logger.info(f'Total training time: {(end - start) / 60:.1f}[m]')
     output_vars['start_time'] = start
     output_vars['end_time'] = end
-    output_vars['elapsed_time'] = end-start
+    output_vars['elapsed_time'] = end - start
 
     # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
     solver.load_checkpoint()

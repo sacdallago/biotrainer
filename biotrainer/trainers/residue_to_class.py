@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 
-from ..solvers import ResidueSolver
+from ..solvers import get_solver
 from ..datasets import pad_sequences, get_dataset
 from ..utilities import seed_all, get_device, read_FASTA, get_sets_from_labels
 from ..utilities.config import write_config_file
@@ -24,7 +24,8 @@ from ..optimizers import get_optimizer
 logger = logging.getLogger(__name__)
 
 
-def get_class_weights(id2label: Dict[str, str], class_str2int: Dict[str, int], class_int2str: Dict[int, str]) -> torch.FloatTensor:
+def get_class_weights(id2label: Dict[str, str], class_str2int: Dict[str, int],
+                      class_int2str: Dict[int, str]) -> torch.FloatTensor:
     # concatenate all labels irrespective of protein to count class sizes
     counter = Counter(list(itertools.chain.from_iterable(
         [list(labels) for labels in id2label.values()]
@@ -219,10 +220,10 @@ def residue_to_class(
         'optimizer': optimizer_choice,
     }, {})
 
-    solver = ResidueSolver(
-        network=model, optimizer=optimizer, loss_function=loss_function, device=device,
-        number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer
-    )
+    solver = get_solver(protocol,
+                        network=model, optimizer=optimizer, loss_function=loss_function, device=device,
+                        number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer
+                        )
 
     # Count and log number of free params
     n_free_parameters = count_parameters(model)
@@ -237,7 +238,7 @@ def residue_to_class(
     logger.info(f'Total training time: {(end - start) / 60:.1f}[m]')
     output_vars['start_time'] = start
     output_vars['end_time'] = end
-    output_vars['elapsed_time'] = end-start
+    output_vars['elapsed_time'] = end - start
 
     # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
     solver.load_checkpoint()
