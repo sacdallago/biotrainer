@@ -1,7 +1,22 @@
-from .residue_to_class import residue_to_class
-from .sequence_to_class import sequence_to_class
+from .ResidueTrainer import ResidueTrainer
+from .SequenceTrainer import SequenceTrainer
+
+__TRAINERS = {
+    'residue_to_class': ResidueTrainer,
+    'sequence_to_class': SequenceTrainer
+}
+
+
+def get_trainer(**kwargs):
+    protocol = kwargs['protocol']
+    trainer = __TRAINERS.get(protocol)
+
+    if not trainer:
+        raise NotImplementedError
+    else:
+        return trainer.pipeline(**kwargs)
+
 
 __all__ = [
-    'residue_to_class',
-    'sequence_to_class'
+    'get_trainer'
 ]

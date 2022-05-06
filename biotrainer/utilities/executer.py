@@ -6,8 +6,8 @@ from typing import Dict, Any
 from pathlib import Path
 
 from ..models import __MODELS
+from ..trainers import get_trainer
 from .config import read_config_file, write_config_file
-from ..trainers import residue_to_class, sequence_to_class
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +70,8 @@ def _convert_paths_to_absolute(config: dict, input_file_path: Path):
 
 
 __PROTOCOLS = {
-    'residue_to_class': residue_to_class,
-    'sequence_to_class': sequence_to_class
+    'residue_to_class',
+    'sequence_to_class'
 }
 
 
@@ -85,7 +85,7 @@ def execute(output_dir: str = "output", protocol: str = "residue_to_class", **kw
         logger.info(f"Creating output dir: {output_dir}")
         output_dir.mkdir(parents=True)
 
-    return __PROTOCOLS.get(protocol)(**{**kwargs, **output_vars})
+    return get_trainer(**{**kwargs, **output_vars})
 
 
 def parse_config_file_and_execute_run(config_file_path: str):
