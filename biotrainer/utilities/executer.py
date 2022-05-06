@@ -53,7 +53,7 @@ def _verify_config(config: dict):
         except KeyError as e:
             raise ConfigurationException("Correct files not available for protocol: " + protocol)
 
-        if "labels_file" in config.keys():
+        if "labels_file" in config.keys() and config["labels_file"] != "":
             raise ConfigurationException("Labels are expected to be found in the sequence file for protocol: "
                                          + protocol)
 
