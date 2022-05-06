@@ -3,7 +3,7 @@ import torch
 from typing import Tuple
 
 
-class ResidueEmbeddingsDataset(torch.utils.data.Dataset):
+class __EmbeddingsDataset(torch.utils.data.Dataset):
     def __init__(self, samples: dict):
         self.ids, self.inputs, self.targets = zip(
             *[(seq_id, inputs, targets) for seq_id, (inputs, targets) in samples.items()]
@@ -17,3 +17,11 @@ class ResidueEmbeddingsDataset(torch.utils.data.Dataset):
         x = self.inputs[index].float()
         y = self.targets[index].long()
         return seq_id, x, y
+
+
+class ResidueEmbeddingsDataset(__EmbeddingsDataset):
+    pass
+
+
+class SequenceEmbeddingsDataset(__EmbeddingsDataset):
+    pass
