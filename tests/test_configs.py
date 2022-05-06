@@ -2,6 +2,7 @@ import os
 import yaml
 import shutil
 
+from biotrainer.utilities.executer import ConfigurationException
 from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
 
 protocol_to_input_files = {
@@ -38,8 +39,7 @@ def test_config(protocol: str, model: str, embedder_name: str, should_fail: bool
     try:
         biotrainer_headless_main(config_file_path=os.path.abspath(config_file_path))
         assert os.path.exists("output/out.yml"), "No output file generated, run failed!"
-    except Exception:
-        assert should_fail, "No exception was thrown although run should have failed!"
-
-    # Clean up after test
-    shutil.rmtree("output")
+        # Clean up after test
+        shutil.rmtree("output")
+    except ConfigurationException:
+        assert should_fail, "A ConfigurationException was thrown although it shouldn't have."

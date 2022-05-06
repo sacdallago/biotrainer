@@ -16,11 +16,9 @@ all_params = {
 
 
 def pytest_generate_tests(metafunc):
-    should_fail = False
     for protocol in protocols:
         for model in models:
-            if model not in __MODELS.get(protocol):
-                should_fail = True
+            should_fail = True if model not in __MODELS.get(protocol) else False
             for embedder_name in embedder_names:
                 all_params["test_config"]["values"].append([protocol, model, embedder_name, should_fail])
     fct_name = metafunc.function.__name__
