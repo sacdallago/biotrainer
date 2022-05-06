@@ -21,6 +21,22 @@ python3 biotrainer.py examples/sequence_to_class/config.yml
 
 Output can be found afterwards in the dataset directory.
 
+
+## Available protocols
+
+```text
+D=embedding dimension (e.g. 1024)
+B=batch dimension (e.g. 30)
+L=sequence dimension (e.g. 350)
+C=number of classes (e.g. 13)
+
+- residue_to_class --> Predict a class C for each residue encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxLxC
+- sequence_to_class --> Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output BxC
+
+Work in Progress:
+- residues_to_class --> Predict a class C for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxC
+```
+
 ## Configuration file options
 
 ```yaml
