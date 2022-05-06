@@ -1,6 +1,5 @@
 from .collate_functions import pad_sequences
-from .ResidueEmbeddingsDataset import ResidueEmbeddingsDataset
-from .SequenceEmbeddingsDataset import SequenceEmbeddingsDataset
+from .EmbeddingsDataset import ResidueEmbeddingsDataset, SequenceEmbeddingsDataset
 
 __DATASETS = {
     'residue_to_class': ResidueEmbeddingsDataset,
