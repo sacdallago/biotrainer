@@ -121,12 +121,14 @@ def sequence_to_class(
             },
             "embeddings": {
                 "type": "embed",
-                "protocol": embedder_name
+                "protocol": embedder_name,
+                "reduce": True,
+                "discard_per_amino_acid_embeddings": True
             }
         }
 
         # Check if bio-embeddings has already been run
-        embeddings_file_path = str(Path(in_config['global']['prefix']) / "embeddings" / "embeddings_file.h5")
+        embeddings_file_path = str(Path(in_config['global']['prefix']) / "embeddings" / "reduced_embeddings_file.h5")
 
         if not Path(embeddings_file_path).is_file():
             _ = execute_pipeline_from_config(in_config, overwrite=False)
@@ -147,7 +149,7 @@ def sequence_to_class(
     output_vars['n_classes'] = len(class_labels)
     logger.info(f"Number of classes: {output_vars['n_classes']}")
 
-    output_vars['n_features'] = torch.tensor(id2emb[training_ids[0]]).shape[1]
+    output_vars['n_features'] = torch.tensor(id2emb[training_ids[0]]).shape[0]
     logger.info(f"Number of features: {output_vars['n_features']}")
 
     if use_class_weights:
