@@ -46,7 +46,7 @@ class ResidueTrainer(Trainer):
     def _use_reduced_embeddings(self) -> bool:
         return False
 
-    def _get_number_features(self):
+    def _get_number_features(self) -> int:
         return torch.tensor(self.id2emb[self.training_ids[0]]).shape[1]
 
     def _get_collate_function(self):
