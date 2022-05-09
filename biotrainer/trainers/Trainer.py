@@ -86,7 +86,7 @@ class Trainer(ABC):
     @staticmethod
     @abstractmethod
     def pipeline(**kwargs):
-        pass
+        raise NotImplementedError
 
     def _execute_pipeline(self):
         self._setup()
@@ -266,14 +266,14 @@ class Trainer(ABC):
         -------
         Number of input features for the model (=> shape of the embedding vector).
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def _get_collate_function(self):
         """
         If the dataloaders use a collate_function, it must be returned by this method.
         """
-        pass
+        raise NotImplementedError
 
     def _create_writer(self):
         self.writer = SummaryWriter(log_dir=str(self.output_dir / "runs"))
