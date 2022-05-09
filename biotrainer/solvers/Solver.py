@@ -177,11 +177,11 @@ class Solver(ABC):
         - R2C: (B x N x L)
         - S2C: (B x N)
         """
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def _calculate_accuracy(self, y, predicted_classes):
-        pass
+        raise NotImplementedError
 
     def classification_iteration(self, x, y, step=1, context: Optional[Callable] = None):
         do_loss_propagation = False
