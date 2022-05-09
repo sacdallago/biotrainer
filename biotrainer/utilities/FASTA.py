@@ -22,7 +22,7 @@ def attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict[str
     return result
 
 
-def _get_split_lists(id2attributes: dict) -> Tuple[list, list, list]:
+def _get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], List[str]]:
     training_ids = list()
     validation_ids = list()
     testing_ids = list()
