@@ -8,12 +8,45 @@ An overview of our decision process and about arguments for and against certain 
 
 <!-- toc -->
 
+- [Before getting started](#before-getting-started)
+  * [Sample attributes:](#sample-attributes)
+  * [Format](#format)
 - [Standardization decisions](#standardization-decisions)
   * [Residue -> Class](#residue---class)
   * [Sequence -> Class](#sequence---class)
   * [Sequence -> Value](#sequence---value)
 
 <!-- tocstop -->
+
+## Before getting started
+
+### Sample attributes:
+  - `SET` --> The partition in which the sample falls. Can be `train` or `test`.
+  - `VALIDATION` --> If the sample is used for validation purposes during model training. Can be `True` or `False`.
+  - `TARGET` --> The class or value to predict, e.g. `Nucleus` or `1.3`
+
+Mind that `VALIDATION` can only be `True` if the `SET` is `train`, and if `SET` is `test` it must be `False`. 
+A combination of `SET=test` and `VALIDATION=True` is a violation.
+
+**All attributes in your .fasta files must exactly match those provided here (case-sensitive!).** 
+
+### Format
+All headers of the fasta files expect whitespace separated values, so
+```fasta
+>Seq1 SET=train VALIDATION=False
+DVCDVVDD
+```
+will work fine, while
+```fasta
+>Seq1 SET=trainVALIDATION=False
+DVCDVVDD
+```
+or even
+```fasta
+>Seq1 SET=train;VALIDATION=False
+DVCDVVDD
+```
+will fail.
 
 ## Standardization decisions
 
