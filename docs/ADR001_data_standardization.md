@@ -85,8 +85,9 @@ CON:
 - 2 files
 
 **2. 1 single Fasta file**
+
+sequences.fasta
 ```fasta
-# sequences.fasta
 >Seq1 TARGET=Glob SET=train VALIDATION=False 
 SEQWENCE
 ```

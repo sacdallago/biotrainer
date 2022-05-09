@@ -56,7 +56,7 @@ You have an input protein sequence and want to predict
 for each residue (amino acid) in the sequence a categorical property 
 (e.g., residue 4, which is an Alanine, is predicted to be part of an alpha-helix).
 
-**2 Fasta files (sequence.fasta, label.fasta)**
+**Required files: 2 Fasta files (sequence.fasta, label.fasta)**
 
 sequences.fasta
 ```fasta
@@ -75,9 +75,10 @@ DVCDVVDD
 You have an input protein sequence and want to predict a property for the whole sequence
 (e.g. if the sequence is a trans-membrane protein or not).
 
-**1 single Fasta file**
+**Required file: FASTA file containing sequences and labels**
+
+sequences.fasta
 ```fasta
-# sequences.fasta
 >Seq1 TARGET=Glob SET=train VALIDATION=False 
 SEQWENCE
 ```
@@ -87,9 +88,10 @@ SEQWENCE
 You have an input protein sequence and want to predict the value of a property for the whole sequence
 (e.g. the melting temperature of the protein).
 
-**1 single Fasta file**
+**Required file: FASTA file containing sequences and labels**
+
+sequences.fasta
 ```fasta
-# sequences.fasta
 >Seq1 TARGET=37.3452 SET=train VALIDATION=False 
 SEQWENCE
 ```
