@@ -100,14 +100,9 @@ class Solver(ABC):
 
         for epoch in range(self.number_of_epochs):
 
-            train_iterations = list()
-            for i, (_, X, y) in enumerate(training_dataloader):
-                iteration_result = self.classification_iteration(
-                    X, y,
-                    step=len(epoch_iterations) * len(training_dataloader) + len(train_iterations) + 1
-                )
-                train_iterations.append(iteration_result)
-
+            # Evaluating before testing: This way val_loss > train_loss holds for most epochs
+            # If we would train before validating, the validation would benefit from the knowledge gained during
+            # training, thus most likely val_loss < train_loss would be true for most epochs (and a bit confusing)
             validation_iterations = list()
             for i, (_, X, y) in enumerate(validation_dataloader):
                 iteration_result = self.classification_iteration(
@@ -115,6 +110,14 @@ class Solver(ABC):
                     step=len(epoch_iterations) * len(validation_dataloader) + len(validation_iterations) + 1
                 )
                 validation_iterations.append(iteration_result)
+
+            train_iterations = list()
+            for i, (_, X, y) in enumerate(training_dataloader):
+                iteration_result = self.classification_iteration(
+                    X, y,
+                    step=len(epoch_iterations) * len(training_dataloader) + len(train_iterations) + 1
+                )
+                train_iterations.append(iteration_result)
 
             epoch_metrics = {
                 'training': Solver._aggregate_iteration_results(train_iterations),
