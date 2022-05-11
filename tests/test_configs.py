@@ -32,7 +32,8 @@ def test_config(protocol: str, model: str, embedder_name: str, should_fail: bool
     if os.path.exists("output"):
         shutil.rmtree("output")
 
-    print("TESTING CONFIG: " + str(protocol) + " - " + str(model) + " - " + str(embedder_name))
+    print("TESTING CONFIG: " + protocol + " - " + model +
+          " - " + embedder_name + " - Passed when failed: " + str(should_fail))
     config_file_path = setup_config(protocol=protocol,
                                     model_choice=model,
                                     embedder_name=embedder_name)
