@@ -2,9 +2,17 @@
 # Creates a test for each of the combination of protocol, model, embedder_name
 
 from biotrainer.models import __MODELS
+from biotrainer.utilities.executer import __PROTOCOLS
 
-protocols = ["residue_to_class", "sequence_to_class"]
-models = ["FNN", "CNN", "LogReg"]
+
+def get_all_available_models():
+    all_models_by_protocol = [list(protocol.keys()) for protocol in __MODELS.values()]
+    all_models_list = [model for model_list in all_models_by_protocol for model in model_list]
+    return set(all_models_list)
+
+
+protocols = __PROTOCOLS
+models = get_all_available_models()
 embedder_names = ["one_hot_encoding", "word2vec"]
 
 all_params = {
