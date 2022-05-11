@@ -8,4 +8,4 @@ class SequenceSolver(Solver):
         return prediction  # No changes
 
     def _calculate_accuracy(self, y, predicted_classes):
-        return metrics.accuracy_score(y, predicted_classes, normalize=True)
+        return metrics.accuracy_score(y.cpu(), predicted_classes.cpu(), normalize=True)
