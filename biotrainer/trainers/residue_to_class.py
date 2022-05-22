@@ -221,7 +221,7 @@ def residue_to_class(
 
     solver = ResidueSolver(
         network=model, optimizer=optimizer, loss_function=loss_function, device=device,
-        number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer
+        number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer, experiment_dir=str(log_dir)
     )
 
     # Count and log number of free params
