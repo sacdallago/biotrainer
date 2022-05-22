@@ -42,12 +42,3 @@ class ResidueTrainer(Trainer):
         for seq_id, seq in self.id2fasta.items():
             if len(seq) != self.id2label[seq_id].size:
                 Exception(f"Length mismatch for {seq_id}: Seq={len(seq)} VS Labels={self.id2label[seq_id].size}")
-
-    def _use_reduced_embeddings(self) -> bool:
-        return False
-
-    def _get_number_features(self) -> int:
-        return torch.tensor(self.id2emb[self.training_ids[0]]).shape[1]
-
-    def _get_collate_function(self):
-        return pad_sequences

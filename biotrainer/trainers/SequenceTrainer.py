@@ -29,12 +29,3 @@ class SequenceTrainer(Trainer):
         # Convert label values to lists of numbers based on the maps
         self.id2label = {identifier: np.array(self.class_str2int[label])
                          for identifier, label in self.id2label.items()}  # classes idxs (zero-based)
-
-    def _use_reduced_embeddings(self) -> bool:
-        return True
-
-    def _get_number_features(self) -> int:
-        return torch.tensor(self.id2emb[self.training_ids[0]]).shape[0]
-
-    def _get_collate_function(self):
-        return None

@@ -6,6 +6,11 @@ __DATASETS = {
     'sequence_to_class': SequenceEmbeddingsDataset
 }
 
+__COLLATE_FUNCTIONS = {
+    'residue_to_class': pad_sequences,
+    'sequence_to_class': None
+}
+
 
 def get_dataset(protocol: str, samples: dict):
     dataset = __DATASETS.get(protocol)
@@ -16,7 +21,13 @@ def get_dataset(protocol: str, samples: dict):
         return dataset(samples=samples)
 
 
+def get_collate_function(protocol: str):
+    collate_function = __COLLATE_FUNCTIONS.get(protocol)
+
+    return collate_function
+
+
 __all__ = [
-    'pad_sequences',
+    'get_collate_function',
     'get_dataset',
 ]

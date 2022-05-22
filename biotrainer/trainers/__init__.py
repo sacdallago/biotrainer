@@ -1,5 +1,6 @@
 from .ResidueTrainer import ResidueTrainer
 from .SequenceTrainer import SequenceTrainer
+from .EmbeddingsLoader import EmbeddingsLoader
 
 __TRAINERS = {
     'residue_to_class': ResidueTrainer,
@@ -9,6 +10,8 @@ __TRAINERS = {
 
 def get_trainer(**kwargs):
     protocol = kwargs['protocol']
+    embeddings_loader = EmbeddingsLoader(**kwargs)
+    kwargs['embeddings_loader'] = embeddings_loader
     trainer = __TRAINERS.get(protocol)
 
     if not trainer:

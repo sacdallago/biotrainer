@@ -10,11 +10,12 @@ from typing import Dict, Union
 from collections import Counter
 from abc import ABC, abstractmethod
 from torch.utils.data import DataLoader
+from .EmbeddingsLoader import EmbeddingsLoader
 from torch.utils.tensorboard import SummaryWriter
 from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 
 from ..solvers import get_solver
-from ..datasets import get_dataset
+from ..datasets import get_dataset, get_collate_function
 from ..utilities import seed_all, get_device
 from ..utilities.config import write_config_file
 from ..models import get_model, count_parameters
@@ -28,6 +29,7 @@ class Trainer(ABC):
 
     def __init__(self,
                  # Needed
+                 embeddings_loader: EmbeddingsLoader,
                  sequence_file: str,
                  # Defined previously
                  protocol: str, output_dir: str,
@@ -43,6 +45,7 @@ class Trainer(ABC):
                  # Everything else
                  **kwargs
                  ):
+        self._embeddings_loader = embeddings_loader
         self.sequence_file = sequence_file
         self.protocol = protocol
         self.output_dir = Path(output_dir)
@@ -108,10 +111,11 @@ class Trainer(ABC):
         logger.info(f"Number of classes: {self.output_vars['n_classes']}")
 
         # Load embeddings
-        self._load_embeddings()
+        self.id2emb, number_features = self._embeddings_loader.load_embeddings()
+        #self._load_embeddings()
 
         # Get number of input features
-        self.output_vars['n_features'] = self._get_number_features()
+        self.output_vars['n_features'] = number_features#self._get_number_features()
         logger.info(f"Number of features: {self.output_vars['n_features']}")
 
         if self.use_class_weights:
@@ -191,18 +195,6 @@ class Trainer(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
-    def _use_reduced_embeddings(self) -> bool:
-        """
-        Define if reduced embeddings from bio_embeddings should be used.
-        Reduced means that the per-residue embeddings are reduced to a per-sequence embedding
-        Returns
-        -------
-        True: Use reduced embeddings from bio_embeddings
-        False: Use non-reduced embeddings
-        """
-        raise NotImplementedError
-
     def _compute_class_weights(self):
         # concatenate all labels irrespective of protein to count class sizes
         counter = Counter(list(itertools.chain.from_iterable(
@@ -259,22 +251,6 @@ class Trainer(ABC):
         logger.info(f"Read {len(self.id2emb)} entries.")
         logger.info(f"Time elapsed for reading embeddings: {(time.time() - start):.1f}[s]")
 
-    @abstractmethod
-    def _get_number_features(self) -> int:
-        """
-        Returns
-        -------
-        Number of input features for the model (=> shape of the embedding vector).
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def _get_collate_function(self):
-        """
-        If the dataloaders use a collate_function, it must be returned by this method.
-        """
-        raise NotImplementedError
-
     def _create_writer(self):
         self.writer = SummaryWriter(log_dir=str(self.output_dir / "runs"))
         self.writer.add_hparams({
@@ -300,7 +276,7 @@ class Trainer(ABC):
         })
         self.train_loader = DataLoader(
             dataset=train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, drop_last=False,
-            collate_fn=self._get_collate_function()
+            collate_fn=get_collate_function(self.protocol)
         )
 
         # Validation
@@ -309,7 +285,7 @@ class Trainer(ABC):
         })
         self.val_loader = DataLoader(
             dataset=val_dataset, batch_size=self.batch_size, shuffle=self.shuffle, drop_last=False,
-            collate_fn=self._get_collate_function()
+            collate_fn=get_collate_function(self.protocol)
         )
 
         # Test
@@ -318,7 +294,7 @@ class Trainer(ABC):
         })
         self.test_loader = DataLoader(
             dataset=test_dataset, batch_size=self.batch_size, shuffle=self.shuffle, drop_last=False,
-            collate_fn=self._get_collate_function()
+            collate_fn=get_collate_function(self.protocol)
         )
 
     def _create_model_and_training_params(self):
