@@ -112,7 +112,6 @@ class Trainer(ABC):
 
         # Load embeddings
         self.id2emb, number_features = self._embeddings_loader.load_embeddings()
-        #self._load_embeddings()
 
         # Get number of input features
         self.output_vars['n_features'] = number_features#self._get_number_features()
@@ -212,44 +211,6 @@ class Trainer(ABC):
         for c in counter:
             logger.info(f"\t{self.class_int2str[c]} : {counter[c]} ({class_weights[c]:.3f})")
         self.class_weights = torch.FloatTensor(class_weights)
-
-    def _load_embeddings(self):
-        # If embeddings don't exist, create them using the bio_embeddings pipeline
-        if not self.embeddings_file_path or not Path(self.embeddings_file_path).is_file():
-            use_reduced_embeddings = self._use_reduced_embeddings()
-            embeddings_config = {
-                "global": {
-                    "sequences_file": self.sequence_file,
-                    "prefix": str(self.output_dir / self.embedder_name),
-                    "simple_remapping": True
-                },
-                "embeddings": {
-                    "type": "embed",
-                    "protocol": self.embedder_name,
-                    "reduce": use_reduced_embeddings,
-                    "discard_per_amino_acid_embeddings": use_reduced_embeddings
-                }
-            }
-            embeddings_file_name = "reduced_embeddings_file.h5" if use_reduced_embeddings else "embeddings_file.h5"
-            # Check if bio-embeddings has already been run
-            self.embeddings_file_path = str(
-                Path(embeddings_config['global']['prefix']) / "embeddings" / embeddings_file_name)
-
-            if not Path(self.embeddings_file_path).is_file():
-                _ = execute_pipeline_from_config(embeddings_config, overwrite=False)
-
-        # load pre-computed embeddings in .h5 file format computed via bio_embeddings
-        logger.info(f"Loading embeddings from: {self.embeddings_file_path}")
-        start = time.time()
-
-        # https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
-        embeddings_file = h5py.File(self.embeddings_file_path, 'r', rdcc_nbytes=1024 ** 2 * 4000, rdcc_nslots=1e7)
-        self.id2emb = {embeddings_file[idx].attrs["original_id"]: embedding for (idx, embedding) in
-                       embeddings_file.items()}
-
-        # Logging
-        logger.info(f"Read {len(self.id2emb)} entries.")
-        logger.info(f"Time elapsed for reading embeddings: {(time.time() - start):.1f}[s]")
 
     def _create_writer(self):
         self.writer = SummaryWriter(log_dir=str(self.output_dir / "runs"))
