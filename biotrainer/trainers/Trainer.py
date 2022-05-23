@@ -120,7 +120,8 @@ class Trainer:
                                   metrics_calculator=metrics_calculator,
                                   network=self._model, optimizer=self._optimizer, loss_function=self._loss_function,
                                   device=self._device, number_of_epochs=self._num_epochs,
-                                  patience=self._patience, epsilon=self._epsilon, log_writer=writer
+                                  patience=self._patience, epsilon=self._epsilon, log_writer=writer,
+                                  experiment_dir=log_dir
                                   )
 
         # Count and log number of free params
