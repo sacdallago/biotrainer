@@ -198,7 +198,8 @@ class Solver(ABC):
             # Compute metrics
             loss = self.loss_function(prediction, y.to(self.device))
             metrics = self.metrics_calculator.calculate_metrics(y, y_hat)
-            metrics.update({'loss': loss.item()})
+            metrics = {'loss': loss.item(),
+                       **metrics}
 
             if do_loss_propagation:
                 # Do a forward pass & update weights
