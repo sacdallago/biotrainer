@@ -1,3 +1,4 @@
+import os
 import h5py
 import time
 import logging
@@ -25,11 +26,12 @@ class EmbeddingsLoader:
                  # Optional (only for precomputed embeddings)
                  embeddings_file_path: str = None,
                  **kwargs):
+        self._protocol = protocol
         self._embedder_name = embedder_name
         self._sequence_file = sequence_file
         self._output_dir = output_dir
         self._embeddings_file_path = embeddings_file_path
-        self._use_reduced_embeddings = _PROTOCOL_TO_REDUCED_EMBEDDINGS[protocol]
+        self._use_reduced_embeddings = _PROTOCOL_TO_REDUCED_EMBEDDINGS[self._protocol]
 
     def get_embedder_name(self) -> str:
         if self._embeddings_file_path:
@@ -43,7 +45,7 @@ class EmbeddingsLoader:
             embeddings_config = {
                 "global": {
                     "sequences_file": self._sequence_file,
-                    "prefix": str(self._output_dir / self._embedder_name),
+                    "prefix": str(self._output_dir / self._protocol / self._embedder_name),
                     "simple_remapping": True
                 },
                 "embeddings": {
@@ -55,6 +57,9 @@ class EmbeddingsLoader:
             }
             embeddings_file_name = "reduced_embeddings_file.h5" \
                 if self._use_reduced_embeddings else "embeddings_file.h5"
+            # Create protocol path to embeddings, because bio-embeddings can't handle recursive dir creation
+            if not os.path.isdir(self._output_dir / self._protocol):
+                os.mkdir(self._output_dir / self._protocol)
             # Check if bio-embeddings has already been run
             self._embeddings_file_path = str(
                 Path(embeddings_config['global']['prefix']) / "embeddings" / embeddings_file_name)
