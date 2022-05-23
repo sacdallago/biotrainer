@@ -169,15 +169,15 @@ class Solver(ABC):
     @abstractmethod
     def _transform_prediction_output(self, prediction):
         """
+        Transform prediction shape if necessary and return final prediction values (float for value, int for class)
         Parameters
         ----------
-        prediction: Prediction of which shape must be transformed
-        - R2C: (Batch_size x protein_Length x Number_classes)
-        - S2C: (B x N)
+        prediction: Prediction which must be transformed
+        - R2C: (Batch_size x protein_Length x Number_classes) -> (B x N x L)
+        - S2C: (B x N) -> (B x N)
         Returns
         -------
-        - R2C: (B x N x L)
-        - S2C: (B x N)
+        y_hat: Predicted classes or values
         """
         raise NotImplementedError
 
@@ -193,13 +193,11 @@ class Solver(ABC):
                 self.optimizer.zero_grad()
 
             prediction = self.network(x.to(self.device))
-            prediction = self._transform_prediction_output(prediction)
-            prediction_probabilities = torch.softmax(prediction, dim=1)
-            _, predicted_classes = torch.max(prediction_probabilities, dim=1)
+            y_hat = self._transform_prediction_output(prediction)
 
             # Compute metrics
             loss = self.loss_function(prediction, y.to(self.device))
-            metrics = self.metrics_calculator.calculate_metrics(y, predicted_classes)
+            metrics = self.metrics_calculator.calculate_metrics(y, y_hat)
             metrics.update({'loss': loss.item()})
 
             if do_loss_propagation:
@@ -211,5 +209,5 @@ class Solver(ABC):
                 if self.log_writer:
                     self.log_writer.add_scalars("Step/train", metrics, step)
 
-            metrics.update({'prediction': predicted_classes.tolist()})
+            metrics.update({'prediction': y_hat.tolist()})
             return metrics
