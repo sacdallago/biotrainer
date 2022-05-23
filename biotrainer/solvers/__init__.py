@@ -1,6 +1,7 @@
+from typing import List
 from .ResidueSolver import ResidueSolver
 from .SequenceSolver import SequenceSolver
-
+from .MetricsCalculator import MetricsCalculator
 
 __SOLVERS = {
     'residue_to_class': ResidueSolver,
@@ -17,6 +18,13 @@ def get_solver(protocol: str, **kwargs):
         return solver(**kwargs)
 
 
+def get_metrics_calculator(protocol: str, metrics_list: List[str]):
+    metrics_calculator = MetricsCalculator(protocol, metrics_list)
+
+    return metrics_calculator
+
+
 __all__ = [
-    'get_solver'
+    'get_solver',
+    'get_metrics_calculator',
 ]

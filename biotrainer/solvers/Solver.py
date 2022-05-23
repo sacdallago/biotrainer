@@ -1,24 +1,27 @@
-import logging
 import math
-
 import torch
+import logging
 
 from pathlib import Path
 from itertools import chain
+from ..utilities import get_device
 from abc import ABC, abstractmethod
 from tempfile import TemporaryDirectory
 from typing import Callable, Optional, Union
-
+from .MetricsCalculator import MetricsCalculator
 from contextlib import nullcontext as _nullcontext
-
-from ..utilities import get_device
 
 logger = logging.getLogger(__name__)
 
 
 class Solver(ABC):
 
-    def __init__(self, network, optimizer, loss_function, experiment_dir: str = None, log_writer=None,
+    def __init__(self,
+                 # Necessary
+                 network, optimizer, loss_function,
+                 log_writer, metrics_calculator: MetricsCalculator,
+                 # Optional with defaults
+                 experiment_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
                  device: Union[None, str, torch.device] = None):
 
@@ -26,6 +29,7 @@ class Solver(ABC):
         self.optimizer = optimizer
         self.loss_function = loss_function
         self.log_writer = log_writer
+        self.metrics_calculator = metrics_calculator
         self.number_of_epochs = number_of_epochs
         self.patience = patience
         self.epsilon = epsilon
@@ -85,11 +89,12 @@ class Solver(ABC):
                 return False
 
     @staticmethod
-    def _aggregate_iteration_results(iteration_result):
-        return {
-            "loss": sum([i['loss'] for i in iteration_result]) / len(iteration_result),
-            "accuracy": sum([i['accuracy'] for i in iteration_result]) / len(iteration_result),
-        }
+    def _aggregate_iteration_results(iteration_results):
+        metrics = dict()
+        iteration_metrics = [metric for metric in iteration_results[0].keys() if metric != "prediction"]
+        for metric in iteration_metrics:
+            metrics[metric] = sum([i[metric] for i in iteration_results]) / len(iteration_results)
+        return metrics
 
     def train(self, training_dataloader, validation_dataloader):
         # Get things ready
@@ -179,10 +184,6 @@ class Solver(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
-    def _calculate_accuracy(self, y, predicted_classes):
-        raise NotImplementedError
-
     def classification_iteration(self, x, y, step=1, context: Optional[Callable] = None):
         do_loss_propagation = False
 
@@ -201,7 +202,8 @@ class Solver(ABC):
 
             # Compute metrics
             loss = self.loss_function(prediction, y.to(self.device))
-            accuracy = self._calculate_accuracy(y, predicted_classes)
+            metrics = self.metrics_calculator.calculate_metrics(y, predicted_classes)
+            metrics.update({'loss': loss.item()})
 
             if do_loss_propagation:
                 # Do a forward pass & update weights
@@ -210,13 +212,7 @@ class Solver(ABC):
                 self.optimizer.step()  # apply gradients
 
                 if self.log_writer:
-                    self.log_writer.add_scalars("Step/train", {
-                        'loss': loss.item(),
-                        'accuracy': accuracy,
-                    }, step)
+                    self.log_writer.add_scalars("Step/train", metrics, step)
 
-            return {
-                'loss': loss.item(),
-                'accuracy': accuracy,
-                'prediction': predicted_classes.tolist()
-            }
+            metrics.update({'prediction': predicted_classes.tolist()})
+            return metrics
