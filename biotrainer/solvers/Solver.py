@@ -177,6 +177,7 @@ class Solver(ABC):
         - S2C: (B x N) -> (B x N)
         Returns
         -------
+        prediction: Permutated prediction for loss
         y_hat: Predicted classes or values
         """
         raise NotImplementedError
@@ -193,7 +194,7 @@ class Solver(ABC):
                 self.optimizer.zero_grad()
 
             prediction = self.network(x.to(self.device))
-            y_hat = self._transform_prediction_output(prediction)
+            prediction, y_hat = self._transform_prediction_output(prediction)
 
             # Compute metrics
             loss = self.loss_function(prediction, y.to(self.device))
