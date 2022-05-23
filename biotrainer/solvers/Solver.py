@@ -20,8 +20,8 @@ class Solver(ABC):
                  # Necessary
                  network, optimizer, loss_function,
                  log_writer, metrics_calculator: MetricsCalculator,
-                 experiment_dir: str,
                  # Optional with defaults
+                 experiment_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
                  device: Union[None, str, torch.device] = None):
 
