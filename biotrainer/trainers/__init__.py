@@ -1,23 +1,17 @@
-from .ResidueTrainer import ResidueTrainer
-from .SequenceTrainer import SequenceTrainer
+from .Trainer import Trainer
 from .EmbeddingsLoader import EmbeddingsLoader
-
-__TRAINERS = {
-    'residue_to_class': ResidueTrainer,
-    'sequence_to_class': SequenceTrainer
-}
+from .PredictionIOHandler import PredictionIOHandler
 
 
 def get_trainer(**kwargs):
-    protocol = kwargs['protocol']
     embeddings_loader = EmbeddingsLoader(**kwargs)
-    kwargs['embeddings_loader'] = embeddings_loader
-    trainer = __TRAINERS.get(protocol)
+    prediction_io_handler = PredictionIOHandler(**kwargs)
+    trainer = Trainer(embeddings_loader, prediction_io_handler, **kwargs)
 
     if not trainer:
         raise NotImplementedError
     else:
-        return trainer.pipeline(**kwargs)
+        return trainer.pipeline()
 
 
 __all__ = [

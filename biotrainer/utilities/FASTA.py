@@ -1,14 +1,14 @@
 import re
 import logging
 
-from typing import Dict, List, Tuple
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
 
-def attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict[str, str]]:
+def get_attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict[str, str]]:
     """
     :param sequences: a list of SeqRecords
     :return: A dictionary of ids and their attributes
@@ -22,7 +22,7 @@ def attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict[str
     return result
 
 
-def _get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], List[str]]:
+def get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], List[str]]:
     training_ids = list()
     validation_ids = list()
     testing_ids = list()
@@ -56,23 +56,6 @@ def _get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], List[st
                       f"Id: {idx}; SET={split}")
 
     return training_ids, validation_ids, testing_ids
-
-
-def get_sets_from_labels(label_sequences: List[SeqRecord]) -> Tuple[List[str], List[str], List[str]]:
-    id2attributes = attributes_from_seqrecords(label_sequences)
-
-    training_ids, validation_ids, testing_ids = _get_split_lists(id2attributes)
-
-    return training_ids, validation_ids, testing_ids
-
-
-def get_sets_from_single_fasta(sequences_file: List[SeqRecord]) -> Tuple[Dict, List[str], List[str], List[str]]:
-    id2attributes = attributes_from_seqrecords(sequences_file)
-
-    seq_labels = {seq_id: seq_vals["TARGET"] for seq_id, seq_vals in id2attributes.items()}
-    training_ids, validation_ids, testing_ids = _get_split_lists(id2attributes)
-
-    return seq_labels, training_ids, validation_ids, testing_ids
 
 
 def read_FASTA(path: str) -> List[SeqRecord]:
