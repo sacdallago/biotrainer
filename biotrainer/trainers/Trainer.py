@@ -1,141 +1,130 @@
-import h5py
 import time
 import torch
 import logging
-import itertools
 
-from copy import deepcopy
 from pathlib import Path
+from copy import deepcopy
 from typing import Dict, Union
-from collections import Counter
-from abc import ABC, abstractmethod
 from torch.utils.data import DataLoader
 from .EmbeddingsLoader import EmbeddingsLoader
+from .PredictionIOHandler import PredictionIOHandler
 from torch.utils.tensorboard import SummaryWriter
-from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 
+from ..losses import get_loss
 from ..solvers import get_solver
-from ..datasets import get_dataset, get_collate_function
+from ..optimizers import get_optimizer
+from ..datasets import get_collate_function
 from ..utilities import seed_all, get_device
 from ..utilities.config import write_config_file
 from ..models import get_model, count_parameters
-from ..losses import get_loss
-from ..optimizers import get_optimizer
 
 logger = logging.getLogger(__name__)
 
 
-class Trainer(ABC):
+class Trainer:
 
     def __init__(self,
                  # Needed
                  embeddings_loader: EmbeddingsLoader,
-                 sequence_file: str,
-                 # Defined previously
-                 protocol: str, output_dir: str,
+                 prediction_io_handler: PredictionIOHandler,
+                 protocol: str, output_dir: Path,
                  # Optional with defaults
-                 labels_file: str = "",
                  model_choice: str = "CNN", num_epochs: int = 200,
                  use_class_weights: bool = False, learning_rate: float = 1e-3,
-                 batch_size: int = 128, embedder_name: str = "prottrans_t5_xl_u50",
-                 embeddings_file_path: str = None,
-                 shuffle: bool = True, seed: int = 42, loss_choice: str = "cross_entropy_loss",
-                 optimizer_choice: str = "adam", patience: int = 10, epsilon: float = 0.001,
+                 batch_size: int = 128, shuffle: bool = True, seed: int = 42,
+                 loss_choice: str = "cross_entropy_loss", optimizer_choice: str = "adam",
+                 patience: int = 10, epsilon: float = 0.001,
                  device: Union[None, str, torch.device] = None,
                  # Everything else
                  **kwargs
                  ):
         self._embeddings_loader = embeddings_loader
-        self.sequence_file = sequence_file
-        self.protocol = protocol
-        self.output_dir = Path(output_dir)
-        self.labels_file = labels_file
-        self.model_choice = model_choice
-        self.num_epochs = num_epochs
-        self.use_class_weights = use_class_weights
-        self.learning_rate = learning_rate
-        self.batch_size = batch_size
-        self.embedder_name = embedder_name
-        self.embeddings_file_path = embeddings_file_path
-        self.shuffle = shuffle
-        self.seed = seed
-        self.loss_choice = loss_choice
-        self.optimizer_choice = optimizer_choice
-        self.patience = patience
-        self.epsilon = epsilon
-        self.device = device
-        self.output_vars: Dict[str,] = dict()
-        self.log_dir = None
-        self.experiment_name = ""
-        self.training_ids = list()
-        self.validation_ids = list()
-        self.class_labels = set()
-        self.id2label: Dict[str, str] = deepcopy(locals())
-        self.id2fasta = dict()
-        self.id2emb = dict()
-        self.class_str2int: Dict[str, int] = dict()
-        self.class_int2str: Dict[int, str] = dict()
-        self.testing_ids = list()
-        self.class_weights = None
-        self.train_loader = None
-        self.val_loader = None
-        self.test_loader = None
-        self.model = None
-        self.loss_function = None
-        self.optimizer = None
-        self.writer = None
-        self.solver = None
+        self._prediction_io_handler = prediction_io_handler
+        self._protocol = protocol
+        self._output_dir = output_dir
+        self._model_choice = model_choice
+        self._num_epochs = num_epochs
+        self._use_loss_weights = use_class_weights
+        self._learning_rate = learning_rate
+        self._batch_size = batch_size
+        self._shuffle = shuffle
+        self._seed = seed
+        self._loss_choice = loss_choice
+        self._optimizer_choice = optimizer_choice
+        self._patience = patience
+        self._epsilon = epsilon
+        self._device = device
+        self._output_vars: Dict[str,] = deepcopy(locals())
+        self._loss_weights = None
+        self._train_loader = None
+        self._val_loader = None
+        self._test_loader = None
+        self._model = None
+        self._loss_function = None
+        self._optimizer = None
+        self._solver = None
 
-    @staticmethod
-    @abstractmethod
-    def pipeline(**kwargs):
-        raise NotImplementedError
+    def pipeline(self):
+        # Get full embedder name for experiment
+        embedder_name = self._embeddings_loader.get_embedder_name()
+        experiment_name = f"{embedder_name}_{self._model_choice}"
+        logger.info(f'########### Experiment: {experiment_name} ###########')
 
-    def _execute_pipeline(self):
-        self._setup()
+        # Set seed
+        seed_all(self._seed)
 
-        self._load_sequences_and_labels()
+        # Create log directory if it does not exist yet
+        log_dir = self._output_dir / self._model_choice / embedder_name
+        if not log_dir.is_dir():
+            logger.info(f"Creating log-directory: {log_dir}")
+            log_dir.mkdir(parents=True)
+        self._output_vars['log_dir'] = str(log_dir)
+        self._output_vars['output_dir'] = self._output_dir
 
-        if len(self.training_ids) < 1 or len(self.validation_ids) < 1 or len(self.testing_ids) < 1:
-            raise ValueError("Not enough samples for training, validation and testing!")
-
-        self.output_vars['training_ids'] = self.training_ids
-        self.output_vars['validation_ids'] = self.validation_ids
-        self.output_vars['testing_ids'] = self.testing_ids
-
-        self._generate_class_labels()
-
-        self.output_vars['class_int_to_string'] = self.class_int2str
-        self.output_vars['class_string_to_integer'] = self.class_str2int
-        self.output_vars['n_classes'] = len(self.class_labels)
-        logger.info(f"Number of classes: {self.output_vars['n_classes']}")
+        # Get device
+        self._device = get_device(self._device)
+        self._output_vars['device'] = str(self._device)
 
         # Load embeddings
-        self.id2emb, number_features = self._embeddings_loader.load_embeddings()
+        id2emb = self._embeddings_loader.load_embeddings(self._output_vars)
 
-        # Get number of input features
-        self.output_vars['n_features'] = number_features#self._get_number_features()
-        logger.info(f"Number of features: {self.output_vars['n_features']}")
+        # Get datasets
+        train_dataset, val_dataset, test_dataset = \
+            self._prediction_io_handler.get_datasets(id2emb, self._output_vars)
 
-        if self.use_class_weights:
-            self._compute_class_weights()
+        # Get loss weights
+        if self._use_loss_weights:
+            self._loss_weights = self._prediction_io_handler.compute_loss_weights()
 
         # Create dataloaders and model
-        self._create_dataloaders()
+        self._create_dataloaders(train_dataset, val_dataset, test_dataset)
         self._create_model_and_training_params()
 
         # Tensorboard writer
-        self._create_writer()
+        writer = SummaryWriter(log_dir=str(self._output_dir / "runs"))
+        writer.add_hparams({
+            'model': self._model_choice,
+            'num_epochs': self._num_epochs,
+            'use_class_weights': self._use_loss_weights,  # TODO: Rename?
+            'learning_rate': self._learning_rate,
+            'batch_size': self._batch_size,
+            'embedder_name': embedder_name,
+            'seed': self._seed,
+            'loss': self._loss_choice,
+            'optimizer': self._optimizer_choice,
+        }, {})
 
         # Create solver
-        self.solver = get_solver(self.protocol,
-                                 network=self.model, optimizer=self.optimizer, loss_function=self.loss_function,
-                                 device=self.device, number_of_epochs=self.num_epochs,
-                                 patience=self.patience, epsilon=self.epsilon, log_writer=self.writer
-                                 )
+        self._solver = get_solver(self._protocol,
+                                  network=self._model, optimizer=self._optimizer, loss_function=self._loss_function,
+                                  device=self._device, number_of_epochs=self._num_epochs,
+                                  patience=self._patience, epsilon=self._epsilon, log_writer=writer
+                                  )
 
         # Count and log number of free params
-        self._log_number_free_params()
+        n_free_parameters = count_parameters(self._model)
+        logger.info(f'Experiment: {experiment_name}. Number of free parameters: {n_free_parameters}')
+        self._output_vars['n_free_parameters'] = n_free_parameters
 
         # Do training and log time
         self._do_and_log_training()
@@ -144,146 +133,50 @@ class Trainer(ABC):
         self._do_and_log_evaluation()
 
         # Save configuration data
-        write_config_file(str(self.log_dir / "out.yml"), self.output_vars)
+        write_config_file(str(log_dir / "out.yml"), self._output_vars)
 
-        return self.output_vars
+        return self._output_vars
 
-    def _setup(self):
-        seed_all(self.seed)
-
-        if self.embeddings_file_path:
-            self.embedder_name = f"precomputed_{Path(self.embeddings_file_path).stem}_{self.embedder_name}"
-
-        self.experiment_name = f"{self.embedder_name}_{self.model_choice}"
-        logger.info(f'########### Experiment: {self.experiment_name} ###########')
-
-        # create log directory if it does not exist yet
-        self.log_dir = self.output_dir / self.model_choice / self.embedder_name
-        if not self.log_dir.is_dir():
-            logger.info(f"Creating log-directory: {self.log_dir}")
-            self.log_dir.mkdir(parents=True)
-            self.output_vars['log_dir'] = str(self.log_dir)
-
-        # Get device
-        self.device = get_device(self.device)
-        self.output_vars['device'] = str(self.device)
-        self.output_vars['output_dir'] = self.output_dir
-
-    @abstractmethod
-    def _load_sequences_and_labels(self):
-        """
-        This method must load the sequences and labels from the provided sequence (and label) file(s).
-        It must set the following member attributes:
-        self.id2fasta
-        self.id2label
-        self.training_ids
-        self.validation_ids
-        self.testing_ids
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def _generate_class_labels(self):
-        """
-        This method must generate the class labels.
-        It must set the following member attributes:
-        self.class_labels
-        self.class_str2int
-        self.class_int2str
-        self.id2label
-        """
-        raise NotImplementedError
-
-    def _compute_class_weights(self):
-        # concatenate all labels irrespective of protein to count class sizes
-        counter = Counter(list(itertools.chain.from_iterable(
-            [list(labels) for labels in self.id2label.values()]
-        )))
-        # total number of samples in the set irrespective of classes
-        n_samples = sum([counter[idx] for idx in range(len(self.class_str2int))])
-        # balanced class weighting (inversely proportional to class size)
-        class_weights = [
-            (n_samples / (len(self.class_str2int) * counter[idx])) for idx in range(len(self.class_str2int))
-        ]
-
-        logger.info(f"Total number of samples/residues: {n_samples}")
-        logger.info("Individual class counts and weights:")
-        for c in counter:
-            logger.info(f"\t{self.class_int2str[c]} : {counter[c]} ({class_weights[c]:.3f})")
-        self.class_weights = torch.FloatTensor(class_weights)
-
-    def _create_writer(self):
-        self.writer = SummaryWriter(log_dir=str(self.output_dir / "runs"))
-        self.writer.add_hparams({
-            'model': self.model_choice,
-            'num_epochs': self.num_epochs,
-            'use_class_weights': self.use_class_weights,
-            'learning_rate': self.learning_rate,
-            'batch_size': self.batch_size,
-            'embedder_name': self.embedder_name,
-            'seed': self.seed,
-            'loss': self.loss_choice,
-            'optimizer': self.optimizer_choice,
-        }, {})
-
-    def _log_number_free_params(self):
-        n_free_parameters = count_parameters(self.model)
-        logger.info(f'Experiment: {self.experiment_name}. Number of free parameters: {n_free_parameters}')
-        self.output_vars['n_free_parameters'] = n_free_parameters
-
-    def _create_dataloaders(self):
-        train_dataset = get_dataset(self.protocol, {
-            idx: (torch.tensor(self.id2emb[idx]), torch.tensor(self.id2label[idx])) for idx in self.training_ids
-        })
-        self.train_loader = DataLoader(
-            dataset=train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, drop_last=False,
-            collate_fn=get_collate_function(self.protocol)
+    def _create_dataloaders(self, train_dataset, val_dataset, test_dataset):
+        self._train_loader = DataLoader(
+            dataset=train_dataset, batch_size=self._batch_size, shuffle=self._shuffle, drop_last=False,
+            collate_fn=get_collate_function(self._protocol)
         )
-
-        # Validation
-        val_dataset = get_dataset(self.protocol, {
-            idx: (torch.tensor(self.id2emb[idx]), torch.tensor(self.id2label[idx])) for idx in self.validation_ids
-        })
-        self.val_loader = DataLoader(
-            dataset=val_dataset, batch_size=self.batch_size, shuffle=self.shuffle, drop_last=False,
-            collate_fn=get_collate_function(self.protocol)
+        self._val_loader = DataLoader(
+            dataset=val_dataset, batch_size=self._batch_size, shuffle=self._shuffle, drop_last=False,
+            collate_fn=get_collate_function(self._protocol)
         )
-
-        # Test
-        test_dataset = get_dataset(self.protocol, {
-            idx: (torch.tensor(self.id2emb[idx]), torch.tensor(self.id2label[idx])) for idx in self.testing_ids
-        })
-        self.test_loader = DataLoader(
-            dataset=test_dataset, batch_size=self.batch_size, shuffle=self.shuffle, drop_last=False,
-            collate_fn=get_collate_function(self.protocol)
+        self._test_loader = DataLoader(
+            dataset=test_dataset, batch_size=self._batch_size, shuffle=self._shuffle, drop_last=False,
+            collate_fn=get_collate_function(self._protocol)
         )
 
     def _create_model_and_training_params(self):
-        self.model = get_model(
-            protocol=self.protocol, model_choice=self.model_choice,
-            n_classes=self.output_vars['n_classes'], n_features=self.output_vars['n_features']
+        self._model = get_model(
+            protocol=self._protocol, model_choice=self._model_choice,
+            n_classes=self._output_vars['n_classes'], n_features=self._output_vars['n_features']
         )
-        self.loss_function = get_loss(
-            protocol=self.protocol, loss_choice=self.loss_choice, weight=self.class_weights
+        self._loss_function = get_loss(
+            protocol=self._protocol, loss_choice=self._loss_choice, weight=self._loss_weights
         )
-        self.optimizer = get_optimizer(
-            protocol=self.protocol, optimizer_choice=self.optimizer_choice,
-            learning_rate=self.learning_rate, model_parameters=self.model.parameters()
+        self._optimizer = get_optimizer(
+            protocol=self._protocol, optimizer_choice=self._optimizer_choice,
+            learning_rate=self._learning_rate, model_parameters=self._model.parameters()
         )
 
     def _do_and_log_training(self):
         start_time = time.time()
-        _ = self.solver.train(self.train_loader, self.val_loader)
+        _ = self._solver.train(self._train_loader, self._val_loader)
         end_time = time.time()
         logger.info(f'Total training time: {(end_time - start_time) / 60:.1f}[m]')
-        self.output_vars['start_time'] = start_time
-        self.output_vars['end_time'] = end_time
-        self.output_vars['elapsed_time'] = end_time - start_time
+        self._output_vars['start_time'] = start_time
+        self._output_vars['end_time'] = end_time
+        self._output_vars['elapsed_time'] = end_time - start_time
 
     def _do_and_log_evaluation(self):
         # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
-        self.solver.load_checkpoint()
+        self._solver.load_checkpoint()
 
         logger.info('Running final evaluation on the best checkpoint.')
-        test_results = self.solver.inference(self.test_loader)
-        self.output_vars['test_iterations_results'] = test_results
+        test_results = self._solver.inference(self._test_loader)
+        self._output_vars['test_iterations_results'] = test_results

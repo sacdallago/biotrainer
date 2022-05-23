@@ -1,9 +1,9 @@
 import h5py
 import time
-import torch
 import logging
 
 from pathlib import Path
+from typing import Dict, Any
 from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
 
 # Defines if reduced embeddings from bio_embeddings should be used.
@@ -31,7 +31,13 @@ class EmbeddingsLoader:
         self._embeddings_file_path = embeddings_file_path
         self._use_reduced_embeddings = _PROTOCOL_TO_REDUCED_EMBEDDINGS[protocol]
 
-    def load_embeddings(self):
+    def get_embedder_name(self) -> str:
+        if self._embeddings_file_path:
+            self._embedder_name = f"precomputed_{Path(self._embeddings_file_path).stem}_{self._embedder_name}"
+
+        return self._embedder_name
+
+    def load_embeddings(self, output_vars: dict) -> Dict[str, Any]:
         # If embeddings don't exist, create them using the bio_embeddings pipeline
         if not self._embeddings_file_path or not Path(self._embeddings_file_path).is_file():
             embeddings_config = {
@@ -65,7 +71,9 @@ class EmbeddingsLoader:
         id2emb = {embeddings_file[idx].attrs["original_id"]: embedding for (idx, embedding) in
                   embeddings_file.items()}
         embeddings_length = list(id2emb.values())[0].shape[-1]  # Last position in shape is always embedding length
+        output_vars['n_features'] = embeddings_length
         # Logging
         logger.info(f"Read {len(id2emb)} entries.")
         logger.info(f"Time elapsed for reading embeddings: {(time.time() - start):.1f}[s]")
-        return id2emb, embeddings_length
+        logger.info(f"Number of features: {embeddings_length}")
+        return id2emb
