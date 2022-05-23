@@ -1,3 +1,4 @@
+import torch
 from .Solver import Solver
 
 
@@ -8,4 +9,6 @@ class ResidueSolver(Solver):
         if network_type in ["FNN", "LogReg"] :
             return prediction.permute(0, 2, 1)  # (Batch_size x protein_Length x Number_classes) => (B x N x L)
 
-        return prediction  # No changes
+        prediction_probabilities = torch.softmax(prediction, dim=1)
+        _, predicted_classes = torch.max(prediction_probabilities, dim=1)
+        return predicted_classes
