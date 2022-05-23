@@ -110,18 +110,15 @@ class Solver(ABC):
             # training, thus most likely val_loss < train_loss would be true for most epochs (and a bit confusing)
             validation_iterations = list()
             for i, (_, X, y) in enumerate(validation_dataloader):
-                iteration_result = self.classification_iteration(
-                    X, y, context=torch.no_grad,
-                    step=len(epoch_iterations) * len(validation_dataloader) + len(validation_iterations) + 1
-                )
+                iteration_result = self.training_iteration(X, y, step=len(epoch_iterations) * len(
+                    validation_dataloader) + len(validation_iterations) + 1, context=torch.no_grad)
                 validation_iterations.append(iteration_result)
 
             train_iterations = list()
             for i, (_, X, y) in enumerate(training_dataloader):
-                iteration_result = self.classification_iteration(
-                    X, y,
-                    step=len(epoch_iterations) * len(training_dataloader) + len(train_iterations) + 1
-                )
+                iteration_result = self.training_iteration(X, y,
+                                                           step=len(epoch_iterations) * len(training_dataloader) + len(
+                                                               train_iterations) + 1)
                 train_iterations.append(iteration_result)
 
             epoch_metrics = {
@@ -161,7 +158,7 @@ class Solver(ABC):
         predict_iterations = list()
 
         for i, (_, X, y) in enumerate(dataloader):
-            iteration_result = self.classification_iteration(X, y, context=torch.no_grad)
+            iteration_result = self.training_iteration(X, y, context=torch.no_grad)
             predict_iterations.append(iteration_result)
 
         return {
@@ -184,7 +181,7 @@ class Solver(ABC):
         """
         raise NotImplementedError
 
-    def classification_iteration(self, x, y, step=1, context: Optional[Callable] = None):
+    def training_iteration(self, x, y, step=1, context: Optional[Callable] = None):
         do_loss_propagation = False
 
         if not context:
