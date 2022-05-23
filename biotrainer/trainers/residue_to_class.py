@@ -78,7 +78,8 @@ def residue_to_class(
     if not log_dir.is_dir():
         logger.info(f"Creating log-directory: {log_dir}")
         log_dir.mkdir(parents=True)
-        output_vars['log_dir'] = str(log_dir)
+    
+    output_vars['log_dir'] = str(log_dir)
 
     # Get device
     device = get_device(device)

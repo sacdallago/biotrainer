@@ -4,10 +4,11 @@ from typing import Union, Optional, Dict, Iterable, List
 
 from torch.utils.data import DataLoader
 
-from ..optimizers import get_optimizer
+from ..utilities import get_device
 from ..losses import get_loss
 from ..models import get_model
-from .cuda_device import get_device
+from ..optimizers import get_optimizer
+
 
 # TODO: change to get_solver once Sebas' stuff is merged!
 from ..solvers import ResidueSolver
@@ -35,6 +36,9 @@ class Inferencer:
             loss_choice: str = "cross_entropy_loss",
             optimizer_choice: str = "adam", batch_size: int = 128,
             device: Union[None, str, torch.device] = None, embeddings_file_path: str = None,
+            
+            # Everything else
+            **kwargs
     ):
 
         model = get_model(
@@ -65,7 +69,7 @@ class Inferencer:
 
     def from_embeddings(self, embeddings: Iterable) -> List[Union[str, int]]:
         dataset = self.dataset({
-            idx: (torch.tensor(embedding), torch.tensor([0])) for idx, embedding in enumerate(embeddings)
+            idx: (torch.tensor(embedding), torch.zeros(torch.tensor(embedding).shape[0])) for idx, embedding in enumerate(embeddings)
         })
 
         if self.protocol == 'residue_to_class':
