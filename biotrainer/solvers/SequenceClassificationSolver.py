@@ -2,7 +2,7 @@ import torch
 from .Solver import Solver
 
 
-class SequenceSolver(Solver):
+class SequenceClassificationSolver(Solver):
 
     def _transform_prediction_output(self, prediction):
         prediction_probabilities = torch.softmax(prediction, dim=1)

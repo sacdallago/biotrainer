@@ -1,11 +1,11 @@
 from typing import List
-from .ResidueSolver import ResidueSolver
-from .SequenceSolver import SequenceSolver
+from .ResidueClassificationSolver import ResidueClassificationSolver
+from .SequenceClassificationSolver import SequenceClassificationSolver
 from .MetricsCalculator import MetricsCalculator
 
 __SOLVERS = {
-    'residue_to_class': ResidueSolver,
-    'sequence_to_class': SequenceSolver
+    'residue_to_class': ResidueClassificationSolver,
+    'sequence_to_class': SequenceClassificationSolver
 }
 
 

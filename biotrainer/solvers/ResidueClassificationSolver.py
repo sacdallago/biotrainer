@@ -2,7 +2,7 @@ import torch
 from .Solver import Solver
 
 
-class ResidueSolver(Solver):
+class ResidueClassificationSolver(Solver):
 
     def _transform_prediction_output(self, prediction):
         network_type = type(self.network).__name__
