@@ -1,12 +1,12 @@
 import os
 import logging
 
+from pathlib import Path
 from copy import deepcopy
 from typing import Dict, Any
-from pathlib import Path
 
-from .config import *
 from ..trainers import get_trainer
+from .config import validate_file, read_config_file, verify_config, write_config_file
 
 logger = logging.getLogger(__name__)
 
