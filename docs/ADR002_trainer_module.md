@@ -41,10 +41,7 @@ There are also some functions that won't change, regardless of the kind of input
 ```mermaid
 classDiagram 
 class TrainerGeneral {
-    dict _execute_pipeline() 
-    void _setup()
-    void _create_writer()
-    void _log_number_free_params()
+    dict _execute_pipeline()
     void _create_dataloaders()
     void _create_model_and_training_params()
     void _do_and_log_training()
@@ -53,8 +50,8 @@ class TrainerGeneral {
 ```
 
 ### Decision/Solution:
-* Replace TrainerInput functions with function object and return:
-- id2emb
-- embeddings_length
-- Maybe embeddings_file_path for logging
+Trainer class is split up in 3 parts:
+* EmbeddingsLoader that only handles loading of the embeddings
+* PredictionIOHandler that creates torch datasets from the input files and embeddings
+* The Trainer class itself that handles the general aspects of training and is given two instances of the objects above
 
