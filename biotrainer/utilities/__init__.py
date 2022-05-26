@@ -2,6 +2,7 @@ from .seeder import seed_all
 from .cuda_device import get_device
 from .FASTA import read_FASTA, get_attributes_from_seqrecords, get_split_lists
 from .config import read_config_file
+from .Inferencer import Inferencer
 
 __all__ = [
     'seed_all',

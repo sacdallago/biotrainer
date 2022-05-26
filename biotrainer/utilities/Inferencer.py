@@ -4,14 +4,12 @@ from typing import Union, Optional, Dict, Iterable, List
 
 from torch.utils.data import DataLoader
 
+from .cuda_device import get_device
 from ..optimizers import get_optimizer
 from ..losses import get_loss
 from ..models import get_model
-from .cuda_device import get_device
-
-# TODO: change to get_solver once Sebas' stuff is merged!
-from ..solvers import ResidueSolver
-from ..datasets import ResidueEmbeddingsDataset, pad_sequences
+from ..solvers import get_solver
+from ..datasets import get_dataset, get_collate_function
 
 
 class Inferencer:
@@ -51,16 +49,16 @@ class Inferencer:
 
         self.device = get_device(device)
         self.batch_size = batch_size
-        self.dataset = ResidueEmbeddingsDataset
+        self.dataset = get_dataset(protocol)
         self.class_int_to_string = class_int_to_string
         self.protocol = protocol
         self.embedder_name = embedder_name
 
-        # TODO: change to get_solver once Sebas' stuff is merged!
-        self.solver = ResidueSolver(
-            network=model, optimizer=optimizer, loss_function=loss_function, device=self.device,
+        self.solver = get_solver(
+            protocol, network=model, optimizer=optimizer, loss_function=loss_function, device=self.device,
             experiment_dir=log_dir
         )
+        self.collate_function = get_collate_function(protocol)
         self.solver.load_checkpoint()
 
     def from_embeddings(self, embeddings: Iterable) -> List[Union[str, int]]:
@@ -70,7 +68,8 @@ class Inferencer:
 
         if self.protocol == 'residue_to_class':
             dataloader = DataLoader(
-                dataset=dataset, batch_size=self.batch_size, shuffle=False, drop_last=False, collate_fn=pad_sequences
+                dataset=dataset, batch_size=self.batch_size, shuffle=False, drop_last=False,
+                collate_fn=self.collate_function
             )
 
             results = self.solver.inference(dataloader)
