@@ -10,6 +10,10 @@ __MODELS = {
 #        'ConvNeXt': ConvNeXt,
         'FNN': FNN,
         'LogReg': LogReg,
+    },
+    'sequence_to_class': {
+        'FNN': FNN,
+        'LogReg': LogReg
     }
 }
 

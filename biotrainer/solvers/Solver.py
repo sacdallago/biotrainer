@@ -1,24 +1,27 @@
-import logging
 import math
-
 import torch
+import logging
 
-from typing import Callable, Optional, Union
-from tempfile import TemporaryDirectory
 from pathlib import Path
 from itertools import chain
-
-from contextlib import nullcontext as _nullcontext
-from sklearn import metrics
-
 from ..utilities import get_device
+from abc import ABC, abstractmethod
+from tempfile import TemporaryDirectory
+from typing import Callable, Optional, Union
+from .MetricsCalculator import MetricsCalculator
+from contextlib import nullcontext as _nullcontext
 
 logger = logging.getLogger(__name__)
 
 
-class ResidueSolver:
+class Solver(ABC):
 
-    def __init__(self, network, optimizer, loss_function, experiment_dir: str = None, log_writer=None,
+    def __init__(self,
+                 # Necessary
+                 network, optimizer, loss_function,
+                 log_writer, metrics_calculator: MetricsCalculator,
+                 # Optional with defaults
+                 experiment_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
                  device: Union[None, str, torch.device] = None):
 
@@ -26,6 +29,7 @@ class ResidueSolver:
         self.optimizer = optimizer
         self.loss_function = loss_function
         self.log_writer = log_writer
+        self.metrics_calculator = metrics_calculator
         self.number_of_epochs = number_of_epochs
         self.patience = patience
         self.epsilon = epsilon
@@ -42,13 +46,6 @@ class ResidueSolver:
 
     def __del__(self):
         self._tempdir.cleanup()
-
-    @staticmethod
-    def _aggregate_iteration_results(iteration_result):
-        return {
-            "loss": sum([i['loss'] for i in iteration_result]) / len(iteration_result),
-            "accuracy": sum([i['accuracy'] for i in iteration_result]) / len(iteration_result),
-        }
 
     def load_checkpoint(self, checkpoint_path: str = None):
         if checkpoint_path:
@@ -91,6 +88,14 @@ class ResidueSolver:
                 self._stop_count = self._stop_count - 1
                 return False
 
+    @staticmethod
+    def _aggregate_iteration_results(iteration_results):
+        metrics = dict()
+        iteration_metrics = [metric for metric in iteration_results[0].keys() if metric != "prediction"]
+        for metric in iteration_metrics:
+            metrics[metric] = sum([i[metric] for i in iteration_results]) / len(iteration_results)
+        return metrics
+
     def train(self, training_dataloader, validation_dataloader):
         # Get things ready
         self.network = self.network.train()
@@ -100,25 +105,25 @@ class ResidueSolver:
 
         for epoch in range(self.number_of_epochs):
 
-            train_iterations = list()
-            for i, (_, X, y) in enumerate(training_dataloader):
-                iteration_result = self.classification_iteration(
-                    X, y,
-                    step=len(epoch_iterations) * len(training_dataloader) + len(train_iterations) + 1
-                )
-                train_iterations.append(iteration_result)
-
+            # Evaluating before testing: This way val_loss > train_loss holds for most epochs
+            # If we would train before validating, the validation would benefit from the knowledge gained during
+            # training, thus most likely val_loss < train_loss would be true for most epochs (and a bit confusing)
             validation_iterations = list()
             for i, (_, X, y) in enumerate(validation_dataloader):
-                iteration_result = self.classification_iteration(
-                    X, y, context=torch.no_grad,
-                    step=len(epoch_iterations) * len(validation_dataloader) + len(validation_iterations) + 1
-                )
+                iteration_result = self.training_iteration(X, y, step=len(epoch_iterations) * len(
+                    validation_dataloader) + len(validation_iterations) + 1, context=torch.no_grad)
                 validation_iterations.append(iteration_result)
 
+            train_iterations = list()
+            for i, (_, X, y) in enumerate(training_dataloader):
+                iteration_result = self.training_iteration(X, y,
+                                                           step=len(epoch_iterations) * len(training_dataloader) + len(
+                                                               train_iterations) + 1)
+                train_iterations.append(iteration_result)
+
             epoch_metrics = {
-                'training': ResidueSolver._aggregate_iteration_results(train_iterations),
-                'validation': ResidueSolver._aggregate_iteration_results(validation_iterations),
+                'training': Solver._aggregate_iteration_results(train_iterations),
+                'validation': Solver._aggregate_iteration_results(validation_iterations),
                 'epoch': epoch
             }
 
@@ -153,15 +158,31 @@ class ResidueSolver:
         predict_iterations = list()
 
         for i, (_, X, y) in enumerate(dataloader):
-            iteration_result = self.classification_iteration(X, y, context=torch.no_grad)
+            iteration_result = self.training_iteration(X, y, context=torch.no_grad)
             predict_iterations.append(iteration_result)
 
         return {
-            'metrics': ResidueSolver._aggregate_iteration_results(predict_iterations),
+            'metrics': Solver._aggregate_iteration_results(predict_iterations),
             'predictions': list(chain(*[p['prediction'] for p in predict_iterations]))
         }
 
-    def classification_iteration(self, x, y, step=1, context: Optional[Callable] = None):
+    @abstractmethod
+    def _transform_prediction_output(self, prediction):
+        """
+        Transform prediction shape if necessary and return final prediction values (float for value, int for class)
+        Parameters
+        ----------
+        prediction: Prediction which must be transformed
+        - R2C: (Batch_size x protein_Length x Number_classes) -> (B x N x L)
+        - S2C: (B x N) -> (B x N)
+        Returns
+        -------
+        prediction: Permutated prediction for loss
+        y_hat: Predicted classes or values
+        """
+        raise NotImplementedError
+
+    def training_iteration(self, x, y, step=1, context: Optional[Callable] = None):
         do_loss_propagation = False
 
         if not context:
@@ -173,23 +194,13 @@ class ResidueSolver:
                 self.optimizer.zero_grad()
 
             prediction = self.network(x.to(self.device))
-            prediction_probabilities = torch.softmax(prediction, dim=1)
-            _, predicted_classes = torch.max(prediction_probabilities, dim=1)
+            prediction, y_hat = self._transform_prediction_output(prediction)
 
             # Compute metrics
             loss = self.loss_function(prediction, y.to(self.device))
-
-            # Flatten and compute numbers for later use
-            flat_y = y.flatten()
-            total_y = len(y)
-
-            # TODO: The value of the mask should be optionable!!!!
-            total_to_consider = int(torch.sum(y == -100))
-            flat_predicted_classes = predicted_classes.flatten().cpu()
-
-            # Count how many match
-            unmasked_accuracy = metrics.accuracy_score(flat_y, flat_predicted_classes, normalize=False)
-            accuracy = (unmasked_accuracy - total_to_consider) / (total_y - total_to_consider)
+            metrics = self.metrics_calculator.calculate_metrics(y, y_hat)
+            metrics = {'loss': loss.item(),
+                       **metrics}
 
             if do_loss_propagation:
                 # Do a forward pass & update weights
@@ -198,13 +209,7 @@ class ResidueSolver:
                 self.optimizer.step()  # apply gradients
 
                 if self.log_writer:
-                    self.log_writer.add_scalars("Step/train", {
-                        'loss': loss.item(),
-                        'accuracy': accuracy,
-                    }, step)
+                    self.log_writer.add_scalars("Step/train", metrics, step)
 
-            return {
-                'loss': loss.item(),
-                'accuracy': accuracy,
-                'prediction': predicted_classes.tolist()
-            }
+            metrics.update({'prediction': y_hat.tolist()})
+            return metrics

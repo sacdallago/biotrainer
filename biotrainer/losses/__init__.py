@@ -6,6 +6,9 @@ from typing import Optional
 __LOSSES = {
     'residue_to_class': {
         'cross_entropy_loss': nn.CrossEntropyLoss
+    },
+    'sequence_to_class': {
+        'cross_entropy_loss': nn.CrossEntropyLoss
     }
 }
 

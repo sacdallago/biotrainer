@@ -1,17 +1,17 @@
 import re
 import logging
 
-from typing import Dict, List, Tuple
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
 
-def attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict[str, str]]:
+def get_attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict[str, str]]:
     """
     :param sequences: a list of SeqRecords
-    :return: A dictionary if ids and their attributes
+    :return: A dictionary of ids and their attributes
     """
 
     result = dict()
@@ -22,16 +22,13 @@ def attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict[str
     return result
 
 
-def get_sets_from_labels(label_sequences: List[SeqRecord]) -> Tuple[List[str], List[str], List[str]]:
-    id2label = {label.id: str(label.seq) for label in label_sequences}
-    id2attributes = attributes_from_seqrecords(label_sequences)
-
+def get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], List[str]]:
     training_ids = list()
     validation_ids = list()
     testing_ids = list()
 
     # Sanity check: labels must contain SET and VALIDATION attributes
-    for idx in id2label.keys():
+    for idx in id2attributes.keys():
         split = id2attributes[idx].get("SET")
 
         if split == 'train':
