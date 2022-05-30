@@ -2,7 +2,6 @@ import torch
 
 from sklearn import metrics
 from typing import List, Dict, Any
-from ..utilities import get_device
 
 
 def _residue_to_class_accuracy(y, y_hat):
@@ -12,7 +11,7 @@ def _residue_to_class_accuracy(y, y_hat):
 
     # TODO: The value of the mask should be optionable!!!!
     total_to_consider = int(torch.sum(y == -100))
-    flat_predicted_classes = y_hat.flatten().to(get_device())
+    flat_predicted_classes = y_hat.flatten().cpu()
 
     # Count how many match
     unmasked_accuracy = metrics.accuracy_score(flat_y, flat_predicted_classes, normalize=False)
@@ -51,9 +50,8 @@ class MetricsCalculator:
 
     def calculate_metrics(self, y, y_hat) -> Dict[str, Any]:
         metrics_dict = dict()
-        device = get_device()
-        y.to(device)
-        y_hat.to(device)
+        y = y.cpu()
+        y_hat = y_hat.cpu()
         for metric_name, metric_algo in self._metric_algorithms:
             metrics_dict[metric_name] = metric_algo(y, y_hat)
         return metrics_dict
