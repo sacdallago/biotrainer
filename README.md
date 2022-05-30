@@ -31,6 +31,19 @@ poetry run python3 run-biotrainer.py examples/residue_to_class/config.yml
 poetry run python3 biotrainer.py examples/sequence_to_class/config.yml
 ```
 
+### Docker
+
+```bash
+# Build
+docker build -t biotrainer .
+# Run
+docker run --rm \
+    -v "$(pwd)/examples/docker":/mnt \
+    -v bio_embeddings_weights_cache:/root/.cache/bio_embeddings \
+    -u $(id -u ${USER}):$(id -g ${USER}) \
+    biotrainer:latest /mnt/config.yml
+```
+
 Output can be found afterwards in the directory of the provided configuration file.
 
 ## Available protocols
