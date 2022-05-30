@@ -2,25 +2,36 @@
 
 ## Basic usage
 
-### Using pip
+### Installation
+
+1. Make sure you have [poetry](https://python-poetry.org/) installed: 
+```bash
+curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python3 - --version 1.1.13
+```
+
+2. Install dependencies and biotrainer via `poetry`:
 ```bash
 # In the base directory:
-pip install -e .
-# Now use biotrainer anywhere:
-cd examples/residue_to_class
-biotrainer config.yml
+poetry install
 ```
 
-### Using python and biotrainer.py 
+### Running
+
+```bash
+cd examples/residue_to_class
+poetry run biotrainer config.yml
+```
+
+You can also use the provided `run-biotrainer.py` file for development and debugging (you might want to set up your 
+IDE to directly execute run-biotrainer.py with the provided virtual environment):
 ```bash
 # Residue -> Class
-python3 biotrainer.py examples/residue_to_class/config.yml
+poetry run python3 run-biotrainer.py examples/residue_to_class/config.yml
 # Sequence -> Class
-python3 biotrainer.py examples/sequence_to_class/config.yml
+poetry run python3 biotrainer.py examples/sequence_to_class/config.yml
 ```
 
-Output can be found afterwards in the dataset directory.
-
+Output can be found afterwards in the directory of the provided configuration file.
 
 ## Available protocols
 
