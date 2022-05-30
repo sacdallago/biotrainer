@@ -2,7 +2,7 @@ import os
 import yaml
 import shutil
 
-from biotrainer.utilities.executer import ConfigurationException
+from biotrainer.utilities.config import ConfigurationException
 from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
 
 protocol_to_input_files = {
