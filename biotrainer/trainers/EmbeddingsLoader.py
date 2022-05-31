@@ -5,7 +5,7 @@ import logging
 
 from pathlib import Path
 from typing import Dict, Any
-from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
+from ..utilities.config import ConfigurationException
 
 # Defines if reduced embeddings from bio_embeddings should be used.
 # Reduced means that the per-residue embeddings are reduced to a per-sequence embedding
@@ -42,6 +42,13 @@ class EmbeddingsLoader:
     def load_embeddings(self, output_vars: dict) -> Dict[str, Any]:
         # If embeddings don't exist, create them using the bio_embeddings pipeline
         if not self._embeddings_file_path or not Path(self._embeddings_file_path).is_file():
+            try:
+                from bio_embeddings.utilities.pipeline import execute_pipeline_from_config
+            except ImportError:
+                raise ConfigurationException(
+                    f"Trying to compute non-existing embeddings without bio-embeddings installed. "
+                    "Install via `poetry install --extras \"bio-embeddings\"`"
+                )
             embeddings_config = {
                 "global": {
                     "sequences_file": self._sequence_file,
