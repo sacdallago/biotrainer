@@ -13,6 +13,8 @@ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-
 ```bash
 # In the base directory:
 poetry install
+# Optional: Add bio-embeddings to compute embeddings
+poetry install --extras "bio-embeddings"
 ```
 
 ### Running
