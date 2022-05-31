@@ -19,7 +19,7 @@ RUN python3 -m venv .venv && \
     touch biotrainer/__init__.py && \
     touch README.md && \
     $HOME/.local/bin/poetry config virtualenvs.in-project true && \
-    $HOME/.local/bin/poetry install --no-dev
+    $HOME/.local/bin/poetry install --no-dev --extras "bio-embeddings"
 
 FROM nvidia/cuda:11.4.3-runtime-ubuntu20.04
 
