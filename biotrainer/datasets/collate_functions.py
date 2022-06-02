@@ -15,7 +15,7 @@ def pad_sequences(batch, padding_value=-100, batch_first=True):
 # TODO: use this padding function instead of above
 def pad_embeddings(
         batch: List[Tuple[torch.Tensor, torch.Tensor]], padding_value=-100, batch_first=True
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.LongTensor, bool]:
+) -> Tuple[List, torch.Tensor, torch.Tensor, torch.LongTensor, bool]:
     """
 
     :param batch_first: first dimension of return value will be batch
@@ -24,7 +24,7 @@ def pad_embeddings(
     :return: Returns padded embeddings, labels, lengths and True/False mask for padding of input embeddings.
     """
 
-    # Each element in "batch" is a tuple [(ID, emnbedding, label)]
+    # Each element in "batch" is a tuple [(ID, embedding, label)]
 
     # Sort the batch in the descending order
     sorted_batch = sorted(batch, key=lambda x: x[1].shape[1], reverse=True)

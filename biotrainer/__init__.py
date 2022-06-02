@@ -5,7 +5,9 @@ import biotrainer.optimizers
 import biotrainer.solvers
 import biotrainer.trainers
 import biotrainer.utilities
+import biotrainer.inference
 
 __all__ = [
-    "datasets", "losses", "models", "optimizers", "solvers", "trainers", "utilities"
+    "datasets", "losses", "models", "optimizers", "solvers", "trainers", "utilities",
+    "inference"
 ]

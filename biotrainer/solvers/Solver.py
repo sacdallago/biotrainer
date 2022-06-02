@@ -2,14 +2,14 @@ import math
 import torch
 import logging
 
-from pathlib import Path
-from itertools import chain
-from ..utilities import get_device
 from abc import ABC, abstractmethod
+from typing import Callable, Optional, Union, Dict
+from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Optional, Union
-from .MetricsCalculator import MetricsCalculator
+from itertools import chain
 from contextlib import nullcontext as _nullcontext
+
+from ..utilities import get_device
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +19,8 @@ class Solver(ABC):
     def __init__(self,
                  # Necessary
                  network, optimizer, loss_function,
-                 log_writer, metrics_calculator: MetricsCalculator,
                  # Optional with defaults
-                 experiment_dir: str = "",
+                 log_writer: Optional = None, experiment_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
                  device: Union[None, str, torch.device] = None):
 
@@ -29,7 +28,6 @@ class Solver(ABC):
         self.optimizer = optimizer
         self.loss_function = loss_function
         self.log_writer = log_writer
-        self.metrics_calculator = metrics_calculator
         self.number_of_epochs = number_of_epochs
         self.patience = patience
         self.epsilon = epsilon
@@ -109,13 +107,13 @@ class Solver(ABC):
             # If we would train before validating, the validation would benefit from the knowledge gained during
             # training, thus most likely val_loss < train_loss would be true for most epochs (and a bit confusing)
             validation_iterations = list()
-            for i, (_, X, y) in enumerate(validation_dataloader):
+            for i, (_, X, y, _, _) in enumerate(validation_dataloader):
                 iteration_result = self.training_iteration(X, y, step=len(epoch_iterations) * len(
                     validation_dataloader) + len(validation_iterations) + 1, context=torch.no_grad)
                 validation_iterations.append(iteration_result)
 
             train_iterations = list()
-            for i, (_, X, y) in enumerate(training_dataloader):
+            for i, (_, X, y, _, _) in enumerate(training_dataloader):
                 iteration_result = self.training_iteration(X, y,
                                                            step=len(epoch_iterations) * len(training_dataloader) + len(
                                                                train_iterations) + 1)
@@ -157,7 +155,7 @@ class Solver(ABC):
 
         predict_iterations = list()
 
-        for i, (_, X, y) in enumerate(dataloader):
+        for i, (_, X, y, _, _) in enumerate(dataloader):
             iteration_result = self.training_iteration(X, y, context=torch.no_grad)
             predict_iterations.append(iteration_result)
 
@@ -167,7 +165,7 @@ class Solver(ABC):
         }
 
     @abstractmethod
-    def _transform_prediction_output(self, prediction):
+    def _transform_prediction_output(self, prediction: torch.Tensor) -> torch.Tensor:
         """
         Transform prediction shape if necessary and return final prediction values (float for value, int for class)
         Parameters
@@ -181,6 +179,19 @@ class Solver(ABC):
         y_hat: Predicted classes or values
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def _compute_metrics(self, predicted: torch.Tensor, labels: torch.Tensor, masks: Optional[torch.Tensor]) -> \
+            Dict[str, Union[int, float]]:
+        """
+        Computes metrics, such as accuracy or RMSE between predicted (from the model used) and labels (from the data).
+
+        :param predicted: The predicted label/value for each sample
+        :param labels: The actual label for each sample
+        :param masks: A mask to apply to the predicted input
+        :return:
+        """
+        pass
 
     def training_iteration(self, x, y, step=1, context: Optional[Callable] = None):
         do_loss_propagation = False
@@ -198,7 +209,9 @@ class Solver(ABC):
 
             # Compute metrics
             loss = self.loss_function(prediction, y.to(self.device))
+
             metrics = self.metrics_calculator.calculate_metrics(y, y_hat)
+
             metrics = {'loss': loss.item(),
                        **metrics}
 
