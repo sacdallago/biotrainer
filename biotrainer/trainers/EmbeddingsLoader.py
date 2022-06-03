@@ -72,8 +72,12 @@ class EmbeddingsLoader:
                 Path(embeddings_config['global']['prefix']) / "embeddings" / embeddings_file_name)
 
             if not Path(self._embeddings_file_path).is_file():
-                _ = execute_pipeline_from_config(embeddings_config, overwrite=False)
-
+                try:
+                    _ = execute_pipeline_from_config(embeddings_config, overwrite=False)
+                except FileExistsError as e:
+                    raise FileExistsError(f"The directory for {self._embedder_name} does already exist, "
+                                          f"but no existing embeddings have been found. Something must have gone wrong "
+                                          f"before, try to delete the output directory and restart.") from e
         # load pre-computed embeddings in .h5 file format computed via bio_embeddings
         logger.info(f"Loading embeddings from: {self._embeddings_file_path}")
         start = time.time()
