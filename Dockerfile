@@ -33,6 +33,8 @@ RUN apt-get update \
 # https://github.com/numba/numba/issues/4032#issuecomment-547088606
 RUN mkdir /tmp/numba_cache && chmod 777 /tmp/numba_cache
 ENV NUMBA_CACHE_DIR=/tmp/numba_cache
+RUN mkdir -m 777 /.cache && \
+    mkdir -m 777 /.cache/bio_embeddings/
 
 COPY --from=venv-build /app/.venv /app/.venv
 COPY . /app/
