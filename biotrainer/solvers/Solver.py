@@ -61,14 +61,15 @@ class Solver(ABC):
             for i, (_, X, y, lengths, masks) in enumerate(validation_dataloader):
                 iteration_result = self._training_iteration(
                     X, y, step=len(epoch_iterations) * len(validation_dataloader) + len(validation_iterations) + 1,
-                    context=torch.no_grad
+                    context=torch.no_grad, masks=masks, lengths=lengths
                 )
                 validation_iterations.append(iteration_result)
 
             train_iterations = list()
             for i, (_, X, y, lengths, masks) in enumerate(training_dataloader):
                 iteration_result = self._training_iteration(
-                    X, y, step=len(epoch_iterations) * len(training_dataloader) + len(train_iterations) + 1
+                    X, y, step=len(epoch_iterations) * len(training_dataloader) + len(train_iterations) + 1,
+                    masks=masks, lengths=lengths
                 )
                 train_iterations.append(iteration_result)
 
@@ -110,7 +111,7 @@ class Solver(ABC):
 
         for i, (_, X, y, lengths, masks) in enumerate(dataloader):
             iteration_result = self._training_iteration(
-                X, y, context=torch.no_grad, masks=masks
+                X, y, context=torch.no_grad, masks=masks, lengths=lengths
             )
             predict_iterations.append(iteration_result)
 
@@ -190,7 +191,7 @@ class Solver(ABC):
 
     def _training_iteration(
           self, x: torch.Tensor, y: torch.Tensor, step=1, context: Optional[Callable] = None,
-          masks: Optional[torch.BoolTensor] = None
+          masks: Optional[torch.BoolTensor] = None, lengths: Optional[torch.LongTensor] = None
     ) -> Dict[str, Union[float, list, Dict[str, Union[float, int]]]]:
         do_loss_propagation = False
 
@@ -227,11 +228,11 @@ class Solver(ABC):
                 if self.log_writer:
                     self.log_writer.add_scalars("Step/train", metrics, step)
 
-            # If a mask is defined, we need to shorten the predictions to the mask
-            if masks is not None:
+            # If lengths is defined, we need to shorten the predictions to the length
+            if lengths is not None:
                 return_pred = list()
-                for pred_x, mask_x in zip(prediction.tolist(), masks.tolist()):
-                    return_pred.append(pred_x[:mask_x.index(False)])
+                for pred_x, length_x in zip(prediction.tolist(), lengths.tolist()):
+                    return_pred.append(pred_x[:length_x])
 
                 prediction = return_pred
             else:
