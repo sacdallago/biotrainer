@@ -10,7 +10,6 @@ __SOLVERS = {
 
 
 def get_solver(protocol: str,
-               metrics_calculator: Optional = None,
                network: Optional = None, optimizer: Optional = None, loss_function: Optional = None,
                device: Optional = None, number_of_epochs: Optional = None,
                patience: Optional = None, epsilon: Optional = None, log_writer: Optional = None,
@@ -22,11 +21,12 @@ def get_solver(protocol: str,
     if not solver:
         raise NotImplementedError
     else:
-        return solver(metrics_calculator=metrics_calculator,
-                      network=network, optimizer=optimizer, loss_function=loss_function,
-                      device=device, number_of_epochs=number_of_epochs,
-                      patience=patience, epsilon=epsilon, log_writer=log_writer,
-                      experiment_dir=experiment_dir)
+        return solver(
+            network=network, optimizer=optimizer, loss_function=loss_function,
+            device=device, number_of_epochs=number_of_epochs,
+            patience=patience, epsilon=epsilon, log_writer=log_writer,
+            experiment_dir=experiment_dir
+        )
 
 
 __all__ = [

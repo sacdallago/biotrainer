@@ -115,7 +115,7 @@ class Trainer:
             'optimizer': self._optimizer_choice,
         }, {})
 
-        # Create metrics_calculator and solver
+        # Create solver
         self._solver = get_solver(self._protocol,
                                   network=self._model, optimizer=self._optimizer, loss_function=self._loss_function,
                                   device=self._device, number_of_epochs=self._num_epochs,
