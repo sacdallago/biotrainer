@@ -52,7 +52,6 @@ class Inferencer:
 
         self.device = get_device(device)
         self.batch_size = batch_size
-        self.dataset = get_dataset(protocol)
         self.class_int_to_string = class_int_to_string
         self.protocol = protocol
         self.embedder_name = embedder_name
@@ -65,7 +64,7 @@ class Inferencer:
         self.solver.load_checkpoint()
 
     def from_embeddings(self, embeddings: Iterable) -> List[Union[str, int]]:
-        dataset = self.dataset({
+        get_dataset(self.protocol, samples={
             idx: (torch.tensor(embedding), torch.zeros(torch.tensor(embedding).shape[0]))
             for idx, embedding in enumerate(embeddings)
         })
