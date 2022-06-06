@@ -6,9 +6,10 @@ from pathlib import Path
 from copy import deepcopy
 from typing import Dict, Union
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+
 from .EmbeddingsLoader import EmbeddingsLoader
 from .PredictionIOHandler import PredictionIOHandler
-from torch.utils.tensorboard import SummaryWriter
 
 from ..losses import get_loss
 from ..optimizers import get_optimizer

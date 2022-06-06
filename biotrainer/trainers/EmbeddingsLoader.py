@@ -88,8 +88,10 @@ class EmbeddingsLoader:
                   embeddings_file.items()}
         embeddings_length = list(id2emb.values())[0].shape[-1]  # Last position in shape is always embedding length
         output_vars['n_features'] = embeddings_length
+
         # Logging
         logger.info(f"Read {len(id2emb)} entries.")
         logger.info(f"Time elapsed for reading embeddings: {(time.time() - start):.1f}[s]")
         logger.info(f"Number of features: {embeddings_length}")
+
         return id2emb
