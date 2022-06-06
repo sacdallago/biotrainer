@@ -8,11 +8,12 @@ from ruamel.yaml import YAMLError
 from ruamel.yaml.comments import CommentedBase
 
 from ..models import __MODELS
-from bio_embeddings.utilities.exceptions import InvalidParameterError
 
 
 class ConfigurationException(Exception):
-    pass
+    """
+    Exception for invalid configurations
+    """
 
 
 def parse_config(config_str: str, preserve_order: bool = True) -> dict:
@@ -38,7 +39,7 @@ def parse_config(config_str: str, preserve_order: bool = True) -> dict:
         else:
             return yaml.safe_load(config_str)
     except YAMLError as e:
-        raise InvalidParameterError(
+        raise ConfigurationException(
             f"Could not parse configuration file at {config_str} as yaml. "
             "Formatting mistake in config file? "
             "See Error above for details."
@@ -60,7 +61,7 @@ def read_config_file(config_path: Union[str, Path], preserve_order: bool = True)
             else:
                 return yaml.safe_load(fp)
         except YAMLError as e:
-            raise InvalidParameterError(
+            raise ConfigurationException(
                 f"Could not parse configuration file at '{config_path}' as yaml. "
                 "Formatting mistake in config file? "
                 "See Error above for details."

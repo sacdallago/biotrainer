@@ -4,6 +4,10 @@ import logging
 from .executer import parse_config_file_and_execute_run
 
 
+def headless_main(config_file_path: str):
+    parse_config_file_and_execute_run(config_file_path=config_file_path)
+
+
 def main(args=None):
     """
     Pipeline commandline entry point
