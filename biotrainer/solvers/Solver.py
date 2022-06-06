@@ -201,7 +201,7 @@ class Solver(ABC):
         # Move everything on device
         x = x.to(self.device)
         y = y.to(self.device)
-        if masks:
+        if masks is not None:
             masks.to(self.device)
 
         with context():
@@ -228,7 +228,7 @@ class Solver(ABC):
                     self.log_writer.add_scalars("Step/train", metrics, step)
 
             # If a mask is defined, we need to shorten the predictions to the mask
-            if masks:
+            if masks is not None:
                 return_pred = list()
                 for pred_x, mask_x in zip(prediction.tolist(), masks.tolist()):
                     return_pred.append(pred_x[:mask_x.index(False)])
