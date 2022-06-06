@@ -4,17 +4,15 @@ from typing import List, Tuple
 from torch.nn.utils.rnn import pad_sequence
 
 
-def pad_sequences(batch, padding_value=-100, batch_first=True):
+def pad_sequence_embeddings(batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
+                            ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, None, None]:
     # batch is a list of the samples returned by your __get_item__ method in your CustomDataset
     seq_ids, X, Y = zip(*batch)
-    X = pad_sequence(X, batch_first=batch_first, padding_value=padding_value)
-    Y = pad_sequence(Y, batch_first=batch_first, padding_value=padding_value)
-    return list(seq_ids), X, Y
+    return seq_ids, X, Y, None, None
 
 
-# TODO: use this padding function instead of above
-def pad_embeddings(
-        batch: List[Tuple[torch.Tensor, torch.Tensor]], padding_value=-100, batch_first=True
+def pad_residue_embeddings(
+        batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]], padding_value=-100, batch_first=True
 ) -> Tuple[List, torch.Tensor, torch.Tensor, torch.LongTensor, bool]:
     """
 
@@ -41,10 +39,10 @@ def pad_embeddings(
     lengths = torch.LongTensor([len(x) for x in sequences])
 
     # Don't forget to grab the labels of the *sorted* batch
-    labels_padded = pad_sequence([x[2] for x in sorted_batch], batch_first=batch_first, padding_value=padding_value)
+    padded_labels = pad_sequence([x[2] for x in sorted_batch], batch_first=batch_first, padding_value=padding_value)
 
     # Turn the lengths into Boolean masks
     masks = torch.arange(lengths.max())[None, :] < lengths[:, None]  # [batchsize, seq_len]
 
     # Premute the embeddings to fit the LA architecture
-    return seq_ids, padded_sequences, labels_padded, lengths, masks
+    return seq_ids, padded_sequences, padded_labels, lengths, masks

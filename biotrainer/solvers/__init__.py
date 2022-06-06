@@ -1,8 +1,7 @@
-from typing import List, Optional
+from typing import Optional
 from .ResidueClassificationSolver import ResidueClassificationSolver
 from .SequenceClassificationSolver import SequenceClassificationSolver
 from .Solver import Solver
-from .MetricsCalculator import MetricsCalculator
 
 __SOLVERS = {
     'residue_to_class': ResidueClassificationSolver,
@@ -30,13 +29,6 @@ def get_solver(protocol: str,
                       experiment_dir=experiment_dir)
 
 
-def get_metrics_calculator(protocol: str, metrics_list: List[str]):
-    metrics_calculator = MetricsCalculator(protocol, metrics_list)
-
-    return metrics_calculator
-
-
 __all__ = [
     'get_solver',
-    'get_metrics_calculator',
 ]

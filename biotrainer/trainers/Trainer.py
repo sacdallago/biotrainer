@@ -16,7 +16,7 @@ from ..datasets import get_collate_function
 from ..utilities import seed_all, get_device
 from ..utilities.config import write_config_file
 from ..models import get_model, count_parameters
-from ..solvers import get_solver, get_metrics_calculator
+from ..solvers import get_solver
 
 logger = logging.getLogger(__name__)
 
@@ -115,9 +115,7 @@ class Trainer:
         }, {})
 
         # Create metrics_calculator and solver
-        metrics_calculator = get_metrics_calculator(self._protocol, ["accuracy"])  # TODO: Parse metrics from config
         self._solver = get_solver(self._protocol,
-                                  metrics_calculator=metrics_calculator,
                                   network=self._model, optimizer=self._optimizer, loss_function=self._loss_function,
                                   device=self._device, number_of_epochs=self._num_epochs,
                                   patience=self._patience, epsilon=self._epsilon, log_writer=writer,
