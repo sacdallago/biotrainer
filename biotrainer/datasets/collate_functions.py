@@ -6,9 +6,11 @@ from torch.nn.utils.rnn import pad_sequence
 
 def pad_sequence_embeddings(batch: List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
                             ) -> Tuple[List, torch.Tensor, torch.Tensor, None, None]:
-    # batch is a list of the samples returned by your __get_item__ method in your CustomDataset
-    seq_ids, X, Y = zip(*batch)
-    return list(seq_ids), torch.Tensor(X), torch.Tensor(Y), None, None
+    ids = [x[0] for x in batch]
+    x = [x[1] for x in batch]
+    y = [x[2] for x in batch]
+    
+    return ids, torch.stack(x), torch.stack(y), None, None
 
 
 def pad_residue_embeddings(
