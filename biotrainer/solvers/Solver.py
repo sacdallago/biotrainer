@@ -203,7 +203,7 @@ class Solver(ABC):
         x = x.to(self.device)
         y = y.to(self.device)
         if masks is not None:
-            masks.to(self.device)
+            masks = masks.to(self.device)
 
         with context():
             if do_loss_propagation:
