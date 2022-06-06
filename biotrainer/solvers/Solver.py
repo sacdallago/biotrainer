@@ -168,7 +168,6 @@ class Solver(ABC):
             metrics[metric] = sum([i[metric] for i in iteration_results]) / len(iteration_results)
         return metrics
 
-    @abstractmethod
     def _transform_logits(self, logits: torch.Tensor) -> torch.Tensor:
         """
         Transform logit shape if necessary.
@@ -188,20 +187,6 @@ class Solver(ABC):
         :return: A torch tensor of the transformed logits
         """
         return logits
-
-    @abstractmethod
-    def _compute_metrics(
-          self, predicted: torch.Tensor, labels: torch.Tensor, masks: Optional[torch.BoolTensor] = None
-    ) -> Dict[str, Union[int, float]]:
-        """
-        Computes metrics, such as accuracy or RMSE between predicted (from the model used) and labels (from the data).
-
-        :param predicted: The predicted label/value for each sample
-        :param labels: The actual label for each sample
-        :return: A dictionary of metrics specific to the type of problem, e.g. accuracy for class predictions, or
-                 RMSE for regression tasks.
-        """
-        raise NotImplementedError
 
     def _training_iteration(
           self, x: torch.Tensor, y: torch.Tensor, step=1, context: Optional[Callable] = None,
@@ -257,3 +242,17 @@ class Solver(ABC):
                 'prediction': prediction,
                 **metrics
             }
+
+    @abstractmethod
+    def _compute_metrics(
+          self, predicted: torch.Tensor, labels: torch.Tensor, masks: Optional[torch.BoolTensor] = None
+    ) -> Dict[str, Union[int, float]]:
+        """
+        Computes metrics, such as accuracy or RMSE between predicted (from the model used) and labels (from the data).
+
+        :param predicted: The predicted label/value for each sample
+        :param labels: The actual label for each sample
+        :return: A dictionary of metrics specific to the type of problem, e.g. accuracy for class predictions, or
+                 RMSE for regression tasks.
+        """
+        raise NotImplementedError

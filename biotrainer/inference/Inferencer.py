@@ -15,27 +15,27 @@ from ..datasets import get_dataset, get_collate_function
 class Inferencer:
 
     def __init__(
-            self,
+          self,
 
-            # These are from the original input config
-            protocol: str,
-            n_classes: int,
-            n_features: int,
-            model_choice: str,
-            embedder_name: str,
+          # These are from the original input config
+          protocol: str,
+          n_classes: int,
+          n_features: int,
+          model_choice: str,
+          embedder_name: str,
 
-            # These are from post-training
-            log_dir: str,
-            class_int_to_string: Optional[Dict[int, str]],
+          # These are from post-training
+          log_dir: str,
+          class_int_to_string: Optional[Dict[int, str]],
 
-            # Fillers
-            learning_rate: float = 1e-3,
-            loss_choice: str = "cross_entropy_loss",
-            optimizer_choice: str = "adam", batch_size: int = 128,
-            device: Union[None, str, torch.device] = None, embeddings_file_path: str = None,
+          # Fillers
+          learning_rate: float = 1e-3,
+          loss_choice: str = "cross_entropy_loss",
+          optimizer_choice: str = "adam", batch_size: int = 128,
+          device: Union[None, str, torch.device] = None, embeddings_file_path: str = None,
 
-            # Everything else
-            **kwargs
+          # Everything else
+          **kwargs
     ):
 
         model = get_model(
@@ -66,7 +66,8 @@ class Inferencer:
 
     def from_embeddings(self, embeddings: Iterable) -> List[Union[str, int]]:
         dataset = self.dataset({
-            idx: (torch.tensor(embedding), torch.zeros(torch.tensor(embedding).shape[0])) for idx, embedding in enumerate(embeddings)
+            idx: (torch.tensor(embedding), torch.zeros(torch.tensor(embedding).shape[0]))
+            for idx, embedding in enumerate(embeddings)
         })
 
         if self.protocol == 'residue_to_class':
