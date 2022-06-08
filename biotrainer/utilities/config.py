@@ -88,8 +88,12 @@ def validate_file(file_path: str):
         raise ConfigurationException(f"The configuration file at '{file_path}' does not exist") from e
 
 
-def verify_config(config: dict):
+def verify_config(config: dict, protocols: set):
     protocol = config["protocol"]
+
+    if protocol not in protocols:
+        raise ConfigurationException(f"Unknown protocol: {protocol}")
+
     model = config["model_choice"]
 
     if protocol == 'residue_to_class':
