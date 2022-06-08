@@ -17,7 +17,7 @@ def get_attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict
     result = dict()
 
     for sequence in sequences:
-        result[sequence.id] = {key: value for key, value in re.findall(r"([A-Z_]+)=([A-z0-9]+)", sequence.description)}
+        result[sequence.id] = {key: value for key, value in re.findall(r"([A-Z_]+)=(-?[A-z0-9]+[.0-9]*)", sequence.description)}
 
     return result
 
