@@ -33,7 +33,7 @@ def parse_config_file_and_execute_run(config_file_path: str):
 
     # read configuration and execute
     config = read_config_file(config_file_path)
-    verify_config(config)
+    verify_config(config, __PROTOCOLS)
 
     input_file_path = Path(os.path.dirname(os.path.abspath(config_file_path)))
     if "labels_file" in config.keys():
