@@ -13,6 +13,7 @@ _PROTOCOL_TO_REDUCED_EMBEDDINGS = {
     "residue_to_class": False,
     "residues_to_class": False,
     "sequence_to_class": True,
+    "sequence_to_value": True
 }
 
 logger = logging.getLogger(__name__)

@@ -29,6 +29,9 @@ _METRICS_BY_PROTOCOL = {
     "sequence_to_class": {
         "accuracy": lambda y, y_hat: metrics.accuracy_score(y, y_hat, normalize=True)
     },
+    "sequence_to_value": {
+        "accuracy": lambda y, y_hat: 0  # TODO: Placeholder
+    },
 }
 
 

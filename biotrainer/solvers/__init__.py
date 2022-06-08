@@ -1,11 +1,13 @@
 from typing import List
 from .ResidueClassificationSolver import ResidueClassificationSolver
 from .SequenceClassificationSolver import SequenceClassificationSolver
+from .SequenceRegressionSolver import SequenceRegressionSolver
 from .MetricsCalculator import MetricsCalculator
 
 __SOLVERS = {
     'residue_to_class': ResidueClassificationSolver,
-    'sequence_to_class': SequenceClassificationSolver
+    'sequence_to_class': SequenceClassificationSolver,
+    'sequence_to_value': SequenceRegressionSolver
 }
 
 

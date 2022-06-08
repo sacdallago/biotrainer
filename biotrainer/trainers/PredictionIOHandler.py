@@ -88,6 +88,9 @@ class PredictionIOHandler:
                 self._handle_class_labels_on_sequence_level()
                 self._log_class_labels(output_vars)
             # b) Value output
+            elif 'value' in self._protocol:
+                self._id2target = {seq_id: float(seq_val) for seq_id, seq_val in self._id2target.items()}
+                output_vars["n_classes"] = 1
             else:
                 raise NotImplementedError
 
