@@ -80,5 +80,8 @@ class Inferencer:
             results['predictions'] = ["".join(
                 [self.class_int_to_string[p] for p in prediction]
             ) for prediction in results['predictions']]
+        # If sequence-to-class problem, map the integers back to the class labels (whatever length)
+        elif self.protocol == "sequence_to_class":
+            results['predictions'] = [self.class_int_to_string[p] for p in results['predictions']]
 
         return results['predictions']
