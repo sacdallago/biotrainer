@@ -4,7 +4,7 @@ import logging
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict, Any
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -38,7 +38,7 @@ def training_and_evaluation_routine(
         device: Union[None, str, torch.device] = None,
         # Everything else
         **kwargs
-):
+) -> Dict[str, Any]:
     output_vars = deepcopy(locals())
     output_vars.pop('kwargs')
 
@@ -219,3 +219,5 @@ def training_and_evaluation_routine(
         test_results['predictions'] = [target_manager.class_int2str[p] for p in test_results['predictions']]
 
     output_vars['test_iterations_results'] = test_results
+
+    return output_vars
