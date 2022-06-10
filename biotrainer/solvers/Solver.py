@@ -3,11 +3,13 @@ import torch
 import logging
 
 from abc import ABC, abstractmethod
-from typing import Callable, Optional, Union, Dict
+from typing import Callable, Optional, Union, Dict, List, Any
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from itertools import chain
 from contextlib import nullcontext as _nullcontext
+
+from torch.utils.data import DataLoader
 
 from ..utilities import get_device
 
@@ -45,7 +47,7 @@ class Solver(ABC):
     def __del__(self):
         self._tempdir.cleanup()
 
-    def train(self, training_dataloader, validation_dataloader):
+    def train(self, training_dataloader: DataLoader, validation_dataloader: DataLoader) -> Dict[str, Any]:
         # Get things ready
         self.network = self.network.train()
         self._min_loss = math.inf
@@ -104,7 +106,7 @@ class Solver(ABC):
 
         return epoch_iterations
 
-    def inference(self, dataloader):
+    def inference(self, dataloader: DataLoader) -> Dict[str, Union[List[Any], Dict[str, Union[float, int]]]]:
         self.network = self.network.eval()
 
         predict_iterations = list()
@@ -130,7 +132,6 @@ class Solver(ABC):
 
         self.network.load_state_dict(state['state_dict'])
         logger.info(f"Loaded model from epoch: {state['epoch']}")
-        return self.network, state['epoch']
 
     def _save_checkpoint(self, epoch: int):
         state = {
@@ -162,26 +163,26 @@ class Solver(ABC):
                 return False
 
     @staticmethod
-    def _aggregate_iteration_results(iteration_results):
+    def _aggregate_iteration_results(iteration_results) -> Dict[str, Any]:
         metrics = dict()
         iteration_metrics = [metric for metric in iteration_results[0].keys() if metric != "prediction"]
         for metric in iteration_metrics:
             metrics[metric] = sum([i[metric] for i in iteration_results]) / len(iteration_results)
         return metrics
 
-    def _transform_logits(self, logits: torch.Tensor) -> torch.Tensor:
+    def _transform_network_output(self, network_output: torch.Tensor) -> torch.Tensor:
         """
-        Transform logit shape if necessary.
+        Transform network_output shape if necessary.
 
-        :param logits: The logits from the ML model employed
-        :return: A torch tensor of the transformed logits
+        :param network_output: The network_output from the ML model employed
+        :return: A torch tensor of the transformed network_output
         """
 
-        return logits
+        return network_output
 
     def _logits_to_predictions(self, logits: torch.Tensor) -> torch.Tensor:
         """
-        An optionable transform function which goes from logits to predictions (e.g. classes or continues values)
+        An optionable transform function which goes from logits to predictions (e.g. classes)
 
         :param logits: The logits from the ML model employed
         :param masks: An optionable mask when dealing with variable sized input
@@ -212,7 +213,7 @@ class Solver(ABC):
             prediction = self.network(x)
 
             # Apply logit transformations before computing loss
-            prediction = self._transform_logits(prediction)
+            prediction = self._transform_network_output(prediction)
             loss = self.loss_function(prediction, y)
 
             # Discretize predictions if necessary

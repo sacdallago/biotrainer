@@ -18,5 +18,5 @@ class SequenceClassificationSolver(Solver):
     ) -> Dict[str, Union[int, float]]:
 
         return {
-            'accuracy': (predicted == labels).float().sum() / len(labels)
+            'accuracy': ((predicted == labels).float().sum() / len(labels)).item()
         }
