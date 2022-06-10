@@ -13,6 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 class PredictionIOHandler:
+    _id2target: Dict[str, Any] = dict()
+    _id2attributes: Dict[str, Any] = dict()
+    _class_str2int: Dict[str, int] = dict()
+    _class_int2str: Dict[int, str] = dict()
+    _class_labels = set()
+
     def __init__(self,
                  # Necessary
                  protocol: str, sequence_file: str,
@@ -22,11 +28,6 @@ class PredictionIOHandler:
         self._protocol = protocol
         self._sequence_file = sequence_file
         self._labels_file = labels_file
-        self._id2target: Dict[str, Any] = dict()
-        self._id2attributes: Dict[str, Any] = dict()
-        self._class_str2int: Dict[str, int] = dict()
-        self._class_int2str: Dict[int, str] = dict()
-        self._class_labels = set()
 
     def _handle_class_labels_on_residue_level(self):
         # Infer classes from data
