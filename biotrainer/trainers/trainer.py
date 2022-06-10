@@ -4,7 +4,7 @@ import logging
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Union, Dict, Any
+from typing import Union, Dict, Any, Optional
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -25,11 +25,11 @@ logger = logging.getLogger(__name__)
 
 def training_and_evaluation_routine(
         # Needed
-        sequence_file: str, labels_file: str,
+        sequence_file: str,
         # Defined previously
         protocol: str, output_dir: str,
         # Optional with defaults
-        model_choice: str = "CNN", num_epochs: int = 200,
+        labels_file: Optional[str] = None, model_choice: str = "CNN", num_epochs: int = 200,
         use_class_weights: bool = False, learning_rate: float = 1e-3,
         batch_size: int = 128, embedder_name: str = "prottrans_t5_xl_u50",
         embeddings_file: str = None,
