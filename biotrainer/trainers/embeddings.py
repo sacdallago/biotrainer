@@ -19,7 +19,7 @@ _REQUIRES_REDUCED_EMBEDDINGS = {
 logger = logging.getLogger(__name__)
 
 
-def load_embeddings(embedder_name: str, sequence_file: str, output_dir: str, protocol: str) -> str:
+def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:
     use_reduced_embeddings = _REQUIRES_REDUCED_EMBEDDINGS[protocol]
 
     try:
@@ -61,24 +61,21 @@ def load_embeddings(embedder_name: str, sequence_file: str, output_dir: str, pro
                                   f"before, try to delete the output directory and restart.") from e
     return embeddings_file_path
 
-#
-# pass
-#
-# ELSE
-# # load pre-computed embeddings in .h5 file format computed via bio_embeddings
-# logger.info(f"Loading embeddings from: {self._embeddings_file_path}")
-# start = time.time()
-#
-# # https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
-# embeddings_file = h5py.File(self._embeddings_file_path, 'r', rdcc_nbytes=1024 ** 2 * 4000, rdcc_nslots=1e7)
-# id2emb = {embeddings_file[idx].attrs["original_id"]: embedding for (idx, embedding) in
-#           embeddings_file.items()}
-# embeddings_length = list(id2emb.values())[0].shape[-1]  # Last position in shape is always embedding length
-# output_vars['n_features'] = embeddings_length
-#
-# # Logging
-# logger.info(f"Read {len(id2emb)} entries.")
-# logger.info(f"Time elapsed for reading embeddings: {(time.time() - start):.1f}[s]")
-# logger.info(f"Number of features: {embeddings_length}")
-#
-# return id2emb
+
+def load_embeddings(embeddings_file_path: str) -> Dict[str, Any]:
+    # load pre-computed embeddings in .h5 file format computed via bio_embeddings
+    logger.info(f"Loading embeddings from: {embeddings_file_path}")
+    start = time.time()
+
+    # https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
+    embeddings_file = h5py.File(embeddings_file_path, 'r', rdcc_nbytes=1024 ** 2 * 4000, rdcc_nslots=1e7)
+
+    # TODO: document that h5 MUST contain 'original_id' --> Create specification!
+    id2emb = {embeddings_file[idx].attrs["original_id"]: embedding for (idx, embedding) in
+              embeddings_file.items()}
+
+    # Logging
+    logger.info(f"Read {len(id2emb)} entries.")
+    logger.info(f"Time elapsed for reading embeddings: {(time.time() - start):.1f}[s]")
+
+    return id2emb

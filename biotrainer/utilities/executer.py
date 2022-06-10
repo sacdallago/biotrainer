@@ -5,7 +5,7 @@ from pathlib import Path
 from copy import deepcopy
 from typing import Dict, Any
 
-from ..trainers import get_trainer
+from ..trainers import training_and_evaluation_routine
 from .config import validate_file, read_config_file, verify_config, write_config_file
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def execute(output_dir: Path = "output", protocol: str = "residue_to_class", **k
         logger.info(f"Creating output dir: {output_dir}")
         output_dir.mkdir(parents=True)
 
-    return get_trainer(**{**kwargs, **output_vars})
+    return training_and_evaluation_routine(**{**kwargs, **output_vars})
 
 
 def parse_config_file_and_execute_run(config_file_path: str):
