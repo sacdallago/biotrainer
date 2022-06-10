@@ -79,8 +79,8 @@ class TargetManager:
                 self.class_int2str = {idx: letter for idx, letter in enumerate(self.class_labels)}
 
                 # Convert label values to lists of numbers based on the maps
-                id2target = {identifier: np.array([self.class_str2int[label] for label in labels])
-                             for identifier, labels in self.id2target.items()}  # classes idxs (zero-based)
+                self.id2target = {identifier: np.array(self.class_str2int[label])
+                                  for identifier, label in self.id2target.items()}  # classes idxs (zero-based)
 
             # b) Value output
             else:
