@@ -59,13 +59,13 @@ def training_and_evaluation_routine(
 
     # Generate embeddings if necessary, otherwise use existing embeddings and overwrite embedder_name
     if not embeddings_file or not Path(embeddings_file).is_file():
-        embeddings_file_path = compute_embeddings(
+        embeddings_file = compute_embeddings(
             embedder_name=embedder_name, sequence_file=sequence_file,
             protocol=protocol, output_dir=output_dir
         )
 
         # Add to outconfig
-        output_vars['embeddings_file'] = embeddings_file_path
+        output_vars['embeddings_file'] = embeddings_file
     else:
         logger.info(f'Embeddings file was found at {embeddings_file}. Embeddings have not been computed.')
         embedder_name = f"precomputed_{Path(embeddings_file).stem}_{embedder_name}"
