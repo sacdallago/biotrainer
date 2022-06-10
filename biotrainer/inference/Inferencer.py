@@ -69,16 +69,16 @@ class Inferencer:
             for idx, embedding in enumerate(embeddings)
         })
 
+        dataloader = DataLoader(
+            dataset=dataset, batch_size=self.batch_size, shuffle=False, drop_last=False,
+            collate_fn=self.collate_function
+        )
+
+        results = self.solver.inference(dataloader)
+
         if self.protocol == 'residue_to_class':
-            dataloader = DataLoader(
-                dataset=dataset, batch_size=self.batch_size, shuffle=False, drop_last=False,
-                collate_fn=self.collate_function
-            )
-
-            results = self.solver.inference(dataloader)
-
             results['predictions'] = ["".join(
                 [self.class_int_to_string[p] for p in prediction]
             ) for prediction in results['predictions']]
 
-            return results['predictions']
+        return results['predictions']
