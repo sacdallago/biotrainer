@@ -1,14 +1,17 @@
 import math
 import torch
 import logging
-from pathlib import Path
-from itertools import chain
-from ..utilities import get_device
+
 from abc import ABC, abstractmethod
+from typing import Callable, Optional, Union, Dict, List, Any
+from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Optional, Union
-from .MetricsCalculator import MetricsCalculator
+from itertools import chain
 from contextlib import nullcontext as _nullcontext
+
+from torch.utils.data import DataLoader
+
+from ..utilities import get_device
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +21,8 @@ class Solver(ABC):
     def __init__(self,
                  # Necessary
                  network, optimizer, loss_function,
-                 log_writer, metrics_calculator: MetricsCalculator,
                  # Optional with defaults
-                 experiment_dir: str = "",
+                 log_writer: Optional = None, experiment_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
                  device: Union[None, str, torch.device] = None):
 
@@ -28,7 +30,6 @@ class Solver(ABC):
         self.optimizer = optimizer
         self.loss_function = loss_function
         self.log_writer = log_writer
-        self.metrics_calculator = metrics_calculator
         self.number_of_epochs = number_of_epochs
         self.patience = patience
         self.epsilon = epsilon
@@ -46,56 +47,7 @@ class Solver(ABC):
     def __del__(self):
         self._tempdir.cleanup()
 
-    def load_checkpoint(self, checkpoint_path: str = None):
-        if checkpoint_path:
-            state = torch.load(checkpoint_path)
-        elif self.experiment_dir:
-            state = torch.load(str(Path(self.experiment_dir) / "checkpoint.pt"))
-        else:
-            state = torch.load(str(Path(self._tempdir.name) / "checkpoint.pt"))
-
-        self.network.load_state_dict(state['state_dict'])
-        logger.info(f"Loaded model from epoch: {state['epoch']}")
-        return self.network, state['epoch']
-
-    def save_checkpoint(self, epoch: int):
-        state = {
-            'epoch': epoch,
-            'state_dict': self.network.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
-        }
-
-        if self.experiment_dir:
-            torch.save(state, str(Path(self.experiment_dir) / "checkpoint.pt"))
-        else:
-            torch.save(state, str(Path(self._tempdir.name) / "checkpoint.pt"))
-
-    def early_stop(self, current_loss: float, epoch: int):
-        if current_loss < (self._min_loss - self.epsilon):
-            self._min_loss = current_loss
-            self._stop_count = self.patience
-
-            # Save best model (overwrite if necessary)
-            self.save_checkpoint(epoch)
-            return False
-        else:
-            if self._stop_count == 0:
-                # Reload best model
-                self.load_checkpoint()
-                return True
-            else:
-                self._stop_count = self._stop_count - 1
-                return False
-
-    @staticmethod
-    def _aggregate_iteration_results(iteration_results):
-        metrics = dict()
-        iteration_metrics = [metric for metric in iteration_results[0].keys() if metric != "prediction"]
-        for metric in iteration_metrics:
-            metrics[metric] = sum([i[metric] for i in iteration_results]) / len(iteration_results)
-        return metrics
-
-    def train(self, training_dataloader, validation_dataloader):
+    def train(self, training_dataloader: DataLoader, validation_dataloader: DataLoader) -> Dict[str, Any]:
         # Get things ready
         self.network = self.network.train()
         self._min_loss = math.inf
@@ -108,16 +60,19 @@ class Solver(ABC):
             # If we would train before validating, the validation would benefit from the knowledge gained during
             # training, thus most likely val_loss < train_loss would be true for most epochs (and a bit confusing)
             validation_iterations = list()
-            for i, (_, X, y) in enumerate(validation_dataloader):
-                iteration_result = self.training_iteration(X, y, step=len(epoch_iterations) * len(
-                    validation_dataloader) + len(validation_iterations) + 1, context=torch.no_grad)
+            for i, (_, X, y, lengths, masks) in enumerate(validation_dataloader):
+                iteration_result = self._training_iteration(
+                    X, y, step=len(epoch_iterations) * len(validation_dataloader) + len(validation_iterations) + 1,
+                    context=torch.no_grad, masks=masks, lengths=lengths
+                )
                 validation_iterations.append(iteration_result)
 
             train_iterations = list()
-            for i, (_, X, y) in enumerate(training_dataloader):
-                iteration_result = self.training_iteration(X, y,
-                                                           step=len(epoch_iterations) * len(training_dataloader) + len(
-                                                               train_iterations) + 1)
+            for i, (_, X, y, lengths, masks) in enumerate(training_dataloader):
+                iteration_result = self._training_iteration(
+                    X, y, step=len(epoch_iterations) * len(training_dataloader) + len(train_iterations) + 1,
+                    masks=masks, lengths=lengths
+                )
                 train_iterations.append(iteration_result)
 
             epoch_metrics = {
@@ -145,19 +100,21 @@ class Solver(ABC):
                     'validation_loss': epoch_metrics['validation']['loss'],
                 }, epoch)
 
-            if self.early_stop(current_loss=epoch_metrics['validation']['loss'], epoch=epoch):
+            if self._early_stop(current_loss=epoch_metrics['validation']['loss'], epoch=epoch):
                 logger.info(f"Early stopping triggered!")
                 return epoch_iterations
 
         return epoch_iterations
 
-    def inference(self, dataloader):
+    def inference(self, dataloader: DataLoader) -> Dict[str, Union[List[Any], Dict[str, Union[float, int]]]]:
         self.network = self.network.eval()
 
         predict_iterations = list()
 
-        for i, (_, X, y) in enumerate(dataloader):
-            iteration_result = self.training_iteration(X, y, context=torch.no_grad)
+        for i, (_, X, y, lengths, masks) in enumerate(dataloader):
+            iteration_result = self._training_iteration(
+                X, y, context=torch.no_grad, masks=masks, lengths=lengths
+            )
             predict_iterations.append(iteration_result)
 
         return {
@@ -165,41 +122,103 @@ class Solver(ABC):
             'predictions': list(chain(*[p['prediction'] for p in predict_iterations]))
         }
 
-    @abstractmethod
-    def _transform_prediction_output(self, prediction):
-        """
-        Transform prediction shape if necessary and return final prediction values (float for value, int for class)
-        Parameters
-        ----------
-        prediction: Prediction which must be transformed
-        - R2C: (Batch_size x protein_Length x Number_classes) -> (B x N x L)
-        - S2C: (B x N) -> (B x N)
-        Returns
-        -------
-        prediction: Permutated prediction for loss
-        y_hat: Predicted classes or values
-        """
-        raise NotImplementedError
+    def load_checkpoint(self, checkpoint_path: str = None):
+        if checkpoint_path:
+            state = torch.load(checkpoint_path)
+        elif self.experiment_dir:
+            state = torch.load(str(Path(self.experiment_dir) / "checkpoint.pt"))
+        else:
+            state = torch.load(str(Path(self._tempdir.name) / "checkpoint.pt"))
 
-    def training_iteration(self, x, y, step=1, context: Optional[Callable] = None):
+        self.network.load_state_dict(state['state_dict'])
+        logger.info(f"Loaded model from epoch: {state['epoch']}")
+
+    def _save_checkpoint(self, epoch: int):
+        state = {
+            'epoch': epoch,
+            'state_dict': self.network.state_dict(),
+            'optimizer': self.optimizer.state_dict(),
+        }
+
+        if self.experiment_dir:
+            torch.save(state, str(Path(self.experiment_dir) / "checkpoint.pt"))
+        else:
+            torch.save(state, str(Path(self._tempdir.name) / "checkpoint.pt"))
+
+    def _early_stop(self, current_loss: float, epoch: int) -> bool:
+        if current_loss < (self._min_loss - self.epsilon):
+            self._min_loss = current_loss
+            self._stop_count = self.patience
+
+            # Save best model (overwrite if necessary)
+            self._save_checkpoint(epoch)
+            return False
+        else:
+            if self._stop_count == 0:
+                # Reload best model
+                self.load_checkpoint()
+                return True
+            else:
+                self._stop_count = self._stop_count - 1
+                return False
+
+    @staticmethod
+    def _aggregate_iteration_results(iteration_results) -> Dict[str, Any]:
+        metrics = dict()
+        iteration_metrics = [metric for metric in iteration_results[0].keys() if metric != "prediction"]
+        for metric in iteration_metrics:
+            metrics[metric] = sum([i[metric] for i in iteration_results]) / len(iteration_results)
+        return metrics
+
+    def _transform_network_output(self, network_output: torch.Tensor) -> torch.Tensor:
+        """
+        Transform network_output shape if necessary.
+
+        :param network_output: The network_output from the ML model employed
+        :return: A torch tensor of the transformed network_output
+        """
+
+        return network_output
+
+    def _logits_to_predictions(self, logits: torch.Tensor) -> torch.Tensor:
+        """
+        An optionable transform function which goes from logits to predictions (e.g. classes)
+
+        :param logits: The logits from the ML model employed
+        :param masks: An optionable mask when dealing with variable sized input
+        :return: A torch tensor of the transformed logits
+        """
+        return logits
+
+    def _training_iteration(
+          self, x: torch.Tensor, y: torch.Tensor, step=1, context: Optional[Callable] = None,
+          masks: Optional[torch.BoolTensor] = None, lengths: Optional[torch.LongTensor] = None
+    ) -> Dict[str, Union[float, list, Dict[str, Union[float, int]]]]:
         do_loss_propagation = False
 
         if not context:
             context = _nullcontext
             do_loss_propagation = True
 
+        # Move everything on device
+        x = x.to(self.device)
+        y = y.to(self.device)
+        if masks is not None:
+            masks = masks.to(self.device)
+
         with context():
             if do_loss_propagation:
                 self.optimizer.zero_grad()
 
-            prediction = self.network(x.to(self.device))
-            prediction, y_hat = self._transform_prediction_output(prediction)
+            prediction = self.network(x)
 
-            # Compute metrics
-            loss = self.loss_function(prediction, y.to(self.device))
-            metrics = self.metrics_calculator.calculate_metrics(y, y_hat)
-            metrics = {'loss': loss.item(),
-                       **metrics}
+            # Apply logit transformations before computing loss
+            prediction = self._transform_network_output(prediction)
+            loss = self.loss_function(prediction, y)
+
+            # Discretize predictions if necessary
+            prediction = self._logits_to_predictions(prediction)
+            metrics = self._compute_metrics(predicted=prediction, labels=y, masks=masks)
 
             if do_loss_propagation:
                 # Do a forward pass & update weights
@@ -210,5 +229,32 @@ class Solver(ABC):
                 if self.log_writer:
                     self.log_writer.add_scalars("Step/train", metrics, step)
 
-            metrics.update({'prediction': y_hat.tolist()})
-            return metrics
+            # If lengths is defined, we need to shorten the predictions to the length
+            if lengths is not None:
+                return_pred = list()
+                for pred_x, length_x in zip(prediction.tolist(), lengths.tolist()):
+                    return_pred.append(pred_x[:length_x])
+
+                prediction = return_pred
+            else:
+                prediction = prediction.tolist()
+
+            return {
+                'loss': loss.item(),
+                'prediction': prediction,
+                **metrics
+            }
+
+    @abstractmethod
+    def _compute_metrics(
+          self, predicted: torch.Tensor, labels: torch.Tensor, masks: Optional[torch.BoolTensor] = None
+    ) -> Dict[str, Union[int, float]]:
+        """
+        Computes metrics, such as accuracy or RMSE between predicted (from the model used) and labels (from the data).
+
+        :param predicted: The predicted label/value for each sample
+        :param labels: The actual label for each sample
+        :return: A dictionary of metrics specific to the type of problem, e.g. accuracy for class predictions, or
+                 RMSE for regression tasks.
+        """
+        raise NotImplementedError

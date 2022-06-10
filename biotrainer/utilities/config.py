@@ -57,7 +57,7 @@ def read_config_file(config_path: Union[str, Path], preserve_order: bool = True)
     with open(config_path, "r") as fp:
         try:
             if preserve_order:
-                return yaml.load(fp, Loader=yaml.RoundTripLoader)
+                return yaml.load(fp, Loader=yaml.Loader)
             else:
                 return yaml.safe_load(fp)
         except YAMLError as e:
