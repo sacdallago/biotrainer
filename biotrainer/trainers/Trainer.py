@@ -80,7 +80,7 @@ class Trainer:
             logger.info(f"Creating log-directory: {log_dir}")
             log_dir.mkdir(parents=True)
         self._output_vars['log_dir'] = str(log_dir)
-        self._output_vars['output_dir'] = self._output_dir
+        self._output_vars['output_dir'] = str(self._output_dir)
 
         # Get device
         self._device = get_device(self._device)
@@ -181,4 +181,10 @@ class Trainer:
 
         logger.info('Running final evaluation on the best checkpoint.')
         test_results = self._solver.inference(self._test_loader)
+
+        if self._protocol == 'residue_to_class':
+            test_results['predictions'] = ["".join(
+                [self._output_vars['class_int_to_string'][p] for p in prediction]
+            ) for prediction in test_results['predictions']]
+
         self._output_vars['test_iterations_results'] = test_results
