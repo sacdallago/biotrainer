@@ -1,9 +1,10 @@
 from .collate_functions import pad_sequence_embeddings, pad_residue_embeddings
-from .EmbeddingsDataset import ResidueEmbeddingsDataset, SequenceEmbeddingsDataset, SequenceEmbeddingsRegressionDataset
+from .EmbeddingsDataset import ResidueEmbeddingsClassificationDataset, SequenceEmbeddingsClassificationDataset, \
+    SequenceEmbeddingsRegressionDataset
 
 __DATASETS = {
-    'residue_to_class': ResidueEmbeddingsDataset,
-    'sequence_to_class': SequenceEmbeddingsDataset,
+    'residue_to_class': ResidueEmbeddingsClassificationDataset,
+    'sequence_to_class': SequenceEmbeddingsClassificationDataset,
     'sequence_to_value': SequenceEmbeddingsRegressionDataset
 }
 
