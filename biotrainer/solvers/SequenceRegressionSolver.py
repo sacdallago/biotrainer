@@ -14,6 +14,9 @@ class SequenceRegressionSolver(Solver):
           self, predicted: torch.Tensor, labels: torch.Tensor, masks: Optional[torch.BoolTensor] = None
     ) -> Dict[str, Union[int, float]]:
 
+        mse = torch.square((predicted - labels).float()).sum() / len(labels)
+
         return {
-            'mse': torch.square(((predicted - labels).float()).sum() / len(labels)).item(),
+            'mse': mse,
+            'rmse': torch.sqrt(mse)
         }
