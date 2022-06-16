@@ -83,6 +83,9 @@ class TargetManager:
                                   for identifier, label in self.id2target.items()}  # classes idxs (zero-based)
 
             # b) Value output
+            elif 'value' in protocol:
+                self.id2target = {seq_id: float(seq_val) for seq_id, seq_val in self.id2target.items()}
+                self.number_of_outputs = 1
             else:
                 raise NotImplementedError
 

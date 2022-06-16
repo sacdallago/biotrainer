@@ -6,11 +6,16 @@ import tempfile
 from biotrainer.utilities.config import ConfigurationException
 from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
 
-protocol_to_input_files = {
+protocol_to_input = {
     "residue_to_class": {"sequence_file": "r2c/sequences.fasta",
-                         "labels_file": "r2c/labels.fasta"},
+                         "labels_file": "r2c/labels.fasta",
+                         "loss_choice": "cross_entropy_loss"},
     "sequence_to_class": {"sequence_file": "s2c/sequences.fasta",
-                          "labels_file": ""}
+                          "labels_file": "",
+                          "loss_choice": "cross_entropy_loss"},
+    "sequence_to_value": {"sequence_file": "s2v/sequences.fasta",
+                          "labels_file": "",
+                          "loss_choice": "mean_squared_error"}
 }
 
 
@@ -25,8 +30,9 @@ def setup_config(protocol: str, model_choice: str, embedder_name: str) -> str:
     config_file_path = create_temporary_copy(config_file_path)
     with open(config_file_path, "r") as config_file:
         config = yaml.safe_load(config_file)
-        config["sequence_file"] = protocol_to_input_files[protocol]["sequence_file"]
-        config["labels_file"] = protocol_to_input_files[protocol]["labels_file"]
+        config["sequence_file"] = protocol_to_input[protocol]["sequence_file"]
+        config["labels_file"] = protocol_to_input[protocol]["labels_file"]
+        config["loss_choice"] = protocol_to_input[protocol]["loss_choice"]
         config["protocol"] = protocol
         config["model_choice"] = model_choice
         config["embedder_name"] = embedder_name
@@ -52,4 +58,4 @@ def test_config(protocol: str, model: str, embedder_name: str, should_fail: bool
         shutil.rmtree("output/")
     except ConfigurationException:
         assert should_fail, "A ConfigurationException was thrown although it shouldn't have."
-    os.remove(temp_config_file_path)
+    os.remove(os.path.abspath(temp_config_file_path))
