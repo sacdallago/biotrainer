@@ -19,11 +19,11 @@ class __EmbeddingsDataset(torch.utils.data.Dataset):
         return seq_id, x, y
 
 
-class ResidueEmbeddingsDataset(__EmbeddingsDataset):
+class ResidueEmbeddingsClassificationDataset(__EmbeddingsDataset):
     pass
 
 
-class SequenceEmbeddingsDataset(__EmbeddingsDataset):
+class SequenceEmbeddingsClassificationDataset(__EmbeddingsDataset):
     pass
 
 
