@@ -16,9 +16,9 @@ models = get_all_available_models()
 embedder_names = ["one_hot_encoding", "word2vec"]
 
 all_params = {
-    "test_config": {
-        "params": ["protocol", "model", "embedder_name", "should_fail"],
-        "values": []
+    'test_config': {
+        'params': ["protocol", "model", "embedder_name", "should_fail"],
+        'values': []
     },
 }
 

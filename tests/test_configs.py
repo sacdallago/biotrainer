@@ -7,15 +7,15 @@ from biotrainer.utilities.config import ConfigurationException
 from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
 
 protocol_to_input = {
-    "residue_to_class": {"sequence_file": "r2c/sequences.fasta",
-                         "labels_file": "r2c/labels.fasta",
-                         "loss_choice": "cross_entropy_loss"},
-    "sequence_to_class": {"sequence_file": "s2c/sequences.fasta",
-                          "labels_file": "",
-                          "loss_choice": "cross_entropy_loss"},
-    "sequence_to_value": {"sequence_file": "s2v/sequences.fasta",
-                          "labels_file": "",
-                          "loss_choice": "mean_squared_error"}
+    'residue_to_class': {'sequence_file': "r2c/sequences.fasta",
+                         'labels_file': "r2c/labels.fasta",
+                         'loss_choice': "cross_entropy_loss"},
+    'sequence_to_class': {'sequence_file': "s2c/sequences.fasta",
+                          'labels_file': "",
+                          'loss_choice': "cross_entropy_loss"},
+    'sequence_to_value': {'sequence_file': "s2v/sequences.fasta",
+                          'labels_file': "",
+                          'loss_choice': "mean_squared_error"}
 }
 
 
