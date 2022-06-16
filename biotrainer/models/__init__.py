@@ -14,6 +14,10 @@ __MODELS = {
     'sequence_to_class': {
         'FNN': FNN,
         'LogReg': LogReg
+    },
+    'sequence_to_value': {
+        'FNN': FNN,
+        'LogReg': LogReg
     }
 }
 
