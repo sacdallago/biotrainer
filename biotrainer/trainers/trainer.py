@@ -2,23 +2,21 @@ import time
 import torch
 import logging
 
-from copy import deepcopy
 from pathlib import Path
-from typing import Union, Dict, Any, Optional
+from copy import deepcopy
 from torch.utils.data import DataLoader
+from typing import Union, Dict, Any, Optional
 from torch.utils.tensorboard import SummaryWriter
 
-from ..datasets import get_dataset, get_collate_function
-from ..utilities import seed_all, get_device, read_FASTA
-from ..models import get_model, count_parameters
 from ..losses import get_loss
-from ..optimizers import get_optimizer
 from ..solvers import get_solver
+from ..optimizers import get_optimizer
+from ..datasets import get_collate_function
+from ..utilities import seed_all, get_device
+from ..models import get_model, count_parameters
 
 from .TargetManager import TargetManager
 from .embeddings import compute_embeddings, load_embeddings
-from .utilities import get_split_lists, get_class_weights
-
 
 logger = logging.getLogger(__name__)
 
@@ -78,58 +76,17 @@ def training_and_evaluation_routine(
     output_vars['n_features'] = embeddings_length
     logger.info(f"Number of features: {embeddings_length}")
 
-    # Mapping from id to protein sequences
-    protein_sequences = read_FASTA(sequence_file)
-    id2sequence = {protein.id: str(protein.seq) for protein in protein_sequences}
+    # Get datasets
+    target_manager = TargetManager(protocol=protocol, sequence_file=sequence_file, labels_file=labels_file)
+    train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
+    output_vars.update(target_manager.get_output_vars())
 
-    # Load targets
-    target_manager = TargetManager(protocol=protocol, protein_sequences=protein_sequences, labels_file=labels_file)
-
-    # Mapping from id to target(s)
-    id2target = target_manager.id2target
-
-    # This will be 1 for regression tasks, 2 for binary classification tasks, and N>2 for everything else
-    output_vars['n_classes'] = target_manager.number_of_outputs
-
-    # Only relevant for class prediction problems:
-    #  1. Write the mappings from int to string and reverse into the outconfig
-    #  2. Compute class weights to pass as bias to model if option is set
     class_weights = None
-
     if 'class' in protocol:
-        output_vars['class_int_to_string'] = target_manager.class_int2str
-        output_vars['class_string_to_integer'] = target_manager.class_str2int
-
         logger.info(f"Number of classes: {output_vars['n_classes']}")
-
-        # Get loss weights
+        # Compute class weights to pass as bias to model if option is set
         if use_class_weights:
-            class_weights = get_class_weights(
-                id2target, class_str2int=target_manager.class_str2int, class_int2str=target_manager.class_int2str
-            )
-
-    # Get the data splits
-    training_ids, validation_ids, testing_ids = get_split_lists(target_manager.id2attributes)
-
-    # Write to outconfig for prosperity
-    output_vars['training_ids'] = training_ids
-    output_vars['validation_ids'] = validation_ids
-    output_vars['testing_ids'] = testing_ids
-
-    # Sanity check (at least one sample for each set!)
-    if len(training_ids) < 1 or len(validation_ids) < 1 or len(testing_ids) < 1:
-        raise ValueError("Not enough samples for training, validation and testing!")
-
-    # Create the datasets:
-    train_dataset = get_dataset(protocol, {
-        idx: (torch.tensor(id2emb[idx]), torch.tensor(id2target[idx])) for idx in training_ids
-    })
-    val_dataset = get_dataset(protocol, {
-        idx: (torch.tensor(id2emb[idx]), torch.tensor(id2target[idx])) for idx in validation_ids
-    })
-    test_dataset = get_dataset(protocol, {
-        idx: (torch.tensor(id2emb[idx]), torch.tensor(id2target[idx])) for idx in testing_ids
-    })
+            class_weights = target_manager.compute_class_weights()
 
     # Create the dataloaders
     train_loader = DataLoader(
@@ -208,15 +165,7 @@ def training_and_evaluation_routine(
     solver.load_checkpoint()
     test_results = solver.inference(test_loader)
 
-    # If residue-to-class problem, map the integers back to the class labels (single letters)
-    if protocol == 'residue_to_class':
-        test_results['predictions'] = ["".join(
-            [target_manager.class_int2str[p] for p in prediction]
-        ) for prediction in test_results['predictions']]
-
-    # If sequence-to-class problem, map the integers back to the class labels (whatever length)
-    elif protocol == "sequence_to_class":
-        test_results['predictions'] = [target_manager.class_int2str[p] for p in test_results['predictions']]
+    test_results['predictions'] = target_manager.revert_mappings(test_results['predictions'])
 
     output_vars['test_iterations_results'] = test_results
 

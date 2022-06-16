@@ -1,9 +1,6 @@
-import itertools
 import logging
-import torch
 
-from collections import Counter
-from typing import Tuple, List, Dict
+from typing import Tuple, List
 
 
 logger = logging.getLogger(__name__)
@@ -44,23 +41,3 @@ def get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], List[str
 
     return training_ids, validation_ids, testing_ids
 
-
-def get_class_weights(
-        id2target: Dict[str, int], class_str2int: Dict[str, int], class_int2str: Dict[int, str]
-) -> torch.FloatTensor:
-    # concatenate all labels irrespective of protein to count class sizes
-    counter = Counter(list(itertools.chain.from_iterable(
-        [list(labels) for labels in id2target.values()]
-    )))
-    # total number of samples in the set irrespective of classes
-    n_samples = sum([counter[idx] for idx in range(len(class_str2int))])
-    # balanced class weighting (inversely proportional to class size)
-    class_weights = [
-        (n_samples / (len(class_str2int) * counter[idx])) for idx in range(len(class_str2int))
-    ]
-
-    logger.info(f"Total number of sequences/residues: {n_samples}")
-    logger.info("Individual class counts and weights:")
-    for c in counter:
-        logger.info(f"\t{class_int2str[c]} : {counter[c]} ({class_weights[c]:.3f})")
-    return torch.FloatTensor(class_weights)
