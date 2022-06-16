@@ -19,6 +19,7 @@ from .TargetManager import TargetManager
 from .embeddings import compute_embeddings, load_embeddings
 
 logger = logging.getLogger(__name__)
+output_vars = dict()
 
 
 def training_and_evaluation_routine(
@@ -37,6 +38,7 @@ def training_and_evaluation_routine(
         # Everything else
         **kwargs
 ) -> Dict[str, Any]:
+    global output_vars
     output_vars = deepcopy(locals())
     output_vars.pop('kwargs')
 
@@ -145,6 +147,15 @@ def training_and_evaluation_routine(
     )
 
     # Perform training of the model (time intensive -- where things can go wrong)
+    _do_and_log_training(solver, train_loader, val_loader)
+
+    # Finally, run evaluation of test set
+    _do_and_log_evaluation(solver, test_loader, target_manager)
+
+    return output_vars
+
+
+def _do_and_log_training(solver, train_loader, val_loader):
     start_time = time.time()
     _ = solver.train(train_loader, val_loader)
     end_time = time.time()
@@ -157,8 +168,8 @@ def training_and_evaluation_routine(
     output_vars['end_time'] = end_time
     output_vars['elapsed_time'] = end_time - start_time
 
-    # Finally, run evaluation of test set
 
+def _do_and_log_evaluation(solver, test_loader, target_manager):
     # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
     logger.info('Running final evaluation on the best checkpoint.')
 
@@ -168,5 +179,3 @@ def training_and_evaluation_routine(
     test_results['predictions'] = target_manager.revert_mappings(test_results['predictions'])
 
     output_vars['test_iterations_results'] = test_results
-
-    return output_vars
