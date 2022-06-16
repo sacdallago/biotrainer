@@ -17,6 +17,6 @@ class SequenceRegressionSolver(Solver):
         mse = torch.square((predicted - labels).float()).sum() / len(labels)
 
         return {
-            'mse': mse,
-            'rmse': torch.sqrt(mse)
+            'mse': mse.item(),
+            'rmse': torch.sqrt(mse).item()
         }
