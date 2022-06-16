@@ -11,10 +11,10 @@ from ..utilities.config import ConfigurationException
 # Defines if reduced embeddings from bio_embeddings should be used.
 # Reduced means that the per-residue embeddings are reduced to a per-sequence embedding
 _REQUIRES_REDUCED_EMBEDDINGS = {
-    "residue_to_class": False,
-    "residues_to_class": False,
-    "sequence_to_class": True,
-    "sequence_to_value": True
+    'residue_to_class': False,
+    'residues_to_class': False,
+    'sequence_to_class': True,
+    'sequence_to_value': True
 }
 
 logger = logging.getLogger(__name__)
@@ -31,16 +31,16 @@ def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path,
             "Install via `poetry install --extras \"bio-embeddings\"`"
         )
     embeddings_config = {
-        "global": {
-            "sequences_file": sequence_file,
-            "prefix": str(output_dir / protocol / embedder_name),
-            "simple_remapping": True
+        'global': {
+            'sequences_file': sequence_file,
+            'prefix': str(output_dir / protocol / embedder_name),
+            'simple_remapping': True
         },
-        "embeddings": {
-            "type": "embed",
-            "protocol": embedder_name,
-            "reduce": use_reduced_embeddings,
-            "discard_per_amino_acid_embeddings": use_reduced_embeddings
+        'embeddings': {
+            'type': 'embed',
+            'protocol': embedder_name,
+            'reduce': use_reduced_embeddings,
+            'discard_per_amino_acid_embeddings': use_reduced_embeddings
         }
     }
     embeddings_file_name = "reduced_embeddings_file.h5" \
