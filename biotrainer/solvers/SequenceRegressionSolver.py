@@ -11,9 +11,8 @@ class SequenceRegressionSolver(Solver):
         return network_output.flatten().float()
 
     def _compute_metrics(
-          self, predicted: torch.Tensor, labels: torch.Tensor, masks: Optional[torch.BoolTensor] = None
+            self, predicted: torch.Tensor, labels: torch.Tensor
     ) -> Dict[str, Union[int, float]]:
-
         mse = torch.square((predicted - labels).float()).sum() / len(labels)
 
         return {

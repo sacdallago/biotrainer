@@ -47,7 +47,7 @@ class Solver(ABC):
     def __del__(self):
         self._tempdir.cleanup()
 
-    def train(self, training_dataloader: DataLoader, validation_dataloader: DataLoader) -> Dict[str, Any]:
+    def train(self, training_dataloader: DataLoader, validation_dataloader: DataLoader) -> List[Dict[str, Any]]:
         # Get things ready
         self.network = self.network.train()
         self._min_loss = math.inf
@@ -60,18 +60,18 @@ class Solver(ABC):
             # If we would train before validating, the validation would benefit from the knowledge gained during
             # training, thus most likely val_loss < train_loss would be true for most epochs (and a bit confusing)
             validation_iterations = list()
-            for i, (_, X, y, lengths, masks) in enumerate(validation_dataloader):
+            for i, (_, X, y, lengths) in enumerate(validation_dataloader):
                 iteration_result = self._training_iteration(
                     X, y, step=len(epoch_iterations) * len(validation_dataloader) + len(validation_iterations) + 1,
-                    context=torch.no_grad, masks=masks, lengths=lengths
+                    context=torch.no_grad, lengths=lengths
                 )
                 validation_iterations.append(iteration_result)
 
             train_iterations = list()
-            for i, (_, X, y, lengths, masks) in enumerate(training_dataloader):
+            for i, (_, X, y, lengths) in enumerate(training_dataloader):
                 iteration_result = self._training_iteration(
                     X, y, step=len(epoch_iterations) * len(training_dataloader) + len(train_iterations) + 1,
-                    masks=masks, lengths=lengths
+                    lengths=lengths
                 )
                 train_iterations.append(iteration_result)
 
@@ -111,9 +111,9 @@ class Solver(ABC):
 
         predict_iterations = list()
 
-        for i, (_, X, y, lengths, masks) in enumerate(dataloader):
+        for i, (_, X, y, lengths) in enumerate(dataloader):
             iteration_result = self._training_iteration(
-                X, y, context=torch.no_grad, masks=masks, lengths=lengths
+                X, y, context=torch.no_grad, lengths=lengths
             )
             predict_iterations.append(iteration_result)
 
@@ -191,8 +191,8 @@ class Solver(ABC):
         return logits
 
     def _training_iteration(
-          self, x: torch.Tensor, y: torch.Tensor, step=1, context: Optional[Callable] = None,
-          masks: Optional[torch.BoolTensor] = None, lengths: Optional[torch.LongTensor] = None
+            self, x: torch.Tensor, y: torch.Tensor, step=1, context: Optional[Callable] = None,
+            lengths: Optional[torch.LongTensor] = None
     ) -> Dict[str, Union[float, list, Dict[str, Union[float, int]]]]:
         do_loss_propagation = False
 
@@ -203,8 +203,6 @@ class Solver(ABC):
         # Move everything on device
         x = x.to(self.device)
         y = y.to(self.device)
-        if masks is not None:
-            masks = masks.to(self.device)
 
         with context():
             if do_loss_propagation:
@@ -218,7 +216,7 @@ class Solver(ABC):
 
             # Discretize predictions if necessary
             prediction = self._logits_to_predictions(prediction)
-            metrics = self._compute_metrics(predicted=prediction, labels=y, masks=masks)
+            metrics = self._compute_metrics(predicted=prediction, labels=y)
 
             if do_loss_propagation:
                 # Do a forward pass & update weights
@@ -247,7 +245,7 @@ class Solver(ABC):
 
     @abstractmethod
     def _compute_metrics(
-          self, predicted: torch.Tensor, labels: torch.Tensor, masks: Optional[torch.BoolTensor] = None
+            self, predicted: torch.Tensor, labels: torch.Tensor
     ) -> Dict[str, Union[int, float]]:
         """
         Computes metrics, such as accuracy or RMSE between predicted (from the model used) and labels (from the data).
