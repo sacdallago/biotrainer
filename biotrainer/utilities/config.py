@@ -96,12 +96,12 @@ def verify_config(config: dict, protocols: set):
 
     model = config["model_choice"]
 
-    if protocol == 'residue_to_class':
+    if "residue_" in protocol:
         required_files = ["labels_file", "sequence_file"]
         for required_file in required_files:
             if required_file not in config.keys():
                 raise ConfigurationException(f"Required {required_file} not included in {protocol}")
-    elif protocol == 'sequence_to_class':
+    elif "sequence_" in protocol:
         required_files = ["sequence_file"]
         for required_file in required_files:
             if required_file not in config.keys():
@@ -110,6 +110,9 @@ def verify_config(config: dict, protocols: set):
         if "labels_file" in config.keys() and config["labels_file"] != "":
             raise ConfigurationException(
                 f"Labels are expected to be found in the sequence file for protocol: {protocol}")
+        if "mask_file" in config.keys() and config["mask_file"] != "":
+            raise ConfigurationException(
+                f"Mask file cannot be applied for protocol: {protocol}")
 
     if model not in __MODELS.get(protocol):
         raise ConfigurationException("Model " + model + " not available for protocol: " + protocol)
