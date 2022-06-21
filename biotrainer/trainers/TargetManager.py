@@ -31,10 +31,12 @@ class TargetManager:
     validation_ids = None
     testing_ids = None
 
-    def __init__(self, protocol: str, sequence_file: str, labels_file: Optional[str] = None):
+    def __init__(self, protocol: str, sequence_file: str,
+                 labels_file: Optional[str] = None, mask_file: Optional[str] = None):
         self._protocol = protocol
         self._sequence_file = sequence_file
         self._labels_file = labels_file
+        self._mask_file = mask_file
 
     def _calculate_targets(self):
         # Parse FASTA protein sequences
@@ -68,7 +70,16 @@ class TargetManager:
                 # Convert label values to lists of numbers based on the maps
                 self._id2target = {identifier: np.array([self.class_str2int[label] for label in labels])
                                    for identifier, labels in self._id2target.items()}  # classes idxs (zero-based)
-
+                # Apply masks if provided:
+                if self._mask_file:
+                    sequence_masks = read_FASTA(self._mask_file)
+                    mask2fasta = {protein.id: np.array([int(mask_value) for mask_value in str(protein.seq)])
+                                  for protein in sequence_masks}
+                    for identifier, unmasked in self._id2target.items():
+                        mask = mask2fasta[identifier]
+                        target_with_mask = np.array([value if mask[index] == 1 else -100 for
+                                                     index, value in enumerate(unmasked)])
+                        self._id2target[identifier] = target_with_mask
             # b) Value output
             else:
                 raise NotImplementedError
