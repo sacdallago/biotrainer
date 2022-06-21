@@ -1,0 +1,8 @@
+>Seq1 SET=train VALIDATION=False
+DVCDVVDD
+>Seq2 SET=train VALIDATION=True
+DDDDDD
+>Seq3 SET=train VALIDATION=True
+DDDDDDVVEE
+>Seq4 Inhibitor of nuclear factor kappa-B kinase subunit beta OS=Homo sapiens OX=9606 GN=IKBKB PE=1 SV=1 SET=test VALIDATION=False
+DDDDDDFFEEEDDD
