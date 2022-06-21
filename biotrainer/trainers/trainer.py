@@ -28,7 +28,8 @@ def training_and_evaluation_routine(
         # Defined previously
         protocol: str, output_dir: str,
         # Optional with defaults
-        labels_file: Optional[str] = None, model_choice: str = "CNN", num_epochs: int = 200,
+        labels_file: Optional[str] = None, mask_file: Optional[str] = None,
+        model_choice: str = "CNN", num_epochs: int = 200,
         use_class_weights: bool = False, learning_rate: float = 1e-3,
         batch_size: int = 128, embedder_name: str = "prottrans_t5_xl_u50",
         embeddings_file: str = None,
@@ -79,7 +80,8 @@ def training_and_evaluation_routine(
     logger.info(f"Number of features: {embeddings_length}")
 
     # Get datasets
-    target_manager = TargetManager(protocol=protocol, sequence_file=sequence_file, labels_file=labels_file)
+    target_manager = TargetManager(protocol=protocol, sequence_file=sequence_file,
+                                   labels_file=labels_file, mask_file=mask_file)
     train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
     output_vars['training_ids'] = target_manager.training_ids
     output_vars['validation_ids'] = target_manager.validation_ids
