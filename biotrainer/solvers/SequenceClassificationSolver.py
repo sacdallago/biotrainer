@@ -14,7 +14,7 @@ class SequenceClassificationSolver(Solver):
         return predicted_classes
 
     def _compute_metrics(
-          self, predicted: torch.Tensor, labels: torch.Tensor, masks: Optional[torch.BoolTensor] = None
+          self, predicted: torch.Tensor, labels: torch.Tensor
     ) -> Dict[str, Union[int, float]]:
 
         return {
