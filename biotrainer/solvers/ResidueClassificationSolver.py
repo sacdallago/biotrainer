@@ -3,6 +3,7 @@ import torch
 from typing import Dict, Union
 
 from .Solver import Solver
+from ..utilities import MASK_AND_LABELS_PAD_VALUE
 
 
 class ResidueClassificationSolver(Solver):
@@ -27,7 +28,7 @@ class ResidueClassificationSolver(Solver):
             self, predicted: torch.Tensor, labels: torch.Tensor
     ) -> Dict[str, Union[int, float]]:
         # This will flatten everything!
-        masks = labels != -100
+        masks = labels != MASK_AND_LABELS_PAD_VALUE
         masks = masks.to(self.device)
 
         masked_predicted = torch.masked_select(predicted, masks)

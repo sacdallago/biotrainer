@@ -3,12 +3,14 @@ import torch.nn as nn
 
 from typing import Optional
 
+from ..utilities import MASK_AND_LABELS_PAD_VALUE
+
 __LOSSES = {
     'residue_to_class': {
-        'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=-100)
+        'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
     'sequence_to_class': {
-        'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=-100)
+        'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
     'sequence_to_value': {
         'mean_squared_error': lambda **kwargs: nn.MSELoss(**kwargs)

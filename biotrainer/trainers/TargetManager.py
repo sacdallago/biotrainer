@@ -10,7 +10,7 @@ from typing import Dict, Any, Tuple, Optional, List, Set
 
 from ..datasets import get_dataset
 from .target_manager_utils import get_split_lists
-from ..utilities import read_FASTA, get_attributes_from_seqrecords
+from ..utilities import read_FASTA, get_attributes_from_seqrecords, MASK_AND_LABELS_PAD_VALUE
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class TargetManager:
                                   for protein in sequence_masks}
                     for identifier, unmasked in self._id2target.items():
                         mask = mask2fasta[identifier]
-                        target_with_mask = np.array([value if mask[index] == 1 else -100 for
+                        target_with_mask = np.array([value if mask[index] == 1 else MASK_AND_LABELS_PAD_VALUE for
                                                      index, value in enumerate(unmasked)])
                         self._id2target[identifier] = target_with_mask
             # b) Value output
