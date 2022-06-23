@@ -34,7 +34,7 @@ def pad_residue_embeddings(
 
     # Get each residue-embedding and pad it
     sequences = [x[1] for x in sorted_batch]
-    padded_sequences = pad_sequence(sequences, batch_first=batch_first, padding_value=padding_value)
+    padded_sequences = pad_sequence(sequences, batch_first=batch_first, padding_value=0)
 
     # Also need to store the length of each sequence
     # This is later needed in order to unpad the sequences
