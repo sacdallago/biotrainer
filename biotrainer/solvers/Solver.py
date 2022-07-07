@@ -131,9 +131,12 @@ class Solver(ABC):
         else:
             state = torch.load(str(Path(self._tempdir.name) / "checkpoint.pt"))
 
-        self.network.load_state_dict(state['state_dict'])
-        self.start_epoch = state['epoch'] + 1
-        logger.info(f"Loaded model from epoch: {state['epoch']}")
+        try:
+            self.network.load_state_dict(state['state_dict'])
+            self.start_epoch = state['epoch'] + 1
+            logger.info(f"Loaded model from epoch: {state['epoch']}")
+        except RuntimeError as e:
+            raise Exception(f"Defined model architecture does not seem to match pretrained model!") from e
 
     def _save_checkpoint(self, epoch: int):
         state = {
