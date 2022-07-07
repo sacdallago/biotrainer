@@ -30,6 +30,7 @@ class Solver(ABC):
         self.optimizer = optimizer
         self.loss_function = loss_function
         self.log_writer = log_writer
+        self.start_epoch = 0
         self.number_of_epochs = number_of_epochs
         self.patience = patience
         self.epsilon = epsilon
@@ -54,7 +55,7 @@ class Solver(ABC):
 
         epoch_iterations = list()
 
-        for epoch in range(self.number_of_epochs):
+        for epoch in range(self.start_epoch, self.number_of_epochs):
 
             # Evaluating before testing: This way val_loss > train_loss holds for most epochs
             # If we would train before validating, the validation would benefit from the knowledge gained during
@@ -131,6 +132,7 @@ class Solver(ABC):
             state = torch.load(str(Path(self._tempdir.name) / "checkpoint.pt"))
 
         self.network.load_state_dict(state['state_dict'])
+        self.start_epoch = state['epoch'] + 1
         logger.info(f"Loaded model from epoch: {state['epoch']}")
 
     def _save_checkpoint(self, epoch: int):
