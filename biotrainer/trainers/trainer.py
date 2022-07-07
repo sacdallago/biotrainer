@@ -36,6 +36,7 @@ def training_and_evaluation_routine(
         shuffle: bool = True, seed: int = 42, loss_choice: str = "cross_entropy_loss",
         optimizer_choice: str = "adam", patience: int = 10, epsilon: float = 0.001,
         device: Union[None, str, torch.device] = None,
+        pretrained_model: str = None,
         # Everything else
         **kwargs
 ) -> Dict[str, Any]:
@@ -153,6 +154,9 @@ def training_and_evaluation_routine(
         protocol, network=model, optimizer=optimizer, loss_function=loss_function, device=device,
         number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer, experiment_dir=log_dir
     )
+
+    if pretrained_model:
+        solver.load_checkpoint(checkpoint_path=pretrained_model)
 
     # Perform training of the model (time intensive -- where things can go wrong)
     _do_and_log_training(solver, train_loader, val_loader)
