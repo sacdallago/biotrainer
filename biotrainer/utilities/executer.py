@@ -31,6 +31,8 @@ def parse_config_file_and_execute_run(config_file_path: str):
         config["sequence_file"] = str(input_file_path / config["sequence_file"])
     if "mask_file" in config.keys():
         config["mask_file"] = str(input_file_path / config["mask_file"])
+    if "embeddings_file" in config.keys():
+        config["embeddings_file"] = str(input_file_path / config["embeddings_file"])
 
     # Create output directory (if necessary)
     output_dir = input_file_path / "output"
