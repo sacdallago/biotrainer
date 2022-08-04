@@ -17,7 +17,7 @@ class TargetManager:
     # Optional
     class_str2int: Optional[Dict[str, int]] = None
     class_int2str: Optional[Dict[int, str]] = None
-    class_labels: Optional[Dict[str, None]] = None
+    class_labels: Optional[List[str]] = None
 
     def __init__(self, protocol: str, protein_sequences: List[SeqRecord], labels_file: Optional[str] = None):
 
@@ -37,7 +37,7 @@ class TargetManager:
                 # Infer classes from data
                 for classes in self.id2target.values():
                     class_labels_temp = class_labels_temp | set(classes)
-                self.class_labels = dict.fromkeys(sorted(class_labels_temp))
+                self.class_labels = sorted(class_labels_temp)
 
                 self.number_of_outputs = len(self.class_labels)
 
@@ -72,7 +72,7 @@ class TargetManager:
             # a) Class output
             if 'class' in protocol:
                 # Infer classes from data
-                self.class_labels = dict.fromkeys(sorted(set(self.id2target.values())))
+                self.class_labels = sorted(set(self.id2target.values()))
 
                 self.number_of_outputs = len(self.class_labels)
 
