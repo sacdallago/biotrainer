@@ -19,17 +19,17 @@ class TargetManager:
     _id2target: Dict[str, Any] = dict()
     _id2attributes: Dict[str, Any] = dict()
     # This will be 1 for regression tasks, 2 for binary classification tasks, and N>2 for everything else
-    _number_of_outputs: int = 1
+    number_of_outputs: int = 1
 
     # Optional, must be set in _calculate_targets()
-    _class_str2int: Optional[Dict[str, int]] = None
-    _class_int2str: Optional[Dict[int, str]] = None
+    class_str2int: Optional[Dict[str, int]] = None
+    class_int2str: Optional[Dict[int, str]] = None
     _class_labels: Optional[List[str]] = None
 
     # Dataset split lists
-    _training_ids = None
-    _validation_ids = None
-    _testing_ids = None
+    training_ids = None
+    validation_ids = None
+    testing_ids = None
 
     def __init__(self, protocol: str, sequence_file: str, labels_file: Optional[str] = None):
         self._protocol = protocol
@@ -59,14 +59,14 @@ class TargetManager:
                     class_labels_temp = class_labels_temp | set(classes)
                 self._class_labels = sorted(class_labels_temp)
 
-                self._number_of_outputs = len(self._class_labels)
+                self.number_of_outputs = len(self._class_labels)
 
                 # Create a mapping from integers to class labels and reverse
-                self._class_str2int = {letter: idx for idx, letter in enumerate(self._class_labels)}
-                self._class_int2str = {idx: letter for idx, letter in enumerate(self._class_labels)}
+                self.class_str2int = {letter: idx for idx, letter in enumerate(self._class_labels)}
+                self.class_int2str = {idx: letter for idx, letter in enumerate(self._class_labels)}
 
                 # Convert label values to lists of numbers based on the maps
-                self._id2target = {identifier: np.array([self._class_str2int[label] for label in labels])
+                self._id2target = {identifier: np.array([self.class_str2int[label] for label in labels])
                                    for identifier, labels in self._id2target.items()}  # classes idxs (zero-based)
 
             # b) Value output
@@ -93,20 +93,20 @@ class TargetManager:
             if 'class' in self._protocol:
                 # Infer classes from data
                 self._class_labels = sorted(set(self._id2target.values()))
-                self._number_of_outputs = len(self._class_labels)
+                self.number_of_outputs = len(self._class_labels)
 
                 # Create a mapping from integers to class labels and reverse
-                self._class_str2int = {letter: idx for idx, letter in enumerate(self._class_labels)}
-                self._class_int2str = {idx: letter for idx, letter in enumerate(self._class_labels)}
+                self.class_str2int = {letter: idx for idx, letter in enumerate(self._class_labels)}
+                self.class_int2str = {idx: letter for idx, letter in enumerate(self._class_labels)}
 
                 # Convert label values to lists of numbers based on the maps
-                self._id2target = {identifier: np.array(self._class_str2int[label])
+                self._id2target = {identifier: np.array(self.class_str2int[label])
                                    for identifier, label in self._id2target.items()}  # classes idxs (zero-based)
 
             # b) Value output
             elif 'value' in self._protocol:
                 self._id2target = {seq_id: float(seq_val) for seq_id, seq_val in self._id2target.items()}
-                self._number_of_outputs = 1
+                self.number_of_outputs = 1
             else:
                 raise NotImplementedError
 
@@ -125,37 +125,22 @@ class TargetManager:
                 if len(seq) != self._id2target[seq_id].size:
                     Exception(f"Length mismatch for {seq_id}: Seq={len(seq)} VS Labels={self._id2target[seq_id].size}")
 
-    def get_output_vars(self) -> Dict[str, Any]:
-        result = {
-            'training_ids': self._training_ids,
-            'validation_ids': self._validation_ids,
-            'testing_ids': self._testing_ids,
-            'n_classes': self._number_of_outputs
-        }
-        if 'class' in self._protocol:
-            result = {
-                **result,
-                'class_int_to_string': self._class_int2str,
-                'class_str_to_int': self._class_str2int
-            }
-        return result
-
     def get_datasets(self, id2emb: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset]:
         # At first calculate id2target
         self._calculate_targets()
 
         # Get dataset splits from file
-        self._training_ids, self._validation_ids, self._testing_ids = get_split_lists(self._id2attributes)
+        self.training_ids, self.validation_ids, self.testing_ids = get_split_lists(self._id2attributes)
 
         # Create datasets
         train_dataset = get_dataset(self._protocol, {
-            idx: (torch.tensor(id2emb[idx]), torch.tensor(self._id2target[idx])) for idx in self._training_ids
+            idx: (torch.tensor(id2emb[idx]), torch.tensor(self._id2target[idx])) for idx in self.training_ids
         })
         val_dataset = get_dataset(self._protocol, {
-            idx: (torch.tensor(id2emb[idx]), torch.tensor(self._id2target[idx])) for idx in self._validation_ids
+            idx: (torch.tensor(id2emb[idx]), torch.tensor(self._id2target[idx])) for idx in self.validation_ids
         })
         test_dataset = get_dataset(self._protocol, {
-            idx: (torch.tensor(id2emb[idx]), torch.tensor(self._id2target[idx])) for idx in self._testing_ids
+            idx: (torch.tensor(id2emb[idx]), torch.tensor(self._id2target[idx])) for idx in self.testing_ids
         })
 
         return train_dataset, val_dataset, test_dataset
@@ -167,16 +152,16 @@ class TargetManager:
                 [list(labels) for labels in self._id2target.values()]
             )))
             # total number of samples in the set irrespective of classes
-            n_samples = sum([counter[idx] for idx in range(len(self._class_str2int))])
+            n_samples = sum([counter[idx] for idx in range(len(self.class_str2int))])
             # balanced class weighting (inversely proportional to class size)
             class_weights = [
-                (n_samples / (len(self._class_str2int) * counter[idx])) for idx in range(len(self._class_str2int))
+                (n_samples / (len(self.class_str2int) * counter[idx])) for idx in range(len(self.class_str2int))
             ]
 
             logger.info(f"Total number of samples/residues: {n_samples}")
             logger.info("Individual class counts and weights:")
             for c in counter:
-                logger.info(f"\t{self._class_int2str[c]} : {counter[c]} ({class_weights[c]:.3f})")
+                logger.info(f"\t{self.class_int2str[c]} : {counter[c]} ({class_weights[c]:.3f})")
             return torch.FloatTensor(class_weights)
         else:
             raise Exception(f"Class weights can only be calculated for classification tasks!")
@@ -185,11 +170,11 @@ class TargetManager:
         # If residue-to-class problem, map the integers back to the class labels (single letters)
         if self._protocol == 'residue_to_class':
             return ["".join(
-                [self._class_int2str[p] for p in prediction]
+                [self.class_int2str[p] for p in prediction]
             ) for prediction in test_predictions]
 
         # If sequence-to-class problem, map the integers back to the class labels (whatever length)
         elif self._protocol == "sequence_to_class":
-            return [self._class_int2str[p] for p in test_predictions]
+            return [self.class_int2str[p] for p in test_predictions]
         else:
             return test_predictions

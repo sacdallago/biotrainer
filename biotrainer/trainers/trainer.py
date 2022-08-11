@@ -81,10 +81,16 @@ def training_and_evaluation_routine(
     # Get datasets
     target_manager = TargetManager(protocol=protocol, sequence_file=sequence_file, labels_file=labels_file)
     train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
-    output_vars.update(target_manager.get_output_vars())
+    output_vars['training_ids'] = target_manager.training_ids
+    output_vars['validation_ids'] = target_manager.validation_ids
+    output_vars['testing_ids'] = target_manager.testing_ids
+    output_vars['n_classes'] = target_manager.number_of_outputs
 
+    # Get x_to_class specific logs and weights
     class_weights = None
     if 'class' in protocol:
+        output_vars['class_int_to_string'] = target_manager.class_int2str
+        output_vars['class_str_to_int'] = target_manager.class_str2int
         logger.info(f"Number of classes: {output_vars['n_classes']}")
         # Compute class weights to pass as bias to model if option is set
         if use_class_weights:
