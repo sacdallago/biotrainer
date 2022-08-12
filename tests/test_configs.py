@@ -10,6 +10,12 @@ protocol_to_input = {
     'residue_to_class': {'sequence_file': "r2c/sequences.fasta",
                          'labels_file': "r2c/labels.fasta",
                          'loss_choice': "cross_entropy_loss"},
+    'residue_to_class-error1': {'sequence_file': "r2c_error1/sequences.fasta",  # Missing sequence in labels file
+                                'labels_file': "r2c_error1/labels.fasta",
+                                'loss_choice': "cross_entropy_loss"},
+    'residue_to_class-error2': {'sequence_file': "r2c_error2/sequences.fasta",  # Sequence and labels length mismatch
+                                'labels_file': "r2c_error2/labels.fasta",
+                                'loss_choice': "cross_entropy_loss"},
     'sequence_to_class': {'sequence_file': "s2c/sequences.fasta",
                           'labels_file': "",
                           'loss_choice': "cross_entropy_loss"},
@@ -33,7 +39,7 @@ def setup_config(protocol: str, model_choice: str, embedder_name: str) -> str:
         config["sequence_file"] = protocol_to_input[protocol]["sequence_file"]
         config["labels_file"] = protocol_to_input[protocol]["labels_file"]
         config["loss_choice"] = protocol_to_input[protocol]["loss_choice"]
-        config["protocol"] = protocol
+        config["protocol"] = protocol if not "error" in protocol else protocol.split("-")[0]
         config["model_choice"] = model_choice
         config["embedder_name"] = embedder_name
     with open(config_file_path, "w") as config_file:
@@ -58,4 +64,6 @@ def test_config(protocol: str, model: str, embedder_name: str, should_fail: bool
         shutil.rmtree("output/")
     except ConfigurationException:
         assert should_fail, "A ConfigurationException was thrown although it shouldn't have."
+    except Exception as e:
+        assert should_fail, "An exception was thrown altthough it shouldn't have."
     os.remove(os.path.abspath(temp_config_file_path))
