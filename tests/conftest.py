@@ -24,7 +24,13 @@ all_params = {
 
 
 def pytest_generate_tests(metafunc):
+    protocols.add("residue_to_class-error1")
+    protocols.add("residue_to_class-error2")
     for protocol in protocols:
+        if "error" in protocol:
+            # Test erroneous config only with one model and embedder, should_fail=True
+            all_params["test_config"]["values"].append([protocol, "CNN", "one_hot_encoding", True])
+            continue
         for model in models:
             should_fail = True if model not in __MODELS.get(protocol) else False
             for embedder_name in embedder_names:
