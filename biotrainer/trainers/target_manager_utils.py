@@ -19,7 +19,7 @@ def get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], List[str
             val = id2attributes[idx].get("VALIDATION")
 
             try:
-                val = eval(val)
+                val = eval(val.capitalize())
             except NameError:
                 pass
 
