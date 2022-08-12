@@ -84,14 +84,6 @@ class TargetManager:
             else:
                 raise NotImplementedError
 
-            # Make sure the length of the sequences in the FASTA matches the length of the sequences in the labels
-            for sequence in protein_sequences:
-                if len(sequence) != self._id2target[sequence.id].size:
-                    Exception(
-                        f"Length mismatch for {sequence.id}: "
-                        f"Seq={len(sequence)} VS Labels={self._id2target[sequence.id].size}"
-                    )
-
         # 2. Sequence Level
         elif 'sequence_' in self._protocol:
 
@@ -131,10 +123,21 @@ class TargetManager:
 
     def _validate_targets(self, id2fasta):
         if 'residue_' in self._protocol:
-            # Make sure the length of the sequences in the FASTA matches the length of the sequences in the labels
+            invalid_sequence_lengths = []
             for seq_id, seq in id2fasta.items():
+                # Check that all sequences are included in both the sequence and labels file
+                if seq_id not in self._id2target.keys():
+                    raise Exception(f"Sequence {seq_id} not found in labels file! Make sure that all your sequences "
+                                    f"are present and annotated in the labels file.")
+                # Make sure the length of the sequences in the FASTA matches the length of the sequences in the labels
                 if len(seq) != self._id2target[seq_id].size:
-                    Exception(f"Length mismatch for {seq_id}: Seq={len(seq)} VS Labels={self._id2target[seq_id].size}")
+                    invalid_sequence_lengths.append((seq_id, len(seq), self._id2target[seq_id].size))
+
+            if len(invalid_sequence_lengths) > 0:
+                exception_message = f"Length mismatch for {len(invalid_sequence_lengths)} sequence(s)!\n"
+                for seq_id, seq_len, target_len in invalid_sequence_lengths:
+                    exception_message += f"{seq_id}: Sequence={seq_len} vs. Labels={self._id2target[seq_id].size}\n"
+                raise Exception(exception_message[:-1])  # Discard last \n
 
     def get_datasets(self, id2emb: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset]:
         # At first calculate id2target
