@@ -41,5 +41,6 @@ def get_all_available_models():
 
 __all__ = [
     "get_model",
+    "get_all_available_models",
     "count_parameters",
 ]
