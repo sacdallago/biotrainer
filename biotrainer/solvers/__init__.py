@@ -6,6 +6,7 @@ from .Solver import Solver
 
 __SOLVERS = {
     'residue_to_class': ResidueClassificationSolver,
+    'residues_to_class': SequenceClassificationSolver,
     'sequence_to_class': SequenceClassificationSolver,
     'sequence_to_value': SequenceRegressionSolver
 }

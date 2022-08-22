@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 __PROTOCOLS = {
     'residue_to_class',
+    'residues_to_class',
     'sequence_to_class',
     'sequence_to_value'
 }

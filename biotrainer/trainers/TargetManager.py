@@ -85,7 +85,7 @@ class TargetManager:
                 raise NotImplementedError
 
         # 2. Sequence Level
-        elif 'sequence_' in self._protocol:
+        elif 'sequence_' in self._protocol or 'residues_' in self._protocol:
 
             # In sequence task, split definitions are in sequence header, as well as target
             # For more info check file specifications!
