@@ -7,7 +7,7 @@ from ruamel import yaml
 from ruamel.yaml import YAMLError
 from ruamel.yaml.comments import CommentedBase
 
-from ..models import __MODELS
+from ..models import get_all_available_models
 
 
 class ConfigurationException(Exception):
@@ -114,7 +114,7 @@ def verify_config(config: dict, protocols: set):
             raise ConfigurationException(
                 f"Mask file cannot be applied for protocol: {protocol}")
 
-    if model not in __MODELS.get(protocol):
+    if model not in get_all_available_models().get(protocol):
         raise ConfigurationException("Model " + model + " not available for protocol: " + protocol)
 
 
