@@ -20,12 +20,13 @@ class Solver(ABC):
 
     def __init__(self,
                  # Necessary
-                 network, optimizer, loss_function,
+                 protocol, network, optimizer, loss_function,
                  # Optional with defaults
                  log_writer: Optional = None, experiment_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
                  device: Union[None, str, torch.device] = None):
 
+        self.protocol = protocol
         self.network = network
         self.optimizer = optimizer
         self.loss_function = loss_function
@@ -232,8 +233,8 @@ class Solver(ABC):
                 if self.log_writer:
                     self.log_writer.add_scalars("Step/train", metrics, step)
 
-            # If lengths is defined, we need to shorten the predictions to the length
-            if lengths is not None:
+            # If lengths is defined, we need to shorten the residue predictions to the length
+            if lengths is not None and "residue_" in self.protocol:
                 return_pred = list()
                 for pred_x, length_x in zip(prediction.tolist(), lengths.tolist()):
                     return_pred.append(pred_x[:length_x])
