@@ -2,6 +2,7 @@ from .FNN import FNN
 from .CNN import CNN
 from .LogReg import LogReg
 #from .ConvNeXt import ConvNeXt
+from .LightAttention import LightAttention
 from .model_params import count_parameters
 
 __MODELS = {
@@ -10,6 +11,9 @@ __MODELS = {
 #        'ConvNeXt': ConvNeXt,
         'FNN': FNN,
         'LogReg': LogReg,
+    },
+    'residues_to_class': {
+        'LightAttention': LightAttention,
     },
     'sequence_to_class': {
         'FNN': FNN,
@@ -29,6 +33,10 @@ def get_model(protocol: str, model_choice: str, n_classes: int, n_features: int)
         raise NotImplementedError
     else:
         return model(n_classes=n_classes, n_features=n_features)
+
+
+def get_all_available_models():
+    return dict(__MODELS)
 
 
 __all__ = [
