@@ -4,6 +4,9 @@ __OPTIMIZERS = {
     'residue_to_class': {
         'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
     },
+    'residues_to_class': {
+        'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
+    },
     'sequence_to_class': {
         'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
     },
