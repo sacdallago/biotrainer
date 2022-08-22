@@ -4,7 +4,7 @@ protocol: sequence_to_class
 model_choice: LogReg
 optimizer_choice: adam
 loss_choice: cross_entropy_loss
-num_epochs: 200
+num_epochs: 10
 use_class_weights: false
 learning_rate: 1e-3
 batch_size: 128
