@@ -63,13 +63,16 @@ def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path,
     return embeddings_file_path
 
 
-def load_embeddings(embeddings_file_path: str) -> Dict[str, Any]:
+def load_embeddings(embeddings_file_path: str, embedder_name: str) -> Dict[str, Any]:
     # load pre-computed embeddings in .h5 file format computed via bio_embeddings
     logger.info(f"Loading embeddings from: {embeddings_file_path}")
     start = time.time()
 
     # https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
-    embeddings_file = h5py.File(embeddings_file_path, 'r', rdcc_nbytes=1024 ** 2 * 4000, rdcc_nslots=1e7)
+    if "prottrans" in embedder_name or "esm" in embedder_name:
+        embeddings_file = h5py.File(embeddings_file_path, 'r', rdcc_nbytes=1024 ** 2 * 4000, rdcc_nslots=1e7)
+    else:
+        embeddings_file = h5py.File(embeddings_file_path, 'r')
 
     # TODO: document that h5 MUST contain 'original_id' --> Create specification!
     id2emb = {embeddings_file[idx].attrs["original_id"]: embedding for (idx, embedding) in
