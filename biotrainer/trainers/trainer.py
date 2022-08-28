@@ -187,3 +187,6 @@ def _do_and_log_evaluation(solver, test_loader, target_manager):
     test_results['predictions'] = target_manager.revert_mappings(test_results['predictions'])
 
     output_vars['test_iterations_results'] = test_results
+
+    logger.info(f"Test set metrics: {test_results['metrics']}")
+    logger.info(f"Extensive output information can be found at {output_vars['output_dir']}/out.yml")
