@@ -58,7 +58,7 @@ class Inferencer:
 
         self.solver = get_solver(
             protocol, network=model, optimizer=optimizer, loss_function=loss_function, device=self.device,
-            experiment_dir=log_dir
+            experiment_dir=log_dir, num_classes=n_classes
         )
         self.collate_function = get_collate_function(protocol)
         self.solver.load_checkpoint()

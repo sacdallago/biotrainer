@@ -1,13 +1,22 @@
 import torch
 
-from typing import Dict, Union, Optional, Callable
-from contextlib import nullcontext as _nullcontext
+from typing import Dict, Union
+from torchmetrics import Accuracy, Precision, Recall, F1Score
 
 from .Solver import Solver
 from ..utilities import MASK_AND_LABELS_PAD_VALUE
 
 
 class ResidueClassificationSolver(Solver):
+
+    def __init__(self, *args, **kwargs):
+        super(ResidueClassificationSolver, self).__init__(*args, **kwargs)
+        # Init metrics
+        num_classes = kwargs['num_classes']
+        self.acc = Accuracy(average="micro", num_classes=num_classes)
+        self.precision = Precision(average="macro", num_classes=num_classes)
+        self.recall = Recall(average="macro", num_classes=num_classes)
+        self.f1_score = F1Score(average="macro", num_classes=num_classes)
 
     def _transform_network_output(self, network_output: torch.Tensor) -> torch.Tensor:
 
@@ -36,27 +45,8 @@ class ResidueClassificationSolver(Solver):
         masked_labels = torch.masked_select(labels, masks)
 
         return {
-            'accuracy': ((masked_predicted == masked_labels).float().sum() / len(masked_labels)).item()
+            'accuracy': self.acc(masked_predicted.cpu(), masked_labels.cpu()).item(),
+            'precision': self.precision(masked_predicted.cpu(), masked_labels.cpu()).item(),
+            'recall': self.recall(masked_predicted.cpu(), masked_labels.cpu()).item(),
+            'f1_score': self.f1_score(masked_predicted.cpu(), masked_labels.cpu()).item()
         }
-
-    def _training_iteration(
-            self, x: torch.Tensor, y: torch.Tensor, step=1, context: Optional[Callable] = None,
-            lengths: Optional[torch.LongTensor] = None
-    ) -> Dict[str, Union[float, list, Dict[str, Union[float, int]]]]:
-        result_dict = super()._training_iteration(x, y, step, context, lengths)
-        if not context:
-            context = _nullcontext
-
-        with context():
-            prediction = result_dict['prediction']
-            # If lengths is defined, we need to shorten the residue predictions to the length
-            if lengths is not None:
-                return_pred = list()
-                for pred_x, length_x in zip(prediction, lengths):#.tolist()):
-                    return_pred.append(pred_x[:length_x])
-
-                result_dict['prediction'] = return_pred
-
-            return result_dict
-
-
