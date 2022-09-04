@@ -17,7 +17,7 @@ def get_solver(protocol: str,
                network: Optional = None, optimizer: Optional = None, loss_function: Optional = None,
                device: Optional = None, number_of_epochs: Optional = None,
                patience: Optional = None, epsilon: Optional = None, log_writer: Optional = None,
-               experiment_dir: Optional = None
+               experiment_dir: Optional = None, num_classes: Optional[int] = 0,
                ):
 
     solver = __SOLVERS.get(protocol)
@@ -29,7 +29,7 @@ def get_solver(protocol: str,
             network=network, optimizer=optimizer, loss_function=loss_function,
             device=device, number_of_epochs=number_of_epochs,
             patience=patience, epsilon=epsilon, log_writer=log_writer,
-            experiment_dir=experiment_dir
+            experiment_dir=experiment_dir, num_classes=num_classes
         )
 
 
