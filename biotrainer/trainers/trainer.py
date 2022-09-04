@@ -152,7 +152,8 @@ def training_and_evaluation_routine(
     # Create solver
     solver = get_solver(
         protocol, network=model, optimizer=optimizer, loss_function=loss_function, device=device,
-        number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer, experiment_dir=log_dir
+        number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer, experiment_dir=log_dir,
+        num_classes=output_vars['n_classes']
     )
 
     if pretrained_model:
