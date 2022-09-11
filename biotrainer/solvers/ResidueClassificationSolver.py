@@ -57,13 +57,13 @@ class ResidueClassificationSolver(Solver):
         masked_labels = torch.masked_select(labels, masks)
 
         precision_per_class = self.precision_per_class(masked_predicted.cpu(), masked_labels.cpu())
-        precisions = {'- precission class {}'.format(i): precision_per_class[i] for i in range(self.num_classes)}
+        precisions = {'- precission class {}'.format(i): float(precision_per_class[i]) for i in range(self.num_classes)}
 
         recall_per_class = self.recall_per_class(masked_predicted.cpu(), masked_labels.cpu())
-        recalls = {'- recall class {}'.format(i): recall_per_class[i] for i in range(self.num_classes)}
+        recalls = {'- recall class {}'.format(i): float(recall_per_class[i]) for i in range(self.num_classes)}
 
         f1_per_class = self.f1_per_class(masked_predicted.cpu(), masked_labels.cpu())
-        f1scores = {'- f1_score class {}'.format(i): f1_per_class[i] for i in range(self.num_classes)}
+        f1scores = {'- f1_score class {}'.format(i): float(f1_per_class[i]) for i in range(self.num_classes)}
 
         return {
             'accuracy': self.acc(masked_predicted.cpu(), masked_labels.cpu()).item(),
