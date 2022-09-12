@@ -9,6 +9,13 @@ or her use-case.
 
 All used files for the examples can be found in *example_files*.
 
+## Installation
+
+Make sure you have a poetry environment installed with the *juypter* extra:
+```bash
+poetry install --extras "jupyter"
+```
+
 ## Examples
 
 1. **Add values from csv**:   

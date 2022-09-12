@@ -15,6 +15,10 @@ curl -sSL https://install.python-poetry.org/ | python3 - --version 1.1.13
 poetry install
 # Optional: Add bio-embeddings to compute embeddings
 poetry install --extras "bio-embeddings"
+# Optional: Add jupyter to use notebooks
+poetry install --extras "jupyter"
+# You can also install all extras at once
+poetry install --all-extras
 ```
 
 ### Running
