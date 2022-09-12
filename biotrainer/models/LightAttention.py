@@ -4,8 +4,10 @@ import torch.nn as nn
 import biotrainer.utilities as utils
 
 
+# LightAttention model originally from Hannes Stark:
+# https://github.com/HannesStark/protein-localization/blob/master/models/light_attention.py
 class LightAttention(nn.Module):
-    def __init__(self, n_features=1024, n_classes=11, dropout=0.25, kernel_size=9, conv_dropout: float = 0.25):
+    def __init__(self, n_features: int, n_classes: int, dropout=0.25, kernel_size=9, conv_dropout: float = 0.25):
         super(LightAttention, self).__init__()
 
         self.feature_convolution = nn.Conv1d(n_features, n_features, kernel_size, stride=1,
