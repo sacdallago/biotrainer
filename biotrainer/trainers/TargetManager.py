@@ -187,8 +187,8 @@ class TargetManager:
                 [self.class_int2str[p] for p in prediction]
             ) for prediction in test_predictions]
 
-        # If sequence-to-class problem, map the integers back to the class labels (whatever length)
-        elif self._protocol == "sequence_to_class":
+        # If sequence/residues-to-class problem, map the integers back to the class labels (whatever length)
+        elif self._protocol == "sequence_to_class" or self._protocol == "residues_to_class":
             return [self.class_int2str[p] for p in test_predictions]
         else:
             return test_predictions
