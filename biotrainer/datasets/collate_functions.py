@@ -42,7 +42,8 @@ def pad_residue_embeddings(
     lengths = torch.LongTensor([len(x) for x in sequences])
 
     # Don't forget to grab the labels of the *sorted* batch
-    padded_labels = pad_sequence([x[2] for x in sorted_batch], batch_first=batch_first, padding_value=MASK_AND_LABELS_PAD_VALUE)
+    padded_labels = pad_sequence([x[2] for x in sorted_batch],
+                                 batch_first=batch_first, padding_value=MASK_AND_LABELS_PAD_VALUE)
 
     # Permute the embeddings to fit the LA architecture
     return seq_ids, padded_sequences, padded_labels, lengths
@@ -75,7 +76,7 @@ def pad_residues_embeddings(
     lengths = torch.LongTensor([len(x) for x in sequences])
 
     # Don't forget to grab the labels of the *sorted* batch
-    labels = [x[2] for x in batch]
+    labels = [x[2] for x in sorted_batch]
 
     # Permute the embeddings to fit the LA architecture
     return seq_ids, padded_sequences, torch.stack(labels), lengths
