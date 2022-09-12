@@ -1,11 +1,17 @@
 import torch
 
 from typing import Optional, Dict, Union
+from torchmetrics import SpearmanCorrCoef
 
 from .Solver import Solver
 
 
 class SequenceRegressionSolver(Solver):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.scc = SpearmanCorrCoef()
 
     def _transform_network_output(self, network_output: torch.Tensor) -> torch.Tensor:
         return network_output.flatten().float()
@@ -17,5 +23,7 @@ class SequenceRegressionSolver(Solver):
 
         return {
             'mse': mse.item(),
-            'rmse': torch.sqrt(mse).item()
+            'rmse': torch.sqrt(mse).item(),
+            'spearmans-corr-coeff': self.scc(predicted.cpu().type(torch.FloatTensor),
+                                             labels.cpu().type(torch.FloatTensor)).item()
         }
