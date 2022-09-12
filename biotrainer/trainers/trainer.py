@@ -37,6 +37,7 @@ def training_and_evaluation_routine(
         optimizer_choice: str = "adam", patience: int = 10, epsilon: float = 0.001,
         device: Union[None, str, torch.device] = None,
         pretrained_model: str = None,
+        save_test_predictions: bool = False,
         # Everything else
         **kwargs
 ) -> Dict[str, Any]:
@@ -163,7 +164,7 @@ def training_and_evaluation_routine(
     _do_and_log_training(solver, train_loader, val_loader)
 
     # Finally, run evaluation of test set
-    _do_and_log_evaluation(solver, test_loader, target_manager)
+    _do_and_log_evaluation(solver, test_loader, target_manager, save_test_predictions)
 
     return output_vars
 
@@ -182,16 +183,18 @@ def _do_and_log_training(solver, train_loader, val_loader):
     output_vars['elapsed_time'] = end_time - start_time
 
 
-def _do_and_log_evaluation(solver, test_loader, target_manager):
+def _do_and_log_evaluation(solver, test_loader, target_manager, save_test_predictions):
     # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
     logger.info('Running final evaluation on the best checkpoint.')
 
     solver.load_checkpoint()
     test_results = solver.inference(test_loader)
 
-    test_results['predictions'] = target_manager.revert_mappings(test_results['predictions'])
-
-    output_vars['test_iterations_results'] = test_results
+    if save_test_predictions:
+        test_results['predictions'] = target_manager.revert_mappings(test_results['predictions'])
+        output_vars['test_iterations_results'] = test_results
+    else:
+        output_vars['test_iterations_results'] = test_results['metrics']
 
     logger.info(f"Test set metrics: {test_results['metrics']}")
     logger.info(f"Extensive output information can be found at {output_vars['output_dir']}/out.yml")
