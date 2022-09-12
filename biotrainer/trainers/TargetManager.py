@@ -6,7 +6,7 @@ import numpy as np
 from collections import Counter
 from Bio.SeqRecord import SeqRecord
 from torch.utils.data import Dataset
-from typing import Dict, Any, Tuple, Optional, List, Set
+from typing import Dict, Any, Tuple, Optional, List
 
 from ..datasets import get_dataset
 from .target_manager_utils import get_split_lists
