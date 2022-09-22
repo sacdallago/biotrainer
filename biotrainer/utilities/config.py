@@ -89,12 +89,10 @@ def validate_file(file_path: str):
 
 
 def verify_config(config: dict, protocols: set):
+    # Check protocol and associated files
     protocol = config["protocol"]
-
     if protocol not in protocols:
         raise ConfigurationException(f"Unknown protocol: {protocol}")
-
-    model = config["model_choice"]
 
     if "residue_" in protocol:
         required_files = ["labels_file", "sequence_file"]
@@ -114,8 +112,18 @@ def verify_config(config: dict, protocols: set):
             raise ConfigurationException(
                 f"Mask file cannot be applied for protocol: {protocol}")
 
+    # Check model for protocol
+    model = config["model_choice"]
     if model not in get_all_available_models().get(protocol):
         raise ConfigurationException("Model " + model + " not available for protocol: " + protocol)
+
+    # Check pretraining
+    if "auto_resume" in config.keys() and "pretrained_model" in config.keys():
+        if config["auto_resume"]:
+            raise ConfigurationException("auto_resume and pretrained_model are mutually exclusive.\n"
+                                         "Use auto_resume in case you need to "
+                                         "restart your training job multiple times.\n"
+                                         "Use pretrained_model if you want to continue to train a specific model.")
 
 
 def write_config_file(out_filename: str, config: dict) -> None:
