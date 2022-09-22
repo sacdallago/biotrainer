@@ -1,6 +1,7 @@
 import torch
 
-from typing import Dict, Union
+from typing import Dict, Union, Optional, Callable
+from contextlib import nullcontext as _nullcontext
 
 from .Solver import Solver
 from .ClassificationSolver import ClassificationSolver
@@ -34,3 +35,25 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
         masked_labels = torch.masked_select(labels, masks)
 
         return super()._compute_metrics(predicted=masked_predicted, labels=masked_labels)
+
+    def _training_iteration(
+            self, x: torch.Tensor, y: torch.Tensor, step=1, context: Optional[Callable] = None,
+            lengths: Optional[torch.LongTensor] = None
+    ) -> Dict[str, Union[float, list, Dict[str, Union[float, int]]]]:
+        result_dict = super()._training_iteration(x, y, step, context, lengths)
+        if not context:
+            context = _nullcontext
+
+        with context():
+            prediction = result_dict['prediction']
+            # If lengths is defined, we need to shorten the residue predictions to the length
+            if lengths is not None:
+                return_pred = list()
+                for pred_x, length_x in zip(prediction, lengths):#.tolist()):
+                    return_pred.append(pred_x[:length_x])
+
+                result_dict['prediction'] = return_pred
+
+            return result_dict
+
+
