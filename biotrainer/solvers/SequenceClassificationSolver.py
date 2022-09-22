@@ -1,6 +1,6 @@
 import torch
 
-from typing import Optional, Dict, Union
+from typing import Dict, Union
 
 from .Solver import Solver
 
