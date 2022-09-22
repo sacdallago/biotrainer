@@ -101,7 +101,7 @@ def verify_config(config: dict, protocols: set):
         for required_file in required_files:
             if required_file not in config.keys():
                 raise ConfigurationException(f"Required {required_file} not included in {protocol}")
-    elif "sequence_" in protocol:
+    elif "sequence_" in protocol or "residues_" in protocol:
         required_files = ["sequence_file"]
         for required_file in required_files:
             if required_file not in config.keys():
