@@ -43,8 +43,25 @@ def parse_config_file_and_execute_run(config_file_path: str):
         logger.info(f"Creating output dir: {output_dir}")
         output_dir.mkdir(parents=True)
 
+    # Create log directory (if necessary)
+    log_dir = output_dir / config["model_choice"] / config["embedder_name"]
+    if not log_dir.is_dir():
+        logger.info(f"Creating log-directory: {log_dir}")
+        log_dir.mkdir(parents=True)
+
+    # Find pre-trained model in auto_resume mode
+    if "auto_resume" in config.keys():
+        if config["auto_resume"]:
+            if "checkpoint.pt" in os.listdir(log_dir):
+                config["pretrained_model"] = log_dir / "checkpoint.pt"
+            else:
+                logger.warning("auto_resume is enabled in the configuration file, but no valid checkpoint was found. "
+                               "Training new model from scratch.")
+    if "pretrained_model" in config.keys():
+        logger.info(f"Using pre_trained model: {config['pretrained_model']}")
+
     # Run biotrainer pipeline
-    out_config = training_and_evaluation_routine(output_dir=str(output_dir), **config)
+    out_config = training_and_evaluation_routine(output_dir=str(output_dir), log_dir=str(log_dir), **config)
 
     # Save output_variables in out.yml
     write_config_file(

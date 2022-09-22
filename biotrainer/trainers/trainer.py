@@ -26,7 +26,7 @@ def training_and_evaluation_routine(
         # Needed
         sequence_file: str,
         # Defined previously
-        protocol: str, output_dir: str,
+        protocol: str, output_dir: str, log_dir: str,
         # Optional with defaults
         labels_file: Optional[str] = None, mask_file: Optional[str] = None,
         model_choice: str = "CNN", num_epochs: int = 200,
@@ -48,13 +48,6 @@ def training_and_evaluation_routine(
     # Initialization
     seed_all(seed)
     output_dir = Path(output_dir)
-
-    # Create log directory if it does not exist yet
-    log_dir = output_dir / model_choice / embedder_name
-    if not log_dir.is_dir():
-        logger.info(f"Creating log-directory: {log_dir}")
-        log_dir.mkdir(parents=True)
-    output_vars['log_dir'] = str(log_dir)
 
     # Get device
     device = get_device(device)
