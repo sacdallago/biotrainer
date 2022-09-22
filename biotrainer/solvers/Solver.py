@@ -20,13 +20,12 @@ class Solver(ABC):
 
     def __init__(self,
                  # Necessary
-                 protocol, network, optimizer, loss_function,
+                 network, optimizer, loss_function,
                  # Optional with defaults
                  log_writer: Optional = None, experiment_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
                  device: Union[None, str, torch.device] = None):
 
-        self.protocol = protocol
         self.network = network
         self.optimizer = optimizer
         self.loss_function = loss_function

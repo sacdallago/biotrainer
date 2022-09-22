@@ -1,12 +1,13 @@
 from typing import Optional
 from .ResidueClassificationSolver import ResidueClassificationSolver
+from .ResiduesClassificationSolver import ResiduesClassificationSolver
 from .SequenceClassificationSolver import SequenceClassificationSolver
 from .SequenceRegressionSolver import SequenceRegressionSolver
 from .Solver import Solver
 
 __SOLVERS = {
     'residue_to_class': ResidueClassificationSolver,
-    'residues_to_class': SequenceClassificationSolver,
+    'residues_to_class': ResiduesClassificationSolver,
     'sequence_to_class': SequenceClassificationSolver,
     'sequence_to_value': SequenceRegressionSolver
 }
@@ -25,7 +26,6 @@ def get_solver(protocol: str,
         raise NotImplementedError
     else:
         return solver(
-            protocol=protocol,
             network=network, optimizer=optimizer, loss_function=loss_function,
             device=device, number_of_epochs=number_of_epochs,
             patience=patience, epsilon=epsilon, log_writer=log_writer,
