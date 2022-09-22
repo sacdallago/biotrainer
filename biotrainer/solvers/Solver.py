@@ -232,15 +232,7 @@ class Solver(ABC):
                 if self.log_writer:
                     self.log_writer.add_scalars("Step/train", metrics, step)
 
-            # If lengths is defined, we need to shorten the residue predictions to the length
-            if lengths is not None and "residue_" in self.protocol:
-                return_pred = list()
-                for pred_x, length_x in zip(prediction.tolist(), lengths.tolist()):
-                    return_pred.append(pred_x[:length_x])
-
-                prediction = return_pred
-            else:
-                prediction = prediction.tolist()
+            prediction = prediction.tolist()
 
             return {
                 'loss': loss.item(),
