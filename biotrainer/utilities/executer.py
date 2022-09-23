@@ -8,7 +8,6 @@ from .config import validate_file, read_config_file, verify_config, write_config
 
 logger = logging.getLogger(__name__)
 
-
 __PROTOCOLS = {
     'residue_to_class',
     'residues_to_class',
@@ -49,14 +48,16 @@ def parse_config_file_and_execute_run(config_file_path: str):
         logger.info(f"Creating log-directory: {log_dir}")
         log_dir.mkdir(parents=True)
 
+    # Make auto_resume = True the default behaviour
+    if "auto_resume" not in config.keys():
+        config["auto_resume"] = True
     # Find pre-trained model in auto_resume mode
-    if "auto_resume" in config.keys():
-        if config["auto_resume"]:
-            if "checkpoint.pt" in os.listdir(log_dir):
-                config["pretrained_model"] = log_dir / "checkpoint.pt"
-            else:
-                logger.warning("auto_resume is enabled in the configuration file, but no valid checkpoint was found. "
-                               "Training new model from scratch.")
+    if config["auto_resume"]:
+        if "checkpoint.pt" in os.listdir(log_dir):
+            config["pretrained_model"] = log_dir / "checkpoint.pt"
+        else:
+            logger.info("auto_resume is enabled in the configuration file, but no valid checkpoint was found. "
+                        "Training new model from scratch.")
     if "pretrained_model" in config.keys():
         logger.info(f"Using pre_trained model: {config['pretrained_model']}")
 
