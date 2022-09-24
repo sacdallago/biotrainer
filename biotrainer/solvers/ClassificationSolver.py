@@ -32,31 +32,35 @@ class ClassificationSolver(Solver):
     def _compute_metrics(
             self, predicted: torch.Tensor, labels: torch.Tensor
     ) -> Dict[str, Union[int, float]]:
-        precision_per_class = self.precision_per_class(predicted.cpu(), labels.cpu())
-        precisions = {'- precission class {}'.format(i): precision_per_class[i].item() for i in range(self.num_classes)}
+        metrics_dict = {'accuracy': self.acc(predicted.cpu(), labels.cpu()).item()}
 
-        recall_per_class = self.recall_per_class(predicted.cpu(), labels.cpu())
-        recalls = {'- recall class {}'.format(i): recall_per_class[i].item() for i in range(self.num_classes)}
+        # Multi-class prediction
+        if self.num_classes > 2:
+            precision_per_class = self.precision_per_class(predicted.cpu(), labels.cpu())
+            precisions = {'- precission class {}'.format(i): precision_per_class[i].item() for i in
+                          range(self.num_classes)}
+            metrics_dict['macro-precision'] = self.macro_precision(predicted.cpu(), labels.cpu()).item()
+            metrics_dict['micro-precision'] = self.micro_precision(predicted.cpu(), labels.cpu()).item()
+            metrics_dict.update(precisions)
 
-        f1_per_class = self.f1_per_class(predicted.cpu(), labels.cpu())
-        f1scores = {'- f1_score class {}'.format(i): f1_per_class[i].item() for i in range(self.num_classes)}
+            recall_per_class = self.recall_per_class(predicted.cpu(), labels.cpu())
+            recalls = {'- recall class {}'.format(i): recall_per_class[i].item() for i in range(self.num_classes)}
+            metrics_dict['macro-recall'] = self.macro_recall(predicted.cpu(), labels.cpu()).item()
+            metrics_dict['micro-recall'] = self.micro_recall(predicted.cpu(), labels.cpu()).item()
+            metrics_dict.update(recalls)
 
-        return {
-            'accuracy': self.acc(predicted.cpu(), labels.cpu()).item(),
+            f1_per_class = self.f1_per_class(predicted.cpu(), labels.cpu())
+            f1scores = {'- f1_score class {}'.format(i): f1_per_class[i].item() for i in range(self.num_classes)}
+            metrics_dict['macro-f1_score'] = self.macro_f1_score(predicted.cpu(), labels.cpu()).item()
+            metrics_dict['micro-f1_score'] = self.micro_f1_score(predicted.cpu(), labels.cpu()).item()
+            metrics_dict.update(f1scores)
+        # Binary prediction
+        else:
+            metrics_dict['precision'] = self.micro_precision(predicted.cpu(), labels.cpu()).item()
+            metrics_dict['recall'] = self.micro_recall(predicted.cpu(), labels.cpu()).item()
+            metrics_dict['f1_score'] = self.micro_f1_score(predicted.cpu(), labels.cpu()).item()
 
-            'macro-precision': self.macro_precision(predicted.cpu(), labels.cpu()).item(),
-            'micro-precision': self.micro_precision(predicted.cpu(), labels.cpu()).item(),
-            **precisions,
+        metrics_dict['spearmans-corr-coeff'] = self.scc(predicted.cpu().float(), labels.cpu().float()).item()
+        metrics_dict['matthews-corr-coeff'] = self.mcc(predicted.cpu(), labels.cpu()).item()
 
-            'macro-recall': self.macro_recall(predicted.cpu(), labels.cpu()).item(),
-            'micro-recall': self.micro_recall(predicted.cpu(), labels.cpu()).item(),
-            **recalls,
-
-            'macro-f1_score': self.macro_f1_score(predicted.cpu(), labels.cpu()).item(),
-            'micro-f1_score': self.micro_f1_score(predicted.cpu(), labels.cpu()).item(),
-            **f1scores,
-
-            'spearmans-corr-coeff': self.scc(predicted.cpu().type(torch.FloatTensor),
-                                             labels.cpu().type(torch.FloatTensor)).item(),
-            'matthews-corr-coeff': self.mcc(predicted.cpu(), labels.cpu()).item(),
-        }
+        return metrics_dict
