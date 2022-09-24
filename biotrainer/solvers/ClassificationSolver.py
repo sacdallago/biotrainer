@@ -45,7 +45,7 @@ class ClassificationSolver(Solver):
             'accuracy': self.acc(predicted.cpu(), labels.cpu()).item(),
 
             'macro-precision': self.macro_precision(predicted.cpu(), labels.cpu()).item(),
-            'micro-precision': self.macro_precision(predicted.cpu(), labels.cpu()).item(),
+            'micro-precision': self.micro_precision(predicted.cpu(), labels.cpu()).item(),
             **precisions,
 
             'macro-recall': self.macro_recall(predicted.cpu(), labels.cpu()).item(),
