@@ -35,10 +35,8 @@ def parse_config_file_and_execute_run(config_file_path: str):
     if "embeddings_file" in config.keys():
         embeddings_file = config["embeddings_file"]
         if urlparse(embeddings_file).scheme in ["http", "https", "ftp"]:
-            try:
-                embeddings_file = download_embeddings(config["embeddings_file"])
-            except Exception as e:
-                raise Exception(f"Could not download embeddings from url path {config['embeddings_file']}") from e
+            embeddings_file = download_embeddings(url=config["embeddings_file"], script_path=str(input_file_path))
+
         config["embeddings_file"] = str(input_file_path / embeddings_file)
     if "pretrained_model" in config.keys():
         config["pretrained_model"] = str(input_file_path / config["pretrained_model"])
