@@ -31,7 +31,7 @@ def training_and_evaluation_routine(
         labels_file: Optional[str] = None, mask_file: Optional[str] = None,
         model_choice: str = "CNN", num_epochs: int = 200,
         use_class_weights: bool = False, learning_rate: float = 1e-3,
-        batch_size: int = 128, embedder_name: str = "prottrans_t5_xl_u50",
+        batch_size: int = 128, embedder_name: str = "custom_embeddings",
         embeddings_file: str = None,
         shuffle: bool = True, seed: int = 42, loss_choice: str = "cross_entropy_loss",
         optimizer_choice: str = "adam", patience: int = 10, epsilon: float = 0.001,
