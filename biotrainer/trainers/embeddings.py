@@ -23,20 +23,21 @@ _REQUIRES_REDUCED_EMBEDDINGS = {
 logger = logging.getLogger(__name__)
 
 
-def download_embeddings(path: str) -> str:
+def download_embeddings(url: str, script_path: str) -> str:
     try:
-        logger.info(f"Trying to download embeddings from {path}")
-        req = request.Request(path, headers={
-            'User-Agent' : 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
+        logger.info(f"Trying to download embeddings from {url}")
+        req = request.Request(url, headers={
+            'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"
         })
 
-        file_name = path.split("/")[-1]
-        save_path = "./downloaded" + file_name
+        file_name = url.split("/")[-1]
+        save_path = script_path + "/downloaded_" + file_name
         with request.urlopen(req) as response, open(save_path, 'wb') as outfile:
             shutil.copyfileobj(response, outfile)
+        logger.info(f"Embeddings file successfully downloaded and stored at {save_path}.")
         return save_path
     except Exception as e:
-        raise e
+        raise Exception(f"Could not download embeddings from url {url}") from e
 
 
 def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:
@@ -88,7 +89,7 @@ def load_embeddings(embeddings_file_path: str, embedder_name: str) -> Dict[str, 
     start = time.time()
 
     # https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
-    if "prottrans" in embedder_name or "esm" in embedder_name:
+    if "prottrans" in embedder_name:
         embeddings_file = h5py.File(embeddings_file_path, 'r', rdcc_nbytes=1024 ** 2 * 4000, rdcc_nslots=1e7)
     else:
         embeddings_file = h5py.File(embeddings_file_path, 'r')
