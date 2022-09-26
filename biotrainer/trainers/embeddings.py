@@ -1,4 +1,7 @@
 import os
+import shutil
+from urllib import request
+
 import h5py
 import time
 import logging
@@ -18,6 +21,22 @@ _REQUIRES_REDUCED_EMBEDDINGS = {
 }
 
 logger = logging.getLogger(__name__)
+
+
+def download_embeddings(path: str) -> str:
+    try:
+        logger.info(f"Trying to download embeddings from {path}")
+        req = request.Request(path, headers={
+            'User-Agent' : 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
+        })
+
+        file_name = path.split("/")[-1]
+        save_path = "./downloaded" + file_name
+        with request.urlopen(req) as response, open(save_path, 'wb') as outfile:
+            shutil.copyfileobj(response, outfile)
+        return save_path
+    except Exception as e:
+        raise e
 
 
 def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:

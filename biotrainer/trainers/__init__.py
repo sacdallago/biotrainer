@@ -1,5 +1,7 @@
+from .embeddings import download_embeddings
 from .trainer import training_and_evaluation_routine
 
 __all__ = [
-    'training_and_evaluation_routine'
+    'download_embeddings',
+    'training_and_evaluation_routine',
 ]
