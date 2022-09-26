@@ -2,8 +2,9 @@ import os
 import logging
 
 from pathlib import Path
+from urllib.parse import urlparse
 
-from ..trainers import training_and_evaluation_routine
+from ..trainers import training_and_evaluation_routine, download_embeddings
 from .config import validate_file, read_config_file, verify_config, write_config_file
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,13 @@ def parse_config_file_and_execute_run(config_file_path: str):
     if "mask_file" in config.keys():
         config["mask_file"] = str(input_file_path / config["mask_file"])
     if "embeddings_file" in config.keys():
-        config["embeddings_file"] = str(input_file_path / config["embeddings_file"])
+        embeddings_file = config["embeddings_file"]
+        if urlparse(embeddings_file).scheme in ["http", "https", "ftp"]:
+            try:
+                embeddings_file = download_embeddings(config["embeddings_file"])
+            except Exception as e:
+                raise Exception(f"Could not download embeddings from url path {config['embeddings_file']}") from e
+        config["embeddings_file"] = str(input_file_path / embeddings_file)
     if "pretrained_model" in config.keys():
         config["pretrained_model"] = str(input_file_path / config["pretrained_model"])
 
