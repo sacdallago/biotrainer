@@ -125,6 +125,12 @@ def verify_config(config: dict, protocols: set):
                                          "restart your training job multiple times.\n"
                                          "Use pretrained_model if you want to continue to train a specific model.")
 
+    # Check embeddings input
+    if "embedder_name" in config.keys() and "embeddings_file" in config.keys():
+        raise ConfigurationException("embedder_name and embeddings_file are mutually exclusive. "
+                                     "Please provide either an embedder_name to calculate embeddings from scratch or "
+                                     "an embeddings_file to use pre-computed embeddings.")
+
 
 def write_config_file(out_filename: str, config: dict) -> None:
     """
