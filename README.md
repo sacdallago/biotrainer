@@ -73,7 +73,7 @@ Work in Progress:
 sequence_file: sequences.fasta # Specify your sequence file
 labels_file: labels.fasta # Specify your label file
 protocol: residue_to_class # residue_to_class | sequence_to_class : Prediction method
-model_choice: CNN # CNN | ConvNeXt | FNN | LogReg : Prediction model 
+model_choice: CNN # CNN | FNN | LogReg : Prediction model 
 optimizer_choice: adam # adam : Model optimizer
 loss_choice: cross_entropy_loss # cross_entropy_loss : Model loss 
 num_epochs: 200 # 1-n : Number of maximum epochs
