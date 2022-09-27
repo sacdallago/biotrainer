@@ -67,7 +67,7 @@ def training_and_evaluation_routine(
         embedder_name = f"precomputed_{Path(embeddings_file).stem}_{embedder_name}"
 
     # Mapping from id to embeddings
-    id2emb = load_embeddings(embeddings_file_path=embeddings_file, embedder_name=embedder_name)
+    id2emb = load_embeddings(embeddings_file_path=embeddings_file)
 
     # Find out feature size and add to output vars + logging
     embeddings_length = list(id2emb.values())[0].shape[-1]  # Last position in shape is always embedding length
