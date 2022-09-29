@@ -12,9 +12,9 @@ An overview of our decision process and about arguments for and against certain 
   * [Sample attributes:](#sample-attributes)
   * [Format](#format)
 - [Standardization decisions](#standardization-decisions)
-  * [Residue -> Class](#residue---class)
-  * [Sequence -> Class](#sequence---class)
-  * [Sequence -> Value](#sequence---value)
+  * [residue_to_class](#residue_to_class)
+  * [sequence_to_class](#sequence_to_class)
+  * [sequence_to_value](#sequence_to_value)
 
 <!-- tocstop -->
 
@@ -50,7 +50,7 @@ will fail.
 
 ## Standardization decisions
 
-### Residue -> Class
+### residue_to_class
 
 You have an input protein sequence and want to predict 
 for each residue (amino acid) in the sequence a categorical property 
@@ -70,7 +70,7 @@ labels.fasta
 DVCDVVDD
 ```
 
-### Sequence -> Class
+### sequence_to_class
 
 You have an input protein sequence and want to predict a property for the whole sequence
 (e.g. if the sequence is a trans-membrane protein or not).
@@ -83,7 +83,7 @@ sequences.fasta
 SEQWENCE
 ```
 
-### Sequence -> Value
+### sequence_to_value
 
 You have an input protein sequence and want to predict the value of a property for the whole sequence
 (e.g. the melting temperature of the protein).
