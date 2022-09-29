@@ -16,6 +16,17 @@ The seed can also be changed (any positive integer):
 seed: 1234  # Default: 42
 ```
 
+You can also manually select a device for training:
+```yaml
+device: cpu | cuda  # Default: Uses cuda if cuda is available, otherwise cpu
+```
+
+After all training is done, the model is evaluated on the test set. The predictions it makes can be stored in the
+output file. This behaviour is disabled by default, because the file can get very long for large datasets.
+```yaml
+save_test_predictions: True | False  # Default: False
+```
+
 ## Training data (protocol specific)
 
 Depending on the protocol that fits to your dataset, you have to provide different input files. For the data standards
