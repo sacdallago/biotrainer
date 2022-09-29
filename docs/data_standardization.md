@@ -13,6 +13,7 @@ An overview of our decision process and about arguments for and against certain 
   * [Format](#format)
 - [Standardization decisions](#standardization-decisions)
   * [residue_to_class](#residue_to_class)
+  * [residues_to_class](#residues_to_class)
   * [sequence_to_class](#sequence_to_class)
   * [sequence_to_value](#sequence_to_value)
 
@@ -51,6 +52,9 @@ will fail.
 ## Standardization decisions
 
 ### residue_to_class
+```text
+Predict a class C for each residue encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxLxC
+```
 
 You have an input protein sequence and want to predict 
 for each residue (amino acid) in the sequence a categorical property 
@@ -70,7 +74,26 @@ labels.fasta
 DVCDVVDD
 ```
 
+### residues_to_class
+```text
+Predict a class C for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxC
+```
+
+You have an input protein sequence and want to predict a property for the whole sequence 
+(e.g. the sub-cellular-location of the protein), but you want to use *per-residue embeddings* for the task.
+
+**Required file: FASTA file containing sequences and labels**
+
+sequences.fasta
+```fasta
+>Seq1 TARGET=Nucleus SET=train VALIDATION=False 
+SEQWENCE
+```
+
 ### sequence_to_class
+```text
+Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output BxC
+```
 
 You have an input protein sequence and want to predict a property for the whole sequence
 (e.g. if the sequence is a trans-membrane protein or not).
@@ -84,6 +107,9 @@ SEQWENCE
 ```
 
 ### sequence_to_value
+```text
+Predict a value V for each sequence encoded in a fixed dimension D. Input BxD --> output BxV
+```
 
 You have an input protein sequence and want to predict the value of a property for the whole sequence
 (e.g. the melting temperature of the protein).
