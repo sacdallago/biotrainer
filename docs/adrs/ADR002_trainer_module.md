@@ -51,7 +51,11 @@ class TrainerGeneral {
 
 ### Decision/Solution:
 Trainer class is split up in 3 parts:
-* EmbeddingsLoader that only handles loading of the embeddings
-* PredictionIOHandler that creates torch datasets from the input files and embeddings
-* The Trainer class itself that handles the general aspects of training and is given two instances of the objects above
+* embeddings.py that only handles loading of the embeddings
+* TargetManager that creates torch datasets from the input files and embeddings and handles class_weight calculation
+* The trainer itself that handles the general aspects of training and uses the functionalities from the scripts above.
+It was eventually kept to be a function rather than a class, to simplify readability of the pipeline. Only very
+time-consuming functions, i.e. `_do_and_log_training()` and `_do_and_log_evaluation()` have been separated to individual
+functions. The functionality described in the TrainerGeneral class above is of course kept, but executed consecutively
+in the `training_and_evaluation_routine()`.
 
