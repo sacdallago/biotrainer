@@ -145,7 +145,8 @@ class TargetManager:
                         id2fasta.pop(seq_id)  # Remove redundant sequences
                 else:
                     exception_message = f"{len(missing_label_sequences)} sequences not found in labels file! " \
-                                        f"Make sure that all sequences are present and annotated in the labels file. " \
+                                        f"Make sure that all sequences are present and annotated in the labels file " \
+                                        f"or set the ignore_redundant_sequences flag to True.\n" \
                                         f"Missing sequence ids:\n"
                     for seq_id in missing_label_sequences:
                         exception_message += f"Sequence {seq_id}\n"
