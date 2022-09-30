@@ -1,4 +1,4 @@
-# H5 File Enhancement
+# Using custom embeddings
 
 This directory contains several notebooks that explain step-by-step, how to add values to an existing h5 file
 or even create a new embedding file from existing values. 

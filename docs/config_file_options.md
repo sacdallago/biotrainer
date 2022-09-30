@@ -61,7 +61,7 @@ A list of all current embedding config options can be found, for example,
 [in this file](https://github.com/sacdallago/bio_embeddings/blob/efb9801f0de9b9d51d19b741088763a7d2d0c3a2/bio_embeddings/embed/pipeline.py#L253). 
 
 It is, furthermore, also possible to provide a custom embeddings file in h5 format (take a look at the 
-[examples folder](../examples/h5file_enhancement/) for more information). Please also have a look at the 
+[examples folder](../examples/custom_embeddings/) for more information). Please also have a look at the 
 [data standardization](data_standardization.md#embeddings) for the specification requirements of your embeddings.
 
 Either provide a local file:

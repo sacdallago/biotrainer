@@ -78,7 +78,7 @@ Take a look at [bio_embeddings](https://github.com/sacdallago/bio_embeddings/) t
 embedding methods. However, it is also possible to provide your own embeddings file using your own embedder, 
 independent of *bio_embeddings*. Please refer to the 
 [data standardization](docs/data_standardization.md#embeddings) document and the 
-[relevant examples](examples/h5file_enhancement/) to learn how to do this. Pre-calculated embeddings can be used for
+[relevant examples](examples/custom_embeddings/) to learn how to do this. Pre-calculated embeddings can be used for
 the training process via the `embeddings_file` parameter, 
 as described in the [configuration options](docs/config_file_options.md#embeddings).
 
