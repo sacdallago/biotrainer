@@ -70,7 +70,7 @@ embeddings_file: path/to/embeddings.h5
 ```
 You can also download your embeddings directly from a URL:
 ```yaml
-embeddings_file: ftp://examples.com/embeddings.h5
+embeddings_file: ftp://examples.com/embeddings.h5  # Supports http, https, ftp
 ```
 The file will be downloaded and stored in the path of your config file with prefix "downloaded_".
 
