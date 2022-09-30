@@ -74,6 +74,12 @@ Number_Sequences x Sequence_Length x Embeddings_Dimension
 ```
 Note that the *embeddings dimension* must be equal for all residues or sequences, but the *sequence length* can differ.
 
+Some embedders use padded per-residue embeddings that always have the same size regardless of the sequence length. 
+Some also include a "start" or "stop" token, so that the dimension of the embedding does not exactly match the 
+number of residues. 
+**For biotrainer to work with per-residue embeddings, there must be an exact 1:1 match 
+between number of residues and embeddings!**
+
 ### Overview about the protocols
 
 ```text
