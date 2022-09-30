@@ -49,7 +49,7 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
             # If lengths is defined, we need to shorten the residue predictions to the length
             if lengths is not None:
                 return_pred = list()
-                for pred_x, length_x in zip(prediction, lengths):#.tolist()):
+                for pred_x, length_x in zip(prediction, lengths):
                     return_pred.append(pred_x[:length_x])
 
                 result_dict['prediction'] = return_pred
