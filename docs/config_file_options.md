@@ -27,6 +27,12 @@ output file. This behaviour is disabled by default, because the file can get ver
 save_test_predictions: True | False  # Default: False
 ```
 
+Sometimes, your sequence file might contain more sequences than your corresponding labels file for a residue-level
+prediction task. If this is intended, you can tell *biotrainer* to simply ignore those redundant sequences:
+```yaml
+ignore_redundant_sequences: True | False  # Default: False
+```
+
 ## Training data (protocol specific)
 
 Depending on the protocol that fits to your dataset, you have to provide different input files. For the data standards
