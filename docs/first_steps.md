@@ -53,16 +53,15 @@ model_choice: CNN
 optimizer_choice: adam
 loss_choice: cross_entropy_loss
 num_epochs: 30
-patience: 20
 use_class_weights: True
 learning_rate: 1e-3
 batch_size: 128
+ignore_redundant_sequences: True
 embedder_name: one_hot_encoding
 ```
 
-We are using pretty standard parameters here to train a CNN. We increased the `patience` a bit, to be more indulgent
-with the training process in the tutorial. If you do not have a GPU available, consider using a smaller number
-of epochs if the training process takes too long.
+We are using pretty standard parameters to train a CNN. 
+If you do have a GPU available, you might want to increase the num_epochs parameter and see, how the model behaves.
 
 The most interesting parameter is the `embedder_name: one_hot_encoding` one. This means that we automatically convert
 our sequences to one-hot encoded vectors, where the actually present amino acid has value `1`, while all the others
@@ -77,4 +76,18 @@ We are finally able to train our model! Execute the following command, using the
 poetry run python3 run-biotrainer.py your-directory/config.yml
 ```
 
+After a while, the training should be finished. You can find the best model checkpoint and a summary *out.yaml*
+file in an *output* subdirectory in the folder of your config file.
+
+## Where to go from here
+
+Congratulations, you finished your first run of *biotrainer*!
+In our test run, we got an accuracy of about 0.19 on the test set. We are confident that you could improve that
+result by using different model and training parameters or a more sophisticated embedding method!
+
+Of course, you can now start to use *biotrainer* on your own protein data. Or you could employ your own embedder
+and use its embeddings for training. Check out the associated 
+[examples](../examples/custom_embeddings) to learn how to do that.
+If you have any feedback, please do not hesitate to get in touch, 
+e.g. by creating an [issue](https://github.com/sacdallago/biotrainer/issues).
 
