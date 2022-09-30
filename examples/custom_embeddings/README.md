@@ -6,6 +6,8 @@ The idea behind this is that an experienced, advanced user does not only rely on
 able to add any values he or she wants to the embeddings and train a model with them.
 The notebooks want to show how this can be achieved, the user is encouraged to apply the existing examples to his
 or her use-case.
+Please also refer to the [data standardization](../../docs/data_standardization.md#embeddings) 
+document to learn about the necessary file standards, that your custom embeddings file has to apply.
 
 All used files for the examples can be found in *example_files*.
 
