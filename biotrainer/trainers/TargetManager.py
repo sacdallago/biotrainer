@@ -162,9 +162,12 @@ class TargetManager:
     def compute_class_weights(self) -> torch.FloatTensor:
         if 'class' in self._protocol:
             # concatenate all labels irrespective of protein to count class sizes
-            counter = Counter(list(itertools.chain.from_iterable(
-                [list(labels) for labels in self._id2target.values()]
-            )))
+            if "residue_" in self._protocol:
+                counter = Counter(list(itertools.chain.from_iterable(
+                    [list(labels) for labels in self._id2target.values()]
+                )))
+            else:
+                counter = Counter([label.item() for label in self._id2target.values()])
             # total number of samples in the set irrespective of classes
             n_samples = sum([counter[idx] for idx in range(len(self.class_str2int))])
             # balanced class weighting (inversely proportional to class size)
@@ -172,7 +175,7 @@ class TargetManager:
                 (n_samples / (len(self.class_str2int) * counter[idx])) for idx in range(len(self.class_str2int))
             ]
 
-            logger.info(f"Total number of samples/residues: {n_samples}")
+            logger.info(f"Total number of sequences/residues: {n_samples}")
             logger.info("Individual class counts and weights:")
             for c in counter:
                 logger.info(f"\t{self.class_int2str[c]} : {counter[c]} ({class_weights[c]:.3f})")

@@ -4,7 +4,7 @@ model_choice: FNN
 optimizer_choice: adam
 loss_choice: cross_entropy_loss
 num_epochs: 200
-use_class_weights: False
+use_class_weights: True
 learning_rate: 1e-3
 batch_size: 128
 save_test_predictions: False
