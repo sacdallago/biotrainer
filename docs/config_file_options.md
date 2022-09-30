@@ -132,7 +132,7 @@ This section describes the available training and dataloader parameters.
 
 You should declare the maximum number of epochs you want to train your model (any positive integer):
 ```yaml
-number_epochs: 20  # Default: 200
+num_epochs: 20  # Default: 200
 ```
 
 The build-in solver has an early-stop mechanism that prevents the model from over-fitting if the validation loss 
