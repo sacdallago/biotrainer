@@ -75,9 +75,9 @@ To convert the sequence data to more meaningful input for a model, embeddings ge
 Hence, *biotrainer* enables automatic calculation of embeddings on a *per-sequence* and *per-residue* level, 
 depending on the protocol. 
 Take a look at [bio_embeddings](https://github.com/sacdallago/bio_embeddings/) to find out about all the available
-embedding methods.
-However, it is also possible to provide your own embeddings file, independent of *bio_embeddings*. Please
-refer to the [data standardization](docs/data_standardization.md#embeddings) document and the 
+embedding methods. However, it is also possible to provide your own embeddings file using your own embedder, 
+independent of *bio_embeddings*. Please refer to the 
+[data standardization](docs/data_standardization.md#embeddings) document and the 
 [relevant examples](examples/h5file_enhancement/) to learn how to do this. Pre-calculated embeddings can be used for
 the training process via the `embeddings_file` parameter, 
 as described in the [configuration options](docs/config_file_options.md#embeddings).
