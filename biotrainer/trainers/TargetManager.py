@@ -32,11 +32,13 @@ class TargetManager:
     testing_ids = None
 
     def __init__(self, protocol: str, sequence_file: str,
-                 labels_file: Optional[str] = None, mask_file: Optional[str] = None):
+                 labels_file: Optional[str] = None, mask_file: Optional[str] = None,
+                 ignore_redundant_sequences: Optional[bool] = False):
         self._protocol = protocol
         self._sequence_file = sequence_file
         self._labels_file = labels_file
         self._mask_file = mask_file
+        self._ignore_redundant_sequences = ignore_redundant_sequences
 
     def _calculate_targets(self):
         # Parse FASTA protein sequences
@@ -124,14 +126,30 @@ class TargetManager:
     def _validate_targets(self, id2fasta):
         if 'residue_' in self._protocol:
             invalid_sequence_lengths = []
+            missing_label_sequences = []
             for seq_id, seq in id2fasta.items():
                 # Check that all sequences are included in both the sequence and labels file
                 if seq_id not in self._id2target.keys():
-                    raise Exception(f"Sequence {seq_id} not found in labels file! Make sure that all your sequences "
-                                    f"are present and annotated in the labels file.")
+                    missing_label_sequences.append(seq_id)
                 # Make sure the length of the sequences in the FASTA matches the length of the sequences in the labels
-                if len(seq) != self._id2target[seq_id].size:
+                elif len(seq) != self._id2target[seq_id].size:
                     invalid_sequence_lengths.append((seq_id, len(seq), self._id2target[seq_id].size))
+
+            if len(missing_label_sequences) > 0:
+                if self._ignore_redundant_sequences:
+                    logger.warning(f"Found {len(missing_label_sequences)} sequence(s) without a corresponding "
+                                   f"entry in the labels file! Because ignore_redundant_sequences flag is set, "
+                                   f"these sequences are dropped for training. "
+                                   f"Data loss: {(len(missing_label_sequences)/len(id2fasta.keys())):3.5f}%")
+                    for seq_id in missing_label_sequences:
+                        id2fasta.pop(seq_id)  # Remove redundant sequences
+                else:
+                    exception_message = f"{len(missing_label_sequences)} sequences not found in labels file! " \
+                                        f"Make sure that all sequences are present and annotated in the labels file. " \
+                                        f"Missing sequence ids:\n"
+                    for seq_id in missing_label_sequences:
+                        exception_message += f"Sequence {seq_id}\n"
+                    raise Exception(exception_message[:-1])  # Discard last \n
 
             if len(invalid_sequence_lengths) > 0:
                 exception_message = f"Length mismatch for {len(invalid_sequence_lengths)} sequence(s)!\n"
