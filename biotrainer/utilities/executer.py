@@ -38,6 +38,7 @@ def parse_config_file_and_execute_run(config_file_path: str):
             embeddings_file = download_embeddings(url=config["embeddings_file"], script_path=str(input_file_path))
 
         config["embeddings_file"] = str(input_file_path / embeddings_file)
+        config["embedder_name"] = "custom_embeddings"
     if "pretrained_model" in config.keys():
         config["pretrained_model"] = str(input_file_path / config["pretrained_model"])
 
