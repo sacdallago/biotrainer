@@ -38,7 +38,7 @@ def training_and_evaluation_routine(
         device: Union[None, str, torch.device] = None,
         pretrained_model: str = None,
         save_test_predictions: bool = False,
-        ignore_redundant_sequences: bool = False,
+        ignore_file_inconsistencies: bool = False,
         # Everything else
         **kwargs
 ) -> Dict[str, Any]:
@@ -77,7 +77,7 @@ def training_and_evaluation_routine(
     # Get datasets
     target_manager = TargetManager(protocol=protocol, sequence_file=sequence_file,
                                    labels_file=labels_file, mask_file=mask_file,
-                                   ignore_redundant_sequences=ignore_redundant_sequences)
+                                   ignore_file_inconsistencies=ignore_file_inconsistencies)
     train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
     output_vars['training_ids'] = target_manager.training_ids
     output_vars['validation_ids'] = target_manager.validation_ids
