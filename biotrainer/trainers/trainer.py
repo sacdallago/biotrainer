@@ -16,6 +16,7 @@ from ..utilities import seed_all, get_device
 from ..models import get_model, count_parameters
 
 from .TargetManager import TargetManager
+from .target_manager_utils import revert_mappings
 from .embeddings import compute_embeddings, load_embeddings
 
 logger = logging.getLogger(__name__)
@@ -185,7 +186,9 @@ def _do_and_log_evaluation(solver, test_loader, target_manager, save_test_predic
     test_results = solver.inference(test_loader)
 
     if save_test_predictions:
-        test_results['predictions'] = target_manager.revert_mappings(test_results['predictions'])
+        test_results['predictions'] = revert_mappings(protocol=target_manager.protocol,
+                                                      test_predictions=test_results['predictions'],
+                                                      class_int2str=target_manager.class_int2str)
         output_vars['test_iterations_results'] = test_results
     else:
         output_vars['test_iterations_results'] = test_results['metrics']
