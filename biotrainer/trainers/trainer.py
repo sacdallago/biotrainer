@@ -183,7 +183,7 @@ def _do_and_log_evaluation(solver, test_loader, target_manager, save_test_predic
     logger.info('Running final evaluation on the best checkpoint.')
 
     solver.load_checkpoint()
-    test_results = solver.inference(test_loader)
+    test_results = solver.inference(test_loader, calculate_test_metrics=True)
 
     if save_test_predictions:
         test_results['predictions'] = revert_mappings(protocol=target_manager.protocol,
