@@ -65,7 +65,7 @@ class Inferencer:
 
     def from_embeddings(self, embeddings: Iterable) -> List[Union[str, int, float]]:
         dataset = get_dataset(self.protocol, samples={
-            idx: (torch.tensor(embedding), torch.empty())
+            idx: (torch.tensor(embedding), torch.empty(1))
             for idx, embedding in enumerate(embeddings)
         })
 
