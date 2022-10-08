@@ -36,6 +36,7 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
 
         return super()._compute_metrics(predicted=masked_predicted, labels=masked_labels)
 
+    # Gets overwritten to shorten prediction lengths if necessary
     def _training_iteration(
             self, x: torch.Tensor, y: torch.Tensor, step=1, context: Optional[Callable] = None,
             lengths: Optional[torch.LongTensor] = None
@@ -56,4 +57,13 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
 
             return result_dict
 
+    # Gets overwritten to shorten prediction lengths if necessary
+    def _prediction_iteration(self, x: torch.Tensor, lengths: Optional[torch.LongTensor] = None):
+        prediction = super()._prediction_iteration(x, lengths)
+        with torch.no_grad():
+            if lengths is not None:
+                return_pred = list()
+                for pred_x, length_x in zip(prediction, lengths):
+                    return_pred.append(pred_x[:length_x])
 
+            return return_pred
