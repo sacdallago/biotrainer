@@ -132,11 +132,11 @@ class Solver(ABC):
 
     def load_checkpoint(self, checkpoint_path: str = None):
         if checkpoint_path:
-            state = torch.load(checkpoint_path)
+            state = torch.load(checkpoint_path, map_location=torch.device(self.device))
         elif self.experiment_dir:
-            state = torch.load(str(Path(self.experiment_dir) / "checkpoint.pt"))
+            state = torch.load(str(Path(self.experiment_dir) / "checkpoint.pt"), map_location=torch.device(self.device))
         else:
-            state = torch.load(str(Path(self._tempdir.name) / "checkpoint.pt"))
+            state = torch.load(str(Path(self._tempdir.name) / "checkpoint.pt"), map_location=torch.device(self.device))
 
         try:
             self.network.load_state_dict(state['state_dict'])
