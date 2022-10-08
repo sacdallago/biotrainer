@@ -234,16 +234,3 @@ class TargetManager:
             return torch.FloatTensor(class_weights)
         else:
             raise Exception(f"Class weights can only be calculated for classification tasks!")
-
-    def revert_mappings(self, test_predictions: List) -> List:
-        # If residue-to-class problem, map the integers back to the class labels (single letters)
-        if self._protocol == 'residue_to_class':
-            return ["".join(
-                [self.class_int2str[p] for p in prediction]
-            ) for prediction in test_predictions]
-
-        # If sequence/residues-to-class problem, map the integers back to the class labels (whatever length)
-        elif self._protocol == "sequence_to_class" or self._protocol == "residues_to_class":
-            return [self.class_int2str[p] for p in test_predictions]
-        else:
-            return test_predictions
