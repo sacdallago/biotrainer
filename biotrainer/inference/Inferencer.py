@@ -74,7 +74,7 @@ class Inferencer:
             collate_fn=self.collate_function
         )
 
-        predictions = self.solver.inference(dataloader)
+        predictions = self.solver.inference(dataloader)["predictions"]
 
         # For class predictions, revert from int (model output) to str (class name)
         predictions = revert_mappings(protocol=self.protocol, test_predictions=predictions,
