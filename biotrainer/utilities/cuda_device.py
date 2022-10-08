@@ -7,7 +7,10 @@ def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
     """Returns what the user specified, or defaults to the GPU,
     with a fallback to CPU if no GPU is available."""
     if isinstance(device, torch.device):
-        return device
+        if device.type == "cuda" and torch.cuda.is_available():
+            return device
+        else:
+            return torch.device("cpu")
     elif device:
         return torch.device(device)
     elif torch.cuda.is_available():
