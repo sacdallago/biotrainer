@@ -63,9 +63,9 @@ class Inferencer:
         self.collate_function = get_collate_function(protocol)
         self.solver.load_checkpoint()
 
-    def from_embeddings(self, embeddings: Iterable) -> List[Union[str, int]]:
+    def from_embeddings(self, embeddings: Iterable) -> List[Union[str, int, float]]:
         dataset = get_dataset(self.protocol, samples={
-            idx: (torch.tensor(embedding), torch.zeros(torch.tensor(embedding).shape[0]))
+            idx: (torch.tensor(embedding), torch.empty())
             for idx, embedding in enumerate(embeddings)
         })
 
@@ -74,14 +74,10 @@ class Inferencer:
             collate_fn=self.collate_function
         )
 
-        results = self.solver.inference(dataloader)
+        predictions = self.solver.inference(dataloader)
 
-        if self.protocol == 'residue_to_class':
-            results['predictions'] = ["".join(
-                [self.class_int_to_string[p] for p in prediction]
-            ) for prediction in results['predictions']]
-        # If sequence-to-class problem, map the integers back to the class labels (whatever length)
-        elif self.protocol == "sequence_to_class":
-            results['predictions'] = [self.class_int_to_string[p] for p in results['predictions']]
+        # For class predictions, revert from int (model output) to str (class name)
+        predictions = revert_mappings(protocol=self.protocol, test_predictions=predictions,
+                                      class_int2str=self.class_int2str)
 
-        return results['predictions']
+        return predictions
