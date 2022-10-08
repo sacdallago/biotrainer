@@ -126,7 +126,7 @@ class Solver(ABC):
             predict_iterations.append(iteration_result)
 
         return {
-            'metrics': Solver._aggregate_iteration_results(predict_iterations),
+            'metrics': Solver._aggregate_iteration_results(predict_iterations) if calculate_test_metrics else None,
             'predictions': list(chain(*[p['prediction'] for p in predict_iterations]))
         }
 
@@ -246,7 +246,7 @@ class Solver(ABC):
                 **metrics
             }
 
-    def _prediction_iteration(self, x: torch.Tensor, lengths: Optional[torch.LongTensor] = None):
+    def _prediction_iteration(self, x: torch.Tensor, lengths: Optional[torch.LongTensor] = None) -> Dict[str, List]:
         with torch.no_grad():
             # Move everything on device
             x = x.to(self.device)
@@ -255,7 +255,7 @@ class Solver(ABC):
             prediction = self._transform_network_output(prediction)
             # Discretize predictions if necessary
             prediction = self._logits_to_predictions(prediction)
-            return prediction.tolist()
+            return {"prediction": prediction.tolist()}
 
     @abstractmethod
     def _compute_metrics(
