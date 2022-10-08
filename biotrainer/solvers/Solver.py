@@ -109,15 +109,20 @@ class Solver(ABC):
 
         return epoch_iterations
 
-    def inference(self, dataloader: DataLoader) -> Dict[str, Union[List[Any], Dict[str, Union[float, int]]]]:
+    def inference(self, dataloader: DataLoader, calculate_test_metrics: bool = False) -> \
+            Dict[str, Union[List[Any], Dict[str, Union[float, int]]]]:
         self.network = self.network.eval()
 
         predict_iterations = list()
 
         for i, (_, X, y, lengths) in enumerate(dataloader):
-            iteration_result = self._training_iteration(
-                X, y, context=torch.no_grad, lengths=lengths
-            )
+            if calculate_test_metrics:  # For test set, y must be valid targets
+                iteration_result = self._training_iteration(
+                    X, y, context=torch.no_grad, lengths=lengths
+                )
+            else:  # For new predictions, y is ignored
+                iteration_result = self._prediction_iteration(x=X, lengths=lengths)
+
             predict_iterations.append(iteration_result)
 
         return {
@@ -241,6 +246,17 @@ class Solver(ABC):
                 'prediction': prediction,
                 **metrics
             }
+
+    def _prediction_iteration(self, x: torch.Tensor, lengths: Optional[torch.LongTensor] = None):
+        with torch.no_grad():
+            # Move everything on device
+            x = x.to(self.device)
+            prediction = self.network(x)
+            # Apply logit transformations
+            prediction = self._transform_network_output(prediction)
+            # Discretize predictions if necessary
+            prediction = self._logits_to_predictions(prediction)
+            return prediction.tolist()
 
     @abstractmethod
     def _compute_metrics(
