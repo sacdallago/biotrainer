@@ -197,7 +197,6 @@ class Solver(ABC):
         An optionable transform function which goes from logits to predictions (e.g. classes)
 
         :param logits: The logits from the ML model employed
-        :param masks: An optionable mask when dealing with variable sized input
         :return: A torch tensor of the transformed logits
         """
         return logits
