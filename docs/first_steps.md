@@ -56,7 +56,7 @@ num_epochs: 30
 use_class_weights: True
 learning_rate: 1e-3
 batch_size: 128
-ignore_redundant_sequences: True
+ignore_file_inconsistencies: True
 embedder_name: one_hot_encoding
 ```
 
