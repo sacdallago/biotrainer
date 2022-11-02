@@ -32,11 +32,13 @@ class TargetManager:
     testing_ids = None
 
     def __init__(self, protocol: str, sequence_file: str,
-                 labels_file: Optional[str] = None, mask_file: Optional[str] = None):
+                 labels_file: Optional[str] = None, mask_file: Optional[str] = None,
+                 ignore_file_inconsistencies: Optional[bool] = False):
         self._protocol = protocol
         self._sequence_file = sequence_file
         self._labels_file = labels_file
         self._mask_file = mask_file
+        self._ignore_redundant_sequences = ignore_file_inconsistencies
 
     def _calculate_targets(self):
         # Parse FASTA protein sequences
@@ -119,19 +121,68 @@ class TargetManager:
         if not self._id2target:
             raise Exception("Prediction targets not found or could not be extracted!")
 
-        self._validate_targets(id2fasta)
-
-    def _validate_targets(self, id2fasta):
+    def _validate_targets(self, id2emb):
         if 'residue_' in self._protocol:
+            """
+            1. Check if number of embeddings and corresponding labels match:
+                # embeddings == # labels --> SUCCESS
+                # embeddings > # labels --> Fail, unless self._ignore_file_inconsistencies (=> drop embeddings).
+                # embeddings < # labels --> Fail, unless self._ignore_file_inconsistencies (=> drop labels).
+            2. Check that lengths of embeddings == length of provided labels, if not --> Fail.
+            """
             invalid_sequence_lengths = []
-            for seq_id, seq in id2fasta.items():
-                # Check that all sequences are included in both the sequence and labels file
+            embeddings_without_labels = []
+            labels_without_embeddings = []
+            for seq_id, seq in id2emb.items():
+                # Check that all embeddings have a corresponding label
                 if seq_id not in self._id2target.keys():
-                    raise Exception(f"Sequence {seq_id} not found in labels file! Make sure that all your sequences "
-                                    f"are present and annotated in the labels file.")
-                # Make sure the length of the sequences in the FASTA matches the length of the sequences in the labels
-                if len(seq) != self._id2target[seq_id].size:
+                    embeddings_without_labels.append(seq_id)
+                # Make sure the length of the sequences in the embeddings match the length of the seqs in the labels
+                elif len(seq) != self._id2target[seq_id].size:
                     invalid_sequence_lengths.append((seq_id, len(seq), self._id2target[seq_id].size))
+
+            for seq_id in self._id2target.keys():
+                # Check that all labels have a corresponding embedding
+                if seq_id not in id2emb.keys():
+                    labels_without_embeddings.append(seq_id)
+
+            if len(embeddings_without_labels) > 0:
+                if self._ignore_redundant_sequences:
+                    logger.warning(f"Found {len(embeddings_without_labels)} sequence(s) without a corresponding "
+                                   f"entry in the labels file! Because ignore_redundant_sequences flag is set, "
+                                   f"these sequences are dropped for training. "
+                                   f"Data loss: {(len(embeddings_without_labels) / len(id2emb.keys())):3.5f}%")
+                    for seq_id in embeddings_without_labels:
+                        id2emb.pop(seq_id)  # Remove redundant sequences
+                else:
+                    exception_message = f"{len(embeddings_without_labels)} sequence(s) not found in labels file! " \
+                                        f"Make sure that all sequences are present and annotated in the labels file " \
+                                        f"or set the ignore_file_inconsistencies flag to True.\n" \
+                                        f"Missing label sequence ids:\n"
+                    for seq_id in embeddings_without_labels:
+                        exception_message += f"Sequence {seq_id}\n"
+                    raise Exception(exception_message[:-1])  # Discard last \n
+
+            if len(labels_without_embeddings) > 0:
+                if self._ignore_redundant_sequences:
+                    logger.warning(f"Found {len(labels_without_embeddings)} label(s) without a corresponding "
+                                   f"entry in the embeddings file! Because ignore_redundant_sequences flag is set, "
+                                   f"these labels are dropped for training. "
+                                   f"Data loss: {(len(labels_without_embeddings) / len(id2emb.keys())):3.5f}%")
+                    for seq_id in labels_without_embeddings:
+                        id2emb.pop(seq_id)  # Remove redundant labels
+                else:
+                    exception_message = f"{len(labels_without_embeddings)} label(s) not found in embeddings file! " \
+                                        f"Make sure that for every sequence id in the labels file, there is a " \
+                                        f"corresponding embedding. If no pre-computed embeddings were used, \n" \
+                                        f"this error message indicates that there is a sequence missing in the " \
+                                        f"sequence_file.\n" \
+                                        f"Setting the ignore_file_inconsistencies flag to True " \
+                                        f"will ignore this problem.\n" \
+                                        f"Missing sequence ids:\n"
+                    for seq_id in labels_without_embeddings:
+                        exception_message += f"Sequence {seq_id}\n"
+                    raise Exception(exception_message[:-1])  # Discard last \n
 
             if len(invalid_sequence_lengths) > 0:
                 exception_message = f"Length mismatch for {len(invalid_sequence_lengths)} sequence(s)!\n"
@@ -140,8 +191,9 @@ class TargetManager:
                 raise Exception(exception_message[:-1])  # Discard last \n
 
     def get_datasets(self, id2emb: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset]:
-        # At first calculate id2target
+        # At first calculate id2target and validate
         self._calculate_targets()
+        self._validate_targets(id2emb)
 
         # Get dataset splits from file
         self.training_ids, self.validation_ids, self.testing_ids = get_split_lists(self._id2attributes)

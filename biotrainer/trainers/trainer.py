@@ -38,6 +38,7 @@ def training_and_evaluation_routine(
         device: Union[None, str, torch.device] = None,
         pretrained_model: str = None,
         save_test_predictions: bool = False,
+        ignore_file_inconsistencies: bool = False,
         # Everything else
         **kwargs
 ) -> Dict[str, Any]:
@@ -59,7 +60,6 @@ def training_and_evaluation_routine(
             embedder_name=embedder_name, sequence_file=sequence_file,
             protocol=protocol, output_dir=output_dir
         )
-
         # Add to outconfig
         output_vars['embeddings_file'] = embeddings_file
     else:
@@ -76,7 +76,8 @@ def training_and_evaluation_routine(
 
     # Get datasets
     target_manager = TargetManager(protocol=protocol, sequence_file=sequence_file,
-                                   labels_file=labels_file, mask_file=mask_file)
+                                   labels_file=labels_file, mask_file=mask_file,
+                                   ignore_file_inconsistencies=ignore_file_inconsistencies)
     train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
     output_vars['training_ids'] = target_manager.training_ids
     output_vars['validation_ids'] = target_manager.validation_ids

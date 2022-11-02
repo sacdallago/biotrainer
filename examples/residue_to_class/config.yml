@@ -8,4 +8,5 @@ num_epochs: 200
 use_class_weights: True
 learning_rate: 1e-3
 batch_size: 128
+ignore_file_inconsistencies: False
 embedder_name: prottrans_t5_xl_u50
