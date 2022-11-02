@@ -38,7 +38,7 @@ class TargetManager:
         self._sequence_file = sequence_file
         self._labels_file = labels_file
         self._mask_file = mask_file
-        self._ignore_redundant_sequences = ignore_file_inconsistencies
+        self._ignore_file_inconsistencies = ignore_file_inconsistencies
 
     def _calculate_targets(self):
         # Parse FASTA protein sequences
@@ -147,7 +147,7 @@ class TargetManager:
                     labels_without_embeddings.append(seq_id)
 
             if len(embeddings_without_labels) > 0:
-                if self._ignore_redundant_sequences:
+                if self._ignore_file_inconsistencies:
                     logger.warning(f"Found {len(embeddings_without_labels)} embedding(s) without a corresponding "
                                    f"entry in the labels file! Because ignore_redundant_sequences flag is set, "
                                    f"these sequences are dropped for training. "
@@ -164,7 +164,7 @@ class TargetManager:
                     raise Exception(exception_message[:-1])  # Discard last \n
 
             if len(labels_without_embeddings) > 0:
-                if self._ignore_redundant_sequences:
+                if self._ignore_file_inconsistencies:
                     logger.warning(f"Found {len(labels_without_embeddings)} label(s) without a corresponding "
                                    f"entry in the embeddings file! Because ignore_redundant_sequences flag is set, "
                                    f"these labels are dropped for training. "
