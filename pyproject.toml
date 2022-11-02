@@ -49,6 +49,7 @@ tqdm = ">=4.45.0,<5.0.0"
 # Optional
 bio-embeddings = {version = "0.2.2", optional = true, extras = ["all"]}
 jupyter = {version = "^1.0.0", optional = true}
+torchmetrics = "^0.10.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "7.1.2"
