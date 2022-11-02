@@ -164,9 +164,9 @@ def training_and_evaluation_routine(
 
 
 def _do_and_log_training(solver, train_loader, val_loader):
-    start_time = time.time()
+    start_time = time.perf_counter()
     _ = solver.train(train_loader, val_loader)
-    end_time = time.time()
+    end_time = time.perf_counter()
 
     # Logging
     logger.info(f'Total training time: {(end_time - start_time) / 60:.1f}[m]')

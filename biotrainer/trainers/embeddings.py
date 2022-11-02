@@ -86,7 +86,7 @@ def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path,
 def load_embeddings(embeddings_file_path: str) -> Dict[str, Any]:
     # load pre-computed embeddings in .h5 file format computed via bio_embeddings
     logger.info(f"Loading embeddings from: {embeddings_file_path}")
-    start = time.time()
+    start = time.perf_counter()
 
     # https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
     embeddings_file = h5py.File(embeddings_file_path, 'r')
@@ -97,6 +97,6 @@ def load_embeddings(embeddings_file_path: str) -> Dict[str, Any]:
 
     # Logging
     logger.info(f"Read {len(id2emb)} entries.")
-    logger.info(f"Time elapsed for reading embeddings: {(time.time() - start):.1f}[s]")
+    logger.info(f"Time elapsed for reading embeddings: {(time.perf_counter() - start):.1f}[s]")
 
     return id2emb
