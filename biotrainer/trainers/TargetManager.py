@@ -121,7 +121,7 @@ class TargetManager:
         if not self._id2target:
             raise Exception("Prediction targets not found or could not be extracted!")
 
-    def _validate_targets(self, id2emb):
+    def _validate_targets(self, id2emb: Dict[str, Any]):
         if 'residue_' in self.protocol:
             """
             1. Check if number of embeddings and corresponding labels match:
@@ -148,7 +148,7 @@ class TargetManager:
 
             if len(embeddings_without_labels) > 0:
                 if self._ignore_redundant_sequences:
-                    logger.warning(f"Found {len(embeddings_without_labels)} sequence(s) without a corresponding "
+                    logger.warning(f"Found {len(embeddings_without_labels)} embedding(s) without a corresponding "
                                    f"entry in the labels file! Because ignore_redundant_sequences flag is set, "
                                    f"these sequences are dropped for training. "
                                    f"Data loss: {(len(embeddings_without_labels) / len(id2emb.keys())):3.5f}%")
@@ -170,7 +170,8 @@ class TargetManager:
                                    f"these labels are dropped for training. "
                                    f"Data loss: {(len(labels_without_embeddings) / len(id2emb.keys())):3.5f}%")
                     for seq_id in labels_without_embeddings:
-                        id2emb.pop(seq_id)  # Remove redundant labels
+                        self._id2target.pop(seq_id)  # Remove redundant labels
+                        self._id2attributes.pop(seq_id)  # Remove redundant labels
                 else:
                     exception_message = f"{len(labels_without_embeddings)} label(s) not found in embeddings file! " \
                                         f"Make sure that for every sequence id in the labels file, there is a " \
