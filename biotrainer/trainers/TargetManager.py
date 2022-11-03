@@ -151,7 +151,7 @@ class TargetManager:
                     logger.warning(f"Found {len(embeddings_without_labels)} embedding(s) without a corresponding "
                                    f"entry in the labels file! Because ignore_redundant_sequences flag is set, "
                                    f"these sequences are dropped for training. "
-                                   f"Data loss: {(len(embeddings_without_labels) / len(id2emb.keys())):3.5f}%")
+                                   f"Data loss: {(len(embeddings_without_labels) / len(id2emb.keys()))*100:.2f}%")
                     for seq_id in embeddings_without_labels:
                         id2emb.pop(seq_id)  # Remove redundant sequences
                 else:
@@ -168,7 +168,7 @@ class TargetManager:
                     logger.warning(f"Found {len(labels_without_embeddings)} label(s) without a corresponding "
                                    f"entry in the embeddings file! Because ignore_redundant_sequences flag is set, "
                                    f"these labels are dropped for training. "
-                                   f"Data loss: {(len(labels_without_embeddings) / len(id2emb.keys())):3.5f}%")
+                                   f"Data loss: {(len(labels_without_embeddings) / len(id2emb.keys()))*100:.2f}%")
                     for seq_id in labels_without_embeddings:
                         self._id2target.pop(seq_id)  # Remove redundant labels
                         self._id2attributes.pop(seq_id)  # Remove redundant labels
