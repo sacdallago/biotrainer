@@ -1,6 +1,7 @@
 import time
 import torch
 import logging
+import datetime
 
 from pathlib import Path
 from copy import deepcopy
@@ -166,16 +167,18 @@ def training_and_evaluation_routine(
 
 
 def _do_and_log_training(solver, train_loader, val_loader):
+    start_time_abs = datetime.datetime.now()
     start_time = time.perf_counter()
     _ = solver.train(train_loader, val_loader)
     end_time = time.perf_counter()
+    end_time_abs = datetime.datetime.now()
 
     # Logging
     logger.info(f'Total training time: {(end_time - start_time) / 60:.1f}[m]')
 
     # Save training time for prosperity
-    output_vars['start_time'] = start_time
-    output_vars['end_time'] = end_time
+    output_vars['start_time'] = start_time_abs
+    output_vars['end_time'] = end_time_abs
     output_vars['elapsed_time'] = end_time - start_time
 
 
