@@ -88,7 +88,7 @@ def training_and_evaluation_routine(
 
     # Get x_to_class specific logs and weights
     class_weights = None
-    if 'class' in protocol:
+    if 'class' in protocol or '_interaction' in protocol:
         output_vars['class_int_to_string'] = target_manager.class_int2str
         output_vars['class_str_to_int'] = target_manager.class_str2int
         logger.info(f"Number of classes: {output_vars['n_classes']}")

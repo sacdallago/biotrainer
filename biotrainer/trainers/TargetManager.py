@@ -10,7 +10,8 @@ from typing import Dict, Any, Tuple, Optional, List
 
 from ..datasets import get_dataset
 from .target_manager_utils import get_split_lists
-from ..utilities import read_FASTA, get_attributes_from_seqrecords, MASK_AND_LABELS_PAD_VALUE
+from ..utilities import get_attributes_from_seqrecords, get_attributes_from_seqrecords_for_protein_interactions, \
+    MASK_AND_LABELS_PAD_VALUE, read_FASTA
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,35 @@ class TargetManager:
             else:
                 raise NotImplementedError
 
+        # Protein-Protein Interactions
+        elif 'protein_protein_interaction' in self.protocol:
+            self._id2attributes = get_attributes_from_seqrecords_for_protein_interactions(protein_sequences)
+
+            self._id2target = {interaction_id: seq_vals["TARGET"] for interaction_id, seq_vals
+                               in self._id2attributes.items()}
+
+            # a) Class output
+            # if 'class' in self.protocol:
+            # Infer classes from data
+            self._class_labels = sorted(set(self._id2target.values()))
+            self.number_of_outputs = len(self._class_labels)
+
+            # Create a mapping from integers to class labels and reverse
+            self.class_str2int = {letter: idx for idx, letter in enumerate(self._class_labels)}
+            self.class_int2str = {idx: letter for idx, letter in enumerate(self._class_labels)}
+
+            # Convert label values to lists of numbers based on the maps
+            self._id2target = {identifier: np.array(self.class_str2int[label])
+                               for identifier, label in self._id2target.items()}  # classes idxs (zero-based)
+
+            """
+            # b) Value output
+            elif 'value' in self.protocol:
+                self._id2target = {seq_id: float(seq_val) for seq_id, seq_val in self._id2target.items()}
+                self.number_of_outputs = 1
+            else:
+                raise NotImplementedError
+            """
         else:
             raise NotImplementedError
 
@@ -151,7 +181,7 @@ class TargetManager:
                     logger.warning(f"Found {len(embeddings_without_labels)} embedding(s) without a corresponding "
                                    f"entry in the labels file! Because ignore_redundant_sequences flag is set, "
                                    f"these sequences are dropped for training. "
-                                   f"Data loss: {(len(embeddings_without_labels) / len(id2emb.keys()))*100:.2f}%")
+                                   f"Data loss: {(len(embeddings_without_labels) / len(id2emb.keys())) * 100:.2f}%")
                     for seq_id in embeddings_without_labels:
                         id2emb.pop(seq_id)  # Remove redundant sequences
                 else:
@@ -168,7 +198,7 @@ class TargetManager:
                     logger.warning(f"Found {len(labels_without_embeddings)} label(s) without a corresponding "
                                    f"entry in the embeddings file! Because ignore_redundant_sequences flag is set, "
                                    f"these labels are dropped for training. "
-                                   f"Data loss: {(len(labels_without_embeddings) / len(id2emb.keys()))*100:.2f}%")
+                                   f"Data loss: {(len(labels_without_embeddings) / len(id2emb.keys())) * 100:.2f}%")
                     for seq_id in labels_without_embeddings:
                         self._id2target.pop(seq_id)  # Remove redundant labels
                         self._id2attributes.pop(seq_id)  # Remove redundant labels
@@ -199,6 +229,16 @@ class TargetManager:
         # Get dataset splits from file
         self.training_ids, self.validation_ids, self.testing_ids = get_split_lists(self._id2attributes)
 
+        # Concatenate embeddings for protein_protein_interaction
+        if "protein_protein_interaction" in self.protocol:
+            for interaction_id in self._id2attributes.keys():
+                interactor_left = interaction_id.split("§")[0]
+                interactor_right = interaction_id.split("§")[1]
+                embedding_left = id2emb[interactor_left]
+                embedding_right = id2emb[interactor_right]
+                combined_embedding = torch.mul(embedding_left, embedding_right)
+                id2emb[interaction_id] = combined_embedding
+
         # Create datasets
         train_dataset = get_dataset(self.protocol, {
             idx: (id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.training_ids
@@ -213,7 +253,7 @@ class TargetManager:
         return train_dataset, val_dataset, test_dataset
 
     def compute_class_weights(self) -> torch.FloatTensor:
-        if 'class' in self.protocol:
+        if 'class' in self.protocol or "_interaction" in self.protocol:
             # concatenate all labels irrespective of protein to count class sizes
             if "residue_" in self.protocol:
                 counter = Counter(list(itertools.chain.from_iterable(

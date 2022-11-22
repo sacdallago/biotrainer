@@ -17,10 +17,27 @@ def get_attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict
     result = dict()
 
     for sequence in sequences:
-        result[sequence.id] = {key: value for key, value in re.findall(r"([A-Z_]+)=(-?[A-z0-9]+[.0-9]*)", sequence.description)}
+        result[sequence.id] = {key: value for key, value in re.findall(r"([A-Z_]+)=(-?[A-z0-9]+-?[A-z0-9]*[.0-9]*)",
+                                                                       sequence.description)}
 
     return result
 
+
+def get_attributes_from_seqrecords_for_protein_interactions(sequences: List[SeqRecord]) -> Dict[str, Dict[str, str]]:
+    """
+    :param sequences: a list of SeqRecords
+    :return: A dictionary of ids and their attributes
+    """
+
+    result = dict()
+
+    for sequence in sequences:
+        attribute_dict = {key: value for key, value
+                          in re.findall(r"([A-Z_]+)=(-?[A-z0-9]+-?[A-z0-9]*[.0-9]*)", sequence.description)}
+        interaction_id = f"{sequence.id}§{attribute_dict['INTERACTOR']}"
+        result[interaction_id] = attribute_dict
+
+    return result
 
 def read_FASTA(path: str) -> List[SeqRecord]:
     """

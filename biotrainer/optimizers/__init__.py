@@ -12,6 +12,9 @@ __OPTIMIZERS = {
     },
     'sequence_to_value': {
         'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
+    },
+    'protein_protein_interaction': {
+        'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
     }
 }
 

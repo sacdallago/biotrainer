@@ -9,7 +9,8 @@ __SOLVERS = {
     'residue_to_class': ResidueClassificationSolver,
     'residues_to_class': ResiduesClassificationSolver,
     'sequence_to_class': SequenceClassificationSolver,
-    'sequence_to_value': SequenceRegressionSolver
+    'sequence_to_value': SequenceRegressionSolver,
+    'protein_protein_interaction': SequenceClassificationSolver
 }
 
 

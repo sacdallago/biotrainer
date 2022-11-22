@@ -20,6 +20,10 @@ __MODELS = {
     'sequence_to_value': {
         'FNN': FNN,
         'LogReg': LogReg
+    },
+    'protein_protein_interaction': {
+        'FNN': FNN,
+        'LogReg': LogReg
     }
 }
 
