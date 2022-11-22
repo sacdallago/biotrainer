@@ -81,9 +81,9 @@ def training_and_evaluation_routine(
                                    labels_file=labels_file, mask_file=mask_file,
                                    ignore_file_inconsistencies=ignore_file_inconsistencies)
     train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
-    output_vars['training_ids'] = target_manager.training_ids
-    output_vars['validation_ids'] = target_manager.validation_ids
-    output_vars['testing_ids'] = target_manager.testing_ids
+    output_vars['n_training_ids'] = len(target_manager.training_ids)
+    output_vars['n_validation_ids'] = len(target_manager.validation_ids)
+    output_vars['n_testing_ids'] = len(target_manager.testing_ids)
     output_vars['n_classes'] = target_manager.number_of_outputs
 
     # Get x_to_class specific logs and weights
