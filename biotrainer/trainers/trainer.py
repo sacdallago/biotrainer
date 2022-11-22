@@ -54,6 +54,7 @@ def training_and_evaluation_routine(
     # Get device
     device = get_device(device)
     output_vars['device'] = str(device)
+    logger.info(f"Using device: {device}")
 
     # Generate embeddings if necessary, otherwise use existing embeddings and overwrite embedder_name
     if not embeddings_file or not Path(embeddings_file).is_file():
