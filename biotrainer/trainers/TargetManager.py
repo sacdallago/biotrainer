@@ -201,13 +201,13 @@ class TargetManager:
 
         # Create datasets
         train_dataset = get_dataset(self.protocol, {
-            idx: (torch.tensor(id2emb[idx]), torch.tensor(self._id2target[idx])) for idx in self.training_ids
+            idx: (id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.training_ids
         })
         val_dataset = get_dataset(self.protocol, {
-            idx: (torch.tensor(id2emb[idx]), torch.tensor(self._id2target[idx])) for idx in self.validation_ids
+            idx: (id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.validation_ids
         })
         test_dataset = get_dataset(self.protocol, {
-            idx: (torch.tensor(id2emb[idx]), torch.tensor(self._id2target[idx])) for idx in self.testing_ids
+            idx: (id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.testing_ids
         })
 
         return train_dataset, val_dataset, test_dataset
