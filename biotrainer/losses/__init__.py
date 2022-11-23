@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from typing import Optional
+from typing import Optional, Union
 
 from ..utilities import MASK_AND_LABELS_PAD_VALUE
 
@@ -21,16 +21,17 @@ __LOSSES = {
 }
 
 
-def get_loss(protocol: str, loss_choice: str, weight: Optional[torch.Tensor] = None):
+def get_loss(protocol: str, loss_choice: str, device: Union[str, torch.device],
+             weight: Optional[torch.Tensor] = None):
     loss = __LOSSES.get(protocol).get(loss_choice)
 
     if not loss:
         raise NotImplementedError
     else:
         if weight is not None:
-            return loss(weight=weight)
+            return loss(weight=weight).to(device)
         else:
-            return loss()
+            return loss().to(device)
 
 
 __all__ = [

@@ -49,7 +49,7 @@ class Inferencer:
             n_classes=n_classes, n_features=n_features
         )
         loss_function = get_loss(
-            protocol=protocol, loss_choice=loss_choice
+            protocol=protocol, loss_choice=loss_choice, device=device
         )
         optimizer = get_optimizer(
             protocol=protocol, optimizer_choice=optimizer_choice,
