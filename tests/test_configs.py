@@ -3,7 +3,7 @@ import yaml
 import shutil
 import tempfile
 
-from biotrainer.utilities.config import ConfigurationException
+from biotrainer.utilities import ConfigurationException
 from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
 
 protocol_to_input = {

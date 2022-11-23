@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib import request
 from typing import Dict, Any
 
-from ..utilities.config import ConfigurationException
+from ..utilities import ConfigurationException
 
 # Defines if reduced embeddings from bio_embeddings should be used.
 # Reduced means that the per-residue embeddings are reduced to a per-sequence embedding
