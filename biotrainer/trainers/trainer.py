@@ -121,7 +121,7 @@ def training_and_evaluation_routine(
 
     # Initialize loss function
     loss_function = get_loss(
-        protocol=protocol, loss_choice=loss_choice, weight=class_weights
+        protocol=protocol, loss_choice=loss_choice, device=device, weight=class_weights
     )
 
     # Initialize optimizer
