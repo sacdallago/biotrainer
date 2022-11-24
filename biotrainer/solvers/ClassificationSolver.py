@@ -23,7 +23,7 @@ class ClassificationSolver(Solver):
         self.recall_per_class = Recall(average="none", num_classes=self.num_classes)
 
         self.macro_f1_score = F1Score(average="macro", num_classes=self.num_classes)
-        self.micro_f1_score = F1Score(average="macro", num_classes=self.num_classes)
+        self.micro_f1_score = F1Score(average="micro", num_classes=self.num_classes)
         self.f1_per_class = F1Score(average="none", num_classes=self.num_classes)
 
         self.scc = SpearmanCorrCoef()
@@ -56,9 +56,9 @@ class ClassificationSolver(Solver):
             metrics_dict.update(f1scores)
         # Binary prediction
         else:
-            metrics_dict['precision'] = self.micro_precision(predicted.cpu(), labels.cpu()).item()
-            metrics_dict['recall'] = self.micro_recall(predicted.cpu(), labels.cpu()).item()
-            metrics_dict['f1_score'] = self.micro_f1_score(predicted.cpu(), labels.cpu()).item()
+            metrics_dict['precision'] = self.macro_precision(predicted.cpu(), labels.cpu()).item()
+            metrics_dict['recall'] = self.macro_recall(predicted.cpu(), labels.cpu()).item()
+            metrics_dict['f1_score'] = self.macro_f1_score(predicted.cpu(), labels.cpu()).item()
 
         metrics_dict['spearmans-corr-coeff'] = self.scc(predicted.cpu().float(), labels.cpu().float()).item()
         metrics_dict['matthews-corr-coeff'] = self.mcc(predicted.cpu(), labels.cpu()).item()
