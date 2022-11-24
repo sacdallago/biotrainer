@@ -28,9 +28,9 @@ class TargetManager:
     _class_labels: Optional[List[str]] = None
 
     # Dataset split lists
-    training_ids = None
-    validation_ids = None
-    testing_ids = None
+    training_ids: List[str] = None
+    validation_ids: List[str] = None
+    testing_ids: List[str] = None
 
     def __init__(self, protocol: str, sequence_file: str,
                  labels_file: Optional[str] = None, mask_file: Optional[str] = None,
