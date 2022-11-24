@@ -1,4 +1,4 @@
-from .FNN import FNN
+from .FNN import FNN, FNNInteraction
 from .CNN import CNN
 from .LogReg import LogReg
 from .LightAttention import LightAttention
@@ -22,7 +22,7 @@ __MODELS = {
         'LogReg': LogReg
     },
     'protein_protein_interaction': {
-        'FNN': FNN,
+        'FNN': FNNInteraction,
         'LogReg': LogReg
     }
 }
