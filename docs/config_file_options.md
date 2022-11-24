@@ -210,3 +210,12 @@ or `num_epochs - num_pretrained_epochs` (from the model state dict) is reached.
 **Note that `pretrained_model` and `auto_resume` options are incompatible.**
 `auto_resume` should be used in case one needs to restart the training job multiple times.
 `pretrained_model` if one wants to continue to train a specific model.
+
+
+Sometimes it might be useful to check your employed setup and architecture only on a small sub-sample of your 
+total dataset. This can also be automatically done for you in biotrainer:
+```yaml
+limited_sample_size: 100  # Default: -1, must be > 0 to be applied
+```
+Note that this value is applied only to the train dataset and embedding calculation is currently
+done for all sequences!
