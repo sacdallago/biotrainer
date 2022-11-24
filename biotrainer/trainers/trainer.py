@@ -163,6 +163,10 @@ def training_and_evaluation_routine(
     # Finally, run evaluation of test set
     _do_and_log_evaluation(solver, test_loader, target_manager, save_test_predictions)
 
+    # Do sanity check TODO: Think about purpose and pros and cons, flags in config, tests..
+    sanity_checker = SanityChecker(output_vars=output_vars, mode="Warn")
+    sanity_checker.check_test_results()
+
     return output_vars
 
 
