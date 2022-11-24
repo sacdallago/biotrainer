@@ -13,8 +13,8 @@ from ..losses import get_loss
 from ..solvers import get_solver
 from ..optimizers import get_optimizer
 from ..datasets import get_collate_function
-from ..utilities import seed_all, get_device
 from ..models import get_model, count_parameters
+from ..utilities import seed_all, get_device, SanityChecker
 
 from .TargetManager import TargetManager
 from .target_manager_utils import revert_mappings
@@ -41,6 +41,7 @@ def training_and_evaluation_routine(
         pretrained_model: str = None,
         save_test_predictions: bool = False,
         ignore_file_inconsistencies: bool = False,
+        limited_sample_size: int = -1,
         # Everything else
         **kwargs
 ) -> Dict[str, Any]:
@@ -80,7 +81,8 @@ def training_and_evaluation_routine(
     # Get datasets
     target_manager = TargetManager(protocol=protocol, sequence_file=sequence_file,
                                    labels_file=labels_file, mask_file=mask_file,
-                                   ignore_file_inconsistencies=ignore_file_inconsistencies)
+                                   ignore_file_inconsistencies=ignore_file_inconsistencies,
+                                   limited_sample_size=limited_sample_size)
     train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
     output_vars['n_training_ids'] = len(target_manager.training_ids)
     output_vars['n_validation_ids'] = len(target_manager.validation_ids)
