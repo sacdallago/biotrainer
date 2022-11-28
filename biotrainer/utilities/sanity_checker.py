@@ -17,7 +17,10 @@ class SanityChecker:
 
     def check_test_results(self):
         test_results = self.output_vars['test_iterations_results']
-        test_result_metrics = test_results['metrics']
+        if "metrics" in test_results.keys():
+            test_result_metrics = test_results['metrics']
+        else:
+            test_result_metrics = test_results
         # Multi-class metrics
         if self.output_vars['n_classes'] > 2:
             pass
