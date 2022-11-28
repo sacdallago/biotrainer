@@ -175,7 +175,7 @@ def training_and_evaluation_routine(
 def _do_and_log_training(solver, train_loader, val_loader):
     start_time_abs = datetime.datetime.now()
     start_time = time.perf_counter()
-    _ = solver.train(train_loader, val_loader)
+    epoch_iterations = solver.train(train_loader, val_loader)
     end_time = time.perf_counter()
     end_time_abs = datetime.datetime.now()
 
@@ -186,6 +186,9 @@ def _do_and_log_training(solver, train_loader, val_loader):
     output_vars['start_time'] = start_time_abs
     output_vars['end_time'] = end_time_abs
     output_vars['elapsed_time'] = end_time - start_time
+
+    # Save metrics from best training epoch
+    output_vars['training_iteration_result_best_epoch'] = epoch_iterations[solver.get_best_epoch()]
 
 
 def _do_and_log_evaluation(solver, test_loader, target_manager, save_test_predictions):
