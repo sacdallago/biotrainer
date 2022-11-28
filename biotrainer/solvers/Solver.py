@@ -39,6 +39,7 @@ class Solver(ABC):
         self.experiment_dir = experiment_dir
 
         # Early stopping internal variables
+        self._best_epoch = 0
         self._min_loss = math.inf
         self._stop_count = patience
         self._tempdir = TemporaryDirectory()
@@ -145,6 +146,12 @@ class Solver(ABC):
         except RuntimeError as e:
             raise Exception(f"Defined model architecture does not seem to match pretrained model!") from e
 
+    def get_best_epoch(self) -> int:
+        if self.start_epoch > 0:
+            return self._best_epoch - self.start_epoch
+        else:
+            return self._best_epoch
+
     def _save_checkpoint(self, epoch: int):
         state = {
             'epoch': epoch,
@@ -161,7 +168,7 @@ class Solver(ABC):
         if current_loss < (self._min_loss - self.epsilon):
             self._min_loss = current_loss
             self._stop_count = self.patience
-
+            self._best_epoch = epoch
             # Save best model (overwrite if necessary)
             self._save_checkpoint(epoch)
             return False
