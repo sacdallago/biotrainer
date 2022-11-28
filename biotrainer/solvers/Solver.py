@@ -167,8 +167,7 @@ class Solver(ABC):
             return False
         else:
             if self._stop_count == 0:
-                # Reload best model
-                self.load_checkpoint()
+                # Trigger early stop
                 return True
             else:
                 self._stop_count = self._stop_count - 1
