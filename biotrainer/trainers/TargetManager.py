@@ -125,74 +125,73 @@ class TargetManager:
             raise Exception("Prediction targets not found or could not be extracted!")
 
     def _validate_targets(self, id2emb: Dict[str, Any]):
-        if 'residue_' in self.protocol:
-            """
-            1. Check if number of embeddings and corresponding labels match:
-                # embeddings == # labels --> SUCCESS
-                # embeddings > # labels --> Fail, unless self._ignore_file_inconsistencies (=> drop embeddings).
-                # embeddings < # labels --> Fail, unless self._ignore_file_inconsistencies (=> drop labels).
-            2. Check that lengths of embeddings == length of provided labels, if not --> Fail.
-            """
-            invalid_sequence_lengths = []
-            embeddings_without_labels = []
-            labels_without_embeddings = []
-            for seq_id, seq in id2emb.items():
-                # Check that all embeddings have a corresponding label
-                if seq_id not in self._id2target.keys():
-                    embeddings_without_labels.append(seq_id)
-                # Make sure the length of the sequences in the embeddings match the length of the seqs in the labels
-                elif len(seq) != self._id2target[seq_id].size:
-                    invalid_sequence_lengths.append((seq_id, len(seq), self._id2target[seq_id].size))
+        """
+        1. Check if number of embeddings and corresponding labels match for every protocol:
+            # embeddings == # labels --> SUCCESS
+            # embeddings > # labels --> Fail, unless self._ignore_file_inconsistencies (=> drop embeddings).
+            # embeddings < # labels --> Fail, unless self._ignore_file_inconsistencies (=> drop labels).
+        2. Check that lengths of embeddings == length of provided labels, if not --> Fail. (only residue_to_x)
+        """
+        invalid_sequence_lengths = []
+        embeddings_without_labels = []
+        labels_without_embeddings = []
+        for seq_id, seq in id2emb.items():
+            # Check that all embeddings have a corresponding label
+            if seq_id not in self._id2target.keys():
+                embeddings_without_labels.append(seq_id)
+            # Make sure the length of the sequences in the embeddings match the length of the seqs in the labels
+            elif "residue_" in self.protocol and len(seq) != self._id2target[seq_id].size:
+                invalid_sequence_lengths.append((seq_id, len(seq), self._id2target[seq_id].size))
 
-            for seq_id in self._id2target.keys():
-                # Check that all labels have a corresponding embedding
-                if seq_id not in id2emb.keys():
-                    labels_without_embeddings.append(seq_id)
+        for seq_id in self._id2target.keys():
+            # Check that all labels have a corresponding embedding
+            if seq_id not in id2emb.keys():
+                labels_without_embeddings.append(seq_id)
 
-            if len(embeddings_without_labels) > 0:
-                if self._ignore_file_inconsistencies:
-                    logger.warning(f"Found {len(embeddings_without_labels)} embedding(s) without a corresponding "
-                                   f"entry in the labels file! Because ignore_redundant_sequences flag is set, "
-                                   f"these sequences are dropped for training. "
-                                   f"Data loss: {(len(embeddings_without_labels) / len(id2emb.keys()))*100:.2f}%")
-                    for seq_id in embeddings_without_labels:
-                        id2emb.pop(seq_id)  # Remove redundant sequences
-                else:
-                    exception_message = f"{len(embeddings_without_labels)} sequence(s) not found in labels file! " \
-                                        f"Make sure that all sequences are present and annotated in the labels file " \
-                                        f"or set the ignore_file_inconsistencies flag to True.\n" \
-                                        f"Missing label sequence ids:\n"
-                    for seq_id in embeddings_without_labels:
-                        exception_message += f"Sequence {seq_id}\n"
-                    raise Exception(exception_message[:-1])  # Discard last \n
-
-            if len(labels_without_embeddings) > 0:
-                if self._ignore_file_inconsistencies:
-                    logger.warning(f"Found {len(labels_without_embeddings)} label(s) without a corresponding "
-                                   f"entry in the embeddings file! Because ignore_redundant_sequences flag is set, "
-                                   f"these labels are dropped for training. "
-                                   f"Data loss: {(len(labels_without_embeddings) / len(id2emb.keys()))*100:.2f}%")
-                    for seq_id in labels_without_embeddings:
-                        self._id2target.pop(seq_id)  # Remove redundant labels
-                        self._id2attributes.pop(seq_id)  # Remove redundant labels
-                else:
-                    exception_message = f"{len(labels_without_embeddings)} label(s) not found in embeddings file! " \
-                                        f"Make sure that for every sequence id in the labels file, there is a " \
-                                        f"corresponding embedding. If no pre-computed embeddings were used, \n" \
-                                        f"this error message indicates that there is a sequence missing in the " \
-                                        f"sequence_file.\n" \
-                                        f"Setting the ignore_file_inconsistencies flag to True " \
-                                        f"will ignore this problem.\n" \
-                                        f"Missing sequence ids:\n"
-                    for seq_id in labels_without_embeddings:
-                        exception_message += f"Sequence {seq_id}\n"
-                    raise Exception(exception_message[:-1])  # Discard last \n
-
-            if len(invalid_sequence_lengths) > 0:
-                exception_message = f"Length mismatch for {len(invalid_sequence_lengths)} sequence(s)!\n"
-                for seq_id, seq_len, target_len in invalid_sequence_lengths:
-                    exception_message += f"{seq_id}: Sequence={seq_len} vs. Labels={self._id2target[seq_id].size}\n"
+        if len(embeddings_without_labels) > 0:
+            if self._ignore_file_inconsistencies:
+                logger.warning(f"Found {len(embeddings_without_labels)} embedding(s) without a corresponding "
+                               f"entry in the labels file! Because ignore_file_inconsistencies flag is set, "
+                               f"these sequences are dropped for training. "
+                               f"Data loss: {(len(embeddings_without_labels) / len(id2emb.keys())) * 100:.2f}%")
+                for seq_id in embeddings_without_labels:
+                    id2emb.pop(seq_id)  # Remove redundant sequences
+            else:
+                exception_message = f"{len(embeddings_without_labels)} sequence(s) not found in labels file! " \
+                                    f"Make sure that all sequences are present and annotated in the labels file " \
+                                    f"or set the ignore_file_inconsistencies flag to True.\n" \
+                                    f"Missing label sequence ids:\n"
+                for seq_id in embeddings_without_labels:
+                    exception_message += f"Sequence {seq_id}\n"
                 raise Exception(exception_message[:-1])  # Discard last \n
+
+        if len(labels_without_embeddings) > 0:
+            if self._ignore_file_inconsistencies:
+                logger.warning(f"Found {len(labels_without_embeddings)} label(s) without a corresponding "
+                               f"entry in the embeddings file! Because ignore_file_inconsistencies flag is set, "
+                               f"these labels are dropped for training. "
+                               f"Data loss: {(len(labels_without_embeddings) / len(id2emb.keys())) * 100:.2f}%")
+                for seq_id in labels_without_embeddings:
+                    self._id2target.pop(seq_id)  # Remove redundant labels
+                    self._id2attributes.pop(seq_id)  # Remove redundant labels
+            else:
+                exception_message = f"{len(labels_without_embeddings)} label(s) not found in embeddings file! " \
+                                    f"Make sure that for every sequence id in the labels file, there is a " \
+                                    f"corresponding embedding. If no pre-computed embeddings were used, \n" \
+                                    f"this error message indicates that there is a sequence missing in the " \
+                                    f"sequence_file.\n" \
+                                    f"Setting the ignore_file_inconsistencies flag to True " \
+                                    f"will ignore this problem.\n" \
+                                    f"Missing sequence ids:\n"
+                for seq_id in labels_without_embeddings:
+                    exception_message += f"Sequence {seq_id}\n"
+                raise Exception(exception_message[:-1])  # Discard last \n
+
+        if len(invalid_sequence_lengths) > 0:
+            exception_message = f"Length mismatch for {len(invalid_sequence_lengths)} sequence(s)!\n"
+            for seq_id, seq_len, target_len in invalid_sequence_lengths:
+                exception_message += f"{seq_id}: Sequence={seq_len} vs. Labels={self._id2target[seq_id].size}\n"
+            raise Exception(exception_message[:-1])  # Discard last \n
 
     def get_datasets(self, id2emb: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset]:
         # At first calculate id2target and validate
