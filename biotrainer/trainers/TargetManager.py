@@ -165,15 +165,24 @@ class TargetManager:
         invalid_sequence_lengths = []
         embeddings_without_labels = []
         labels_without_embeddings = []
+        if "_interaction" in self.protocol:
+            all_protein_ids = []
+            for interaction_key in self._id2target.keys():
+                protein_ids = interaction_key.split("§")
+                all_protein_ids.extend(protein_ids)
+            all_ids_with_target = set(all_protein_ids)
+        else:
+            all_ids_with_target = set(self._id2target.keys())
+
         for seq_id, seq in id2emb.items():
             # Check that all embeddings have a corresponding label
-            if seq_id not in self._id2target.keys():
+            if seq_id not in all_ids_with_target:
                 embeddings_without_labels.append(seq_id)
             # Make sure the length of the sequences in the embeddings match the length of the seqs in the labels
             elif "residue_" in self.protocol and len(seq) != self._id2target[seq_id].size:
                 invalid_sequence_lengths.append((seq_id, len(seq), self._id2target[seq_id].size))
 
-        for seq_id in self._id2target.keys():
+        for seq_id in all_ids_with_target:
             # Check that all labels have a corresponding embedding
             if seq_id not in id2emb.keys():
                 labels_without_embeddings.append(seq_id)
