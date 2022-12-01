@@ -43,5 +43,5 @@ class FNNInteraction(FNN):
             nn.Linear(int(bottleneck_dim/2), int(bottleneck_dim/4)),  # 64 x 32
             nn.ReLU(),
             nn.Dropout(dropout_rate),
-            nn.Linear(int(bottleneck_dim/4), n_classes)  # 32 x n_classes
+            nn.Linear(int(bottleneck_dim/4), 1)  # 32 x n_classes
         )
