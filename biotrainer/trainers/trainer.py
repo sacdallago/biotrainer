@@ -199,9 +199,9 @@ def _do_and_log_evaluation(solver, test_loader, target_manager, save_test_predic
     test_results = solver.inference(test_loader, calculate_test_metrics=True)
 
     if save_test_predictions:
-        test_results['predictions'] = revert_mappings(protocol=target_manager.protocol,
-                                                      test_predictions=test_results['predictions'],
-                                                      class_int2str=target_manager.class_int2str)
+        test_results['mapped_predictions'] = revert_mappings(protocol=target_manager.protocol,
+                                                             test_predictions=test_results['mapped_predictions'],
+                                                             class_int2str=target_manager.class_int2str)
         output_vars['test_iterations_results'] = test_results
     else:
         output_vars['test_iterations_results'] = test_results['metrics']

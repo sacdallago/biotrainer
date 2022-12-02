@@ -115,8 +115,9 @@ class Solver(ABC):
         self.network = self.network.eval()
 
         predict_iterations = list()
+        mapped_predictions = dict()
 
-        for i, (_, X, y, lengths) in enumerate(dataloader):
+        for i, (seq_ids, X, y, lengths) in enumerate(dataloader):
             if calculate_test_metrics:  # For test set, y must be valid targets
                 iteration_result = self._training_iteration(
                     X, y, context=torch.no_grad, lengths=lengths
@@ -125,10 +126,13 @@ class Solver(ABC):
                 iteration_result = self._prediction_iteration(x=X, lengths=lengths)
 
             predict_iterations.append(iteration_result)
+            # Create dict with seq_id: prediction
+            for idx, prediction in enumerate(iteration_result["prediction"]):
+                mapped_predictions[seq_ids[idx]] = prediction
 
         return {
             'metrics': Solver._aggregate_iteration_results(predict_iterations) if calculate_test_metrics else None,
-            'predictions': list(chain(*[p['prediction'] for p in predict_iterations]))
+            'mapped_predictions': mapped_predictions
         }
 
     def load_checkpoint(self, checkpoint_path: str = None):

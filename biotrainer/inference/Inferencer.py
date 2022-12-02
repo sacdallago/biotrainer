@@ -63,7 +63,7 @@ class Inferencer:
         self.collate_function = get_collate_function(protocol)
         self.solver.load_checkpoint()
 
-    def from_embeddings(self, embeddings: Iterable) -> List[Union[str, int, float]]:
+    def from_embeddings(self, embeddings: Iterable) -> Dict[str, Union[str, int, float]]:
         dataset = get_dataset(self.protocol, samples={
             idx: (torch.tensor(embedding), torch.empty(1))
             for idx, embedding in enumerate(embeddings)
@@ -74,7 +74,7 @@ class Inferencer:
             collate_fn=self.collate_function
         )
 
-        predictions = self.solver.inference(dataloader)["predictions"]
+        predictions = self.solver.inference(dataloader)["mapped_predictions"]
 
         # For class predictions, revert from int (model output) to str (class name)
         predictions = revert_mappings(protocol=self.protocol, test_predictions=predictions,

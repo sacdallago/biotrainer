@@ -1,6 +1,6 @@
 import logging
 
-from typing import Tuple, List, Optional, Dict
+from typing import Tuple, List, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -41,15 +41,14 @@ def get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], List[str
     return training_ids, validation_ids, testing_ids
 
 
-def revert_mappings(protocol: str, test_predictions: List, class_int2str: Optional[Dict[int, str]] = None):
+def revert_mappings(protocol: str, test_predictions: Dict, class_int2str: Dict[int, str]) -> Dict[str, str]:
     # If residue-to-class problem, map the integers back to the class labels (single letters)
     if protocol == 'residue_to_class':
-        return ["".join(
-            [class_int2str[p] for p in prediction]
-        ) for prediction in test_predictions]
+        return {seq_id: "".join([class_int2str[p] for p in prediction])
+                for seq_id, prediction in test_predictions.items()}
 
     # If sequence/residues-to-class problem, map the integers back to the class labels (whatever length)
     elif protocol == "sequence_to_class" or protocol == "residues_to_class":
-        return [class_int2str[p] for p in test_predictions]
+        return {seq_id: class_int2str[prediction] for seq_id, prediction in test_predictions.items()}
     else:
         return test_predictions

@@ -32,8 +32,8 @@ class SanityChecker:
             if accuracy == precision == recall:
                 self.handle_result(f"Accuracy ({accuracy} == Precision == Recall for binary prediction!")
 
-        if "predictions" in test_results:
-            predictions = test_results['predictions']
+        if "mapped_predictions" in test_results:
+            predictions = list(test_results['mapped_predictions'].values())
             # Check if the model is only predicting the same value for all test samples:
             if all(prediction == predictions[0] for prediction in predictions):
                 self.handle_result(f"Model is only predicting {predictions[0]} for all test samples!")
