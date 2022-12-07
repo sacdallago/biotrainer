@@ -30,29 +30,28 @@ issues = "https://github.com/sacdallago/biotrainer/issues"
 repository = "https://github.com/sacdallago/biotrainer"
 
 [tool.poetry.dependencies]
-python = ">=3.7.1,<3.10"
+python = ">=3.8,<3.10"
 
 biopython = ">=1.79,<2.0"
 matplotlib = ">=3.2.1,<4.0.0"
 h5py = ">=3.2.1,<4.0.0"
-numpy = "1.21.6" # Latest version (1.22.4) conflicts with bio-embeddings
+numpy = "^1.23.5"
 plotly = ">=5.1.0,<6.0.0"
-protobuf = "3.20.0"  # Latest version (4.21.1) conflicts with tensorboard writer
+protobuf = "^3.20.3"  # Latest version (4.21.1) conflicts with tensorboard writer
 pyyaml = "6.0"
 "ruamel.yaml" = ">=0.17.10,<0.18.0"
 scipy = ">=1.4.1,<2.0.0"
-setuptools = "59.5.0"
-tensorboard = "2.9.0"
-torch = "^1.09" # Latest version (1.11.0) conflicts with bio-embeddings
+tensorboard = "^2.11.0"
+torch = "^1.13.0"
 tqdm = ">=4.45.0,<5.0.0"
-torchmetrics = "^0.10.2"
+torchmetrics = "^0.11.0"
 
 # Optional
-bio-embeddings = {version = "0.2.2", optional = true, extras = ["all"]}
-jupyter = {version = "^1.0.0", optional = true}
+bio-embeddings = { git = "https://github.com/SebieF/bio_embeddings.git", branch = "updating-dependencies", optional = true, extras = ["all"] }
+jupyter = { version = "^1.0.0", optional = true }
 
 [tool.poetry.dev-dependencies]
-pytest = "7.1.2"
+pytest = "7.2.0"
 
 [tool.poetry.extras]
 bio-embeddings = ["bio-embeddings"]
