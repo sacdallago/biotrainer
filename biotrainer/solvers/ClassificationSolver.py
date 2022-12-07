@@ -12,22 +12,23 @@ class ClassificationSolver(Solver):
         super().__init__(*args, **kwargs)
         # Init metrics
         self.num_classes = kwargs['num_classes']
-        self.acc = Accuracy(average="micro", num_classes=self.num_classes)
+        task = "multiclass" if self.num_classes >= 1 else "binary"
+        self.acc = Accuracy(task=task, average="micro", num_classes=self.num_classes)
 
-        self.macro_precision = Precision(average="macro", num_classes=self.num_classes)
-        self.micro_precision = Precision(average="micro", num_classes=self.num_classes)
-        self.precision_per_class = Precision(average="none", num_classes=self.num_classes)
+        self.macro_precision = Precision(task=task, average="macro", num_classes=self.num_classes)
+        self.micro_precision = Precision(task=task, average="micro", num_classes=self.num_classes)
+        self.precision_per_class = Precision(task=task, average="none", num_classes=self.num_classes)
 
-        self.macro_recall = Recall(average="macro", num_classes=self.num_classes)
-        self.micro_recall = Recall(average="micro", num_classes=self.num_classes)
-        self.recall_per_class = Recall(average="none", num_classes=self.num_classes)
+        self.macro_recall = Recall(task=task, average="macro", num_classes=self.num_classes)
+        self.micro_recall = Recall(task=task, average="micro", num_classes=self.num_classes)
+        self.recall_per_class = Recall(task=task, average="none", num_classes=self.num_classes)
 
-        self.macro_f1_score = F1Score(average="macro", num_classes=self.num_classes)
-        self.micro_f1_score = F1Score(average="micro", num_classes=self.num_classes)
-        self.f1_per_class = F1Score(average="none", num_classes=self.num_classes)
+        self.macro_f1_score = F1Score(task=task, average="macro", num_classes=self.num_classes)
+        self.micro_f1_score = F1Score(task=task, average="micro", num_classes=self.num_classes)
+        self.f1_per_class = F1Score(task=task, average="none", num_classes=self.num_classes)
 
         self.scc = SpearmanCorrCoef()
-        self.mcc = MatthewsCorrCoef(num_classes=self.num_classes)
+        self.mcc = MatthewsCorrCoef(task=task, num_classes=self.num_classes)
 
     def _compute_metrics(
             self, predicted: torch.Tensor, labels: torch.Tensor
