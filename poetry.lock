@@ -241,8 +241,8 @@ webserver = ["flask (>=2.2.2,<3.0.0)", "pymongo (>=4.1.1,<5.0.0)", "sentry-sdk[f
 [package.source]
 type = "git"
 url = "https://github.com/SebieF/bio_embeddings.git"
-reference = "updating-dependencies"
-resolved_reference = "13648697dc63f329638e9cedc226ef5596fdbd6b"
+reference = "biotrainer-compatible"
+resolved_reference = "1e9ff9c29f5b9fc51236a1d0e8a914383026b20a"
 
 [[package]]
 name = "biopython"
@@ -514,14 +514,14 @@ development = ["black", "flake8", "mypy", "pytest", "types-colorama"]
 
 [[package]]
 name = "comm"
-version = "0.1.1"
+version = "0.1.2"
 description = "Jupyter Python Comm implementation, for usage in ipykernel, xeus-python etc."
 category = "main"
 optional = true
 python-versions = ">=3.6"
 
 [package.dependencies]
-traitlets = ">5.3"
+traitlets = ">=5.3"
 
 [package.extras]
 test = ["pytest"]
@@ -893,7 +893,7 @@ python-versions = "*"
 
 [[package]]
 name = "ipykernel"
-version = "6.19.0"
+version = "6.19.1"
 description = "IPython Kernel for Jupyter"
 category = "main"
 optional = true
@@ -1225,7 +1225,7 @@ test = ["click", "coverage", "pre-commit", "pytest (>=6.1.0)", "pytest-asyncio (
 
 [[package]]
 name = "jupyter-server"
-version = "2.0.0"
+version = "2.0.1"
 description = "The backend—i.e. core services, APIs, and REST endpoints—to Jupyter web applications."
 category = "main"
 optional = true
@@ -1236,6 +1236,7 @@ anyio = ">=3.1.0,<4"
 argon2-cffi = "*"
 jinja2 = "*"
 jupyter-client = ">=7.4.4"
+jupyter-core = ">=4.12,<5.0.0 || >=5.1.0"
 jupyter-events = ">=0.4.0"
 jupyter-server-terminals = "*"
 nbconvert = ">=6.4.4"
@@ -1247,12 +1248,14 @@ pyzmq = ">=24"
 send2trash = "*"
 terminado = ">=0.8.3"
 tornado = ">=6.2.0"
-traitlets = ">=5.3.0"
+traitlets = ">=5.6.0"
 websocket-client = "*"
 
 [package.extras]
-docs = ["docutils (<0.19)", "ipykernel", "jinja2", "jupyter-client", "jupyter-server", "mistune (<1.0.0)", "myst-parser", "nbformat", "prometheus-client", "pydata-sphinx-theme", "send2trash", "sphinxcontrib-github-alt", "sphinxcontrib-openapi", "sphinxemoji", "tornado"]
+docs = ["docutils (<0.20)", "ipykernel", "jinja2", "jupyter-client", "jupyter-server", "mistune (<1.0.0)", "myst-parser", "nbformat", "prometheus-client", "pydata-sphinx-theme", "send2trash", "sphinxcontrib-github-alt", "sphinxcontrib-openapi", "sphinxemoji", "tornado"]
+lint = ["black (>=22.6.0)", "mdformat (>0.7)", "ruff (>=0.0.156)"]
 test = ["ipykernel", "pre-commit", "pytest (>=7.0)", "pytest-console-scripts", "pytest-jupyter[server] (>=0.4)", "pytest-timeout", "requests"]
+typing = ["mypy (>=0.990)"]
 
 [[package]]
 name = "jupyter-server-terminals"
@@ -1722,14 +1725,11 @@ tests = ["fakeredis", "pytest"]
 
 [[package]]
 name = "packaging"
-version = "21.3"
+version = "22.0"
 description = "Core utilities for Python packages"
 category = "main"
 optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-pyparsing = ">=2.0.2,<3.0.5 || >3.0.5"
+python-versions = ">=3.7"
 
 [[package]]
 name = "pandas"
@@ -2928,7 +2928,7 @@ jupyter = ["jupyter"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.10"
-content-hash = "6633d33d563eb6cc9fdb48cdf1303ae00767a0d748050da21d9811beed201678"
+content-hash = "59dc4fc93004bf881a602652f878a3b7731abffa47d40ca73cc0f55506d74943"
 
 [metadata.files]
 absl-py = [
@@ -3171,8 +3171,8 @@ colorlog = [
     {file = "colorlog-6.7.0.tar.gz", hash = "sha256:bd94bd21c1e13fac7bd3153f4bc3a7dc0eb0974b8bc2fdf1a989e474f6e582e5"},
 ]
 comm = [
-    {file = "comm-0.1.1-py3-none-any.whl", hash = "sha256:788a4ec961956c1cb2b0ba3c21f2458ff5757bb2f552032b140787af88d670a3"},
-    {file = "comm-0.1.1.tar.gz", hash = "sha256:f395ea64f4f261f35ffc2fbf80a62ec071375dac48cd3ea56092711e74dd063e"},
+    {file = "comm-0.1.2-py3-none-any.whl", hash = "sha256:9f3abf3515112fa7c55a42a6a5ab358735c9dccc8b5910a9d8e3ef5998130666"},
+    {file = "comm-0.1.2.tar.gz", hash = "sha256:3e2f5826578e683999b93716285b3b1f344f157bf75fa9ce0a797564e742f062"},
 ]
 contourpy = [
     {file = "contourpy-1.0.6-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:613c665529899b5d9fade7e5d1760111a0b011231277a0d36c49f0d3d6914bd6"},
@@ -3503,8 +3503,8 @@ iniconfig = [
     {file = "iniconfig-1.1.1.tar.gz", hash = "sha256:bc3af051d7d14b2ee5ef9969666def0cd1a000e121eaea580d4a313df4b37f32"},
 ]
 ipykernel = [
-    {file = "ipykernel-6.19.0-py3-none-any.whl", hash = "sha256:851aa3f9cbbec6918136ada733069a6709934b8106a743495070cf46917eb9a9"},
-    {file = "ipykernel-6.19.0.tar.gz", hash = "sha256:7aabde9e201c4a8f43000f4be0d057f91df13b906ea646acd9047fcb85600b9b"},
+    {file = "ipykernel-6.19.1-py3-none-any.whl", hash = "sha256:8b358a5aaa77c7e4b6cec22b03a910ab6c2968a449dced12082b6a6c56404083"},
+    {file = "ipykernel-6.19.1.tar.gz", hash = "sha256:d472029d14408273265a7b0ec6d1923f1b1f51d8643f125c6a6881e5e6e56a39"},
 ]
 ipython = [
     {file = "ipython-8.7.0-py3-none-any.whl", hash = "sha256:352042ddcb019f7c04e48171b4dd78e4c4bb67bf97030d170e154aac42b656d9"},
@@ -3595,8 +3595,8 @@ jupyter-events = [
     {file = "jupyter_events-0.5.0.tar.gz", hash = "sha256:e27ffdd6138699d47d42cb65ae6d79334ff7c0d923694381c991ce56a140f2cd"},
 ]
 jupyter-server = [
-    {file = "jupyter_server-2.0.0-py3-none-any.whl", hash = "sha256:999c10535587ed3194005b6205baaadb0d2dd32f0e6d667d9177e32e0d5ec85a"},
-    {file = "jupyter_server-2.0.0.tar.gz", hash = "sha256:4ed33c3d8a2c9c1e5e6238c5a837f65ec4b1edf2bf87a3f677cc057207757a10"},
+    {file = "jupyter_server-2.0.1-py3-none-any.whl", hash = "sha256:3bc09974a5290249de6924a614933e6f4f3d6d11f3061423a9f4e0271064a8b3"},
+    {file = "jupyter_server-2.0.1.tar.gz", hash = "sha256:6e71268380ad7e4f2d9dda2f3e51a4fd4d1997b5390d5acdb74c7a195cfe4c00"},
 ]
 jupyter-server-terminals = [
     {file = "jupyter_server_terminals-0.4.2-py3-none-any.whl", hash = "sha256:c0eaacee6cac21b597c23c38dd523dc4e9b947f97af5101e0396c08f28db3e37"},
@@ -3972,8 +3972,8 @@ optuna = [
     {file = "optuna-2.10.1.tar.gz", hash = "sha256:8a12009b57757c1070b3bff2261c24824d6430c22926dd1e2ace33b3deff555f"},
 ]
 packaging = [
-    {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
-    {file = "packaging-21.3.tar.gz", hash = "sha256:dd47c42927d89ab911e606518907cc2d3a1f38bbd026385970643f9c5b8ecfeb"},
+    {file = "packaging-22.0-py3-none-any.whl", hash = "sha256:957e2148ba0e1a3b282772e791ef1d8083648bc131c8ab0c1feba110ce1146c3"},
+    {file = "packaging-22.0.tar.gz", hash = "sha256:2198ec20bd4c017b8f9717e00f0c8714076fc2fd93816750ab48e2c41de2cfd3"},
 ]
 pandas = [
     {file = "pandas-1.5.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:e9dbacd22555c2d47f262ef96bb4e30880e5956169741400af8b306bbb24a273"},
