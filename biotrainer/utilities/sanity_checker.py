@@ -9,7 +9,7 @@ class SanityChecker:
         self.output_vars = output_vars
         self.mode = mode
 
-    def handle_result(self, result: str):
+    def _handle_result(self, result: str):
         if self.mode == "Warn":
             logger.warning(result)
         elif self.mode == "Error":
@@ -32,13 +32,13 @@ class SanityChecker:
                 precision = test_result_metrics['precision']
                 recall = test_result_metrics['recall']
                 if accuracy == precision == recall:
-                    self.handle_result(f"Accuracy ({accuracy} == Precision == Recall for binary prediction!")
+                    self._handle_result(f"Accuracy ({accuracy} == Precision == Recall for binary prediction!")
 
             if "mapped_predictions" in test_results:
                 predictions = list(test_results['mapped_predictions'].values())
                 # Check if the model is only predicting the same value for all test samples:
                 if all(prediction == predictions[0] for prediction in predictions):
-                    self.handle_result(f"Model is only predicting {predictions[0]} for all test samples!")
+                    self._handle_result(f"Model is only predicting {predictions[0]} for all test samples!")
 
         logger.info("Sanity check on test results successful!")
 
