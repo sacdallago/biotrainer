@@ -34,6 +34,11 @@ If this is intended, you can tell *biotrainer* to simply ignore those redundant 
 ignore_file_inconsistencies: True | False  # Default: False
 ```
 
+A concrete output directory can be specified:
+```yaml
+output_dir: path/to/output_dir  # Default: ./output
+```
+
 ## Training data (protocol specific)
 
 Depending on the protocol that fits to your dataset, you have to provide different input files. For the data standards
