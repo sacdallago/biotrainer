@@ -43,7 +43,11 @@ def parse_config_file_and_execute_run(config_file_path: str):
         config["pretrained_model"] = str(input_file_path / config["pretrained_model"])
 
     # Create output directory (if necessary)
-    output_dir = input_file_path / "output"
+    if "output_dir" in config.keys():
+        output_dir = Path(config["output_dir"])
+    else:
+        output_dir = input_file_path / "output"
+        config["output_dir"] = str(output_dir)
     if not output_dir.is_dir():
         logger.info(f"Creating output dir: {output_dir}")
         output_dir.mkdir(parents=True)
@@ -68,7 +72,7 @@ def parse_config_file_and_execute_run(config_file_path: str):
         logger.info(f"Using pre_trained model: {config['pretrained_model']}")
 
     # Run biotrainer pipeline
-    out_config = training_and_evaluation_routine(output_dir=str(output_dir), log_dir=str(log_dir), **config)
+    out_config = training_and_evaluation_routine(log_dir=str(log_dir), **config)
 
     # Save output_variables in out.yml
     write_config_file(
