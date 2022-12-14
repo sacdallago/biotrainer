@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from ..solvers import get_solver
 from ..models import  count_parameters
 from ..datasets import get_collate_function
-from ..utilities import seed_all, get_device, SanityChecker
+from ..utilities import seed_all, SanityChecker
 
 from .model_factory import ModelFactory
 from .TargetManager import TargetManager
@@ -52,8 +52,7 @@ def training_and_evaluation_routine(
     seed_all(seed)
     output_dir = Path(output_dir)
 
-    # Get device
-    device = get_device(device)
+    # Log device
     output_vars['device'] = str(device)
     logger.info(f"Using device: {device}")
 

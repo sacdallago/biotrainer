@@ -12,8 +12,6 @@ from typing import Callable, Optional, Union, Dict, List, Any
 
 from torch.utils.data import DataLoader
 
-from ..utilities import get_device
-
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +44,7 @@ class Solver(ABC):
         self._tempdir = TemporaryDirectory()
 
         # Device handling
-        self.device = get_device(device)
+        self.device = device
         self.network = network.to(self.device)
 
     def __del__(self):

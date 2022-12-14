@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from urllib.parse import urlparse
 
-from ..trainers import training_and_evaluation_routine, download_embeddings
+from .cuda_device import get_device
 from .config import validate_file, read_config_file, verify_config, write_config_file
 
 from ..trainers import training_and_evaluation_routine, download_embeddings, ModelFactory
@@ -69,6 +69,10 @@ def parse_config_file_and_execute_run(config_file_path: str):
                         "Training new model from scratch.")
     if "pretrained_model" in config.keys():
         logger.info(f"Using pre_trained model: {config['pretrained_model']}")
+
+    # Get device once at the beginning
+    device = get_device(config["device"] if "device" in config.keys() else None)
+    config["device"] = device
 
     # Create model factory
     model_factory = ModelFactory(**config)
