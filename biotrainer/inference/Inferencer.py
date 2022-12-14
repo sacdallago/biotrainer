@@ -16,27 +16,27 @@ from ..datasets import get_dataset, get_collate_function
 class Inferencer:
 
     def __init__(
-          self,
+            self,
 
-          # These are from the original input config
-          protocol: str,
-          n_classes: int,
-          n_features: int,
-          model_choice: str,
-          embedder_name: str,
+            # These are from the original input config
+            protocol: str,
+            n_classes: int,
+            n_features: int,
+            model_choice: str,
+            embedder_name: str,
 
-          # These are from the output (out.yml) file
-          log_dir: str,
-          class_int_to_string: Optional[Dict[int, str]] = None,
+            # These are from the output (out.yml) file
+            log_dir: str,
+            class_int_to_string: Optional[Dict[int, str]] = None,
 
-          # Fillers
-          learning_rate: float = 1e-3,
-          loss_choice: str = "cross_entropy_loss",
-          optimizer_choice: str = "adam", batch_size: int = 128,
-          device: Union[None, str, torch.device] = None,
+            # Fillers
+            learning_rate: float = 1e-3,
+            loss_choice: str = "cross_entropy_loss",
+            optimizer_choice: str = "adam", batch_size: int = 128,
+            device: Union[None, str, torch.device] = None,
 
-          # Everything else
-          **kwargs
+            # Everything else
+            **kwargs
     ):
         self.protocol = protocol
         self.device = get_device(device)
