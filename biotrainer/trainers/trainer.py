@@ -5,6 +5,7 @@ import datetime
 
 from pathlib import Path
 from copy import deepcopy
+from collections import namedtuple
 from torch.utils.data import DataLoader
 from typing import Optional, Dict, Any, Union
 from torch.utils.tensorboard import SummaryWriter
@@ -12,15 +13,18 @@ from torch.utils.tensorboard import SummaryWriter
 from .model_factory import ModelFactory
 from .TargetManager import TargetManager
 from .target_manager_utils import revert_mappings
+from .cv_splitter import CrossValidationSplitter, Split
 from .embeddings import compute_embeddings, load_embeddings
 
-from ..solvers import get_solver
+from ..solvers import get_solver, Solver
 from ..models import count_parameters
 from ..datasets import get_collate_function
 from ..utilities import seed_all, SanityChecker
 
 logger = logging.getLogger(__name__)
 output_vars = dict()
+
+SplitResult = namedtuple("SplitResult", "best_epoch_metrics, solver")
 
 
 class Trainer:
@@ -42,9 +46,13 @@ class Trainer:
                  save_test_predictions: bool = False,
                  ignore_file_inconsistencies: bool = False,
                  limited_sample_size: int = -1,
+                 cross_validation_configuration: Dict[str, Any] = None,
                  # Everything else
                  **kwargs
                  ):
+        if not cross_validation_configuration:
+            cross_validation_configuration = {"method": "hold_out"}
+
         global output_vars
         output_vars = deepcopy(locals())
         output_vars.pop('kwargs')
@@ -71,6 +79,7 @@ class Trainer:
         self._save_test_predictions = save_test_predictions
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
         self._limited_sample_size = limited_sample_size
+        self._cross_validation_configuration = cross_validation_configuration
 
     def training_and_evaluation_routine(self):
         # 1. SETUP
@@ -85,47 +94,25 @@ class Trainer:
                                        ignore_file_inconsistencies=self._ignore_file_inconsistencies,
                                        limited_sample_size=self._limited_sample_size)
         train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
-        output_vars['n_training_ids'] = len(target_manager.training_ids)
-        output_vars['n_validation_ids'] = len(target_manager.validation_ids)
-        output_vars['n_testing_ids'] = len(target_manager.testing_ids)
+
+        # COMMON FOR ALL k-fold Splits:
+        output_vars['n_testing_ids'] = len(target_manager.testing_ids)  # TODO: Change to test_dataset, typing
         output_vars['n_classes'] = target_manager.number_of_outputs
+        test_loader = self._create_dataloader(dataset=test_dataset)
 
-        # 4. CLASS WEIGHTS
-        class_weights = self._get_class_weights(target_manager=target_manager)
+        # CREATE SPLITS:
+        cross_validation_splitter = CrossValidationSplitter(self._cross_validation_configuration)
+        splits = cross_validation_splitter.split(train_dataset=train_dataset, val_dataset=val_dataset)
 
-        # 5. DATALOADERS
-        train_loader = self._get_dataloader(dataset=train_dataset)
-        val_loader = self._get_dataloader(dataset=val_dataset)
-        test_loader = self._get_dataloader(dataset=test_dataset)
+        # RUN CROSS VALIDATION
+        split_results = list()
+        for split in splits:
+            best_epoch_metrics, solver = self._do_training_by_split(split.name, split.train, split.val)
+            split_results.append(SplitResult(best_epoch_metrics, solver))
 
-        # 6. MODEL, LOSS, OPTIMIZER
-        # Create model, loss, optimizer
-        model, loss_function, optimizer = self._model_factory.create_model_loss_optimizer(
-            n_classes=output_vars["n_classes"],
-            n_features=output_vars["n_features"],
-            class_weights=class_weights)
-        # Count and log number of free params
-        n_free_parameters = count_parameters(model)
-        output_vars['n_free_parameters'] = n_free_parameters
-
-        # 7. WRITER
-        writer = self._create_writer()
-
-        # 8. SOLVER
-        solver = get_solver(
-            self._protocol, network=model, optimizer=optimizer, loss_function=loss_function, device=self._device,
-            number_of_epochs=self._num_epochs, patience=self._patience, epsilon=self._epsilon, log_writer=writer,
-            experiment_dir=self._log_dir,
-            num_classes=output_vars['n_classes']
-        )
-        if self._pretrained_model:
-            solver.load_checkpoint(checkpoint_path=self._pretrained_model)
-
-        # 9. TRAINING/VALIDATION
-        self._do_and_log_training(solver, train_loader, val_loader)
-
+        solver_of_best_model = split_results[0].solver
         # 10. TESTING
-        self._do_and_log_evaluation(solver, test_loader, target_manager)
+        self._do_and_log_evaluation(solver_of_best_model, test_loader, target_manager)
 
         # 11. SANITY CHECK TODO: Think about purpose and pros and cons, flags in config, tests..
         sanity_checker = SanityChecker(output_vars=output_vars, mode="Warn")
@@ -177,7 +164,7 @@ class Trainer:
 
         return class_weights
 
-    def _get_dataloader(self, dataset) -> torch.utils.data.dataloader.DataLoader:
+    def _create_dataloader(self, dataset) -> torch.utils.data.dataloader.DataLoader:
         # Create dataloader from dataset
         return DataLoader(
             dataset=dataset, batch_size=self._batch_size, shuffle=self._shuffle, drop_last=False,
@@ -202,8 +189,51 @@ class Trainer:
 
         return writer
 
+    def _create_solver(self, model, loss_function, optimizer, writer) -> Solver:
+        return get_solver(
+            self._protocol, network=model, loss_function=loss_function, optimizer=optimizer, device=self._device,
+            number_of_epochs=self._num_epochs, patience=self._patience, epsilon=self._epsilon, log_writer=writer,
+            experiment_dir=self._log_dir,
+            num_classes=output_vars['n_classes']
+        )
+
+    def _do_training_by_split(self, iteration_name, train_dataset, val_dataset):
+        output_vars[iteration_name] = {}
+        output_vars[iteration_name]['n_training_ids'] = len(train_dataset)
+        output_vars[iteration_name]['n_validation_ids'] = len(val_dataset)
+
+        # 4. CLASS WEIGHTS
+        # TODO class_weights = self._get_class_weights(target_manager=target_manager)
+
+        # 5. DATALOADERS
+        train_loader = self._create_dataloader(dataset=train_dataset)
+        val_loader = self._create_dataloader(dataset=val_dataset)
+
+        # 6. MODEL, LOSS, OPTIMIZER
+        # Create model, loss, optimizer
+        model, loss_function, optimizer = self._model_factory.create_model_loss_optimizer(
+            n_classes=output_vars["n_classes"],
+            n_features=output_vars["n_features"],
+            class_weights=None)  # TODO
+        # Count and log number of free params
+        n_free_parameters = count_parameters(model)
+        output_vars[iteration_name]['n_free_parameters'] = n_free_parameters
+
+        # 7. WRITER
+        writer = self._create_writer()
+
+        # 8. SOLVER
+        solver = self._create_solver(model=model, loss_function=loss_function, optimizer=optimizer, writer=writer)
+        #if self._pretrained_model:
+        #    solver.load_checkpoint(checkpoint_path=self._pretrained_model)
+
+        # 9. TRAINING/VALIDATION
+        best_epoch_metrics = self._do_and_log_training(iteration_name, solver, train_loader, val_loader)
+
+        return best_epoch_metrics, solver
+
     @staticmethod
-    def _do_and_log_training(solver, train_loader, val_loader):
+    def _do_and_log_training(iteration_name, solver, train_loader, val_loader):
         start_time_abs = datetime.datetime.now()
         start_time = time.perf_counter()
         epoch_iterations = solver.train(train_loader, val_loader)
@@ -211,19 +241,21 @@ class Trainer:
         end_time_abs = datetime.datetime.now()
 
         # Logging
-        logger.info(f'Total training time: {(end_time - start_time) / 60:.1f}[m]')
+        logger.info(f'Total training time for {iteration_name}: {(end_time - start_time) / 60:.1f}[m]')
+        # TODO: ADD OVERALL TIME!
 
         # Save training time for prosperity
-        output_vars['start_time'] = start_time_abs
-        output_vars['end_time'] = end_time_abs
-        output_vars['elapsed_time'] = end_time - start_time
+        output_vars[iteration_name]['start_time'] = start_time_abs
+        output_vars[iteration_name]['end_time'] = end_time_abs
+        output_vars[iteration_name]['elapsed_time'] = end_time - start_time
 
         # Save metrics from best training epoch
-        output_vars['training_iteration_result_best_epoch'] = epoch_iterations[solver.get_best_epoch()]
+        output_vars[iteration_name]['training_iteration_result_best_epoch'] = epoch_iterations[solver.get_best_epoch()]
+        return epoch_iterations[solver.get_best_epoch()]
 
     def _do_and_log_evaluation(self, solver, test_loader, target_manager):
         # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
-        logger.info('Running final evaluation on the best checkpoint.')
+        logger.info('Running final evaluation on the best model')
 
         solver.load_checkpoint()
         test_results = solver.inference(test_loader, calculate_test_metrics=True)
