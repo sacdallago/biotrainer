@@ -6,190 +6,235 @@ import datetime
 from pathlib import Path
 from copy import deepcopy
 from torch.utils.data import DataLoader
-from typing import Union, Dict, Any, Optional
+from typing import Optional, Dict, Any, Union
 from torch.utils.tensorboard import SummaryWriter
-
-from ..solvers import get_solver
-from ..models import  count_parameters
-from ..datasets import get_collate_function
-from ..utilities import seed_all, SanityChecker
 
 from .model_factory import ModelFactory
 from .TargetManager import TargetManager
 from .target_manager_utils import revert_mappings
 from .embeddings import compute_embeddings, load_embeddings
 
+from ..solvers import get_solver
+from ..models import count_parameters
+from ..datasets import get_collate_function
+from ..utilities import seed_all, SanityChecker
+
 logger = logging.getLogger(__name__)
 output_vars = dict()
 
 
-def training_and_evaluation_routine(
-        # Needed
-        sequence_file: str,
-        # Defined previously
-        protocol: str, output_dir: str, log_dir: str, model_factory: ModelFactory,
-        # Optional with defaults
-        labels_file: Optional[str] = None, mask_file: Optional[str] = None,
-        num_epochs: int = 200,
-        use_class_weights: bool = False,
-        batch_size: int = 128, embedder_name: str = "custom_embeddings",
-        embeddings_file: str = None,
-        shuffle: bool = True, seed: int = 42,
-        patience: int = 10, epsilon: float = 0.001,
-        device: Union[None, str, torch.device] = None,
-        pretrained_model: str = None,
-        save_test_predictions: bool = False,
-        ignore_file_inconsistencies: bool = False,
-        limited_sample_size: int = -1,
-        # Everything else
-        **kwargs
-) -> Dict[str, Any]:
-    global output_vars
-    output_vars = deepcopy(locals())
-    output_vars.pop('kwargs')
+class Trainer:
+    def __init__(self,
+                 # Needed
+                 sequence_file: str,
+                 # Defined previously
+                 protocol: str, output_dir: str, log_dir: str, model_factory: ModelFactory,
+                 # Optional with defaults
+                 labels_file: Optional[str] = None, mask_file: Optional[str] = None,
+                 num_epochs: int = 200,
+                 use_class_weights: bool = False,
+                 batch_size: int = 128, embedder_name: str = "custom_embeddings",
+                 embeddings_file: str = None,
+                 shuffle: bool = True, seed: int = 42,
+                 patience: int = 10, epsilon: float = 0.001,
+                 device: torch.device = None,
+                 pretrained_model: str = None,
+                 save_test_predictions: bool = False,
+                 ignore_file_inconsistencies: bool = False,
+                 limited_sample_size: int = -1,
+                 # Everything else
+                 **kwargs
+                 ):
+        global output_vars
+        output_vars = deepcopy(locals())
+        output_vars.pop('kwargs')
+        output_vars.pop('self')
 
-    # Initialization
-    seed_all(seed)
-    output_dir = Path(output_dir)
+        self._sequence_file = sequence_file
+        self._protocol = protocol
+        self._output_dir = Path(output_dir)
+        self._log_dir = log_dir
+        self._model_factory = model_factory
+        self._labels_file = labels_file
+        self._mask_file = mask_file
+        self._num_epochs = num_epochs
+        self._use_class_weights = use_class_weights
+        self._batch_size = batch_size
+        self._embedder_name = embedder_name
+        self._embeddings_file = embeddings_file
+        self._shuffle = shuffle
+        self._seed = seed
+        self._patience = patience
+        self._epsilon = epsilon
+        self._device = device
+        self._pretrained_model = pretrained_model
+        self._save_test_predictions = save_test_predictions
+        self._ignore_file_inconsistencies = ignore_file_inconsistencies
+        self._limited_sample_size = limited_sample_size
 
-    # Log device
-    output_vars['device'] = str(device)
-    logger.info(f"Using device: {device}")
+    def training_and_evaluation_routine(self):
+        # 1. SETUP
+        self._setup()
 
-    # Generate embeddings if necessary, otherwise use existing embeddings and overwrite embedder_name
-    if not embeddings_file or not Path(embeddings_file).is_file():
-        embeddings_file = compute_embeddings(
-            embedder_name=embedder_name, sequence_file=sequence_file,
-            protocol=protocol, output_dir=output_dir
+        # 2. EMBEDDINGS
+        id2emb = self._create_and_load_embeddings()
+
+        # 3. TARGETS => DATASETS
+        target_manager = TargetManager(protocol=self._protocol, sequence_file=self._sequence_file,
+                                       labels_file=self._labels_file, mask_file=self._mask_file,
+                                       ignore_file_inconsistencies=self._ignore_file_inconsistencies,
+                                       limited_sample_size=self._limited_sample_size)
+        train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
+        output_vars['n_training_ids'] = len(target_manager.training_ids)
+        output_vars['n_validation_ids'] = len(target_manager.validation_ids)
+        output_vars['n_testing_ids'] = len(target_manager.testing_ids)
+        output_vars['n_classes'] = target_manager.number_of_outputs
+
+        # 4. CLASS WEIGHTS
+        class_weights = self._get_class_weights(target_manager=target_manager)
+
+        # 5. DATALOADERS
+        train_loader = self._get_dataloader(dataset=train_dataset)
+        val_loader = self._get_dataloader(dataset=val_dataset)
+        test_loader = self._get_dataloader(dataset=test_dataset)
+
+        # 6. MODEL, LOSS, OPTIMIZER
+        # Create model, loss, optimizer
+        model, loss_function, optimizer = self._model_factory.create_model_loss_optimizer(
+            n_classes=output_vars["n_classes"],
+            n_features=output_vars["n_features"],
+            class_weights=class_weights)
+        # Count and log number of free params
+        n_free_parameters = count_parameters(model)
+        output_vars['n_free_parameters'] = n_free_parameters
+
+        # 7. WRITER
+        writer = self._create_writer()
+
+        # 8. SOLVER
+        solver = get_solver(
+            self._protocol, network=model, optimizer=optimizer, loss_function=loss_function, device=self._device,
+            number_of_epochs=self._num_epochs, patience=self._patience, epsilon=self._epsilon, log_writer=writer,
+            experiment_dir=self._log_dir,
+            num_classes=output_vars['n_classes']
         )
-        # Add to outconfig
-        output_vars['embeddings_file'] = embeddings_file
-    else:
-        logger.info(f'Embeddings file was found at {embeddings_file}. Embeddings have not been computed.')
-        embedder_name = f"precomputed_{Path(embeddings_file).stem}_{embedder_name}"
+        if self._pretrained_model:
+            solver.load_checkpoint(checkpoint_path=self._pretrained_model)
 
-    # Mapping from id to embeddings
-    id2emb = load_embeddings(embeddings_file_path=embeddings_file)
+        # 9. TRAINING/VALIDATION
+        self._do_and_log_training(solver, train_loader, val_loader)
 
-    # Find out feature size and add to output vars + logging
-    embeddings_length = list(id2emb.values())[0].shape[-1]  # Last position in shape is always embedding length
-    output_vars['n_features'] = embeddings_length
-    logger.info(f"Number of features: {embeddings_length}")
+        # 10. TESTING
+        self._do_and_log_evaluation(solver, test_loader, target_manager)
 
-    # Get datasets
-    target_manager = TargetManager(protocol=protocol, sequence_file=sequence_file,
-                                   labels_file=labels_file, mask_file=mask_file,
-                                   ignore_file_inconsistencies=ignore_file_inconsistencies,
-                                   limited_sample_size=limited_sample_size)
-    train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
-    output_vars['n_training_ids'] = len(target_manager.training_ids)
-    output_vars['n_validation_ids'] = len(target_manager.validation_ids)
-    output_vars['n_testing_ids'] = len(target_manager.testing_ids)
-    output_vars['n_classes'] = target_manager.number_of_outputs
+        # 11. SANITY CHECK TODO: Think about purpose and pros and cons, flags in config, tests..
+        sanity_checker = SanityChecker(output_vars=output_vars, mode="Warn")
+        sanity_checker.check_test_results()
 
-    # Get x_to_class specific logs and weights
-    class_weights = None
-    if 'class' in protocol or '_interaction' in protocol:
-        output_vars['class_int_to_string'] = target_manager.class_int2str
-        output_vars['class_str_to_int'] = target_manager.class_str2int
-        logger.info(f"Number of classes: {output_vars['n_classes']}")
-        # Compute class weights to pass as bias to model if option is set
-        if use_class_weights:
-            class_weights = target_manager.compute_class_weights()
+        return output_vars
 
-    # Create the dataloaders
-    train_loader = DataLoader(
-        dataset=train_dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False,
-        collate_fn=get_collate_function(protocol)
-    )
-    val_loader = DataLoader(
-        dataset=val_dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False,
-        collate_fn=get_collate_function(protocol)
-    )
-    test_loader = DataLoader(
-        dataset=test_dataset, batch_size=batch_size, shuffle=shuffle, drop_last=False,
-        collate_fn=get_collate_function(protocol)
-    )
+    def _setup(self):
+        # Seed
+        seed_all(self._seed)
+        # Log device
+        output_vars['device'] = str(self._device)
+        logger.info(f"Using device: {self._device}")
 
-    # Create model, loss, optimizer
-    model, loss_function, optimizer = model_factory.create_model_loss_optimizer(n_classes=output_vars["n_classes"],
-                                                                                n_features=output_vars["n_features"],
-                                                                                class_weights=class_weights)
-    # Count and log number of free params
-    n_free_parameters = count_parameters(model)
-    output_vars['n_free_parameters'] = n_free_parameters
+    def _create_and_load_embeddings(self) -> Dict[str, Any]:
+        # Generate embeddings if necessary, otherwise use existing embeddings and overwrite embedder_name
+        embeddings_file = self._embeddings_file
+        if not embeddings_file or not Path(embeddings_file).is_file():
+            embeddings_file = compute_embeddings(
+                embedder_name=self._embedder_name, sequence_file=self._sequence_file,
+                protocol=self._protocol, output_dir=self._output_dir
+            )
+            # Add to out config
+            output_vars['embeddings_file'] = embeddings_file
+        else:
+            logger.info(f'Embeddings file was found at {embeddings_file}. Embeddings have not been computed.')
+            self._embedder_name = f"precomputed_{Path(embeddings_file).stem}_{self._embedder_name}"
 
-    # Tensorboard writer
-    writer = SummaryWriter(log_dir=str(output_dir / "runs"))
+        # Mapping from id to embeddings
+        id2emb = load_embeddings(embeddings_file_path=embeddings_file)
 
-    writer.add_hparams({
-        'model': model_factory.model_choice,
-        'num_epochs': num_epochs,
-        'use_class_weights': use_class_weights,
-        'learning_rate': model_factory.learning_rate,
-        'batch_size': batch_size,
-        'embedder_name': embedder_name,
-        'seed': seed,
-        'loss': model_factory.loss_choice,
-        'optimizer': model_factory.optimizer_choice,
-    }, {})
+        # Find out feature size and add to output vars + logging
+        embeddings_length = list(id2emb.values())[0].shape[-1]  # Last position in shape is always embedding length
+        output_vars['n_features'] = embeddings_length
+        logger.info(f"Number of features: {embeddings_length}")
 
-    # Create solver
-    solver = get_solver(
-        protocol, network=model, optimizer=optimizer, loss_function=loss_function, device=device,
-        number_of_epochs=num_epochs, patience=patience, epsilon=epsilon, log_writer=writer, experiment_dir=log_dir,
-        num_classes=output_vars['n_classes']
-    )
+        return id2emb
 
-    if pretrained_model:
-        solver.load_checkpoint(checkpoint_path=pretrained_model)
+    def _get_class_weights(self, target_manager: TargetManager) -> Union[None, torch.FloatTensor]:
+        # Get x_to_class specific logs and weights
+        class_weights = None
+        if 'class' in self._protocol or '_interaction' in self._protocol:
+            output_vars['class_int_to_string'] = target_manager.class_int2str
+            output_vars['class_str_to_int'] = target_manager.class_str2int
+            logger.info(f"Number of classes: {output_vars['n_classes']}")
+            # Compute class weights to pass as bias to model if option is set
+            if self._use_class_weights:
+                class_weights = target_manager.compute_class_weights()
 
-    # Perform training of the model (time intensive -- where things can go wrong)
-    _do_and_log_training(solver, train_loader, val_loader)
+        return class_weights
 
-    # Finally, run evaluation of test set
-    _do_and_log_evaluation(solver, test_loader, target_manager, save_test_predictions)
+    def _get_dataloader(self, dataset) -> torch.utils.data.dataloader.DataLoader:
+        # Create dataloader from dataset
+        return DataLoader(
+            dataset=dataset, batch_size=self._batch_size, shuffle=self._shuffle, drop_last=False,
+            collate_fn=get_collate_function(self._protocol)
+        )
 
-    # Do sanity check TODO: Think about purpose and pros and cons, flags in config, tests..
-    sanity_checker = SanityChecker(output_vars=output_vars, mode="Warn")
-    sanity_checker.check_test_results()
+    def _create_writer(self) -> torch.utils.tensorboard.writer.SummaryWriter:
+        # Tensorboard writer
+        writer = SummaryWriter(log_dir=str(self._output_dir / "runs"))
 
-    return output_vars
+        writer.add_hparams({
+            'model': self._model_factory.model_choice,
+            'num_epochs': self._num_epochs,
+            'use_class_weights': self._use_class_weights,
+            'learning_rate': self._model_factory.learning_rate,
+            'batch_size': self._batch_size,
+            'embedder_name': self._embedder_name,
+            'seed': self._seed,
+            'loss': self._model_factory.loss_choice,
+            'optimizer': self._model_factory.optimizer_choice,
+        }, {})
 
+        return writer
 
-def _do_and_log_training(solver, train_loader, val_loader):
-    start_time_abs = datetime.datetime.now()
-    start_time = time.perf_counter()
-    epoch_iterations = solver.train(train_loader, val_loader)
-    end_time = time.perf_counter()
-    end_time_abs = datetime.datetime.now()
+    @staticmethod
+    def _do_and_log_training(solver, train_loader, val_loader):
+        start_time_abs = datetime.datetime.now()
+        start_time = time.perf_counter()
+        epoch_iterations = solver.train(train_loader, val_loader)
+        end_time = time.perf_counter()
+        end_time_abs = datetime.datetime.now()
 
-    # Logging
-    logger.info(f'Total training time: {(end_time - start_time) / 60:.1f}[m]')
+        # Logging
+        logger.info(f'Total training time: {(end_time - start_time) / 60:.1f}[m]')
 
-    # Save training time for prosperity
-    output_vars['start_time'] = start_time_abs
-    output_vars['end_time'] = end_time_abs
-    output_vars['elapsed_time'] = end_time - start_time
+        # Save training time for prosperity
+        output_vars['start_time'] = start_time_abs
+        output_vars['end_time'] = end_time_abs
+        output_vars['elapsed_time'] = end_time - start_time
 
-    # Save metrics from best training epoch
-    output_vars['training_iteration_result_best_epoch'] = epoch_iterations[solver.get_best_epoch()]
+        # Save metrics from best training epoch
+        output_vars['training_iteration_result_best_epoch'] = epoch_iterations[solver.get_best_epoch()]
 
+    def _do_and_log_evaluation(self, solver, test_loader, target_manager):
+        # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
+        logger.info('Running final evaluation on the best checkpoint.')
 
-def _do_and_log_evaluation(solver, test_loader, target_manager, save_test_predictions):
-    # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
-    logger.info('Running final evaluation on the best checkpoint.')
+        solver.load_checkpoint()
+        test_results = solver.inference(test_loader, calculate_test_metrics=True)
 
-    solver.load_checkpoint()
-    test_results = solver.inference(test_loader, calculate_test_metrics=True)
+        if self._save_test_predictions:
+            test_results['mapped_predictions'] = revert_mappings(protocol=self._protocol,
+                                                                 test_predictions=test_results['mapped_predictions'],
+                                                                 class_int2str=target_manager.class_int2str)
+            output_vars['test_iterations_results'] = test_results
+        else:
+            output_vars['test_iterations_results'] = test_results['metrics']
 
-    if save_test_predictions:
-        test_results['mapped_predictions'] = revert_mappings(protocol=target_manager.protocol,
-                                                             test_predictions=test_results['mapped_predictions'],
-                                                             class_int2str=target_manager.class_int2str)
-        output_vars['test_iterations_results'] = test_results
-    else:
-        output_vars['test_iterations_results'] = test_results['metrics']
-
-    logger.info(f"Test set metrics: {test_results['metrics']}")
-    logger.info(f"Extensive output information can be found at {output_vars['output_dir']}/out.yml")
+        logger.info(f"Test set metrics: {test_results['metrics']}")
+        logger.info(f"Extensive output information can be found at {output_vars['output_dir']}/out.yml")

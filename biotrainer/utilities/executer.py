@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 from .cuda_device import get_device
 from .config import validate_file, read_config_file, verify_config, write_config_file
 
-from ..trainers import training_and_evaluation_routine, download_embeddings, ModelFactory
+from ..trainers import download_embeddings, ModelFactory, Trainer
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +78,11 @@ def parse_config_file_and_execute_run(config_file_path: str):
     model_factory = ModelFactory(**config)
 
     # Run biotrainer pipeline
-    out_config = training_and_evaluation_routine(output_dir=str(output_dir),
-                                                 log_dir=str(log_dir),
-                                                 model_factory=model_factory,
-                                                 **config)
+    trainer = Trainer(output_dir=str(output_dir),
+                      log_dir=str(log_dir),
+                      model_factory=model_factory,
+                      **config)
+    out_config = trainer.training_and_evaluation_routine()
 
     # Save output_variables in out.yml
     write_config_file(
