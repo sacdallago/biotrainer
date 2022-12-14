@@ -9,13 +9,12 @@ from torch.utils.data import DataLoader
 from typing import Union, Dict, Any, Optional
 from torch.utils.tensorboard import SummaryWriter
 
-from ..losses import get_loss
 from ..solvers import get_solver
-from ..optimizers import get_optimizer
+from ..models import  count_parameters
 from ..datasets import get_collate_function
-from ..models import get_model, count_parameters
 from ..utilities import seed_all, get_device, SanityChecker
 
+from .model_factory import ModelFactory
 from .TargetManager import TargetManager
 from .target_manager_utils import revert_mappings
 from .embeddings import compute_embeddings, load_embeddings
@@ -28,15 +27,15 @@ def training_and_evaluation_routine(
         # Needed
         sequence_file: str,
         # Defined previously
-        protocol: str, output_dir: str, log_dir: str,
+        protocol: str, output_dir: str, log_dir: str, model_factory: ModelFactory,
         # Optional with defaults
         labels_file: Optional[str] = None, mask_file: Optional[str] = None,
-        model_choice: str = "CNN", num_epochs: int = 200,
-        use_class_weights: bool = False, learning_rate: float = 1e-3,
+        num_epochs: int = 200,
+        use_class_weights: bool = False,
         batch_size: int = 128, embedder_name: str = "custom_embeddings",
         embeddings_file: str = None,
-        shuffle: bool = True, seed: int = 42, loss_choice: str = "cross_entropy_loss",
-        optimizer_choice: str = "adam", patience: int = 10, epsilon: float = 0.001,
+        shuffle: bool = True, seed: int = 42,
+        patience: int = 10, epsilon: float = 0.001,
         device: Union[None, str, torch.device] = None,
         pretrained_model: str = None,
         save_test_predictions: bool = False,
@@ -113,40 +112,27 @@ def training_and_evaluation_routine(
         collate_fn=get_collate_function(protocol)
     )
 
-    # Initialize model
-    model = get_model(
-        protocol=protocol, model_choice=model_choice,
-        n_classes=output_vars['n_classes'], n_features=output_vars['n_features']
-    )
-
+    # Create model, loss, optimizer
+    model, loss_function, optimizer = model_factory.create_model_loss_optimizer(n_classes=output_vars["n_classes"],
+                                                                                n_features=output_vars["n_features"],
+                                                                                class_weights=class_weights)
     # Count and log number of free params
     n_free_parameters = count_parameters(model)
     output_vars['n_free_parameters'] = n_free_parameters
-
-    # Initialize loss function
-    loss_function = get_loss(
-        protocol=protocol, loss_choice=loss_choice, device=device, weight=class_weights
-    )
-
-    # Initialize optimizer
-    optimizer = get_optimizer(
-        protocol=protocol, optimizer_choice=optimizer_choice,
-        learning_rate=learning_rate, model_parameters=model.parameters()
-    )
 
     # Tensorboard writer
     writer = SummaryWriter(log_dir=str(output_dir / "runs"))
 
     writer.add_hparams({
-        'model': model_choice,
+        'model': model_factory.model_choice,
         'num_epochs': num_epochs,
         'use_class_weights': use_class_weights,
-        'learning_rate': learning_rate,
+        'learning_rate': model_factory.learning_rate,
         'batch_size': batch_size,
         'embedder_name': embedder_name,
         'seed': seed,
-        'loss': loss_choice,
-        'optimizer': optimizer_choice,
+        'loss': model_factory.loss_choice,
+        'optimizer': model_factory.optimizer_choice,
     }, {})
 
     # Create solver

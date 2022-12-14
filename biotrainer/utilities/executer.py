@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 from ..trainers import training_and_evaluation_routine, download_embeddings
 from .config import validate_file, read_config_file, verify_config, write_config_file
 
+from ..trainers import training_and_evaluation_routine, download_embeddings, ModelFactory
+
 logger = logging.getLogger(__name__)
 
 __PROTOCOLS = {
@@ -68,8 +70,14 @@ def parse_config_file_and_execute_run(config_file_path: str):
     if "pretrained_model" in config.keys():
         logger.info(f"Using pre_trained model: {config['pretrained_model']}")
 
+    # Create model factory
+    model_factory = ModelFactory(**config)
+
     # Run biotrainer pipeline
-    out_config = training_and_evaluation_routine(output_dir=str(output_dir), log_dir=str(log_dir), **config)
+    out_config = training_and_evaluation_routine(output_dir=str(output_dir),
+                                                 log_dir=str(log_dir),
+                                                 model_factory=model_factory,
+                                                 **config)
 
     # Save output_variables in out.yml
     write_config_file(
