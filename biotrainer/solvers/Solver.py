@@ -2,12 +2,13 @@ import math
 import torch
 import logging
 
-from abc import ABC, abstractmethod
-from typing import Callable, Optional, Union, Dict, List, Any
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from itertools import chain
+from scipy.stats import norm
+from abc import ABC, abstractmethod
+from tempfile import TemporaryDirectory
 from contextlib import nullcontext as _nullcontext
+from typing import Callable, Optional, Union, Dict, List, Any
 
 from torch.utils.data import DataLoader
 
@@ -135,6 +136,59 @@ class Solver(ABC):
             'mapped_predictions': mapped_predictions
         }
 
+    def inference_monte_carlo_dropout(self, dataloader: DataLoader,
+                                      n_forward_passes: int = 30,
+                                      confidence_level: float = 0.05):
+        """
+        Calculate inference results from existing models for given embeddings
+
+            dataloader: Dataloader with embeddings
+            n_forward_passes: Times to repeat calculation with different dropout nodes enabled
+            confidence_level: Confidence level for result confidence intervals (0.05 => 95% percentile)
+        """
+        if not 0 < confidence_level < 1:
+            raise Exception(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
+
+        def enable_dropout(model):
+            """ Function to enable the dropout layers during test-time """
+            number_dropout_layers = 0
+            for m in model.modules():
+                if m.__class__.__name__.startswith('Dropout'):
+                    m.train()
+                    number_dropout_layers += 1
+            if not number_dropout_layers > 0:
+                raise Exception("Trying to do monte carlo dropout inference on model without dropout!")
+
+        mapped_predictions = dict()
+
+        for i, (seq_ids, X, y, lengths) in enumerate(dataloader):
+            dropout_iterations = list()
+            for idx_forward_pass in range(n_forward_passes):
+                self.network = self.network.eval()
+                enable_dropout(self.network)
+                dropout_iteration_result = self._prediction_iteration(x=X, lengths=lengths)
+                dropout_iterations.append(dropout_iteration_result)
+
+            dropout_logits = torch.stack([dropout_iteration["logits"] for dropout_iteration in dropout_iterations])
+            dropout_std_dev, dropout_mean = torch.std_mean(dropout_logits, dim=0, unbiased=True)
+            z_score = norm.ppf(q=1 - (confidence_level / 2))
+            confidence_range = z_score * dropout_std_dev / (n_forward_passes ** 0.5)
+            prediction_by_mean = self._logits_to_predictions(dropout_mean)
+
+            # Create dict with seq_id: prediction
+            for idx, prediction in enumerate(prediction_by_mean):
+                mapped_predictions[seq_ids[idx]] = {"prediction": prediction_by_mean[idx].item(),
+                                                    "mcd_mean": dropout_mean[idx].item(),
+                                                    "mcd_lower_bound": (
+                                                                dropout_mean[idx] - confidence_range[idx]).item(),
+                                                    "mcd_upper_bound": (
+                                                                dropout_mean[idx] + confidence_range[idx]).item()
+                                                    }
+
+        return {
+            'mapped_predictions': mapped_predictions
+        }
+
     def load_checkpoint(self, checkpoint_path: str = None):
         if checkpoint_path:
             state = torch.load(checkpoint_path, map_location=torch.device(self.device))
@@ -256,16 +310,19 @@ class Solver(ABC):
                 **metrics
             }
 
-    def _prediction_iteration(self, x: torch.Tensor, lengths: Optional[torch.LongTensor] = None) -> Dict[str, List]:
+    def _prediction_iteration(self, x: torch.Tensor, lengths: Optional[torch.LongTensor] = None) -> \
+            Dict[str, Union[List, torch.Tensor]]:
+
         with torch.no_grad():
             # Move everything on device
             x = x.to(self.device)
-            prediction = self.network(x)
-            # Apply logit transformations
-            prediction = self._transform_network_output(prediction)
+            prediction_logits = self.network(x)
+            # Apply transformations
+            prediction_logits = self._transform_network_output(prediction_logits)
             # Discretize predictions if necessary
-            prediction = self._logits_to_predictions(prediction)
-            return {"prediction": prediction.tolist()}
+            prediction = self._logits_to_predictions(prediction_logits)
+            return {"prediction": prediction.tolist(),
+                    "logits": prediction_logits}
 
     @abstractmethod
     def _compute_metrics(

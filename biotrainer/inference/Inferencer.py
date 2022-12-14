@@ -81,3 +81,30 @@ class Inferencer:
                                       class_int2str=self.class_int2str)
 
         return predictions
+
+    def from_embeddings_with_monte_carlo_dropout(self, embeddings: Iterable,
+                                                 n_forward_passes: int = 30,
+                                                 confidence_level: float = 0.05):
+        if "_value" not in self.protocol and "_interaction" not in self.protocol:
+            raise Exception(f"Monte carlo dropout only implemented for x_to_value "
+                            f"and protein_protein_interaction protocols!")
+
+        dataset = get_dataset(self.protocol, samples={
+            idx: (torch.tensor(embedding), torch.empty(1))
+            for idx, embedding in enumerate(embeddings)
+        })
+
+        dataloader = DataLoader(
+            dataset=dataset, batch_size=self.batch_size, shuffle=False, drop_last=False,
+            collate_fn=self.collate_function
+        )
+
+        predictions = self.solver.inference_monte_carlo_dropout(dataloader=dataloader,
+                                                                n_forward_passes=n_forward_passes,
+                                                                confidence_level=confidence_level)["mapped_predictions"]
+
+        # For class predictions, revert from int (model output) to str (class name)
+        predictions = revert_mappings(protocol=self.protocol, test_predictions=predictions,
+                                      class_int2str=self.class_int2str)
+
+        return predictions
