@@ -99,7 +99,8 @@ class Trainer:
         test_loader = self._create_dataloader(dataset=test_dataset)
 
         # CREATE SPLITS:
-        cross_validation_splitter = CrossValidationSplitter(self._cross_validation_configuration)
+        cross_validation_splitter = CrossValidationSplitter(self._protocol,
+                                                            self._cross_validation_configuration)
         splits = cross_validation_splitter.split(train_dataset=train_dataset, val_dataset=val_dataset)
 
         # RUN CROSS VALIDATION

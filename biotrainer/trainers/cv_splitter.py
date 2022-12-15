@@ -6,7 +6,9 @@ Split = namedtuple("Split", "name train val")
 
 class CrossValidationSplitter:
 
-    def __init__(self, cross_validation_config: Dict[str, Any]):
+    def __init__(self, protocol, cross_validation_config: Dict[str, Any]):
+        self._protocol = protocol
+
         self._split_strategy = None
 
         if cross_validation_config["method"] == "hold_out":
