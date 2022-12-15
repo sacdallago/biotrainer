@@ -131,6 +131,39 @@ def verify_config(config: dict, protocols: set):
                                      "Please provide either an embedder_name to calculate embeddings from scratch or "
                                      "an embeddings_file to use pre-computed embeddings.")
 
+    # Check cross validation configuration
+    if "cross_validation_config" in config.keys():
+        cross_validation_config = config["cross_validation_config"]
+        if type(cross_validation_config) is not dict:
+            raise ConfigurationException("cross_validation_config must be given as a dict of values, e.g.: \n"
+                                         "cross_validation_config:\n"
+                                         "\tmethod: k_fold\n"
+                                         "\tk: 3\n"
+                                         "\tstratified: False\n"
+                                         "\tnested: True")
+        if "method" not in cross_validation_config.keys():
+            raise ConfigurationException(f"No method for cross validation configured!")
+        else:
+            method = cross_validation_config["method"]
+            supported_methods = ["hold_out", "k_fold", "leave_p_out"]
+            if method not in supported_methods:
+                raise ConfigurationException(f"Unknown method {method} for cross_validation!\n"
+                                             f"Supported methods: {supported_methods}")
+            if method == "hold_out" and len(cross_validation_config.keys()) > 1:
+                raise ConfigurationException(f"cross_validation method hold_out does not support "
+                                             f"any additional parameters!\n"
+                                             f"Given: {cross_validation_config.keys()}")
+            if method == "k_fold":
+                if "k" not in cross_validation_config.keys():
+                    raise ConfigurationException(f"Missing parameter k for k-fold cross validation!")
+                elif int(cross_validation_config["k"]) < 2:
+                    raise ConfigurationException(f"k for k-fold cross_validation must be >= 2!")
+            if method == "leave_p_out":
+                if "p" not in cross_validation_config.keys():
+                    raise ConfigurationException(f"Missing parameter p for leave_p_out cross validation!")
+                elif int(cross_validation_config["p"]) < 1:
+                    raise ConfigurationException(f"p for leave_p_out cross_validation must be >= 1!")
+
 
 def write_config_file(out_filename: str, config: dict) -> None:
     """
