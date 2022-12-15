@@ -191,11 +191,12 @@ class Trainer:
 
         return writer
 
-    def _create_solver(self, model, loss_function, optimizer, writer) -> Solver:
+    def _create_solver(self, split_name, model, loss_function, optimizer, writer) -> Solver:
         return get_solver(
-            self._protocol, network=model, loss_function=loss_function, optimizer=optimizer, device=self._device,
-            number_of_epochs=self._num_epochs, patience=self._patience, epsilon=self._epsilon, log_writer=writer,
-            experiment_dir=self._log_dir,
+            protocol=self._protocol, name=split_name,
+            network=model, loss_function=loss_function, optimizer=optimizer, device=self._device,
+            number_of_epochs=self._num_epochs, patience=self._patience, epsilon=self._epsilon,
+            log_writer=writer, experiment_dir=self._log_dir,
             num_classes=output_vars['n_classes']
         )
 
@@ -225,8 +226,9 @@ class Trainer:
         writer = self._create_writer()
 
         # 8. SOLVER
-        solver = self._create_solver(model=model, loss_function=loss_function, optimizer=optimizer, writer=writer)
-        #if self._pretrained_model:
+        solver = self._create_solver(split_name=split_name,
+                                     model=model, loss_function=loss_function, optimizer=optimizer, writer=writer)
+        # if self._pretrained_model:
         #    solver.load_checkpoint(checkpoint_path=self._pretrained_model)
 
         # 9. TRAINING/VALIDATION

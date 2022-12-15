@@ -15,7 +15,7 @@ __SOLVERS = {
 }
 
 
-def get_solver(protocol: str,
+def get_solver(protocol: str, name: str,
                network: Optional = None, optimizer: Optional = None, loss_function: Optional = None,
                device: Optional = None, number_of_epochs: Optional = None,
                patience: Optional = None, epsilon: Optional = None, log_writer: Optional = None,
@@ -28,6 +28,7 @@ def get_solver(protocol: str,
         raise NotImplementedError
     else:
         return solver(
+            name=name,
             network=network, optimizer=optimizer, loss_function=loss_function,
             device=device, number_of_epochs=number_of_epochs,
             patience=patience, epsilon=epsilon, log_writer=log_writer,

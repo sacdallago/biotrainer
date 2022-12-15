@@ -19,7 +19,7 @@ class Solver(ABC):
 
     def __init__(self,
                  # Necessary
-                 network, optimizer, loss_function,
+                 name, network, optimizer, loss_function,
                  # Optional with defaults
                  log_writer: Optional = None, experiment_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
@@ -27,6 +27,7 @@ class Solver(ABC):
                  # Used by classification subclasses
                  num_classes: Optional[int] = 0):
 
+        self.checkpoint_name = f"{name}_checkpoint.pt"
         self.network = network
         self.optimizer = optimizer
         self.loss_function = loss_function
@@ -191,9 +192,11 @@ class Solver(ABC):
         if checkpoint_path:
             state = torch.load(checkpoint_path, map_location=torch.device(self.device))
         elif self.experiment_dir:
-            state = torch.load(str(Path(self.experiment_dir) / "checkpoint.pt"), map_location=torch.device(self.device))
+            state = torch.load(str(Path(self.experiment_dir) / self.checkpoint_name),
+                               map_location=torch.device(self.device))
         else:
-            state = torch.load(str(Path(self._tempdir.name) / "checkpoint.pt"), map_location=torch.device(self.device))
+            state = torch.load(str(Path(self._tempdir.name) / self.checkpoint_name),
+                               map_location=torch.device(self.device))
 
         try:
             self.network.load_state_dict(state['state_dict'])
@@ -216,9 +219,9 @@ class Solver(ABC):
         }
 
         if self.experiment_dir:
-            torch.save(state, str(Path(self.experiment_dir) / "checkpoint.pt"))
+            torch.save(state, str(Path(self.experiment_dir) / self.checkpoint_name))
         else:
-            torch.save(state, str(Path(self._tempdir.name) / "checkpoint.pt"))
+            torch.save(state, str(Path(self._tempdir.name) / self.checkpoint_name))
 
     def _early_stop(self, current_loss: float, epoch: int) -> bool:
         if current_loss < (self._min_loss - self.epsilon):
