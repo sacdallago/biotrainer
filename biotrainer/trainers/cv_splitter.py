@@ -19,7 +19,14 @@ class CrossValidationSplitter:
             self._split_strategy = self.__hold_out_split
         if cross_validation_config["method"] == "k_fold":
             k = int(cross_validation_config["k"])
-            stratified = eval(cross_validation_config["stratified"].capitalize())
+            if "stratified" in cross_validation_config.keys():
+                stratified = eval(str(cross_validation_config["stratified"]).capitalize())
+            else:
+                stratified = False
+            if "nested" in cross_validation_config.keys():
+                nested = eval(str(cross_validation_config["nested"]).capitalize())
+            else:
+                nested = False
             self._split_strategy = lambda train_dataset, val_dataset: self.__k_fold_split(k=k, stratified=stratified,
                                                                                           train_dataset=train_dataset,
                                                                                           val_dataset=val_dataset)
