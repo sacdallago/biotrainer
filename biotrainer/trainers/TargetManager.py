@@ -6,13 +6,12 @@ import numpy as np
 
 from collections import Counter
 from Bio.SeqRecord import SeqRecord
-from torch.utils.data import Dataset
 from typing import Dict, Any, Tuple, Optional, List
 
-from ..datasets import get_dataset
 from .target_manager_utils import get_split_lists
+
 from ..utilities import get_attributes_from_seqrecords, get_attributes_from_seqrecords_for_protein_interactions, \
-    MASK_AND_LABELS_PAD_VALUE, read_FASTA
+    MASK_AND_LABELS_PAD_VALUE, read_FASTA, DatasetSample
 
 logger = logging.getLogger(__name__)
 
@@ -232,7 +231,8 @@ class TargetManager:
                 exception_message += f"{seq_id}: Sequence={seq_len} vs. Labels={self._id2target[seq_id].size}\n"
             raise Exception(exception_message[:-1])  # Discard last \n
 
-    def get_datasets(self, id2emb: Dict[str, Any]) -> Tuple[Dataset, Dataset, Dataset]:
+    def get_datasets_by_annotations(self, id2emb: Dict[str, Any]) -> \
+            Tuple[List[DatasetSample], List[DatasetSample], List[DatasetSample]]:
         # At first calculate id2target and validate
         self._calculate_targets()
         self._validate_targets(id2emb)
@@ -264,15 +264,15 @@ class TargetManager:
                 id2emb[interaction_id] = combined_embedding
 
         # Create datasets
-        train_dataset = get_dataset(self.protocol, {
-            idx: (id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.training_ids
-        })
-        val_dataset = get_dataset(self.protocol, {
-            idx: (id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.validation_ids
-        })
-        test_dataset = get_dataset(self.protocol, {
-            idx: (id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.testing_ids
-        })
+        train_dataset = [
+            DatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.training_ids
+        ]
+        val_dataset = [
+            DatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.validation_ids
+        ]
+        test_dataset = [
+            DatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.testing_ids
+        ]
 
         return train_dataset, val_dataset, test_dataset
 

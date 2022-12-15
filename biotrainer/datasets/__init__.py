@@ -1,3 +1,5 @@
+from typing import List
+
 from .collate_functions import pad_sequence_embeddings, pad_residue_embeddings, pad_residues_embeddings
 from .EmbeddingsDataset import ResidueEmbeddingsClassificationDataset, SequenceEmbeddingsClassificationDataset, \
     SequenceEmbeddingsInteractionDataset, SequenceEmbeddingsRegressionDataset
@@ -19,7 +21,7 @@ __COLLATE_FUNCTIONS = {
 }
 
 
-def get_dataset(protocol: str, samples: dict):
+def get_dataset(protocol: str, samples: List):
     dataset = __DATASETS.get(protocol)
 
     if not dataset:

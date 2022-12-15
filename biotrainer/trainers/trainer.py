@@ -90,11 +90,12 @@ class Trainer:
                                        labels_file=self._labels_file, mask_file=self._mask_file,
                                        ignore_file_inconsistencies=self._ignore_file_inconsistencies,
                                        limited_sample_size=self._limited_sample_size)
-        train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
+        train_dataset, val_dataset, test_dataset = target_manager.get_datasets_by_annotations(id2emb)
 
-        # COMMON FOR ALL k-fold Splits:
-        output_vars['n_testing_ids'] = len(target_manager.testing_ids)  # TODO: Change to test_dataset, typing
+        # COMMON FOR ALL k-fold SPLITS:
+        output_vars['n_testing_ids'] = len(test_dataset)
         output_vars['n_classes'] = target_manager.number_of_outputs
+        test_dataset = get_dataset(self._protocol, test_dataset)
         test_loader = self._create_dataloader(dataset=test_dataset)
 
         # CREATE SPLITS:
@@ -104,8 +105,12 @@ class Trainer:
         # RUN CROSS VALIDATION
         split_results = list()
         for split in splits:
-            best_epoch_metrics, solver = self._do_training_by_split(split.name, split.train, split.val)
-            split_results.append(SplitResult(best_epoch_metrics, solver))
+            best_epoch_metrics, solver = self._do_training_by_split(split_name=split.name,
+                                                                    train_dataset=get_dataset(self._protocol,
+                                                                                              split.train),
+                                                                    val_dataset=get_dataset(self._protocol,
+                                                                                            split.val))
+            split_results.append(SplitResult(split.name, best_epoch_metrics, solver))
 
         solver_of_best_model = split_results[0].solver
         # 10. TESTING
