@@ -43,12 +43,12 @@ class Trainer:
                  save_test_predictions: bool = False,
                  ignore_file_inconsistencies: bool = False,
                  limited_sample_size: int = -1,
-                 cross_validation_configuration: Dict[str, Any] = None,
+                 cross_validation_config: Dict[str, Any] = None,
                  # Everything else
                  **kwargs
                  ):
-        if not cross_validation_configuration:
-            cross_validation_configuration = {"method": "hold_out"}
+        if not cross_validation_config:
+            cross_validation_config = {"method": "hold_out"}
 
         global output_vars
         output_vars = deepcopy(locals())
@@ -76,7 +76,7 @@ class Trainer:
         self._save_test_predictions = save_test_predictions
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
         self._limited_sample_size = limited_sample_size
-        self._cross_validation_configuration = cross_validation_configuration
+        self._cross_validation_config = cross_validation_config
 
     def training_and_evaluation_routine(self):
         # 1. SETUP
@@ -100,7 +100,7 @@ class Trainer:
 
         # CREATE SPLITS:
         cross_validation_splitter = CrossValidationSplitter(self._protocol,
-                                                            self._cross_validation_configuration)
+                                                            self._cross_validation_config)
         splits = cross_validation_splitter.split(train_dataset=train_dataset, val_dataset=val_dataset)
 
         # RUN CROSS VALIDATION
