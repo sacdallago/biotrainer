@@ -112,7 +112,7 @@ class Trainer:
                                                                                             split.val))
             split_results.append(SplitResult(split.name, best_epoch_metrics, solver))
 
-        solver_of_best_model = split_results[0].solver
+        solver_of_best_model = self._get_best_model_of_splits(split_results)
         # 10. TESTING
         self._do_and_log_evaluation(solver_of_best_model, test_loader, target_manager)
 
@@ -254,6 +254,14 @@ class Trainer:
         # Save metrics from best training epoch
         output_vars[split_name]['training_iteration_result_best_epoch'] = epoch_iterations[solver.get_best_epoch()]
         return epoch_iterations[solver.get_best_epoch()]
+
+    def _get_best_model_of_splits(self, split_results: List[SplitResult]) -> Solver:
+        split_results_sorted = sorted(split_results,
+                                      key=lambda split_result: split_result.best_epoch_metrics["validation"]["loss"],
+                                      reverse=False)  # Lowest to highest loss
+        best_split_result = split_results_sorted[0]
+        logger.info(f"Using best model from split {best_split_result.name} for test set evaluation")
+        return best_split_result.solver
 
     def _do_and_log_evaluation(self, solver, test_loader, target_manager):
         # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
