@@ -5,26 +5,23 @@ import datetime
 
 from pathlib import Path
 from copy import deepcopy
-from collections import namedtuple
 from torch.utils.data import DataLoader
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any, Union, List
 from torch.utils.tensorboard import SummaryWriter
 
 from .model_factory import ModelFactory
 from .TargetManager import TargetManager
+from .cv_splitter import CrossValidationSplitter
 from .target_manager_utils import revert_mappings
-from .cv_splitter import CrossValidationSplitter, Split
 from .embeddings import compute_embeddings, load_embeddings
 
-from ..solvers import get_solver, Solver
 from ..models import count_parameters
-from ..datasets import get_collate_function
-from ..utilities import seed_all, SanityChecker
+from ..solvers import get_solver, Solver
+from ..datasets import get_collate_function, get_dataset
+from ..utilities import seed_all, SanityChecker, SplitResult
 
 logger = logging.getLogger(__name__)
 output_vars = dict()
-
-SplitResult = namedtuple("SplitResult", "best_epoch_metrics, solver")
 
 
 class Trainer:
