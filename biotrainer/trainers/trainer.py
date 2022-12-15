@@ -194,10 +194,10 @@ class Trainer:
             num_classes=output_vars['n_classes']
         )
 
-    def _do_training_by_split(self, iteration_name, train_dataset, val_dataset):
-        output_vars[iteration_name] = {}
-        output_vars[iteration_name]['n_training_ids'] = len(train_dataset)
-        output_vars[iteration_name]['n_validation_ids'] = len(val_dataset)
+    def _do_training_by_split(self, split_name: str, train_dataset, val_dataset):
+        output_vars[split_name] = {}
+        output_vars[split_name]['n_training_ids'] = len(train_dataset)
+        output_vars[split_name]['n_validation_ids'] = len(val_dataset)
 
         # 4. CLASS WEIGHTS
         # TODO class_weights = self._get_class_weights(target_manager=target_manager)
@@ -214,7 +214,7 @@ class Trainer:
             class_weights=None)  # TODO
         # Count and log number of free params
         n_free_parameters = count_parameters(model)
-        output_vars[iteration_name]['n_free_parameters'] = n_free_parameters
+        output_vars[split_name]['n_free_parameters'] = n_free_parameters
 
         # 7. WRITER
         writer = self._create_writer()
@@ -225,12 +225,12 @@ class Trainer:
         #    solver.load_checkpoint(checkpoint_path=self._pretrained_model)
 
         # 9. TRAINING/VALIDATION
-        best_epoch_metrics = self._do_and_log_training(iteration_name, solver, train_loader, val_loader)
+        best_epoch_metrics = self._do_and_log_training(split_name, solver, train_loader, val_loader)
 
         return best_epoch_metrics, solver
 
     @staticmethod
-    def _do_and_log_training(iteration_name, solver, train_loader, val_loader):
+    def _do_and_log_training(split_name, solver, train_loader, val_loader):
         start_time_abs = datetime.datetime.now()
         start_time = time.perf_counter()
         epoch_iterations = solver.train(train_loader, val_loader)
@@ -238,16 +238,16 @@ class Trainer:
         end_time_abs = datetime.datetime.now()
 
         # Logging
-        logger.info(f'Total training time for {iteration_name}: {(end_time - start_time) / 60:.1f}[m]')
+        logger.info(f'Total training time for {split_name}: {(end_time - start_time) / 60:.1f}[m]')
         # TODO: ADD OVERALL TIME!
 
         # Save training time for prosperity
-        output_vars[iteration_name]['start_time'] = start_time_abs
-        output_vars[iteration_name]['end_time'] = end_time_abs
-        output_vars[iteration_name]['elapsed_time'] = end_time - start_time
+        output_vars[split_name]['start_time'] = start_time_abs
+        output_vars[split_name]['end_time'] = end_time_abs
+        output_vars[split_name]['elapsed_time'] = end_time - start_time
 
         # Save metrics from best training epoch
-        output_vars[iteration_name]['training_iteration_result_best_epoch'] = epoch_iterations[solver.get_best_epoch()]
+        output_vars[split_name]['training_iteration_result_best_epoch'] = epoch_iterations[solver.get_best_epoch()]
         return epoch_iterations[solver.get_best_epoch()]
 
     def _do_and_log_evaluation(self, solver, test_loader, target_manager):
