@@ -36,5 +36,6 @@ def get_solver(protocol: str,
 
 
 __all__ = [
+    'Solver',
     'get_solver',
 ]
