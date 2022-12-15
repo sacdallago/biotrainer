@@ -1,15 +1,15 @@
 import torch
 
-from typing import Union, Optional, Dict, Iterable, List
+from typing import Union, Optional, Dict, Iterable
 
 from torch.utils.data import DataLoader
 
 from ..losses import get_loss
 from ..models import get_model
 from ..solvers import get_solver
-from ..utilities import get_device
 from ..optimizers import get_optimizer
 from ..trainers import revert_mappings
+from ..utilities import get_device, DatasetSample
 from ..datasets import get_dataset, get_collate_function
 
 
@@ -57,17 +57,18 @@ class Inferencer:
         )
 
         self.solver = get_solver(
-            protocol, network=model, optimizer=optimizer, loss_function=loss_function, device=self.device,
+            protocol=protocol, name="Inferencer",  # TODO checkpoint name!
+            network=model, optimizer=optimizer, loss_function=loss_function, device=self.device,
             experiment_dir=log_dir, num_classes=n_classes
         )
         self.collate_function = get_collate_function(protocol)
         self.solver.load_checkpoint()
 
     def from_embeddings(self, embeddings: Iterable) -> Dict[str, Union[str, int, float]]:
-        dataset = get_dataset(self.protocol, samples={
-            idx: (torch.tensor(embedding), torch.empty(1))
+        dataset = get_dataset(self.protocol, samples=[
+            DatasetSample(idx, torch.tensor(embedding), torch.empty(1))
             for idx, embedding in enumerate(embeddings)
-        })
+        ])
 
         dataloader = DataLoader(
             dataset=dataset, batch_size=self.batch_size, shuffle=False, drop_last=False,
@@ -89,10 +90,10 @@ class Inferencer:
             raise Exception(f"Monte carlo dropout only implemented for x_to_value "
                             f"and protein_protein_interaction protocols!")
 
-        dataset = get_dataset(self.protocol, samples={
-            idx: (torch.tensor(embedding), torch.empty(1))
+        dataset = get_dataset(self.protocol, samples=[
+            DatasetSample(idx, torch.tensor(embedding), torch.empty(1))
             for idx, embedding in enumerate(embeddings)
-        })
+        ])
 
         dataloader = DataLoader(
             dataset=dataset, batch_size=self.batch_size, shuffle=False, drop_last=False,
