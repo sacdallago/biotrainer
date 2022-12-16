@@ -13,7 +13,7 @@ def seed_all(seed=42):
 
     random.seed(seed)
 
-    np.random.seed(seed)
+    np.random.seed(seed)  # Also seeds sklearn
 
     torch.manual_seed(seed)
 

@@ -2,7 +2,7 @@ import logging
 import numpy as np
 
 from typing import Any, Dict, List
-from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.model_selection import KFold, StratifiedKFold, RepeatedStratifiedKFold, RepeatedKFold
 
 from ..utilities import Split, DatasetSample
 
@@ -17,17 +17,23 @@ class CrossValidationSplitter:
         self._split_strategy = None
         if cross_validation_config["method"] == "hold_out":
             self._split_strategy = self.__hold_out_split
+
         if cross_validation_config["method"] == "k_fold":
             k = int(cross_validation_config["k"])
             if "stratified" in cross_validation_config.keys():
                 stratified = eval(str(cross_validation_config["stratified"]).capitalize())
             else:
                 stratified = False
+            if "repeat" in cross_validation_config.keys():
+                repeat = int(cross_validation_config["repeat"])
+            else:
+                repeat = 1
             if "nested" in cross_validation_config.keys():
                 nested = eval(str(cross_validation_config["nested"]).capitalize())
             else:
                 nested = False
             self._split_strategy = lambda train_dataset, val_dataset: self.__k_fold_split(k=k, stratified=stratified,
+                                                                                          repeat=repeat,
                                                                                           train_dataset=train_dataset,
                                                                                           val_dataset=val_dataset)
 
@@ -87,7 +93,7 @@ class CrossValidationSplitter:
 
         return bins
 
-    def __k_fold_split(self, k: int, stratified: bool,
+    def __k_fold_split(self, k: int, stratified: bool, repeat: int,
                        train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
         concat_dataset = train_dataset + val_dataset
         ys = [sample.target for sample in concat_dataset]
@@ -95,18 +101,31 @@ class CrossValidationSplitter:
         split_base_name = "k_fold"
         if stratified:
             logger.info(f"Splitting to stratified {k}-fold Cross Validation datasets")
-            kf = StratifiedKFold(n_splits=k)
             split_base_name += "-strat"
+            if repeat > 1:
+                split_base_name += "-rep"
+                kf = RepeatedStratifiedKFold(n_splits=k, n_repeats=repeat)
+            else:
+                kf = StratifiedKFold(n_splits=k)
             # Change continuous values to bins for stratified split
             if "_value" in self._protocol:
                 ys = self.__continuous_values_to_bins(ys)
         else:
             logger.info(f"Splitting to {k}-fold Cross Validation datasets")
-            kf = KFold(n_splits=k)
+            if repeat > 1:
+                split_base_name += "-rep"
+                kf = RepeatedKFold(n_splits=k, n_repeats=repeat)
+            else:
+                kf = KFold(n_splits=k)
         all_splits = []
         for idx, (split_ids_train, split_ids_val) in enumerate(kf.split(X=concat_dataset, y=ys)):
             train_split = [concat_dataset[split_id_train] for split_id_train in split_ids_train]
             val_split = [concat_dataset[split_id_val] for split_id_val in split_ids_val]
-            all_splits.append(Split(f"{split_base_name}-{idx + 1}", train_split, val_split))
+
+            if repeat > 1:
+                current_split_name = f"{split_base_name}-{(idx + 1) % k if (idx + 1) % k != 0 else k}-{(idx // k) + 1}"
+            else:
+                current_split_name = f"{split_base_name}-{idx + 1}"
+            all_splits.append(Split(current_split_name, train_split, val_split))
 
         return all_splits
