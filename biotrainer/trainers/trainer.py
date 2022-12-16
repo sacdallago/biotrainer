@@ -1,5 +1,6 @@
 import time
 import torch
+import random
 import logging
 import datetime
 
@@ -18,7 +19,7 @@ from .embeddings import compute_embeddings, load_embeddings
 from ..models import count_parameters
 from ..solvers import get_solver, Solver
 from ..datasets import get_collate_function, get_dataset
-from ..utilities import seed_all, SanityChecker, SplitResult
+from ..utilities import seed_all, SanityChecker, SplitResult, DatasetSample
 
 logger = logging.getLogger(__name__)
 output_vars = dict()
@@ -88,14 +89,13 @@ class Trainer:
         # 3. TARGETS => DATASETS
         target_manager = TargetManager(protocol=self._protocol, sequence_file=self._sequence_file,
                                        labels_file=self._labels_file, mask_file=self._mask_file,
-                                       ignore_file_inconsistencies=self._ignore_file_inconsistencies,
-                                       limited_sample_size=self._limited_sample_size)
+                                       ignore_file_inconsistencies=self._ignore_file_inconsistencies)
         train_dataset, val_dataset, test_dataset = target_manager.get_datasets_by_annotations(id2emb)
 
         # COMMON FOR ALL k-fold SPLITS:
         output_vars['n_testing_ids'] = len(test_dataset)
         output_vars['n_classes'] = target_manager.number_of_outputs
-        test_dataset = get_dataset(self._protocol, test_dataset)
+        test_dataset = self._create_embeddings_dataset(test_dataset, mode="test")
         test_loader = self._create_dataloader(dataset=test_dataset)
 
         # CREATE SPLITS:
@@ -106,11 +106,11 @@ class Trainer:
         # RUN CROSS VALIDATION
         split_results = list()
         for split in splits:
+            train_dataset = self._create_embeddings_dataset(split.train, mode="train")
+            val_dataset = self._create_embeddings_dataset(split.val, mode="val")
             best_epoch_metrics, solver = self._do_training_by_split(split_name=split.name,
-                                                                    train_dataset=get_dataset(self._protocol,
-                                                                                              split.train),
-                                                                    val_dataset=get_dataset(self._protocol,
-                                                                                            split.val))
+                                                                    train_dataset=train_dataset,
+                                                                    val_dataset=val_dataset)
             split_results.append(SplitResult(split.name, best_epoch_metrics, solver))
 
         solver_of_best_model = self._get_best_model_of_splits(split_results)
@@ -166,6 +166,14 @@ class Trainer:
                 class_weights = target_manager.compute_class_weights()
 
         return class_weights
+
+    def _create_embeddings_dataset(self, split: List[DatasetSample], mode: str):
+        # Apply limited sample number
+        if mode == "train" and self._limited_sample_size > 0:
+            logger.info(f"Using limited sample size of {self._limited_sample_size} for training dataset")
+            split = random.sample(split,
+                                          k=min(self._limited_sample_size, len(split)))
+        return get_dataset(self._protocol, split)
 
     def _create_dataloader(self, dataset) -> torch.utils.data.dataloader.DataLoader:
         # Create dataloader from dataset

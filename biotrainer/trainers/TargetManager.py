@@ -1,5 +1,4 @@
 import torch
-import random
 import logging
 import itertools
 import numpy as np
@@ -34,14 +33,12 @@ class TargetManager:
 
     def __init__(self, protocol: str, sequence_file: str,
                  labels_file: Optional[str] = None, mask_file: Optional[str] = None,
-                 ignore_file_inconsistencies: Optional[bool] = False,
-                 limited_sample_size: Optional[int] = -1):
+                 ignore_file_inconsistencies: Optional[bool] = False):
         self.protocol = protocol
         self._sequence_file = sequence_file
         self._labels_file = labels_file
         self._mask_file = mask_file
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
-        self._limited_sample_size = limited_sample_size
 
     def _calculate_targets(self):
         # Parse FASTA protein sequences
@@ -239,19 +236,6 @@ class TargetManager:
 
         # Get dataset splits from file
         self.training_ids, self.validation_ids, self.testing_ids = get_split_lists(self._id2attributes)
-        # Apply limited sample number
-        if self._limited_sample_size > 0:
-            logger.info(f"Using limited sample size of {self._limited_sample_size} for train, validation, test")
-            self.training_ids = random.sample(self.training_ids,
-                                              k=min(self._limited_sample_size, len(self.training_ids)))
-            """  TODO: Also on val/test ids?
-            self.validation_ids = random.sample(self.validation_ids,
-                                                k=min(self._limited_sample_size, len(self.validation_ids)))
-            self.testing_ids = random.sample(self.testing_ids,
-                                             k=min(self._limited_sample_size, len(self.testing_ids)))
-            """
-            remaining_ids = self.training_ids + self.validation_ids + self.testing_ids
-            self._id2target = {idx: target for idx, target in self._id2target.items() if idx in remaining_ids}
 
         # Concatenate embeddings for protein_protein_interaction
         if "protein_protein_interaction" in self.protocol:
