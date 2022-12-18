@@ -2,7 +2,7 @@ import logging
 import numpy as np
 
 from typing import Any, Dict, List
-from sklearn.model_selection import KFold, StratifiedKFold, RepeatedStratifiedKFold, RepeatedKFold
+from sklearn.model_selection import KFold, StratifiedKFold, RepeatedStratifiedKFold, RepeatedKFold, LeavePOut
 
 from ..utilities import Split, DatasetSample
 
@@ -36,6 +36,13 @@ class CrossValidationSplitter:
                                                                                           repeat=repeat,
                                                                                           train_dataset=train_dataset,
                                                                                           val_dataset=val_dataset)
+
+        if cross_validation_config["method"] == "leave_p_out":
+            p = int(cross_validation_config["p"])
+            self._split_strategy = lambda train_dataset, val_dataset: \
+                self.__leave_p_out_split(p=p,
+                                         train_dataset=train_dataset,
+                                         val_dataset=val_dataset)
 
     def split(self, train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
         return self._split_strategy(train_dataset, val_dataset)
@@ -127,5 +134,26 @@ class CrossValidationSplitter:
             else:
                 current_split_name = f"{split_base_name}-{idx + 1}"
             all_splits.append(Split(current_split_name, train_split, val_split))
+
+        return all_splits
+
+    @staticmethod
+    def __leave_p_out_split(p: int,
+                            train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
+        concat_dataset = train_dataset + val_dataset
+
+        lpo = LeavePOut(p=p)
+        n_created_datasets = lpo.get_n_splits(X=concat_dataset)
+        logger.info(f"Splitting to leave_{p}_out Cross Validation datasets")
+        logger.info(f"Number of created datasets: {n_created_datasets}")
+        if n_created_datasets > 1000:
+            logger.warning(f"Number of created datasets is very high! Consider using a smaller value for p or another "
+                           f"cross validation method.")
+
+        all_splits = []
+        for idx, (split_ids_train, split_ids_val) in enumerate(lpo.split(X=concat_dataset)):
+            train_split = [concat_dataset[split_id_train] for split_id_train in split_ids_train]
+            val_split = [concat_dataset[split_id_val] for split_id_val in split_ids_val]
+            all_splits.append(Split(f"leave_{p}_out-{idx + 1}", train_split, val_split))
 
         return all_splits
