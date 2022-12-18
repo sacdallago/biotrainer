@@ -106,6 +106,7 @@ class Trainer:
         # RUN CROSS VALIDATION
         split_results = list()
         for split in splits:
+            logger.info(f"Training model for split {split.name}:")
             train_dataset = self._create_embeddings_dataset(split.train, mode="train")
             val_dataset = self._create_embeddings_dataset(split.val, mode="val")
             best_epoch_metrics, solver = self._do_training_by_split(split_name=split.name,
