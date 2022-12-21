@@ -9,6 +9,9 @@ class HyperParameterSearchTests(unittest.TestCase):
     def test_hps_grid(self):
         # Only normal lists
         param_dict = {
+            "cross_validation_config": {
+                "search_method": "grid_search"
+            },
             "optimizer_choice": "adam",
             "use_class_weights": [True, False],
             "batch_size": [16, 48, 128],
@@ -21,6 +24,9 @@ class HyperParameterSearchTests(unittest.TestCase):
 
         # Range and list comprehension
         param_dict = {
+            "cross_validation_config": {
+                "search_method": "grid_search"
+            },
             "optimizer_choice": "adam",
             "use_class_weights": [True, False],
             "batch_size": "range(0, 10, 1)",
@@ -35,7 +41,10 @@ class HyperParameterSearchTests(unittest.TestCase):
         n_max_evaluations = 10
         param_dict = {
             "optimizer_choice": "adam",
-            "cross_validation_config": {"n_max_evaluations_random": n_max_evaluations},
+            "cross_validation_config": {
+                "search_method": "random_search",
+                "n_max_evaluations_random": n_max_evaluations
+            },
             "use_class_weights": [True, False],
             "batch_size": "range(0, 10, 1)",
             "learning_rate": "[10**-x for x in [3,4,5]]"
