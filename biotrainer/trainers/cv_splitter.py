@@ -16,7 +16,7 @@ class CrossValidationSplitter:
 
         self._split_strategy = None
         if cross_validation_config["method"] == "hold_out":
-            self._split_strategy = self.__hold_out_split
+            self._split_strategy = self._hold_out_split
 
         if cross_validation_config["method"] == "k_fold":
             k = int(cross_validation_config["k"])
@@ -31,27 +31,16 @@ class CrossValidationSplitter:
             if "nested_k" in cross_validation_config.keys():
                 nested_k = int(cross_validation_config["nested_k"])
                 self._nested_split_strategy = lambda train_dataset, hp_iteration: \
-                    self.__k_fold_split(k=nested_k,
-                                        stratified=stratified,
-                                        nested=True,
-                                        repeat=repeat,
-                                        train_dataset=train_dataset,
-                                        val_dataset=[],
-                                        hp_iteration=hp_iteration)
+                    self._k_fold_split(k=nested_k, stratified=stratified, nested=True, repeat=repeat,
+                                       train_dataset=train_dataset, val_dataset=[], hp_iteration=hp_iteration)
             self._split_strategy = lambda train_dataset, val_dataset: \
-                self.__k_fold_split(k=k,
-                                    stratified=stratified,
-                                    nested=False,
-                                    repeat=repeat,
-                                    train_dataset=train_dataset,
-                                    val_dataset=val_dataset)
+                self._k_fold_split(k=k, stratified=stratified, nested=False, repeat=repeat, train_dataset=train_dataset,
+                                   val_dataset=val_dataset)
 
         if cross_validation_config["method"] == "leave_p_out":
             p = int(cross_validation_config["p"])
             self._split_strategy = lambda train_dataset, val_dataset: \
-                self.__leave_p_out_split(p=p,
-                                         train_dataset=train_dataset,
-                                         val_dataset=val_dataset)
+                self._leave_p_out_split(p=p, train_dataset=train_dataset, val_dataset=val_dataset)
 
     def split(self, train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
         return self._split_strategy(train_dataset, val_dataset)
@@ -60,11 +49,11 @@ class CrossValidationSplitter:
         return self._nested_split_strategy(train_dataset, hp_iteration)
 
     @staticmethod
-    def __hold_out_split(train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
+    def _hold_out_split(train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
         return [Split("hold_out", train_dataset, val_dataset)]
 
     @staticmethod
-    def __continuous_values_to_bins(ys: List) -> List:
+    def _continuous_values_to_bins(ys: List) -> List:
         """
         Calculate bins for continuous target values.
         Assigns to each data_point in ys the maximum of its associated bin.
@@ -112,9 +101,9 @@ class CrossValidationSplitter:
 
         return bins
 
-    def __k_fold_split(self, k: int, stratified: bool, nested: bool, repeat: int,
-                       train_dataset: List[DatasetSample], val_dataset: List[DatasetSample],
-                       hp_iteration: Optional[int] = None) -> List[Split]:
+    def _k_fold_split(self, k: int, stratified: bool, nested: bool, repeat: int,
+                      train_dataset: List[DatasetSample], val_dataset: List[DatasetSample],
+                      hp_iteration: Optional[int] = None) -> List[Split]:
         concat_dataset = train_dataset + val_dataset
         ys = [sample.target for sample in concat_dataset]
 
@@ -129,7 +118,7 @@ class CrossValidationSplitter:
                 kf = StratifiedKFold(n_splits=k)
             # Change continuous values to bins for stratified split
             if "_value" in self._protocol:
-                ys = self.__continuous_values_to_bins(ys)
+                ys = self._continuous_values_to_bins(ys)
         else:
             logger.info(f"Splitting to {k}-fold Cross Validation datasets")
             if repeat > 1:
@@ -158,8 +147,8 @@ class CrossValidationSplitter:
         return all_splits
 
     @staticmethod
-    def __leave_p_out_split(p: int,
-                            train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
+    def _leave_p_out_split(p: int,
+                           train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
         concat_dataset = train_dataset + val_dataset
 
         lpo = LeavePOut(p=p)
