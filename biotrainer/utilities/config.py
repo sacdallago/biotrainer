@@ -214,6 +214,7 @@ def verify_config(config: dict, protocols: set):
                     raise ConfigurationException(f"Missing parameter p for leave_p_out cross validation!")
                 elif int(cross_validation_config["p"]) < 1:
                     raise ConfigurationException(f"p for leave_p_out cross_validation must be >= 1!")
+    return True
 
 
 def write_config_file(out_filename: str, config: dict) -> None:
