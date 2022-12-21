@@ -5,7 +5,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .cuda_device import get_device
-from .config import validate_file, read_config_file, verify_config, write_config_file
+from .config import validate_file, read_config_file, verify_config, write_config_file, add_default_values_to_config
 
 from ..trainers import download_embeddings, ModelFactory, Trainer
 
@@ -57,9 +57,9 @@ def parse_config_file_and_execute_run(config_file_path: str):
         logger.info(f"Creating log-directory: {log_dir}")
         log_dir.mkdir(parents=True)
 
-    # Make auto_resume = True the default behaviour
-    if "auto_resume" not in config.keys():
-        config["auto_resume"] = True
+    # Add default hyper_parameters to config if not defined by user
+    config = add_default_values_to_config(config, output_dir=str(output_dir), log_dir=str(log_dir))
+
     # Find pre-trained model in auto_resume mode
     if config["auto_resume"]:
         if "checkpoint.pt" in os.listdir(log_dir):

@@ -88,6 +88,29 @@ def validate_file(file_path: str):
         raise ConfigurationException(f"The configuration file at '{file_path}' does not exist") from e
 
 
+def add_default_values_to_config(config: dict, output_dir: str, log_dir: str):
+    default_values = {
+        "auto_resume": True,
+        "num_epochs": 200,
+        "use_class_weights": False,
+        "batch_size": 128,
+        "embedder_name": 'custom_embeddings',
+        "shuffle": True,
+        "seed": 42,
+        "patience": 10,
+        "epsilon": 0.001,
+        "learning_rate": 1e-3,
+        "output_dir": output_dir,
+        "log_dir": log_dir,
+        "cross_validation_config": {"method": "hold_out"}
+    }
+    for default_key, default_value in default_values.items():
+        if default_key not in config.keys():
+            config[default_key] = default_value
+
+    return config
+
+
 def verify_config(config: dict, protocols: set):
     # Check protocol and associated files
     protocol = config["protocol"]
