@@ -1,6 +1,6 @@
 from .FNN import FNN, FNNInteraction
 from .CNN import CNN
-from .LogReg import LogReg
+from .LogReg import LogReg, LogRegInteraction
 from .LightAttention import LightAttention
 from .model_params import count_parameters
 
@@ -23,7 +23,7 @@ __MODELS = {
     },
     'protein_protein_interaction': {
         'FNN': FNNInteraction,
-        'LogReg': LogReg
+        'LogReg': LogRegInteraction
     }
 }
 
