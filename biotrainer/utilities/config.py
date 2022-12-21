@@ -1,4 +1,5 @@
 import os
+import logging
 
 from pathlib import Path
 from typing import Union
@@ -8,6 +9,8 @@ from ruamel.yaml import YAMLError
 from ruamel.yaml.comments import CommentedBase
 
 from ..models import get_all_available_models
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigurationException(Exception):
@@ -181,6 +184,31 @@ def verify_config(config: dict, protocols: set):
                     raise ConfigurationException(f"Missing parameter k for k-fold cross validation!")
                 elif int(cross_validation_config["k"]) < 2:
                     raise ConfigurationException(f"k for k-fold cross_validation must be >= 2!")
+                if "nested" in cross_validation_config.keys():
+                    nested = eval(str(cross_validation_config["nested"]).capitalize())
+                    if nested:
+                        if "nested_k" not in cross_validation_config.keys():
+                            raise ConfigurationException(
+                                f"Missing parameter nested_k for nested k-fold cross validation!")
+                        elif int(cross_validation_config["nested_k"]) < 2:
+                            raise ConfigurationException(f"nested k for nested k-fold cross_validation must be >= 2!")
+                        if "search_method" not in cross_validation_config.keys():
+                            raise ConfigurationException(
+                                f"Missing parameter search_method for nested k-fold cross validation!"
+                            )
+                        elif cross_validation_config["search_method"] == "random_search":
+                            if "n_max_evaluations_random" not in cross_validation_config.keys():
+                                raise ConfigurationException(f"hyper parameter search method random_search misses "
+                                                             f"parameter n_max_evaluations!")
+                            elif int(cross_validation_config["n_max_evaluations_random"] < 2):
+                                raise ConfigurationException(
+                                    f"n_max_evaluations_random for random_search must be >= 2!")
+
+                    else:
+                        if "nested_k" in cross_validation_config.keys():
+                            logger.warning(f"nested == False for k_fold cross validation, but nested_k is given. "
+                                           f"nested_k ({cross_validation_config['nested_k']}) will be ignored!")
+
             if method == "leave_p_out":
                 if "p" not in cross_validation_config.keys():
                     raise ConfigurationException(f"Missing parameter p for leave_p_out cross validation!")
