@@ -199,7 +199,7 @@ def verify_config(config: dict, protocols: set):
                         elif cross_validation_config["search_method"] == "random_search":
                             if "n_max_evaluations_random" not in cross_validation_config.keys():
                                 raise ConfigurationException(f"hyper parameter search method random_search misses "
-                                                             f"parameter n_max_evaluations!")
+                                                             f"parameter n_max_evaluations_random!")
                             elif int(cross_validation_config["n_max_evaluations_random"] < 2):
                                 raise ConfigurationException(
                                     f"n_max_evaluations_random for random_search must be >= 2!")
