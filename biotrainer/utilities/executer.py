@@ -2,12 +2,13 @@ import os
 import logging
 
 from pathlib import Path
+from copy import deepcopy
 from urllib.parse import urlparse
 
 from .cuda_device import get_device
 from .config import validate_file, read_config_file, verify_config, write_config_file, add_default_values_to_config
 
-from ..trainers import download_embeddings, ModelFactory, Trainer
+from ..trainers import download_embeddings, Trainer, HyperParameterManager
 
 logger = logging.getLogger(__name__)
 
@@ -74,14 +75,17 @@ def parse_config_file_and_execute_run(config_file_path: str):
     device = get_device(config["device"] if "device" in config.keys() else None)
     config["device"] = device
 
-    # Create model factory
-    model_factory = ModelFactory(**config)
+    # Create hyper parameter manager
+    hp_manager = HyperParameterManager(**config)
+
+    # Copy output_vars from config
+    output_vars = deepcopy(config)
 
     # Run biotrainer pipeline
-    trainer = Trainer(output_dir=str(output_dir),
-                      log_dir=str(log_dir),
-                      model_factory=model_factory,
-                      **config)
+    trainer = Trainer(hp_manager=hp_manager,
+                      output_vars=output_vars,
+                      **config
+                      )
     out_config = trainer.training_and_evaluation_routine()
 
     # Save output_variables in out.yml

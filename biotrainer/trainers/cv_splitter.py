@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from sklearn.model_selection import KFold, StratifiedKFold, RepeatedStratifiedKFold, RepeatedKFold, LeavePOut
 
 from ..utilities import Split, DatasetSample
@@ -28,14 +28,23 @@ class CrossValidationSplitter:
                 repeat = int(cross_validation_config["repeat"])
             else:
                 repeat = 1
-            if "nested" in cross_validation_config.keys():
-                nested = eval(str(cross_validation_config["nested"]).capitalize())
-            else:
-                nested = False
-            self._split_strategy = lambda train_dataset, val_dataset: self.__k_fold_split(k=k, stratified=stratified,
-                                                                                          repeat=repeat,
-                                                                                          train_dataset=train_dataset,
-                                                                                          val_dataset=val_dataset)
+            if "nested_k" in cross_validation_config.keys():
+                nested_k = int(cross_validation_config["nested_k"])
+                self._nested_split_strategy = lambda train_dataset, hp_iteration: \
+                    self.__k_fold_split(k=nested_k,
+                                        stratified=stratified,
+                                        nested=True,
+                                        repeat=repeat,
+                                        train_dataset=train_dataset,
+                                        val_dataset=[],
+                                        hp_iteration=hp_iteration)
+            self._split_strategy = lambda train_dataset, val_dataset: \
+                self.__k_fold_split(k=k,
+                                    stratified=stratified,
+                                    nested=False,
+                                    repeat=repeat,
+                                    train_dataset=train_dataset,
+                                    val_dataset=val_dataset)
 
         if cross_validation_config["method"] == "leave_p_out":
             p = int(cross_validation_config["p"])
@@ -46,6 +55,9 @@ class CrossValidationSplitter:
 
     def split(self, train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
         return self._split_strategy(train_dataset, val_dataset)
+
+    def nested_split(self, train_dataset: List[DatasetSample], hp_iteration: int) -> List[Split]:
+        return self._nested_split_strategy(train_dataset, hp_iteration)
 
     @staticmethod
     def __hold_out_split(train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
@@ -100,8 +112,9 @@ class CrossValidationSplitter:
 
         return bins
 
-    def __k_fold_split(self, k: int, stratified: bool, repeat: int,
-                       train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
+    def __k_fold_split(self, k: int, stratified: bool, nested: bool, repeat: int,
+                       train_dataset: List[DatasetSample], val_dataset: List[DatasetSample],
+                       hp_iteration: Optional[int] = None) -> List[Split]:
         concat_dataset = train_dataset + val_dataset
         ys = [sample.target for sample in concat_dataset]
 
@@ -124,15 +137,22 @@ class CrossValidationSplitter:
                 kf = RepeatedKFold(n_splits=k, n_repeats=repeat)
             else:
                 kf = KFold(n_splits=k)
+        if nested:
+            split_base_name += "-nested"
         all_splits = []
         for idx, (split_ids_train, split_ids_val) in enumerate(kf.split(X=concat_dataset, y=ys)):
             train_split = [concat_dataset[split_id_train] for split_id_train in split_ids_train]
             val_split = [concat_dataset[split_id_val] for split_id_val in split_ids_val]
 
             if repeat > 1:
-                current_split_name = f"{split_base_name}-{(idx + 1) % k if (idx + 1) % k != 0 else k}-{(idx // k) + 1}"
+                # Repeated splits are labeled e.g. 1-1, 1-2, 2-1, 2-2, 3-1, 3-2 .. (for 3==2 and repeat==2)
+                current_repeated_split = f"{(idx + 1) % k if (idx + 1) % k != 0 else k}-{(idx // k) + 1}"
+                current_split_name = f"{split_base_name}-{current_repeated_split}"
             else:
                 current_split_name = f"{split_base_name}-{idx + 1}"
+
+            if hp_iteration:
+                current_split_name += f"-hp-{hp_iteration}"
             all_splits.append(Split(current_split_name, train_split, val_split))
 
         return all_splits
