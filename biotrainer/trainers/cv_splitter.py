@@ -74,7 +74,7 @@ class CrossValidationSplitter:
         bin_min = minimum
         bin_max = bin_min + bin_size
         for data_point in np.sort(ys_np):
-            if bin_min <= data_point < bin_max:
+            if bin_min <= data_point <= bin_max:
                 if str(bin_max) not in bin_dict.keys():
                     bin_dict[str(bin_max)] = 0
 
