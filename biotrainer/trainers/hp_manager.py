@@ -82,5 +82,4 @@ class HyperParameterManager:
         random.shuffle(all_possible_hp_combinations)
 
         for i in range(n_max_evaluations):
-            print(all_possible_hp_combinations[i])
             yield {**self._constant_params, **all_possible_hp_combinations[i]}
