@@ -1,8 +1,8 @@
 import os
 import yaml
-import shutil
 import tempfile
 
+from pathlib import Path
 from biotrainer.utilities import ConfigurationException
 from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
 
@@ -33,45 +33,36 @@ protocol_to_input = {
 }
 
 
-def create_temporary_copy(path):
-    tmp = tempfile.NamedTemporaryFile(dir=".", delete=False)
-    shutil.copy2(path, tmp.name)
-    return tmp.name
-
-
-def setup_config(protocol: str, model_choice: str, embedder_name: str) -> str:
-    config_file_path = "test_config.yml"
-    config_file_path = create_temporary_copy(config_file_path)
-    with open(config_file_path, "r") as config_file:
+def setup_config(protocol: str, model_choice: str, embedder_name: str, tmp_config_path: str):
+    template_config_file_path = "test_config.yml"
+    with open(template_config_file_path, "r") as config_file:
         config = yaml.safe_load(config_file)
-        config["sequence_file"] = protocol_to_input[protocol]["sequence_file"]
-        config["labels_file"] = protocol_to_input[protocol]["labels_file"]
+        sequence_path_absolute = str(Path(protocol_to_input[protocol]["sequence_file"]).absolute())
+        config["sequence_file"] = sequence_path_absolute
+        labels_path_absolute = "" if protocol_to_input[protocol]["labels_file"] == "" else str(
+            Path(protocol_to_input[protocol]["labels_file"]).absolute())
+        config["labels_file"] = labels_path_absolute
         config["loss_choice"] = protocol_to_input[protocol]["loss_choice"]
-        config["protocol"] = protocol if not "error" in protocol else protocol.split("-")[0]
+        config["protocol"] = protocol if "error" not in protocol else protocol.split("-")[0]
         config["model_choice"] = model_choice
         config["embedder_name"] = embedder_name
-    with open(config_file_path, "w") as config_file:
-        yaml.safe_dump(config, config_file, default_flow_style=False, sort_keys=False)
-    return config_file_path
+    with open(tmp_config_path, "w") as tmp_config_file:
+        yaml.safe_dump(config, tmp_config_file, default_flow_style=False, sort_keys=False)
 
 
 def test_config(protocol: str, model: str, embedder_name: str, should_fail: bool):
-    # Clean up before test
-    if os.path.exists("output/"):
-        shutil.rmtree("output/")
-
     print("TESTING CONFIG: " + protocol + " - " + model +
           " - " + embedder_name + " - Passed when failed: " + str(should_fail))
-    temp_config_file_path = setup_config(protocol=protocol,
-                                         model_choice=model,
-                                         embedder_name=embedder_name)
-    try:
-        biotrainer_headless_main(config_file_path=os.path.abspath(temp_config_file_path))
-        assert os.path.exists("output/out.yml"), "No output file generated, run failed!"
-        # Clean up after test
-        shutil.rmtree("output/")
-    except ConfigurationException:
-        assert should_fail, "A ConfigurationException was thrown although it shouldn't have."
-    except Exception as e:
-        assert should_fail, "An exception was thrown altthough it shouldn't have."
-    os.remove(os.path.abspath(temp_config_file_path))
+    with tempfile.TemporaryDirectory() as tmp_dir_name:
+        tmp_config_path = tmp_dir_name + "/tmp_config_file.yml"
+        setup_config(protocol=protocol,
+                     model_choice=model,
+                     embedder_name=embedder_name,
+                     tmp_config_path=tmp_config_path)
+        try:
+            biotrainer_headless_main(config_file_path=os.path.abspath(tmp_config_path))
+            assert os.path.exists(f"{tmp_dir_name}/output/out.yml"), "No output file generated, run failed!"
+        except ConfigurationException:
+            assert should_fail, "A ConfigurationException was thrown although it shouldn't have."
+        except Exception as e:
+            assert should_fail, "An exception was thrown although it shouldn't have."
