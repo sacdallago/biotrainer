@@ -50,7 +50,7 @@ def setup_config(protocol: str, model_choice: str, embedder_name: str, tmp_confi
         yaml.safe_dump(config, tmp_config_file, default_flow_style=False, sort_keys=False)
 
 
-def test_config(protocol: str, model: str, embedder_name: str, should_fail: bool):
+def test_protocol_config(protocol: str, model: str, embedder_name: str, should_fail: bool):
     print("TESTING CONFIG: " + protocol + " - " + model +
           " - " + embedder_name + " - Passed when failed: " + str(should_fail))
     with tempfile.TemporaryDirectory() as tmp_dir_name:
