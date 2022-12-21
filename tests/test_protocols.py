@@ -26,7 +26,10 @@ protocol_to_input = {
                           'loss_choice': "cross_entropy_loss"},
     'sequence_to_value': {'sequence_file': "test_input_files/s2v/sequences.fasta",
                           'labels_file': "",
-                          'loss_choice': "mean_squared_error"}
+                          'loss_choice': "mean_squared_error"},
+    'protein_protein_interaction': {'sequence_file': "test_input_files/ppi/interactions.fasta",
+                                    'labels_file': "",
+                                    'loss_choice': "cross_entropy_loss"},
 }
 
 
