@@ -91,10 +91,13 @@ class Trainer:
         hp_search_method = self._cross_validation_config["search_method"] \
             if "search_method" in self._cross_validation_config.keys() else "no_search"
 
+        start_time_total = time.perf_counter()
         if nested_cv:
             split_results = self._run_nested_cross_validation(splits, hp_search_method)
         else:
             split_results = self._run_cross_validation(splits, hp_search_method)
+        end_time_total = time.perf_counter()
+        self._output_vars["elapsed_time_total"] = end_time_total - start_time_total
 
         best_split = self._get_best_model_of_splits(split_results)
         # 10. TESTING
@@ -303,7 +306,6 @@ class Trainer:
         # Logging
         logger.info(f'Total training time for {inner_split_name if inner_split_name != "" else outer_split_name}: '
                     f'{(end_time - start_time) / 60:.1f}[m]')
-        # TODO: ADD OVERALL TIME!
 
         if inner_split_name:
             save_dict = self._output_vars[outer_split_name][inner_split_name]
