@@ -138,6 +138,12 @@ def verify_config(config: dict, protocols: set):
             raise ConfigurationException(
                 f"Mask file cannot be applied for protocol: {protocol}")
 
+    if "_value" in protocol:
+        if "use_class_weights" in config.keys():
+            use_class_weights = config["use_class_weights"]
+            if type(use_class_weights) == list or eval(str(use_class_weights).capitalize()):
+                raise ConfigurationException(f"Class weights are not supported for protocol {protocol}!")
+
     # Check model for protocol
     model = config["model_choice"]
     if model not in get_all_available_models().get(protocol):
