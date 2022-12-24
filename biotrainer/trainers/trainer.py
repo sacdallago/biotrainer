@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 class Trainer:
+    _class_weights: Union[None, torch.FloatTensor] = None
+
     def __init__(self,
                  # Needed
                  sequence_file: str,
@@ -77,7 +79,10 @@ class Trainer:
                                        ignore_file_inconsistencies=self._ignore_file_inconsistencies)
         train_dataset, val_dataset, test_dataset = target_manager.get_datasets_by_annotations(id2emb)
 
-        # COMMON FOR ALL k-fold SPLITS:
+        # 4. CLASS WEIGHTS
+        self._class_weights = self._get_class_weights(target_manager=target_manager)
+
+        # LOG COMMON VALUES FOR ALL k-fold SPLITS:
         self._output_vars['n_testing_ids'] = len(test_dataset)
         self._output_vars['n_classes'] = target_manager.number_of_outputs
 
@@ -150,8 +155,7 @@ class Trainer:
             self._output_vars['class_str_to_int'] = target_manager.class_str2int
             logger.info(f"Number of classes: {self._output_vars['n_classes']}")
             # Compute class weights to pass as bias to model if option is set
-            #if self._use_class_weights: TODO
-            #    class_weights = target_manager.compute_class_weights()
+            class_weights = target_manager.compute_class_weights()
 
         return class_weights
 
@@ -259,11 +263,6 @@ class Trainer:
         save_dict['n_training_ids'] = len(train_dataset)
         save_dict['n_validation_ids'] = len(val_dataset)
         save_dict['split_hyper_params'] = self._hp_manager.get_only_params_to_optimize(hyper_params)
-        # 4. CLASS WEIGHTS
-        class_weights = None
-        if hyper_params["use_class_weights"]:
-            pass
-        # TODO class_weights = self._get_class_weights(target_manager=target_manager)
 
         # 5. DATALOADERS
         train_loader = self._create_dataloader(dataset=train_dataset, hyper_params=hyper_params)
@@ -275,7 +274,7 @@ class Trainer:
         model, loss_function, optimizer = model_factory.create_model_loss_optimizer(
             n_classes=self._output_vars["n_classes"],
             n_features=self._output_vars["n_features"],
-            class_weights=class_weights)
+            class_weights=self._class_weights if hyper_params["use_class_weights"] else None)
         # Count and log number of free params
         n_free_parameters = count_parameters(model)
         save_dict['n_free_parameters'] = n_free_parameters
