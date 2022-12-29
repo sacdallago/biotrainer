@@ -67,13 +67,13 @@ class Trainer:
         self._hp_manager = hp_manager
 
     def training_and_evaluation_routine(self):
-        # 1. SETUP
+        # SETUP
         self._setup()
 
-        # 2. EMBEDDINGS
+        # EMBEDDINGS
         id2emb = self._create_and_load_embeddings()
 
-        # 3. TARGETS => DATASETS
+        # TARGETS => DATASETS
         target_manager = TargetManager(protocol=self._protocol, sequence_file=self._sequence_file,
                                        labels_file=self._labels_file, mask_file=self._mask_file,
                                        ignore_file_inconsistencies=self._ignore_file_inconsistencies)
@@ -83,7 +83,7 @@ class Trainer:
         self._output_vars['n_testing_ids'] = len(test_dataset)
         self._output_vars['n_classes'] = target_manager.number_of_outputs
 
-        # 4. CLASS WEIGHTS
+        # CLASS WEIGHTS
         self._class_weights = self._get_class_weights(target_manager=target_manager)
 
         # CREATE SPLITS:
@@ -105,12 +105,13 @@ class Trainer:
         self._output_vars["elapsed_time_total"] = end_time_total - start_time_total
 
         best_split = self._get_best_model_of_splits(split_results)
-        # 10. TESTING
+
+        # TESTING
         test_dataset = self._create_embeddings_dataset(test_dataset, mode="test")
         test_loader = self._create_dataloader(dataset=test_dataset, hyper_params=best_split.hyper_params)
         self._do_and_log_evaluation(best_split.solver, test_loader, target_manager)
 
-        # 11. SANITY CHECK TODO: Think about purpose and pros and cons, flags in config, tests..
+        # SANITY CHECKER TODO: Think about purpose and pros and cons, flags in config, tests..
         sanity_checker = SanityChecker(output_vars=self._output_vars, mode="Warn")
         sanity_checker.check_test_results()
 
@@ -264,12 +265,11 @@ class Trainer:
         save_dict['n_validation_ids'] = len(val_dataset)
         save_dict['split_hyper_params'] = self._hp_manager.get_only_params_to_optimize(hyper_params)
 
-        # 5. DATALOADERS
+        # DATALOADERS
         train_loader = self._create_dataloader(dataset=train_dataset, hyper_params=hyper_params)
         val_loader = self._create_dataloader(dataset=val_dataset, hyper_params=hyper_params)
 
-        # 6. MODEL, LOSS, OPTIMIZER
-        # Create model, loss, optimizer
+        # MODEL, LOSS, OPTIMIZER
         model_factory = ModelFactory(**hyper_params)
         model, loss_function, optimizer = model_factory.create_model_loss_optimizer(
             n_classes=self._output_vars["n_classes"],
@@ -279,17 +279,17 @@ class Trainer:
         n_free_parameters = count_parameters(model)
         save_dict['n_free_parameters'] = n_free_parameters
 
-        # 7. WRITER
+        # WRITER
         writer = self._create_writer(hyper_params=hyper_params)
 
-        # 8. SOLVER
+        # SOLVER
         solver = self._create_solver(split_name=split_name,
                                      model=model, loss_function=loss_function, optimizer=optimizer, writer=writer,
                                      hyper_params=hyper_params)
         # if self._pretrained_model:
         #    solver.load_checkpoint(checkpoint_path=self._pretrained_model)
 
-        # 9. TRAINING/VALIDATION
+        # TRAINING/VALIDATION
         best_epoch_metrics = self._do_and_log_training(outer_split.name, solver, train_loader, val_loader,
                                                        inner_split_name=inner_split.name if inner_split else "")
 
