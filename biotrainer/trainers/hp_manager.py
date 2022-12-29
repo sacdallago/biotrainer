@@ -27,10 +27,10 @@ class HyperParameterManager:
                 self._params_to_optimize[key] = list(set(value))
             elif type(value) is str and "[" in value and "]" in value:
                 try:
-                    compiled_list = compile(source=value, filename='<range>', mode='eval')
-                    range_obj = eval(compiled_list, locals())
-                    assert range_obj, "List could not be compiled from input!"
-                    self._params_to_optimize[key] = range_obj
+                    compiled_list = compile(source=value, filename='<list>', mode='eval')
+                    list_obj = eval(compiled_list, locals())
+                    assert list_obj, "List could not be compiled from input!"
+                    self._params_to_optimize[key] = list_obj
                 except Exception as e:
                     raise ConfigurationException(f"Unable to compile hyper_parameters from config:\n"
                                                  f"{key}: {value}") from e
