@@ -79,12 +79,12 @@ class Trainer:
                                        ignore_file_inconsistencies=self._ignore_file_inconsistencies)
         train_dataset, val_dataset, test_dataset = target_manager.get_datasets_by_annotations(id2emb)
 
-        # 4. CLASS WEIGHTS
-        self._class_weights = self._get_class_weights(target_manager=target_manager)
-
         # LOG COMMON VALUES FOR ALL k-fold SPLITS:
         self._output_vars['n_testing_ids'] = len(test_dataset)
         self._output_vars['n_classes'] = target_manager.number_of_outputs
+
+        # 4. CLASS WEIGHTS
+        self._class_weights = self._get_class_weights(target_manager=target_manager)
 
         # CREATE SPLITS:
         splits = self._cross_validation_splitter.split(train_dataset=train_dataset, val_dataset=val_dataset)
