@@ -105,6 +105,7 @@ class Trainer:
         end_time_total = time.perf_counter()
         self._output_vars["elapsed_time_total"] = end_time_total - start_time_total
 
+        self._log_average_result_of_splits(split_results)
         best_split = self._get_best_model_of_splits(split_results)
 
         # TESTING
@@ -338,12 +339,26 @@ class Trainer:
                                       key=lambda split_result: split_result.best_epoch_metrics["validation"]["loss"],
                                       reverse=False)  # Lowest to highest loss
         best_split_result = split_results_sorted[0]
-        logger.info(f"Using best model from split {best_split_result.name} for test set evaluation")
+        if len(split_results) > 1:  # Not for hold_out cross validation
+            logger.info(f"Using best model from split {best_split_result.name} for test set evaluation")
+            self._output_vars["best_split"] = best_split_result.name
         return best_split_result
 
-    def _get_average_loss_of_splits(self, split_results: List[SplitResult]) -> float:
+    @staticmethod
+    def _get_average_loss_of_splits(split_results: List[SplitResult]) -> float:
         sum_loss = sum([split_result.best_epoch_metrics["validation"]["loss"] for split_result in split_results])
         return sum_loss / len(split_results)
+
+    def _log_average_result_of_splits(self, split_results: List[SplitResult]):
+        n = len(split_results)
+        if n > 1:  # Not for hold_out cross validation
+            average_dict = {}
+            result_metric_keys = split_results[0].best_epoch_metrics["validation"].keys()
+            for key in result_metric_keys:
+                average_dict[key] = sum(
+                    [split_result.best_epoch_metrics["validation"][key] for split_result in split_results]) / n
+            logger.info(f"Average split results: {average_dict}")
+            self._output_vars["average_outer_split_results"] = average_dict
 
     def _do_and_log_evaluation(self, solver, test_loader, target_manager):
         # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
