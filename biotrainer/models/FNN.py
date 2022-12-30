@@ -5,7 +5,9 @@ import torch.nn as nn
 class FNN(nn.Module):
     def __init__(
             self, n_classes: int, n_features: int,
-            bottleneck_dim: int = 32, dropout_rate: float = 0.25):
+            bottleneck_dim: int = 32, dropout_rate: float = 0.25,
+            **kwargs
+    ):
         super(FNN, self).__init__()
 
         self.classifier = nn.Sequential(

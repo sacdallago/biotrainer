@@ -5,7 +5,8 @@ import torch.nn as nn
 class CNN(nn.Module):
     def __init__(
             self, n_classes: int, n_features: int,
-            bottleneck_dim: int = 32
+            bottleneck_dim: int = 32,
+            **kwargs,
     ):
         super(CNN, self).__init__()
 

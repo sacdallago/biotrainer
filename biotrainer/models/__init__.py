@@ -1,3 +1,5 @@
+import inspect
+
 from .FNN import FNN, FNNInteraction
 from .CNN import CNN
 from .LogReg import LogReg, LogRegInteraction
@@ -28,13 +30,17 @@ __MODELS = {
 }
 
 
-def get_model(protocol: str, model_choice: str, n_classes: int, n_features: int):
+def get_model(protocol: str, model_choice: str, n_classes: int, n_features: int,
+              **kwargs):
     model = __MODELS.get(protocol).get(model_choice)
 
     if not model:
         raise NotImplementedError
     else:
-        return model(n_classes=n_classes, n_features=n_features)
+        if "dropout_rate" in kwargs.keys() and "dropout_rate" not in inspect.signature(model).parameters:
+            raise NotImplementedError(f"dropout_rate not implemented for model_choice {model_choice}")
+
+        return model(n_classes=n_classes, n_features=n_features, **kwargs)
 
 
 def get_all_available_models():

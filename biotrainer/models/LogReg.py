@@ -3,13 +3,13 @@ import torch.nn as nn
 
 # Logistic regression (single linear layer directly mapping to classes)
 class LogReg(nn.Module):
-    def __init__(self, n_classes: int, n_features: int):
+    def __init__(self, n_classes: int, n_features: int, **kwargs):
         super(LogReg, self).__init__()
         self.classifier = nn.Sequential(
-            nn.Linear(n_features, n_classes), # 7x32
+            nn.Linear(n_features, n_classes),  # 7x32
         )
 
-    def forward( self, x):
+    def forward(self, x):
         """
             L = protein length
             B = batch-size
@@ -21,7 +21,7 @@ class LogReg(nn.Module):
 
 
 class LogRegInteraction(nn.Module):
-    def __init__(self, n_classes: int, n_features: int):
+    def __init__(self, n_classes: int, n_features: int, **kwargs):
         super(LogRegInteraction, self).__init__()
         self.classifier = nn.Sequential(
             nn.Linear(n_features, 1),  # 7x32

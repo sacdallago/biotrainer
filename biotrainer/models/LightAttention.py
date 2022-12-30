@@ -7,7 +7,9 @@ import biotrainer.utilities as utils
 # LightAttention model originally from Hannes Stark:
 # https://github.com/HannesStark/protein-localization/blob/master/models/light_attention.py
 class LightAttention(nn.Module):
-    def __init__(self, n_features: int, n_classes: int, dropout=0.25, kernel_size=9, conv_dropout: float = 0.25):
+    def __init__(self, n_features: int, n_classes: int, dropout_rate=0.25, kernel_size=9, conv_dropout: float = 0.25,
+                 **kwargs
+                 ):
         super(LightAttention, self).__init__()
 
         self.feature_convolution = nn.Conv1d(n_features, n_features, kernel_size, stride=1,
@@ -21,14 +23,14 @@ class LightAttention(nn.Module):
 
         self.linear = nn.Sequential(
             nn.Linear(2 * n_features, 32),
-            nn.Dropout(dropout),
+            nn.Dropout(dropout_rate),
             nn.ReLU(),
             nn.BatchNorm1d(32)
         )
 
         self.output = nn.Linear(32, n_classes)
 
-    def forward(self, x: torch.Tensor, **kwargs) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x: [batch_size, embeddings_dim, sequence_length] embedding tensor that should be classified

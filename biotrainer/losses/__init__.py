@@ -25,7 +25,7 @@ __LOSSES = {
 
 
 def get_loss(protocol: str, loss_choice: str, device: Union[str, torch.device],
-             weight: Optional[torch.Tensor] = None):
+             weight: Optional[torch.Tensor] = None, **kwargs):
     loss = __LOSSES.get(protocol).get(loss_choice)
 
     if not loss:

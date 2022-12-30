@@ -9,14 +9,15 @@ from torch.utils.data import DataLoader
 from typing import Optional, Dict, Any, Union, List
 from torch.utils.tensorboard import SummaryWriter
 
-from .model_factory import ModelFactory
 from .TargetManager import TargetManager
 from .hp_manager import HyperParameterManager
 from .cv_splitter import CrossValidationSplitter
 from .target_manager_utils import revert_mappings
 from .embeddings import compute_embeddings, load_embeddings
 
-from ..models import count_parameters
+from ..losses import get_loss
+from ..optimizers import get_optimizer
+from ..models import count_parameters, get_model
 from ..solvers import get_solver, Solver
 from ..datasets import get_collate_function, get_dataset
 from ..utilities import seed_all, SanityChecker, Split, SplitResult, DatasetSample
@@ -220,7 +221,7 @@ class Trainer:
             hyper_param_loss_results = list()
             for hp_iteration, hyper_params in enumerate(self._hp_manager.search(mode=hp_search_method)):
                 inner_splits = self._cross_validation_splitter.nested_split(train_dataset=outer_split.train,
-                                                                            hp_iteration=hp_iteration+1)
+                                                                            hp_iteration=hp_iteration + 1)
                 split_results_inner = list()
                 for inner_split in inner_splits:
                     logger.info(f"Training model for inner split {inner_split.name}:")
@@ -270,11 +271,10 @@ class Trainer:
         val_loader = self._create_dataloader(dataset=val_dataset, hyper_params=hyper_params)
 
         # MODEL, LOSS, OPTIMIZER
-        model_factory = ModelFactory(**hyper_params)
-        model, loss_function, optimizer = model_factory.create_model_loss_optimizer(
-            n_classes=self._output_vars["n_classes"],
-            n_features=self._output_vars["n_features"],
-            class_weights=self._class_weights if hyper_params["use_class_weights"] else None)
+        model, loss_function, optimizer = self._create_model_loss_optimizer(
+            class_weights=self._class_weights if hyper_params["use_class_weights"] else None,
+            **hyper_params)
+
         # Count and log number of free params
         n_free_parameters = count_parameters(model)
         save_dict['n_free_parameters'] = n_free_parameters
@@ -294,6 +294,20 @@ class Trainer:
                                                        inner_split_name=inner_split.name if inner_split else "")
 
         return best_epoch_metrics, solver
+
+    def _create_model_loss_optimizer(self, class_weights: Optional[torch.Tensor] = None,
+                                     **kwargs) -> (torch.nn.Module, torch.nn.Module, torch.nn.Module):
+        # Initialize model
+        model = get_model(n_classes=self._output_vars["n_classes"], n_features=self._output_vars["n_features"],
+                          **kwargs)
+
+        # Initialize loss function
+        loss_function = get_loss(weight=class_weights, **kwargs)
+
+        # Initialize optimizer
+        optimizer = get_optimizer(model_parameters=model.parameters(), **kwargs)
+
+        return model, loss_function, optimizer
 
     def _do_and_log_training(self, outer_split_name: str, solver, train_loader, val_loader, inner_split_name: str = ""):
         start_time_abs = datetime.datetime.now()
