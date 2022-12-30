@@ -36,7 +36,7 @@ ignore_file_inconsistencies: True | False  # Default: False
 
 A concrete output directory can be specified:
 ```yaml
-output_dir: path/to/output_dir  # Default: ./output
+output_dir: path/to/output_dir  # Default: path/to/config/output
 ```
 
 ## Training data (protocol specific)
