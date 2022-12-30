@@ -4,7 +4,7 @@ import torch.nn as nn
 # Convolutional neural network (two convolutional layers)
 class CNN(nn.Module):
     def __init__(
-            self, n_classes: int, n_features: int, pretrained_model=None,
+            self, n_classes: int, n_features: int,
             bottleneck_dim: int = 32
     ):
         super(CNN, self).__init__()

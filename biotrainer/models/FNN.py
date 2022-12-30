@@ -4,7 +4,7 @@ import torch.nn as nn
 # Feed-Forward Neural Network (FNN) with two linear layers connected by a non-lin
 class FNN(nn.Module):
     def __init__(
-            self, n_classes: int, n_features: int, pretrained_model=None,
+            self, n_classes: int, n_features: int,
             bottleneck_dim: int = 32, dropout_rate: float = 0.25):
         super(FNN, self).__init__()
 
@@ -29,7 +29,7 @@ class FNN(nn.Module):
 
 class FNNInteraction(FNN):
     def __init__(
-            self, n_classes: int, n_features: int, pretrained_model=None,
+            self, n_classes: int, n_features: int,
             bottleneck_dim: int = 128, dropout_rate: float = 0.25):
         super(FNN, self).__init__()
 
