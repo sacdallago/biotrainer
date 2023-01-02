@@ -1,4 +1,5 @@
 from .seeder import seed_all
+from .version import __version__
 from .cuda_device import get_device
 from .sanity_checker import SanityChecker, SanityException
 from .data_classes import Split, SplitResult, DatasetSample
@@ -20,5 +21,6 @@ __all__ = [
     'SanityException',
     'Split',
     'SplitResult',
-    'DatasetSample'
+    'DatasetSample',
+    '__version__'
 ]

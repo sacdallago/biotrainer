@@ -20,7 +20,7 @@ from ..optimizers import get_optimizer
 from ..models import count_parameters, get_model
 from ..solvers import get_solver, Solver
 from ..datasets import get_collate_function, get_dataset
-from ..utilities import seed_all, SanityChecker, Split, SplitResult, DatasetSample
+from ..utilities import seed_all, SanityChecker, Split, SplitResult, DatasetSample, __version__
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +125,8 @@ class Trainer:
         # Log device
         self._output_vars['device'] = str(self._device)
         logger.info(f"Using device: {self._device}")
+        # Log version
+        self._output_vars['biotrainer_version'] = str(__version__)
 
     def _create_and_load_embeddings(self) -> Dict[str, Any]:
         # Generate embeddings if necessary, otherwise use existing embeddings and overwrite embedder_name
