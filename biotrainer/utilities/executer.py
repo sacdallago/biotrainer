@@ -21,15 +21,41 @@ __PROTOCOLS = {
 }
 
 
+def _setup_logging(output_dir: str):
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s %(levelname)s %(message)s",
+                        handlers=[
+                            logging.FileHandler(output_dir + "/logger_out.log"),
+                            logging.StreamHandler()]
+                        )
+    # Jax likes to print warnings
+    logging.captureWarnings(True)
+
+
 def parse_config_file_and_execute_run(config_file_path: str):
     validate_file(config_file_path)
 
     # read configuration and execute
     config = read_config_file(config_file_path)
+
+    # Create output directory (if necessary)
+    input_file_path = Path(os.path.dirname(os.path.abspath(config_file_path)))
+    if "output_dir" in config.keys():
+        output_dir = input_file_path / Path(config["output_dir"])
+    else:
+        output_dir = input_file_path / "output"
+    if not output_dir.is_dir():
+        logger.info(f"Creating output dir: {output_dir}")
+        output_dir.mkdir(parents=True)
+    config["output_dir"] = str(output_dir)
+
+    # Setup logging
+    _setup_logging(str(output_dir))
+
+    # Verify config by protocol and check cross validation config
     verify_config(config, __PROTOCOLS)
 
     # Make input file paths absolute
-    input_file_path = Path(os.path.dirname(os.path.abspath(config_file_path)))
     if "labels_file" in config.keys():
         config["labels_file"] = str(input_file_path / config["labels_file"])
     if "sequence_file" in config.keys():
@@ -45,16 +71,6 @@ def parse_config_file_and_execute_run(config_file_path: str):
         config["embedder_name"] = "custom_embeddings"
     if "pretrained_model" in config.keys():
         config["pretrained_model"] = str(input_file_path / config["pretrained_model"])
-
-    # Create output directory (if necessary)
-    if "output_dir" in config.keys():
-        output_dir = input_file_path / Path(config["output_dir"])
-    else:
-        output_dir = input_file_path / "output"
-    if not output_dir.is_dir():
-        logger.info(f"Creating output dir: {output_dir}")
-        output_dir.mkdir(parents=True)
-    config["output_dir"] = str(output_dir)
 
     # Create log directory (if necessary)
     log_dir = output_dir / config["model_choice"] / config["embedder_name"]

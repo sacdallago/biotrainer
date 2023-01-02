@@ -1,5 +1,4 @@
 import argparse
-import logging
 
 from .executer import parse_config_file_and_execute_run
 
@@ -20,10 +19,6 @@ def main(args=None):
     """
     Pipeline commandline entry point
     """
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    # Jax likes to print warnings
-    logging.captureWarnings(True)
-
     parser = argparse.ArgumentParser(description='Trains models on protein embeddings.')
     parser.add_argument('--list_embedders', required=False, action='store_true',
                         help='List all available embedders from bio_embeddings')
