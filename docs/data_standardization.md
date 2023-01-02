@@ -24,30 +24,41 @@ An overview of our decision process and about arguments for and against certain 
 ## Before getting started
 
 ### Sample attributes
-  - `SET` --> The partition in which the sample falls. Can be `train` or `test`.
-  - `VALIDATION` --> If the sample is used for validation purposes during model training. Can be `True` or `False`.
+  - `ID` --> Identifier of the sequence, right after ">" (.fasta standard) 
+  - `SET` --> The partition in which the sample falls. Can be `train`, `val` or `test`.
   - `TARGET` --> The class or value to predict, e.g. `Nucleus` or `1.3`
 
+<details>
+<summary>
+Deprecated VALIDATION annotation
+</summary>
+Validation annotation can also be given via a separate attribute "VALIDATION=True/False". This behaviour
+id deprecated and mutually exclusive with annotations that include a SET=val value.
+
+- `VALIDATION` --> If the sample is used for validation purposes during model training. Can be `True` or `False`.
+  
 Mind that `VALIDATION` can only be `True` if the `SET` is `train`, and if `SET` is `test` it must be `False`. 
 A combination of `SET=test` and `VALIDATION=True` is a violation.
+A combination of `SET=val` and `VALIDATION=True` or `VALIDATION=False` is also a violation.
+</details>
 
 **All attributes in your .fasta files must exactly match those provided here (case-sensitive!).** 
 
 ### Format
 All headers of the fasta files expect whitespace separated values, so
 ```fasta
->Seq1 SET=train VALIDATION=False
-DVCDVVDD
+>Seq1 SET=train TARGET=0.1
+SEQWENCE
 ```
 will work fine, while
 ```fasta
->Seq1 SET=trainVALIDATION=False
-DVCDVVDD
+>Seq1 SET=trainTARGET=0.1
+SEQWENCE
 ```
 or even
 ```fasta
->Seq1 SET=train;VALIDATION=False
-DVCDVVDD
+>Seq1 SET=train;TARGET=0.1
+SEQWENCE
 ```
 will fail.
 
@@ -113,7 +124,7 @@ SEQWENCE
 
 labels.fasta
 ```fasta
->Seq1 SET=train VALIDATION=False
+>Seq1 SET=train
 DVCDVVDD
 ```
 
@@ -129,7 +140,7 @@ You have an input protein sequence and want to predict a property for the whole 
 
 sequences.fasta
 ```fasta
->Seq1 TARGET=Nucleus SET=train VALIDATION=False 
+>Seq1 TARGET=Nucleus SET=train
 SEQWENCE
 ```
 
@@ -145,7 +156,7 @@ You have an input protein sequence and want to predict a property for the whole 
 
 sequences.fasta
 ```fasta
->Seq1 TARGET=Glob SET=train VALIDATION=False 
+>Seq1 TARGET=Glob SET=train
 SEQWENCE
 ```
 
@@ -161,6 +172,6 @@ You have an input protein sequence and want to predict the value of a property f
 
 sequences.fasta
 ```fasta
->Seq1 TARGET=37.3452 SET=train VALIDATION=False 
+>Seq1 TARGET=37.3452 SET=train
 SEQWENCE
 ```

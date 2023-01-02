@@ -1,6 +1,6 @@
->Seq1 SET=train VALIDATION=False
+>Seq1 SET=train
 DVCVVDD
->Seq2 SET=train VALIDATION=True
+>Seq2 SET=val
 DDDDDD
->Seq3 Inhibitor of nuclear factor kappa-B kinase subunit beta OS=Homo sapiens OX=9606 GN=IKBKB PE=1 SV=1 SET=test VALIDATION=False
+>Seq3 Inhibitor of nuclear factor kappa-B kinase subunit beta OS=Homo sapiens OX=9606 GN=IKBKB PE=1 SV=1 SET=test
 DDDDDDFFEEED
