@@ -64,7 +64,7 @@ def parse_config_file_and_execute_run(config_file_path: str):
     # Find pre-trained model in auto_resume mode
     if config["auto_resume"]:
         if "checkpoint.pt" in os.listdir(log_dir):
-            config["pretrained_model"] = log_dir / "checkpoint.pt"
+            config["pretrained_model"] = str(log_dir / "checkpoint.pt")
         else:
             logger.info("auto_resume is enabled in the configuration file, but no valid checkpoint was found. "
                         "Training new model from scratch.")

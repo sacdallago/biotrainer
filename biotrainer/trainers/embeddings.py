@@ -1,15 +1,15 @@
 import os
-import shutil
-from urllib import request
-
-import h5py
 import time
+import h5py
+import torch
+import shutil
 import logging
 
 from pathlib import Path
+from urllib import request
 from typing import Dict, Any
 
-from ..utilities.config import ConfigurationException
+from ..utilities import ConfigurationException
 
 # Defines if reduced embeddings from bio_embeddings should be used.
 # Reduced means that the per-residue embeddings are reduced to a per-sequence embedding
@@ -88,11 +88,12 @@ def load_embeddings(embeddings_file_path: str) -> Dict[str, Any]:
     logger.info(f"Loading embeddings from: {embeddings_file_path}")
     start = time.perf_counter()
 
+    # Old version see:
     # https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
     embeddings_file = h5py.File(embeddings_file_path, 'r')
 
-    # TODO: document that h5 MUST contain 'original_id' --> Create specification!
-    id2emb = {embeddings_file[idx].attrs["original_id"]: embedding for (idx, embedding) in
+    # "original_id" from embeddings file -> Embedding
+    id2emb = {embeddings_file[idx].attrs["original_id"]: torch.tensor(embedding) for (idx, embedding) in
               embeddings_file.items()}
 
     # Logging

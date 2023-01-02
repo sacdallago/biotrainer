@@ -1,6 +1,7 @@
 import time
 import torch
 import logging
+import datetime
 
 from pathlib import Path
 from copy import deepcopy
@@ -12,8 +13,8 @@ from ..losses import get_loss
 from ..solvers import get_solver
 from ..optimizers import get_optimizer
 from ..datasets import get_collate_function
-from ..utilities import seed_all, get_device
 from ..models import get_model, count_parameters
+from ..utilities import seed_all, get_device, SanityChecker
 
 from .TargetManager import TargetManager
 from .target_manager_utils import revert_mappings
@@ -40,6 +41,7 @@ def training_and_evaluation_routine(
         pretrained_model: str = None,
         save_test_predictions: bool = False,
         ignore_file_inconsistencies: bool = False,
+        limited_sample_size: int = -1,
         # Everything else
         **kwargs
 ) -> Dict[str, Any]:
@@ -54,6 +56,7 @@ def training_and_evaluation_routine(
     # Get device
     device = get_device(device)
     output_vars['device'] = str(device)
+    logger.info(f"Using device: {device}")
 
     # Generate embeddings if necessary, otherwise use existing embeddings and overwrite embedder_name
     if not embeddings_file or not Path(embeddings_file).is_file():
@@ -78,11 +81,12 @@ def training_and_evaluation_routine(
     # Get datasets
     target_manager = TargetManager(protocol=protocol, sequence_file=sequence_file,
                                    labels_file=labels_file, mask_file=mask_file,
-                                   ignore_file_inconsistencies=ignore_file_inconsistencies)
+                                   ignore_file_inconsistencies=ignore_file_inconsistencies,
+                                   limited_sample_size=limited_sample_size)
     train_dataset, val_dataset, test_dataset = target_manager.get_datasets(id2emb)
-    output_vars['training_ids'] = target_manager.training_ids
-    output_vars['validation_ids'] = target_manager.validation_ids
-    output_vars['testing_ids'] = target_manager.testing_ids
+    output_vars['n_training_ids'] = len(target_manager.training_ids)
+    output_vars['n_validation_ids'] = len(target_manager.validation_ids)
+    output_vars['n_testing_ids'] = len(target_manager.testing_ids)
     output_vars['n_classes'] = target_manager.number_of_outputs
 
     # Get x_to_class specific logs and weights
@@ -161,21 +165,30 @@ def training_and_evaluation_routine(
     # Finally, run evaluation of test set
     _do_and_log_evaluation(solver, test_loader, target_manager, save_test_predictions)
 
+    # Do sanity check TODO: Think about purpose and pros and cons, flags in config, tests..
+    sanity_checker = SanityChecker(output_vars=output_vars, mode="Warn")
+    sanity_checker.check_test_results()
+
     return output_vars
 
 
 def _do_and_log_training(solver, train_loader, val_loader):
+    start_time_abs = datetime.datetime.now()
     start_time = time.perf_counter()
-    _ = solver.train(train_loader, val_loader)
+    epoch_iterations = solver.train(train_loader, val_loader)
     end_time = time.perf_counter()
+    end_time_abs = datetime.datetime.now()
 
     # Logging
     logger.info(f'Total training time: {(end_time - start_time) / 60:.1f}[m]')
 
     # Save training time for prosperity
-    output_vars['start_time'] = start_time
-    output_vars['end_time'] = end_time
+    output_vars['start_time'] = start_time_abs
+    output_vars['end_time'] = end_time_abs
     output_vars['elapsed_time'] = end_time - start_time
+
+    # Save metrics from best training epoch
+    output_vars['training_iteration_result_best_epoch'] = epoch_iterations[solver.get_best_epoch()]
 
 
 def _do_and_log_evaluation(solver, test_loader, target_manager, save_test_predictions):
