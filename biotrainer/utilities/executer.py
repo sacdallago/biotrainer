@@ -47,10 +47,14 @@ def parse_config_file_and_execute_run(config_file_path: str):
         config["pretrained_model"] = str(input_file_path / config["pretrained_model"])
 
     # Create output directory (if necessary)
-    output_dir = input_file_path / "output"
+    if "output_dir" in config.keys():
+        output_dir = input_file_path / Path(config["output_dir"])
+    else:
+        output_dir = input_file_path / "output"
     if not output_dir.is_dir():
         logger.info(f"Creating output dir: {output_dir}")
         output_dir.mkdir(parents=True)
+    config["output_dir"] = str(output_dir)
 
     # Create log directory (if necessary)
     log_dir = output_dir / config["model_choice"] / config["embedder_name"]
