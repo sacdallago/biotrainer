@@ -19,7 +19,7 @@ class SanityChecker:
     def check_test_results(self):
         test_results = self.output_vars['test_iterations_results']
 
-        if "_class" in self.output_vars["protocol"]:
+        if "_class" in self.output_vars["protocol"] or "_interaction" in self.output_vars["protocol"]:
             if "metrics" in test_results.keys():
                 test_result_metrics = test_results['metrics']
             else:
