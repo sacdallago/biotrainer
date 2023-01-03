@@ -5,14 +5,15 @@ logger = logging.getLogger(__name__)
 
 
 class SanityChecker:
-    def __init__(self, output_vars: Dict, mode: str = "Warn"):
+    def __init__(self, output_vars: Dict, mode: str = "warn"):
         self.output_vars = output_vars
         self.mode = mode
 
     def _handle_result(self, result: str):
-        if self.mode == "Warn":
+        if self.mode == "warn":
             logger.warning(result)
-        elif self.mode == "Error":
+        elif self.mode == "error":
+            #  Might be useful for integration tests later
             raise SanityException(result)
 
     def check_test_results(self):
@@ -32,7 +33,7 @@ class SanityChecker:
                 precision = test_result_metrics['precision']
                 recall = test_result_metrics['recall']
                 if accuracy == precision == recall:
-                    self._handle_result(f"Accuracy ({accuracy} == Precision == Recall for binary prediction!")
+                    self._handle_result(f"Accuracy ({accuracy}) == Precision == Recall for binary prediction!")
 
             if "mapped_predictions" in test_results:
                 predictions = list(test_results['mapped_predictions'].values())

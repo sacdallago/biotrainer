@@ -114,7 +114,7 @@ class Trainer:
         self._do_and_log_evaluation(best_split.solver, test_loader, target_manager)
 
         # SANITY CHECKER TODO: Think about purpose and pros and cons, flags in config, tests..
-        sanity_checker = SanityChecker(output_vars=self._output_vars, mode="Warn")
+        sanity_checker = SanityChecker(output_vars=self._output_vars, mode="warn")
         sanity_checker.check_test_results()
 
         return self._output_vars
