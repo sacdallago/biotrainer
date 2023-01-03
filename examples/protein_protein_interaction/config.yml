@@ -1,0 +1,14 @@
+sequence_file: interactions.fasta
+protocol: protein_protein_interaction
+model_choice: FNN
+optimizer_choice: adam
+loss_choice: cross_entropy_loss
+num_epochs: 50
+use_class_weights: True
+learning_rate: 1e-3
+batch_size: 64
+save_test_predictions: True
+embedder_name: one_hot_encoding
+auto_resume: False
+cross_validation_config:
+  method: hold_out

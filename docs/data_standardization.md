@@ -103,6 +103,8 @@ C=number of classes (e.g. 13)
 - residues_to_class --> Predict a class C for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxC
 - sequence_to_class --> Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output BxC
 - sequence_to_value --> Predict a value V for each sequence encoded in a fixed dimension D. Input BxD --> output BxV
+
+- protein_protein_interaction --> Predict a binary class C for each interaction for two sequences encoded in a fixed dimension D. Input BxD --> output BxC
 ```
 
 ### residue_to_class
@@ -173,5 +175,23 @@ You have an input protein sequence and want to predict the value of a property f
 sequences.fasta
 ```fasta
 >Seq1 TARGET=37.3452 SET=train
+SEQWENCE
+```
+
+### protein_protein_interaction
+```text
+- Predict a binary class C for each interaction for two sequences encoded in a fixed dimension D. Input BxD --> output BxC
+```
+
+You have two input proteins and want to predict, if they interact or not (per-sequence interaction prediction).
+Hence, the labels and outputs will be in `[0, 1]` (binary classification task).
+Before the training, protein embeddings can be computed as usual via the `embedder_name` option. 
+In this case, sequences from the sequence lines and `SEQINTERACTOR` annotations are merged and, after that, embedded.
+
+**Required file: FASTA file containing interactions and labels**
+
+interactions.fasta
+```fasta
+>Seq1 INTERACTOR=Seq2 TARGET=0 SET=train SEQINTERACTOR=PRTEIN
 SEQWENCE
 ```
