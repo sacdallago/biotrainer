@@ -41,7 +41,7 @@ class SanityChecker:
                 if all(prediction == predictions[0] for prediction in predictions):
                     self._handle_result(f"Model is only predicting {predictions[0]} for all test samples!")
 
-        logger.info("Sanity check on test results successful!")
+        logger.info("Sanity check on test results finished!")
 
 
 class SanityException(Exception):
