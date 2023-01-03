@@ -288,17 +288,22 @@ sets!**
 
 On clusters for example, training can get interrupted for a numerous reasons. The implemented auto_resume mode 
 makes it possible to re-submit your job without changing anything in the configuration. It will automatically search
-for the latest available checkpoint at the default directory path. This behaviour is activated by default, but
-you can switch it off if necessary:
+for the latest available checkpoint at the default directory path. This behaviour is de-activated by default, but
+you can switch it on if necessary:
 ```yaml
 auto_resume: True | False  # Default: True
 ```
+This works for any cross validation method.
+**Due to randomness in the computation (especially when using GPU or random layers in the network like dropout),
+results might differ between originally trained checkpoints and resumed training!**
 
 If you are using an already pretrained model and want to continue to train it for more epochs, you can use the 
 following option:
 ```yaml
 pretrained_model: path/to/model_checkpoint.pt
 ```
+**Note that `pretrained_model` only works in combination with `hold_out` cross validation!**
+
 *Biotrainer* will now run until early stop was triggered, 
 or `num_epochs - num_pretrained_epochs` (from the model state dict) is reached.
 

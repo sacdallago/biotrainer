@@ -1,9 +1,9 @@
+import os
 import math
 import torch
 import logging
 
 from pathlib import Path
-from itertools import chain
 from scipy.stats import norm
 from abc import ABC, abstractmethod
 from tempfile import TemporaryDirectory
@@ -105,7 +105,7 @@ class Solver(ABC):
                 }, epoch)
 
             if self._early_stop(current_loss=epoch_metrics['validation']['loss'], epoch=epoch):
-                logger.info(f"Early stopping triggered!")
+                logger.info(f"Early stopping triggered! (Best epoch: {self._best_epoch})")
                 return epoch_iterations
 
         return epoch_iterations
@@ -179,16 +179,49 @@ class Solver(ABC):
                 mapped_predictions[seq_ids[idx]] = {"prediction": prediction_by_mean[idx].item(),
                                                     "mcd_mean": dropout_mean[idx].item(),
                                                     "mcd_lower_bound": (
-                                                                dropout_mean[idx] - confidence_range[idx]).item(),
+                                                            dropout_mean[idx] - confidence_range[idx]).item(),
                                                     "mcd_upper_bound": (
-                                                                dropout_mean[idx] + confidence_range[idx]).item()
+                                                            dropout_mean[idx] + confidence_range[idx]).item()
                                                     }
 
         return {
             'mapped_predictions': mapped_predictions
         }
 
-    def load_checkpoint(self, checkpoint_path: str = None):
+    def auto_resume(self, training_dataloader: DataLoader, validation_dataloader: DataLoader,
+                    train_wrapper):
+        available_checkpoints = [checkpoint for checkpoint in os.listdir(self.experiment_dir)
+                                 if checkpoint.split("_")[0] == self.checkpoint_name.split("_")[0]]
+        if self.checkpoint_name in available_checkpoints:
+            # Hold out
+            if "hold_out" in self.checkpoint_name:
+                self.load_checkpoint(resume_training=True)
+                return train_wrapper(self)
+            # K_fold and leave_p_out: Checkpoint is already there, now check if it has been trained completely
+            # Sort by name and by last split number (differs from alphabetical order because str(9) > str(10))
+            available_checkpoints_sorted = sorted(available_checkpoints,
+                                                  key=lambda ch_pt: (ch_pt.split("_checkpoint.pt")[0].split("-")[0:-1],
+                                                                     int(ch_pt.split("_checkpoint.pt")[0].split("-")[-1]
+                                                                         )
+                                                                     )
+                                                  )
+            if available_checkpoints_sorted.index(self.checkpoint_name) < (len(available_checkpoints_sorted) - 1):
+                # Do inference on train and val to get metrics of training
+                self.load_checkpoint(resume_training=False)
+                train_set_result = self.inference(training_dataloader, calculate_test_metrics=True)
+                val_set_result = self.inference(validation_dataloader, calculate_test_metrics=True)
+                return {
+                    "training": train_set_result["metrics"],
+                    "validation": val_set_result["metrics"],
+                    "epoch": self.start_epoch
+                }
+
+        # Checkpoint not available or not sure if checkpoint training has finished
+        logger.info(f"No pretrained checkpoint ({self.checkpoint_name}) found for auto_resume. "
+                    f"Training new model from scratch!")
+        return train_wrapper(self)
+
+    def load_checkpoint(self, checkpoint_path: str = None, resume_training: bool = False):
         if checkpoint_path:
             state = torch.load(checkpoint_path, map_location=torch.device(self.device))
         elif self.experiment_dir:
@@ -200,7 +233,13 @@ class Solver(ABC):
 
         try:
             self.network.load_state_dict(state['state_dict'])
-            self.start_epoch = state['epoch'] + 1
+            if resume_training:
+                self.start_epoch = state['epoch'] + 1
+                if self.start_epoch == self.number_of_epochs:
+                    raise Exception(f"Cannot resume training of checkpoint because model has already "
+                                    f"been trained for maximum number_of_epochs ({self.number_of_epochs})!")
+            else:
+                self.start_epoch = state['epoch']
             logger.info(f"Loaded model from epoch: {state['epoch']}")
         except RuntimeError as e:
             raise Exception(f"Defined model architecture does not seem to match pretrained model!") from e

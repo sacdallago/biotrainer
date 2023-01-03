@@ -30,9 +30,10 @@ class CrossValidationSplitter:
                 repeat = 1
             if "nested_k" in cross_validation_config.keys():
                 nested_k = int(cross_validation_config["nested_k"])
-                self._nested_split_strategy = lambda train_dataset, hp_iteration: \
+                self._nested_split_strategy = lambda train_dataset, current_outer_k, hp_iteration: \
                     self._k_fold_split(k=nested_k, stratified=stratified, nested=True, repeat=repeat,
-                                       train_dataset=train_dataset, val_dataset=[], hp_iteration=hp_iteration)
+                                       train_dataset=train_dataset, val_dataset=[],
+                                       current_outer_k=current_outer_k, hp_iteration=hp_iteration)
             self._split_strategy = lambda train_dataset, val_dataset: \
                 self._k_fold_split(k=k, stratified=stratified, nested=False, repeat=repeat, train_dataset=train_dataset,
                                    val_dataset=val_dataset)
@@ -45,8 +46,8 @@ class CrossValidationSplitter:
     def split(self, train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
         return self._split_strategy(train_dataset, val_dataset)
 
-    def nested_split(self, train_dataset: List[DatasetSample], hp_iteration: int) -> List[Split]:
-        return self._nested_split_strategy(train_dataset, hp_iteration)
+    def nested_split(self, train_dataset: List[DatasetSample], current_outer_k: int, hp_iteration: int) -> List[Split]:
+        return self._nested_split_strategy(train_dataset, current_outer_k, hp_iteration)
 
     @staticmethod
     def _hold_out_split(train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
@@ -103,7 +104,8 @@ class CrossValidationSplitter:
 
     def _k_fold_split(self, k: int, stratified: bool, nested: bool, repeat: int,
                       train_dataset: List[DatasetSample], val_dataset: List[DatasetSample],
-                      hp_iteration: Optional[int] = None) -> List[Split]:
+                      hp_iteration: Optional[int] = None,
+                      current_outer_k: Optional[int] = None) -> List[Split]:
         concat_dataset = train_dataset + val_dataset
         ys = [sample.target for sample in concat_dataset]
 
@@ -126,6 +128,10 @@ class CrossValidationSplitter:
                 kf = RepeatedKFold(n_splits=k, n_repeats=repeat)
             else:
                 kf = KFold(n_splits=k)
+        if current_outer_k:
+            split_base_name += f"-{current_outer_k}"
+        if hp_iteration:
+            split_base_name += f"-hp-{hp_iteration}"
         if nested:
             split_base_name += "-nested"
         all_splits = []
@@ -140,8 +146,6 @@ class CrossValidationSplitter:
             else:
                 current_split_name = f"{split_base_name}-{idx + 1}"
 
-            if hp_iteration:
-                current_split_name += f"-hp-{hp_iteration}"
             all_splits.append(Split(current_split_name, train_split, val_split))
 
         return all_splits

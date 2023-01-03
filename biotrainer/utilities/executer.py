@@ -71,6 +71,7 @@ def parse_config_file_and_execute_run(config_file_path: str):
         config["embedder_name"] = "custom_embeddings"
     if "pretrained_model" in config.keys():
         config["pretrained_model"] = str(input_file_path / config["pretrained_model"])
+        logger.info(f"Using pre_trained model: {config['pretrained_model']}")
 
     # Create log directory (if necessary)
     log_dir = output_dir / config["model_choice"] / config["embedder_name"]
@@ -80,16 +81,6 @@ def parse_config_file_and_execute_run(config_file_path: str):
 
     # Add default hyper_parameters to config if not defined by user
     config = add_default_values_to_config(config, output_dir=str(output_dir), log_dir=str(log_dir))
-
-    # Find pre-trained model in auto_resume mode
-    if config["auto_resume"]:
-        if "checkpoint.pt" in os.listdir(log_dir):
-            config["pretrained_model"] = str(log_dir / "checkpoint.pt")
-        else:
-            logger.info("auto_resume is enabled in the configuration file, but no valid checkpoint was found. "
-                        "Training new model from scratch.")
-    if "pretrained_model" in config.keys():
-        logger.info(f"Using pre_trained model: {config['pretrained_model']}")
 
     # Get device once at the beginning
     device = get_device(config["device"] if "device" in config.keys() else None)

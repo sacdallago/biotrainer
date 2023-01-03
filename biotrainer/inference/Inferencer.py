@@ -62,7 +62,7 @@ class Inferencer:
             experiment_dir=log_dir, num_classes=n_classes
         )
         self.collate_function = get_collate_function(protocol)
-        self.solver.load_checkpoint()
+        self.solver.load_checkpoint(resume_training=False)
 
     def from_embeddings(self, embeddings: Iterable) -> Dict[str, Union[str, int, float]]:
         dataset = get_dataset(self.protocol, samples=[

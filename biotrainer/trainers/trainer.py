@@ -40,6 +40,7 @@ class Trainer:
                  embeddings_file: str = None,
                  seed: int = 42,
                  device: torch.device = None,
+                 auto_resume: bool = False,
                  pretrained_model: str = None,
                  save_test_predictions: bool = False,
                  ignore_file_inconsistencies: bool = False,
@@ -59,6 +60,7 @@ class Trainer:
         self._embeddings_file = embeddings_file
         self._seed = seed
         self._device = device
+        self._auto_resume = auto_resume
         self._pretrained_model = pretrained_model
         self._save_test_predictions = save_test_predictions
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
@@ -242,7 +244,8 @@ class Trainer:
                                           reverse=False)
             best_hyper_param_combination = hyper_param_loss_results[0][0]
             # TRAIN ON split.train, VALIDATE ON split.val
-            logger.info(f"Training model for outer split {outer_split.name}:")
+            logger.info(f"Training model for outer split {outer_split.name} with best hyper_parameter combination "
+                        f"{self._hp_manager.get_only_params_to_optimize(best_hyper_param_combination)}:")
             best_epoch_metrics, solver = self._do_training_by_split(outer_split=outer_split,
                                                                     hyper_params=best_hyper_param_combination)
             split_results_outer.append(
@@ -290,13 +293,23 @@ class Trainer:
         solver = self._create_solver(split_name=split_name,
                                      model=model, loss_function=loss_function, optimizer=optimizer, writer=writer,
                                      hyper_params=hyper_params)
-        # if self._pretrained_model:
-        #    solver.load_checkpoint(checkpoint_path=self._pretrained_model)
-
         # TRAINING/VALIDATION
-        best_epoch_metrics = self._do_and_log_training(outer_split.name, solver, train_loader, val_loader,
-                                                       inner_split_name=inner_split.name if inner_split else "")
+        if self._auto_resume:
+            best_epoch_metrics = solver.auto_resume(training_dataloader=train_loader, validation_dataloader=val_loader,
+                                                    train_wrapper=lambda untrained_solver: self._do_and_log_training(
+                                                        outer_split.name,
+                                                        untrained_solver,
+                                                        train_loader,
+                                                        val_loader,
+                                                        inner_split_name=inner_split.name if inner_split else ""))
+        else:
+            if self._pretrained_model:
+                solver.load_checkpoint(checkpoint_path=self._pretrained_model, resume_training=True)
+            best_epoch_metrics = self._do_and_log_training(outer_split.name, solver, train_loader, val_loader,
+                                                           inner_split_name=inner_split.name if inner_split else "")
 
+        # Save metrics from best training epoch
+        save_dict['training_iteration_result_best_epoch'] = best_epoch_metrics
         return best_epoch_metrics, solver
 
     def _create_model_loss_optimizer(self, class_weights: Optional[torch.Tensor] = None,
@@ -333,8 +346,6 @@ class Trainer:
         save_dict['end_time'] = end_time_abs
         save_dict['elapsed_time'] = end_time - start_time
 
-        # Save metrics from best training epoch
-        save_dict['training_iteration_result_best_epoch'] = epoch_iterations[solver.get_best_epoch()]
         return epoch_iterations[solver.get_best_epoch()]
 
     def _get_best_model_of_splits(self, split_results: List[SplitResult]) -> SplitResult:
@@ -367,7 +378,7 @@ class Trainer:
         # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
         logger.info('Running final evaluation on the best model')
 
-        solver.load_checkpoint()
+        solver.load_checkpoint(resume_training=False)
         test_results = solver.inference(test_loader, calculate_test_metrics=True)
 
         if self._save_test_predictions:
