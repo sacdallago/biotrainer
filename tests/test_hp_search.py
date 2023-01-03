@@ -10,6 +10,7 @@ class HyperParameterSearchTests(unittest.TestCase):
         # Only normal lists
         param_dict = {
             "cross_validation_config": {
+                "method": "k_fold",
                 "search_method": "grid_search"
             },
             "optimizer_choice": "adam",
@@ -19,12 +20,14 @@ class HyperParameterSearchTests(unittest.TestCase):
         }
         hps = hp_manager.HyperParameterManager(**param_dict)
         number_all_combinations = reduce(lambda l1, l2: l1 * l2,
-                                         map(len, [val for val in param_dict.values() if val != "adam"]))
+                                         map(len, [val for val in param_dict.values()
+                                                   if val != "adam" and type(val) != dict]))
         self.assertTrue(len(list(hps._grid_search())) == number_all_combinations)
 
         # Range and list comprehension
         param_dict = {
             "cross_validation_config": {
+                "method": "k_fold",
                 "search_method": "grid_search"
             },
             "optimizer_choice": "adam",
@@ -42,6 +45,7 @@ class HyperParameterSearchTests(unittest.TestCase):
         param_dict = {
             "optimizer_choice": "adam",
             "cross_validation_config": {
+                "method": "k_fold",
                 "search_method": "random_search",
                 "n_max_evaluations_random": n_max_evaluations
             },

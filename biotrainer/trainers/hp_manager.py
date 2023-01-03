@@ -42,6 +42,9 @@ class HyperParameterManager:
             if len(self._params_to_optimize.keys()) == 0:
                 raise ConfigurationException(f"No parameters to optimize were given. Define with list or range!\n"
                                              f"e.g. learning_rate: [1e-3, 1e-4]")
+        if len(self._params_to_optimize.keys()) > 0 and \
+                self._constant_params["cross_validation_config"]["method"] != "k_fold":
+            raise ConfigurationException(f"Parameter search only supported for nested k_fold cross validation!")
 
     def search(self, mode="no_search") -> \
             Generator[Dict[str, Any], None, Union[None, Generator[Dict[str, Any], None, None]]]:
