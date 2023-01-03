@@ -93,7 +93,7 @@ def validate_file(file_path: str):
 
 def add_default_values_to_config(config: dict, output_dir: str, log_dir: str):
     default_values = {
-        "auto_resume": True,
+        "auto_resume": False,
         "num_epochs": 200,
         "use_class_weights": False,
         "batch_size": 128,
@@ -185,6 +185,9 @@ def verify_config(config: dict, protocols: set):
                 raise ConfigurationException(f"cross_validation method hold_out does not support "
                                              f"any additional parameters!\n"
                                              f"Given: {cross_validation_config.keys()}")
+            if method != "hold_out" and "pretrained_model" in config.keys():
+                raise ConfigurationException(f"pretrained_model option only available for hold_out "
+                                             f"cross validation!")
             if method == "k_fold":
                 if "k" not in cross_validation_config.keys():
                     raise ConfigurationException(f"Missing parameter k for k-fold cross validation!")
@@ -209,6 +212,9 @@ def verify_config(config: dict, protocols: set):
                             elif int(cross_validation_config["n_max_evaluations_random"] < 2):
                                 raise ConfigurationException(
                                     f"n_max_evaluations_random for random_search must be >= 2!")
+                        if "repeat" in cross_validation_config.keys() and int(cross_validation_config["repeat"]) > 1:
+                            raise ConfigurationException(f"A combination of repeat and nested is currently not "
+                                                         f"supported for cross validation!")
 
                     else:
                         if "nested_k" in cross_validation_config.keys():
