@@ -52,7 +52,7 @@ def generate_tests_cross_validation(metafunc):
         "hold_out": {},
         "k_fold": {
             "k": [3, 3],
-            "repeated": [1, 2],
+            "repeat": [1, 2],
             "stratified": [True, False],
             "nested": [True, False],
             "nested_k": [3, 3],
@@ -76,8 +76,12 @@ def generate_tests_cross_validation(metafunc):
         if method == "k_fold":
             unique_permutations = set([frozenset(dict(zip(config, v)).items()) for v in product(*config.values())])
             for unique_permutation in unique_permutations:
+                unique_permutation_dict = dict(unique_permutation)
+                if unique_permutation_dict["repeat"] > 1 and unique_permutation_dict["nested"] is True:
+                    continue
+
                 tmp_config = deepcopy(method_configuration)
-                tmp_config.update(dict(unique_permutation))
+                tmp_config.update(unique_permutation_dict)
                 all_params["test_cross_validation"]["values"].append([tmp_config])
         else:
             all_params["test_cross_validation"]["values"].append([method_configuration])

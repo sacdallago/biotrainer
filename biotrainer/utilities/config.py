@@ -213,7 +213,10 @@ def verify_config(config: dict, protocols: set):
                     else:
                         if "nested_k" in cross_validation_config.keys():
                             logger.warning(f"nested == False for k_fold cross validation, but nested_k is given. "
-                                           f"nested_k ({cross_validation_config['nested_k']}) will be ignored!")
+                                           f"nested_k ({cross_validation_config['nested_k']}) is ignored!")
+                        if "search_method" in cross_validation_config.keys():
+                            logger.warning(f"nested == False for k_fold cross validation, but search_method is given. "
+                                           f"search_method ({cross_validation_config['search_method']}) is ignored!")
 
             if method == "leave_p_out":
                 if "p" not in cross_validation_config.keys():

@@ -37,7 +37,8 @@ class HyperParameterManager:
             else:
                 self._constant_params[key] = value
 
-        if "search_method" in self._constant_params["cross_validation_config"]:
+        if "nested" in self._constant_params["cross_validation_config"].keys() and \
+                str(self._constant_params["cross_validation_config"]["nested"]).capitalize() == "True":
             if len(self._params_to_optimize.keys()) == 0:
                 raise ConfigurationException(f"No parameters to optimize were given. Define with list or range!\n"
                                              f"e.g. learning_rate: [1e-3, 1e-4]")

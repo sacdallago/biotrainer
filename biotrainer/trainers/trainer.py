@@ -94,14 +94,12 @@ class Trainer:
         nested_cv = False
         if "nested" in self._cross_validation_config.keys():
             nested_cv = eval(str(self._cross_validation_config["nested"]).capitalize())
-        hp_search_method = self._cross_validation_config["search_method"] \
-            if "search_method" in self._cross_validation_config.keys() else "no_search"
 
         start_time_total = time.perf_counter()
         if nested_cv:
-            split_results = self._run_nested_cross_validation(splits, hp_search_method)
+            split_results = self._run_nested_cross_validation(splits)
         else:
-            split_results = self._run_cross_validation(splits, hp_search_method)
+            split_results = self._run_cross_validation(splits)
         end_time_total = time.perf_counter()
         self._output_vars["elapsed_time_total"] = end_time_total - start_time_total
 
@@ -207,10 +205,10 @@ class Trainer:
             num_classes=self._output_vars['n_classes']
         )
 
-    def _run_cross_validation(self, splits: List[Split], hp_search_method: str) -> List[SplitResult]:
+    def _run_cross_validation(self, splits: List[Split]) -> List[SplitResult]:
         split_results = list()
         for split in splits:
-            for hyper_params in self._hp_manager.search(mode=hp_search_method):
+            for hyper_params in self._hp_manager.search(mode="no_search"):
                 logger.info(f"Training model for split {split.name}:")
                 best_epoch_metrics, solver = self._do_training_by_split(outer_split=split,
                                                                         hyper_params=hyper_params)
@@ -218,13 +216,16 @@ class Trainer:
 
         return split_results
 
-    def _run_nested_cross_validation(self, splits: List[Split], hp_search_method: str) -> List[SplitResult]:
+    def _run_nested_cross_validation(self, splits: List[Split]) -> List[SplitResult]:
+        hp_search_method = self._cross_validation_config["search_method"]
         split_results_outer = list()
-        for outer_split in splits:
+        for outer_k, outer_split in enumerate(splits):
             hyper_param_loss_results = list()
             for hp_iteration, hyper_params in enumerate(self._hp_manager.search(mode=hp_search_method)):
                 inner_splits = self._cross_validation_splitter.nested_split(train_dataset=outer_split.train,
-                                                                            hp_iteration=hp_iteration + 1)
+                                                                            current_outer_k=outer_k + 1,
+                                                                            hp_iteration=hp_iteration + 1
+                                                                            )
                 split_results_inner = list()
                 for inner_split in inner_splits:
                     logger.info(f"Training model for inner split {inner_split.name}:")
