@@ -1,9 +1,0 @@
-embeddings:
-  discard_per_amino_acid_embeddings: false
-  protocol: prottrans_t5_xl_u50
-  reduce: false
-  type: embed
-global:
-  prefix: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output/residue_to_class/prottrans_t5_xl_u50
-  sequences_file: /mnt/home/cdallago/biotrainer/examples/residue_to_class/sequences.fasta
-  simple_remapping: true

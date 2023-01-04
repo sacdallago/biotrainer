@@ -1,49 +1,130 @@
+auto_resume: false
 batch_size: 128
+biotrainer_version: 0.2.1
 class_int_to_string:
-  0: E
-  1: F
-  2: C
-  3: D
+  0: C
+  1: D
+  2: E
+  3: F
   4: V
-class_string_to_integer:
-  C: 2
-  D: 3
-  E: 0
-  F: 1
+class_str_to_int:
+  C: 0
+  D: 1
+  E: 2
+  F: 3
   V: 4
+cross_validation_config:
+  method: hold_out
 device: cuda
-elapsed_time: 1.0181808471679688
-embedder_name: prottrans_t5_xl_u50
-embeddings_file: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output/residue_to_class/prottrans_t5_xl_u50/embeddings/embeddings_file.h5
-end_time: 1654871027.4298887
+elapsed_time_total: 3.536731841000801
+embedder_name: one_hot_encoding
+embeddings_file: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/output/residue_to_class/one_hot_encoding/embeddings/embeddings_file.h5
 epsilon: 0.001
-labels_file: /mnt/home/cdallago/biotrainer/examples/residue_to_class/labels.fasta
+ignore_file_inconsistencies: false
+labels_file: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/labels.fasta
 learning_rate: 0.001
-log_dir: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output/CNN/prottrans_t5_xl_u50
+log_dir: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/output/CNN/one_hot_encoding
 loss_choice: cross_entropy_loss
 model_choice: CNN
 n_classes: 5
-n_features: 1024
-n_free_parameters: 230533
+n_features: 21
+n_testing_ids: 1
 num_epochs: 200
 optimizer_choice: adam
-output_dir: /mnt/home/cdallago/biotrainer/examples/residue_to_class/output
+output_dir: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/output
 patience: 10
 protocol: residue_to_class
 seed: 42
-sequence_file: /mnt/home/cdallago/biotrainer/examples/residue_to_class/sequences.fasta
+sequence_file: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/sequences.fasta
 shuffle: true
-start_time: 1654871026.4117079
+split_results:
+  hold_out:
+    elapsed_time: 2.389001309999003
+    end_time: 2023-01-04 11:18:46.265490
+    n_free_parameters: 5861
+    n_training_ids: 1
+    n_validation_ids: 1
+    split_hyper_params: {}
+    start_time: 2023-01-04 11:18:43.876485
+    training_iteration_result_best_epoch:
+      epoch: 0
+      training:
+        '- f1_score class 0': 0.0
+        '- f1_score class 1': 0.0
+        '- f1_score class 2': 0.0
+        '- f1_score class 3': 0.0
+        '- f1_score class 4': 0.0
+        '- precission class 0': 0.0
+        '- precission class 1': 0.0
+        '- precission class 2': 0.0
+        '- precission class 3': 0.0
+        '- precission class 4': 0.0
+        '- recall class 0': 0.0
+        '- recall class 1': 0.0
+        '- recall class 2': 0.0
+        '- recall class 3': 0.0
+        '- recall class 4': 0.0
+        accuracy: 0.0
+        loss: 1.6607266664505005
+        macro-f1_score: 0.0
+        macro-precision: 0.0
+        macro-recall: 0.0
+        matthews-corr-coeff: 0.0
+        micro-f1_score: 0.0
+        micro-precision: 0.0
+        micro-recall: 0.0
+        spearmans-corr-coeff: 0.2760261595249176
+      validation:
+        '- f1_score class 0': 0.0
+        '- f1_score class 1': 0.0
+        '- f1_score class 2': 0.0
+        '- f1_score class 3': 0.0
+        '- f1_score class 4': 0.0
+        '- precission class 0': 0.0
+        '- precission class 1': 0.0
+        '- precission class 2': 0.0
+        '- precission class 3': 0.0
+        '- precission class 4': 0.0
+        '- recall class 0': 0.0
+        '- recall class 1': 0.0
+        '- recall class 2': 0.0
+        '- recall class 3': 0.0
+        '- recall class 4': 0.0
+        accuracy: 0.0
+        loss: 1.6121171712875366
+        macro-f1_score: 0.0
+        macro-precision: 0.0
+        macro-recall: 0.0
+        matthews-corr-coeff: 0.0
+        micro-f1_score: 0.0
+        micro-precision: 0.0
+        micro-recall: 0.0
+        spearmans-corr-coeff: 0.0
 test_iterations_results:
   metrics:
-    accuracy: 0.2857142984867096
-    loss: 2.120563268661499
-  predictions:
-  - DVCDVVDDDDVVDD
-testing_ids:
-- Seq3
-training_ids:
-- Seq1
-use_class_weights: false
-validation_ids:
-- Seq2
+    '- f1_score class 0': 0.0
+    '- f1_score class 1': 0.0
+    '- f1_score class 2': 0.0
+    '- f1_score class 3': 0.0
+    '- f1_score class 4': 0.0
+    '- precission class 0': 0.0
+    '- precission class 1': 0.0
+    '- precission class 2': 0.0
+    '- precission class 3': 0.0
+    '- precission class 4': 0.0
+    '- recall class 0': 0.0
+    '- recall class 1': 0.0
+    '- recall class 2': 0.0
+    '- recall class 3': 0.0
+    '- recall class 4': 0.0
+    accuracy: 0.0
+    loss: 1.6182039976119995
+    macro-f1_score: 0.0
+    macro-precision: 0.0
+    macro-recall: 0.0
+    matthews-corr-coeff: -0.3000600337982178
+    micro-f1_score: 0.0
+    micro-precision: 0.0
+    micro-recall: 0.0
+    spearmans-corr-coeff: -0.14046210050582886
+use_class_weights: true
