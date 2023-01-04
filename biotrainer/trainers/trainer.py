@@ -387,7 +387,7 @@ class Trainer:
                                                                  class_int2str=target_manager.class_int2str)
             self._output_vars['test_iterations_results'] = test_results
         else:
-            self._output_vars['test_iterations_results'] = test_results['metrics']
+            self._output_vars['test_iterations_results'] = {'metrics': test_results['metrics']}
 
         logger.info(f"Test set metrics: {test_results['metrics']}")
         logger.info(f"Extensive output information can be found at {self._output_vars['output_dir']}/out.yml")

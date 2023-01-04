@@ -23,7 +23,8 @@ class SanityChecker:
             if "metrics" in test_results.keys():
                 test_result_metrics = test_results['metrics']
             else:
-                test_result_metrics = test_results
+                self._handle_result(f"No test result metrics found!")
+                return
             # Multi-class metrics
             if self.output_vars['n_classes'] > 2:
                 pass
