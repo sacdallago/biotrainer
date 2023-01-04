@@ -154,7 +154,8 @@ class Solver(ABC):
             for m in model.modules():
                 if m.__class__.__name__.startswith('Dropout'):
                     m.train()
-                    number_dropout_layers += 1
+                    if m.p > 0.0:
+                        number_dropout_layers += 1
             if not number_dropout_layers > 0:
                 raise Exception("Trying to do monte carlo dropout inference on model without dropout!")
 
