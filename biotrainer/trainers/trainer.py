@@ -93,6 +93,7 @@ class Trainer:
         splits = self._cross_validation_splitter.split(train_dataset=train_dataset, val_dataset=val_dataset)
 
         # RUN CROSS VALIDATION
+        self._output_vars["split_results"] = {}
         nested_cv = False
         if "nested" in self._cross_validation_config.keys():
             nested_cv = eval(str(self._cross_validation_config["nested"]).capitalize())
@@ -260,14 +261,14 @@ class Trainer:
         val_dataset = self._create_embeddings_dataset(inner_split.val if inner_split else outer_split.val,
                                                       mode="val")
 
-        if outer_split.name not in self._output_vars.keys():
-            self._output_vars[outer_split.name] = {}
+        if outer_split.name not in self._output_vars["split_results"].keys():
+            self._output_vars["split_results"][outer_split.name] = {}
 
         if inner_split:
-            self._output_vars[outer_split.name][inner_split.name] = {}
-            save_dict = self._output_vars[outer_split.name][inner_split.name]
+            self._output_vars["split_results"][outer_split.name][inner_split.name] = {}
+            save_dict = self._output_vars["split_results"][outer_split.name][inner_split.name]
         else:
-            save_dict = self._output_vars[outer_split.name]
+            save_dict = self._output_vars["split_results"][outer_split.name]
 
         save_dict['n_training_ids'] = len(train_dataset)
         save_dict['n_validation_ids'] = len(val_dataset)
@@ -338,9 +339,9 @@ class Trainer:
                     f'{(end_time - start_time) / 60:.1f}[m]')
 
         if inner_split_name:
-            save_dict = self._output_vars[outer_split_name][inner_split_name]
+            save_dict = self._output_vars["split_results"][outer_split_name][inner_split_name]
         else:
-            save_dict = self._output_vars[outer_split_name]
+            save_dict = self._output_vars["split_results"][outer_split_name]
         # Save training time for prosperity
         save_dict['start_time'] = start_time_abs
         save_dict['end_time'] = end_time_abs
@@ -372,7 +373,7 @@ class Trainer:
                 average_dict[key] = sum(
                     [split_result.best_epoch_metrics["validation"][key] for split_result in split_results]) / n
             logger.info(f"Average split results: {average_dict}")
-            self._output_vars["average_outer_split_results"] = average_dict
+            self._output_vars["split_results"]["average_outer_split_results"] = average_dict
 
     def _do_and_log_evaluation(self, solver, test_loader, target_manager):
         # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
