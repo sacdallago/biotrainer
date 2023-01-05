@@ -21,10 +21,12 @@ You can also manually select a device for training:
 device: cpu | cuda  # Default: Uses cuda if cuda is available, otherwise cpu
 ```
 
-After all training is done, the model is evaluated on the test set. The predictions it makes can be stored in the
-output file. This behaviour is disabled by default, because the file can get very long for large datasets.
+The sequence ids associated with the generated or annotated splits can be saved in the output file.
+Furthermore, after all training is done, the (best) model is evaluated on the test set. 
+The predictions it makes are stored in the output file, if the following flag is set to `True`. 
+This behaviour is disabled by default, because the file can get very long for large datasets.
 ```yaml
-save_test_predictions: True | False  # Default: False
+save_split_ids: True | False  # Default: False
 ```
 
 Sometimes, your sequence or embeddings file might contain more or less sequences than your corresponding labels 

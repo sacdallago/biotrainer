@@ -7,7 +7,7 @@ num_epochs: 50
 use_class_weights: True
 learning_rate: 1e-3
 batch_size: 64
-save_test_predictions: True
+save_split_ids: True
 embedder_name: one_hot_encoding
 auto_resume: False
 cross_validation_config:

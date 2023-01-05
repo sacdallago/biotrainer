@@ -7,5 +7,5 @@ num_epochs: 200
 use_class_weights: True
 learning_rate: 1e-3
 batch_size: 128
-save_test_predictions: False
+save_split_ids: False
 embedder_name: one_hot_encoding

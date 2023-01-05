@@ -103,6 +103,7 @@ def add_default_values_to_config(config: dict, output_dir: str, log_dir: str):
         "patience": 10,
         "epsilon": 0.001,
         "learning_rate": 1e-3,
+        "save_split_ids": False,
         "output_dir": output_dir,
         "log_dir": log_dir,
         "cross_validation_config": {"method": "hold_out"}

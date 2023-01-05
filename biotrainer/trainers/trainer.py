@@ -42,7 +42,7 @@ class Trainer:
                  device: torch.device = None,
                  auto_resume: bool = False,
                  pretrained_model: str = None,
-                 save_test_predictions: bool = False,
+                 save_split_ids: bool = False,
                  ignore_file_inconsistencies: bool = False,
                  limited_sample_size: int = -1,
                  cross_validation_config: Dict[str, Any] = None,
@@ -62,7 +62,7 @@ class Trainer:
         self._device = device
         self._auto_resume = auto_resume
         self._pretrained_model = pretrained_model
-        self._save_test_predictions = save_test_predictions
+        self._save_split_ids = save_split_ids
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
         self._limited_sample_size = limited_sample_size
         self._cross_validation_config = cross_validation_config
@@ -275,6 +275,9 @@ class Trainer:
         save_dict['n_training_ids'] = len(train_dataset)
         save_dict['n_validation_ids'] = len(val_dataset)
         save_dict['split_hyper_params'] = self._hp_manager.get_only_params_to_optimize(hyper_params)
+        if self._save_split_ids:
+            save_dict['training_ids'] = [sample.seq_id for sample in current_split.train]
+            save_dict['validation_ids'] = [sample.seq_id for sample in current_split.val]
 
         # DATALOADERS
         train_loader = self._create_dataloader(dataset=train_dataset, hyper_params=hyper_params)
@@ -386,7 +389,7 @@ class Trainer:
         solver.load_checkpoint(resume_training=False)
         test_results = solver.inference(test_loader, calculate_test_metrics=True)
 
-        if self._save_test_predictions:
+        if self._save_split_ids:
             test_results['mapped_predictions'] = revert_mappings(protocol=self._protocol,
                                                                  test_predictions=test_results['mapped_predictions'],
                                                                  class_int2str=target_manager.class_int2str)
