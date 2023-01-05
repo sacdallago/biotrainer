@@ -255,12 +255,10 @@ class Trainer:
         return split_results_outer
 
     def _do_training_by_split(self, outer_split: Split, hyper_params: Dict[str, Any], inner_split: Split = None):
-        split_name = inner_split.name if inner_split else outer_split.name
-        train_dataset = self._create_embeddings_dataset(inner_split.train if inner_split else outer_split.train,
-                                                        mode="train")
-        val_dataset = self._create_embeddings_dataset(inner_split.val if inner_split else outer_split.val,
-                                                      mode="val")
+        # Necessary for differentiation of splits during nested k-fold cross validation
+        current_split = inner_split if inner_split else outer_split
 
+        # SETUP SAVE DICT
         if outer_split.name not in self._output_vars["split_results"].keys():
             self._output_vars["split_results"][outer_split.name] = {}
 
@@ -269,6 +267,10 @@ class Trainer:
             save_dict = self._output_vars["split_results"][outer_split.name][inner_split.name]
         else:
             save_dict = self._output_vars["split_results"][outer_split.name]
+
+        # DATASETS
+        train_dataset = self._create_embeddings_dataset(current_split.train, mode="train")
+        val_dataset = self._create_embeddings_dataset(current_split.val, mode="val")
 
         save_dict['n_training_ids'] = len(train_dataset)
         save_dict['n_validation_ids'] = len(val_dataset)
@@ -291,26 +293,32 @@ class Trainer:
         writer = self._create_writer(hyper_params=hyper_params)
 
         # SOLVER
-        solver = self._create_solver(split_name=split_name,
+        solver = self._create_solver(split_name=current_split.name,
                                      model=model, loss_function=loss_function, optimizer=optimizer, writer=writer,
                                      hyper_params=hyper_params)
         # TRAINING/VALIDATION
         if self._auto_resume:
             best_epoch_metrics = solver.auto_resume(training_dataloader=train_loader, validation_dataloader=val_loader,
                                                     train_wrapper=lambda untrained_solver: self._do_and_log_training(
-                                                        outer_split.name,
-                                                        untrained_solver,
-                                                        train_loader,
-                                                        val_loader,
-                                                        inner_split_name=inner_split.name if inner_split else ""))
+                                                        split_name=current_split.name,
+                                                        solver=untrained_solver,
+                                                        train_loader=train_loader,
+                                                        val_loader=val_loader,
+                                                        save_dict=save_dict
+                                                        )
+                                                    )
         else:
             if self._pretrained_model:
                 solver.load_checkpoint(checkpoint_path=self._pretrained_model, resume_training=True)
-            best_epoch_metrics = self._do_and_log_training(outer_split.name, solver, train_loader, val_loader,
-                                                           inner_split_name=inner_split.name if inner_split else "")
+            best_epoch_metrics = self._do_and_log_training(split_name=current_split.name,
+                                                           solver=solver,
+                                                           train_loader=train_loader,
+                                                           val_loader=val_loader,
+                                                           save_dict=save_dict)
 
         # Save metrics from best training epoch
         save_dict['training_iteration_result_best_epoch'] = best_epoch_metrics
+
         return best_epoch_metrics, solver
 
     def _create_model_loss_optimizer(self, class_weights: Optional[torch.Tensor] = None,
@@ -327,7 +335,8 @@ class Trainer:
 
         return model, loss_function, optimizer
 
-    def _do_and_log_training(self, outer_split_name: str, solver, train_loader, val_loader, inner_split_name: str = ""):
+    @staticmethod
+    def _do_and_log_training(split_name: str, solver, train_loader, val_loader, save_dict: Dict):
         start_time_abs = datetime.datetime.now()
         start_time = time.perf_counter()
         epoch_iterations = solver.train(train_loader, val_loader)
@@ -335,13 +344,8 @@ class Trainer:
         end_time_abs = datetime.datetime.now()
 
         # Logging
-        logger.info(f'Total training time for {inner_split_name if inner_split_name != "" else outer_split_name}: '
-                    f'{(end_time - start_time) / 60:.1f}[m]')
+        logger.info(f'Total training time for {split_name}: {(end_time - start_time) / 60:.1f}[m]')
 
-        if inner_split_name:
-            save_dict = self._output_vars["split_results"][outer_split_name][inner_split_name]
-        else:
-            save_dict = self._output_vars["split_results"][outer_split_name]
         # Save training time for prosperity
         save_dict['start_time'] = start_time_abs
         save_dict['end_time'] = end_time_abs
