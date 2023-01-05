@@ -356,7 +356,7 @@ class Trainer:
         best_split_result = split_results_sorted[0]
         if len(split_results) > 1:  # Not for hold_out cross validation
             logger.info(f"Using best model from split {best_split_result.name} for test set evaluation")
-            self._output_vars["best_split"] = best_split_result.name
+            self._output_vars["split_results"]["best_split"] = best_split_result.name
         return best_split_result
 
     @staticmethod

@@ -41,8 +41,8 @@ class Inferencer:
         result_dict = {}
         splits = kwargs["split_results"].keys()
         for split in splits:
-            # Ignore average result
-            if "average" in split:
+            # Ignore average or best result
+            if "average" in split or "best" in split:
                 continue
             split_config = deepcopy(kwargs)
             for key, value in kwargs["split_results"][split]["split_hyper_params"].items():
