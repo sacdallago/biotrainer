@@ -132,3 +132,11 @@ docker run --rm \
 
 Output can be found afterwards in the directory of the provided configuration file.
 
+
+## Citation
+
+If you are using *biotrainer* for your work, please add a citation:
+
+```text
+Sanchez, J. G., Franz, S., Heinzinger, M., Rost, B., & Dallago, C. Standards, tooling and benchmarks to probe representation learning on proteins. In NeurIPS 2022 Workshop on Learning Meaningful Representations of Life.
+```
