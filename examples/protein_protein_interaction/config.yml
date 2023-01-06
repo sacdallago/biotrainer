@@ -1,6 +1,7 @@
 sequence_file: interactions.fasta
-protocol: protein_protein_interaction
-model_choice: FNN
+protocol: sequence_to_class
+interaction: multiply
+model_choice: DeeperFNN
 optimizer_choice: adam
 loss_choice: cross_entropy_loss
 num_epochs: 50

@@ -18,7 +18,7 @@ __LOSSES = {
     'sequence_to_value': {
         'mean_squared_error': lambda **kwargs: nn.MSELoss(**kwargs)
     },
-    'protein_protein_interaction': {
+    'protein_protein_interaction': { #TODO
         'cross_entropy_loss': lambda **kwargs: nn.BCEWithLogitsLoss(**kwargs)
     }
 }

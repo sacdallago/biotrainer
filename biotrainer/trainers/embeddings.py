@@ -18,8 +18,7 @@ _REQUIRES_REDUCED_EMBEDDINGS = {
     'residue_to_class': False,
     'residues_to_class': False,
     'sequence_to_class': True,
-    'sequence_to_value': True,
-    'protein_protein_interaction': True
+    'sequence_to_value': True
 }
 
 logger = logging.getLogger(__name__)
@@ -43,12 +42,13 @@ def download_embeddings(url: str, script_path: str) -> str:
 
 
 def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:
-    if "interaction" in protocol:
-        sequence_file = _merge_interaction_sequences_to_fasta_file(sequence_file, output_dir, protocol)
+    #if "interaction" in protocol:
+    #    sequence_file = _merge_interaction_sequences_to_fasta_file(sequence_file, output_dir, protocol)
 
     return _do_compute_embeddings(embedder_name, sequence_file, output_dir, protocol)
 
 
+""" TODO REMOVE
 def _merge_interaction_sequences_to_fasta_file(sequence_file: str, output_dir: Path, protocol: str) -> str:
     sequences = read_FASTA(sequence_file)
     sequence_attributes = get_attributes_from_seqrecords_for_protein_interactions(sequences)
@@ -63,7 +63,7 @@ def _merge_interaction_sequences_to_fasta_file(sequence_file: str, output_dir: P
             interaction_fasta_file.write(f"{seq}\n")
 
     return str(output_path)
-
+"""
 
 def _do_compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:
     use_reduced_embeddings = _REQUIRES_REDUCED_EMBEDDINGS[protocol]

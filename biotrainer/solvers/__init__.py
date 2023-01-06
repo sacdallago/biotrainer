@@ -2,7 +2,6 @@ from typing import Optional
 from .ResidueClassificationSolver import ResidueClassificationSolver
 from .ResiduesClassificationSolver import ResiduesClassificationSolver
 from .SequenceClassificationSolver import SequenceClassificationSolver
-from .InteractionClassificationSolver import InteractionClassificationSolver
 from .SequenceRegressionSolver import SequenceRegressionSolver
 from .Solver import Solver
 
@@ -11,7 +10,6 @@ __SOLVERS = {
     'residues_to_class': ResiduesClassificationSolver,
     'sequence_to_class': SequenceClassificationSolver,
     'sequence_to_value': SequenceRegressionSolver,
-    'protein_protein_interaction': InteractionClassificationSolver
 }
 
 

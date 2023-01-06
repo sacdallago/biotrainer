@@ -46,6 +46,7 @@ class Trainer:
                  ignore_file_inconsistencies: bool = False,
                  limited_sample_size: int = -1,
                  cross_validation_config: Dict[str, Any] = None,
+                 interaction: Optional[str] = None,
                  # Ignore rest
                  **kwargs
                  ):
@@ -64,6 +65,7 @@ class Trainer:
         self._pretrained_model = pretrained_model
         self._save_split_ids = save_split_ids
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
+        self._interaction = interaction
         self._limited_sample_size = limited_sample_size
         self._cross_validation_config = cross_validation_config
         self._cross_validation_splitter = CrossValidationSplitter(self._protocol, self._cross_validation_config)
@@ -79,7 +81,8 @@ class Trainer:
         # TARGETS => DATASETS
         target_manager = TargetManager(protocol=self._protocol, sequence_file=self._sequence_file,
                                        labels_file=self._labels_file, mask_file=self._mask_file,
-                                       ignore_file_inconsistencies=self._ignore_file_inconsistencies)
+                                       ignore_file_inconsistencies=self._ignore_file_inconsistencies,
+                                       interaction=self._interaction)
         train_dataset, val_dataset, test_dataset = target_manager.get_datasets_by_annotations(id2emb)
 
         # LOG COMMON VALUES FOR ALL k-fold SPLITS:

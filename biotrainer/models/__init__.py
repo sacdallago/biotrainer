@@ -1,8 +1,8 @@
 import inspect
 
-from .FNN import FNN, FNNInteraction
 from .CNN import CNN
-from .LogReg import LogReg, LogRegInteraction
+from .LogReg import LogReg
+from .FNN import FNN, DeeperFNN
 from .LightAttention import LightAttention
 from .model_params import count_parameters
 
@@ -10,6 +10,7 @@ __MODELS = {
     'residue_to_class': {
         'CNN': CNN,
         'FNN': FNN,
+        'DeeperFNN': DeeperFNN,
         'LogReg': LogReg,
     },
     'residues_to_class': {
@@ -17,16 +18,14 @@ __MODELS = {
     },
     'sequence_to_class': {
         'FNN': FNN,
+        'DeeperFNN': DeeperFNN,
         'LogReg': LogReg
     },
     'sequence_to_value': {
         'FNN': FNN,
+        'DeeperFNN': DeeperFNN,
         'LogReg': LogReg
     },
-    'protein_protein_interaction': {
-        'FNN': FNNInteraction,
-        'LogReg': LogRegInteraction
-    }
 }
 
 

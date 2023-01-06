@@ -114,7 +114,7 @@ class Inferencer:
                                                  confidence_level: float = 0.05):
         if "_value" not in self.protocol and "_interaction" not in self.protocol:
             raise Exception(f"Monte carlo dropout only implemented for x_to_value "
-                            f"and protein_protein_interaction protocols!")
+                            f"and protein_protein_interaction protocols!")  # TODO
 
         solver, dataloader = self._load_solver_and_dataloader(embeddings, split_name)
 

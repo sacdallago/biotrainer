@@ -17,7 +17,6 @@ __PROTOCOLS = {
     'residues_to_class',
     'sequence_to_class',
     'sequence_to_value',
-    'protein_protein_interaction'
 }
 
 
