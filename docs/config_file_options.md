@@ -11,6 +11,14 @@ Choose a **protocol** that handles, how your provided data is interpreted:
 protocol: residue_to_class | residues_to_class | sequence_to_class | sequence_to_value
 ```
 
+To use interactions for your sequences, you need to indicate how embeddings of interacting sequences should be
+combined:
+```yaml
+interaction: multiply | concat  # Default: None
+```
+`multiply` does an element-wise multiplication of the two embeddings, so `torch.mul(emb1, emb2)`.
+`concat` concatenates both embeddings, so `torch.concat([emb1, emb2])`.
+
 The seed can also be changed (any positive integer):
 ```yaml
 seed: 1234  # Default: 42

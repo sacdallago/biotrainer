@@ -18,6 +18,7 @@ An overview of our decision process and about arguments for and against certain 
   * [residues_to_class](#residues_to_class)
   * [sequence_to_class](#sequence_to_class)
   * [sequence_to_value](#sequence_to_value)
+  * [protein_protein_interaction](#protein_protein_interaction)
 
 <!-- tocstop -->
 
@@ -103,8 +104,6 @@ C=number of classes (e.g. 13)
 - residues_to_class --> Predict a class C for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxC
 - sequence_to_class --> Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output BxC
 - sequence_to_value --> Predict a value V for each sequence encoded in a fixed dimension D. Input BxD --> output BxV
-
-- protein_protein_interaction --> Predict a binary class C for each interaction for two sequences encoded in a fixed dimension D. Input BxD --> output BxC
 ```
 
 ### residue_to_class
@@ -179,19 +178,37 @@ SEQWENCE
 ```
 
 ### protein_protein_interaction
-```text
-- Predict a binary class C for each interaction for two sequences encoded in a fixed dimension D. Input BxD --> output BxC
+
+This is not a protocol in and out of itself, but can be applied to any protocol by setting the config option
+`interaction`:
+```yaml
+# config.yml
+protocol: sequence_to_class
+interaction: multiply | concat  # Default: None
 ```
 
-You have two input proteins and want to predict, if they interact or not (per-sequence interaction prediction).
+So, you have two input proteins and want to predict, if they interact or not (per-sequence interaction prediction).
 Hence, the labels and outputs will be in `[0, 1]` (binary classification task).
-Before the training, protein embeddings can be computed as usual via the `embedder_name` option. 
-In this case, sequences from the sequence lines and `SEQINTERACTOR` annotations are merged and, after that, embedded.
+Before the training, protein embeddings can be computed as usual via the `embedder_name` option.
 
 **Required file: FASTA file containing interactions and labels**
 
 interactions.fasta
 ```fasta
->Seq1 INTERACTOR=Seq2 TARGET=0 SET=train SEQINTERACTOR=PRTEIN
+>Seq1 INTERACTOR=Seq2 TARGET=0 SET=train
 SEQWENCE
+>Seq2 INTERACTOR=Seq1 TARGET=0 SET=train
+PRTEIN
+```
+
+Note that each pair of `>ID` and associated sequence must be present *at least once* in the file! Hence, duplicating
+each interaction is not strictly necessary.
+So, this is also a correct input file:
+```fasta
+>Seq1 INTERACTOR=Seq2 TARGET=0 SET=train
+SEQWENCE
+>Seq2 INTERACTOR=Seq1 TARGET=0 SET=train
+PRTEIN
+>Seq3 INTERACTOR=Seq2 TARGET=1 SET=test
+SEQPRTEIN
 ```

@@ -10,7 +10,7 @@ from typing import Dict, Any, Tuple, Optional, List
 from .target_manager_utils import get_split_lists
 
 from ..utilities import get_attributes_from_seqrecords, get_attributes_from_seqrecords_for_protein_interactions, \
-    MASK_AND_LABELS_PAD_VALUE, read_FASTA, DatasetSample
+    MASK_AND_LABELS_PAD_VALUE, read_FASTA, INTERACTION_INDICATOR, DatasetSample
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,12 @@ class TargetManager:
     training_ids: List[str] = None
     validation_ids: List[str] = None
     testing_ids: List[str] = None
+
+    # Interaction operations
+    interaction_operations = {
+        "multiply": lambda embedding_left, embedding_right: torch.mul(embedding_left, embedding_right),
+        "concat": lambda embedding_left, embedding_right: torch.concat([embedding_left, embedding_right])
+    }
 
     def __init__(self, protocol: str, sequence_file: str,
                  labels_file: Optional[str] = None, mask_file: Optional[str] = None,
@@ -139,7 +145,7 @@ class TargetManager:
         if self._interaction:
             all_protein_ids = []
             for interaction_key in self._id2target.keys():
-                protein_ids = interaction_key.split("§")
+                protein_ids = interaction_key.split(INTERACTION_INDICATOR)
                 all_protein_ids.extend(protein_ids)
             all_ids_with_target = set(all_protein_ids)
         else:
@@ -203,6 +209,14 @@ class TargetManager:
                 exception_message += f"{seq_id}: Sequence={seq_len} vs. Labels={self._id2target[seq_id].size}\n"
             raise Exception(exception_message[:-1])  # Discard last \n
 
+    @staticmethod
+    def _validate_embeddings_shapes(id2emb: Dict[str, Any]):
+        first_embedding_shape = list(id2emb.values())[0].shape[-1]  # Last position in shape is always embedding length
+        all_embeddings_have_same_dimension = all([embedding.shape[-1] == first_embedding_shape
+                                                  for embedding in id2emb.values()])
+        if not all_embeddings_have_same_dimension:
+            raise Exception(f"Embeddings dimensions differ between sequences, but all must be equal!")
+
     def get_datasets_by_annotations(self, id2emb: Dict[str, Any]) -> \
             Tuple[List[DatasetSample], List[DatasetSample], List[DatasetSample]]:
         # At first calculate id2target and validate
@@ -212,15 +226,24 @@ class TargetManager:
         # Get dataset splits from file
         self.training_ids, self.validation_ids, self.testing_ids = get_split_lists(self._id2attributes)
 
-        # Concatenate embeddings for protein_protein_interaction
+        # Combine embeddings for protein_protein_interaction
         if self._interaction:
+            interaction_operation = self.interaction_operations.get(self._interaction)
+            if not interaction_operation:
+                raise NotImplementedError(f"Chosen interaction operation {self._interaction} is not supported!")
+            interaction_id2emb = {}
             for interaction_id in self._id2attributes.keys():
-                interactor_left = interaction_id.split("§")[0]
-                interactor_right = interaction_id.split("§")[1]
+                interactor_left = interaction_id.split(INTERACTION_INDICATOR)[0]
+                interactor_right = interaction_id.split(INTERACTION_INDICATOR)[1]
                 embedding_left = id2emb[interactor_left]
                 embedding_right = id2emb[interactor_right]
-                combined_embedding = torch.mul(embedding_left, embedding_right)
-                id2emb[interaction_id] = combined_embedding
+                combined_embedding = interaction_operation(embedding_left, embedding_right)
+                interaction_id2emb[interaction_id] = combined_embedding
+
+            id2emb = interaction_id2emb
+
+        # Validate that all embeddings have the same shape
+        self._validate_embeddings_shapes(id2emb)
 
         # Create datasets
         train_dataset = [
@@ -236,7 +259,7 @@ class TargetManager:
         return train_dataset, val_dataset, test_dataset
 
     def compute_class_weights(self) -> torch.FloatTensor:
-        if 'class' in self.protocol or "_interaction" in self.protocol:
+        if 'class' in self.protocol:
             # concatenate all labels irrespective of protein to count class sizes
             if "residue_" in self.protocol:
                 counter = Counter(list(itertools.chain.from_iterable(

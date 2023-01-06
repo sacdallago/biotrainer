@@ -12,7 +12,7 @@ from ..utilities import MASK_AND_LABELS_PAD_VALUE
 class ResidueClassificationSolver(ClassificationSolver, Solver):
     def _transform_network_output(self, network_output: torch.Tensor) -> torch.Tensor:
         network_type = type(self.network).__name__
-        if network_type in ["FNN", "LogReg"]:
+        if network_type in ["FNN", "DeeperFNN", "LogReg"]:
             # (Batch_size x protein_Length x Number_classes) => (B x N x L)
             network_output = network_output.permute(0, 2, 1)
 

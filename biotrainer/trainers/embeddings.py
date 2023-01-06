@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib import request
 from typing import Dict, Any
 
-from ..utilities import ConfigurationException, read_FASTA, get_attributes_from_seqrecords_for_protein_interactions
+from ..utilities import ConfigurationException
 
 # Defines if reduced embeddings from bio_embeddings should be used.
 # Reduced means that the per-residue embeddings are reduced to a per-sequence embedding
@@ -42,30 +42,6 @@ def download_embeddings(url: str, script_path: str) -> str:
 
 
 def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:
-    #if "interaction" in protocol:
-    #    sequence_file = _merge_interaction_sequences_to_fasta_file(sequence_file, output_dir, protocol)
-
-    return _do_compute_embeddings(embedder_name, sequence_file, output_dir, protocol)
-
-
-""" TODO REMOVE
-def _merge_interaction_sequences_to_fasta_file(sequence_file: str, output_dir: Path, protocol: str) -> str:
-    sequences = read_FASTA(sequence_file)
-    sequence_attributes = get_attributes_from_seqrecords_for_protein_interactions(sequences)
-
-    sequences_left = {seq.id: seq.seq for seq in sequences}
-    sequences_right = {seq["INTERACTOR"]: seq["SEQINTERACTOR"] for seq in sequence_attributes.values()}
-    all_sequences = {**sequences_left, **sequences_right}
-    output_path = output_dir / "all_interaction_sequences.fasta"
-    with open(output_path, "w") as interaction_fasta_file:
-        for seq_id, seq in all_sequences.items():
-            interaction_fasta_file.write(f">{seq_id}\n")
-            interaction_fasta_file.write(f"{seq}\n")
-
-    return str(output_path)
-"""
-
-def _do_compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:
     use_reduced_embeddings = _REQUIRES_REDUCED_EMBEDDINGS[protocol]
 
     try:

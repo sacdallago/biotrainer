@@ -84,8 +84,12 @@ class Trainer:
                                        ignore_file_inconsistencies=self._ignore_file_inconsistencies,
                                        interaction=self._interaction)
         train_dataset, val_dataset, test_dataset = target_manager.get_datasets_by_annotations(id2emb)
+        del id2emb  # No longer required and should not be used later in the routine
 
         # LOG COMMON VALUES FOR ALL k-fold SPLITS:
+        embeddings_length = train_dataset[0].embedding.shape[-1]  # Last position in shape is always embedding length
+        logger.info(f"Number of features: {embeddings_length}")
+        self._output_vars['n_features'] = embeddings_length
         self._output_vars['n_testing_ids'] = len(test_dataset)
         self._output_vars['n_classes'] = target_manager.number_of_outputs
 
@@ -149,17 +153,12 @@ class Trainer:
         # Mapping from id to embeddings
         id2emb = load_embeddings(embeddings_file_path=embeddings_file)
 
-        # Find out feature size and add to output vars + logging
-        embeddings_length = list(id2emb.values())[0].shape[-1]  # Last position in shape is always embedding length
-        self._output_vars['n_features'] = embeddings_length
-        logger.info(f"Number of features: {embeddings_length}")
-
         return id2emb
 
     def _get_class_weights(self, target_manager: TargetManager) -> Union[None, torch.FloatTensor]:
         # Get x_to_class specific logs and weights
         class_weights = None
-        if 'class' in self._protocol or '_interaction' in self._protocol:
+        if 'class' in self._protocol:
             self._output_vars['class_int_to_string'] = target_manager.class_int2str
             self._output_vars['class_str_to_int'] = target_manager.class_str2int
             logger.info(f"Number of classes: {self._output_vars['n_classes']}")

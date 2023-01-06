@@ -18,9 +18,6 @@ __LOSSES = {
     'sequence_to_value': {
         'mean_squared_error': lambda **kwargs: nn.MSELoss(**kwargs)
     },
-    'protein_protein_interaction': { #TODO
-        'cross_entropy_loss': lambda **kwargs: nn.BCEWithLogitsLoss(**kwargs)
-    }
 }
 
 
@@ -32,11 +29,7 @@ def get_loss(protocol: str, loss_choice: str, device: Union[str, torch.device],
         raise NotImplementedError
     else:
         if weight is not None:
-            if "_interaction" in protocol:
-                # https://discuss.pytorch.org/t/bcewithlogitsloss-and-class-weights/88837
-                return loss(pos_weight=(weight[1] / weight[0])).to(device)
-            else:
-                return loss(weight=weight).to(device)
+            return loss(weight=weight).to(device)
         else:
             return loss().to(device)
 

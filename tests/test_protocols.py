@@ -24,12 +24,18 @@ protocol_to_input = {
     'sequence_to_class': {'sequence_file': "test_input_files/s2c/sequences.fasta",
                           'labels_file': "",
                           'loss_choice': "cross_entropy_loss"},
+    'sequence_to_class-interactionmultiply': {'sequence_file': "test_input_files/ppi/interactions.fasta",
+                                              'labels_file': "",
+                                              'loss_choice': "cross_entropy_loss",
+                                              'interaction': "multiply"},
+    'sequence_to_class-interactionconcat': {'sequence_file': "test_input_files/ppi/interactions.fasta",
+                                            'labels_file': "",
+                                            'loss_choice': "cross_entropy_loss",
+                                            'interaction': "concat"},
     'sequence_to_value': {'sequence_file': "test_input_files/s2v/sequences.fasta",
                           'labels_file': "",
                           'loss_choice': "mean_squared_error"},
-    'protein_protein_interaction': {'sequence_file': "test_input_files/ppi/interactions.fasta",
-                                    'labels_file': "",
-                                    'loss_choice': "cross_entropy_loss"},
+
 }
 
 
@@ -43,7 +49,10 @@ def setup_config(protocol: str, model_choice: str, embedder_name: str, tmp_confi
             Path(protocol_to_input[protocol]["labels_file"]).absolute())
         config["labels_file"] = labels_path_absolute
         config["loss_choice"] = protocol_to_input[protocol]["loss_choice"]
-        config["protocol"] = protocol if "error" not in protocol else protocol.split("-")[0]
+        actual_protocol = protocol.split("-")[0]
+        if len(protocol.split("-")) > 1 and "interaction" in protocol.split("-")[1]:
+            config["interaction"] = protocol_to_input[protocol]["interaction"]
+        config["protocol"] = actual_protocol
         config["model_choice"] = model_choice
         config["embedder_name"] = embedder_name
     with open(tmp_config_path, "w") as tmp_config_file:
