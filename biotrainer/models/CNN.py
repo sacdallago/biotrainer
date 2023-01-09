@@ -6,15 +6,15 @@ class CNN(nn.Module):
     def __init__(
             self, n_classes: int, n_features: int,
             bottleneck_dim: int = 32,
+            dropout_rate: float = 0.0,  # Dropout for CNN disabled by default
             **kwargs,
     ):
         super(CNN, self).__init__()
 
-        # dropout_rate = 0.25
         self.classifier = nn.Sequential(
             nn.Conv2d(n_features, bottleneck_dim, kernel_size=(7, 1), padding=(3, 0)),  # 7x32
             nn.ReLU(),
-            # nn.Dropout(dropout_rate),
+            nn.Dropout(dropout_rate),
             nn.Conv2d(bottleneck_dim, n_classes, kernel_size=(7, 1), padding=(3, 0))
         )
 
