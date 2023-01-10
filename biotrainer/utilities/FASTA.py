@@ -49,7 +49,8 @@ def get_attributes_from_seqrecords_for_protein_interactions(sequences: List[SeqR
                     raise Exception(f"Interaction multiple times present in fasta file, but SET=sets are "
                                     f"different for {int_id}!")
 
-        result[interaction_id] = attribute_dict
+        if interaction_id_flipped not in result.keys():
+            result[interaction_id] = attribute_dict
 
     return result
 
