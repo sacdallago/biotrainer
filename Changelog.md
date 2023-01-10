@@ -1,5 +1,12 @@
 # Biotrainer Changelog
 
+## 01.2023 - Version 0.3.0
+### Features
+* Interaction protocol
+* Cross Validation
+... *TODO*
+
+
 ## 05.12.2022 - Version 0.2.1
 ### Bug fixes
 * Fixing loss function not working on GPU (#62)
