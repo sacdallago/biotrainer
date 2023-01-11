@@ -294,6 +294,15 @@ cross_validation_config:
 **Note that this might create a very high number of splits and is only recommended for small training and validation
 sets!**
 
+For both cross validation methods, you can also declare which metric to use to choose the best model
+(or the best hyperparameter combination for nested k-fold cross validation):
+```yaml
+cross_validation_config:
+  method: leave_p_out
+  choose_by: loss | accuracy | precision | recall | rmse | ... # Default: loss 
+  p: 5  # p >= 1
+```
+
 ## Special training modes
 
 On clusters for example, training can get interrupted for a numerous reasons. The implemented auto_resume mode 

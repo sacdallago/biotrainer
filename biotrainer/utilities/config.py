@@ -106,7 +106,7 @@ def add_default_values_to_config(config: dict, output_dir: str, log_dir: str):
         "save_split_ids": False,
         "output_dir": output_dir,
         "log_dir": log_dir,
-        "cross_validation_config": {"method": "hold_out"}
+        "cross_validation_config": {"method": "hold_out", "choose_by": "loss"}
     }
     for default_key, default_value in default_values.items():
         if default_key not in config.keys():

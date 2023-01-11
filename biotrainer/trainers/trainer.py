@@ -20,7 +20,8 @@ from ..optimizers import get_optimizer
 from ..models import count_parameters, get_model
 from ..solvers import get_solver, Solver
 from ..datasets import get_collate_function, get_dataset
-from ..utilities import seed_all, SanityChecker, Split, SplitResult, DatasetSample, __version__
+from ..utilities import seed_all, SanityChecker, Split, SplitResult, DatasetSample, METRICS_WITHOUT_REVERSED_SORTING, \
+    __version__
 
 logger = logging.getLogger(__name__)
 
@@ -225,7 +226,7 @@ class Trainer:
         hp_search_method = self._cross_validation_config["search_method"]
         split_results_outer = list()
         for outer_k, outer_split in enumerate(splits):
-            hyper_param_loss_results = list()
+            hyper_param_metric_results = list()
             for hp_iteration, hyper_params in enumerate(self._hp_manager.search(mode=hp_search_method)):
                 inner_splits = self._cross_validation_splitter.nested_split(train_dataset=outer_split.train,
                                                                             current_outer_k=outer_k + 1,
@@ -240,15 +241,21 @@ class Trainer:
                     split_results_inner.append(
                         SplitResult(inner_split.name, hyper_params, best_epoch_metrics_inner, s_inner))
 
-                hyper_param_loss_results.append((hyper_params, self._get_average_loss_of_splits(split_results_inner)))
+                hyper_param_metric_results.append((hyper_params,
+                                                   self._get_average_of_chosen_metric_for_splits(split_results_inner)
+                                                   ))
 
-            # SELECT BEST HYPER PARAMETER COMBINATION BY AVERAGE LOSS
-            hyper_param_loss_results.sort(key=lambda hp_loss_res: hp_loss_res[1],
-                                          reverse=False)
-            best_hyper_param_combination = hyper_param_loss_results[0][0]
+            # SELECT BEST HYPER PARAMETER COMBINATION BY AVERAGE METRIC TO OPTIMIZE
+            hyper_param_metric_results = self._sort_according_to_chosen_metric(
+                list_to_sort=hyper_param_metric_results,
+                key=lambda hp_metric_res: hp_metric_res[1]
+            )
+
+            best_hyper_param_combination = hyper_param_metric_results[0][0]
             # TRAIN ON split.train, VALIDATE ON split.val
             logger.info(f"Training model for outer split {outer_split.name} with best hyper_parameter combination "
-                        f"{self._hp_manager.get_only_params_to_optimize(best_hyper_param_combination)}:")
+                        f"{self._hp_manager.get_only_params_to_optimize(best_hyper_param_combination)} "
+                        f"(criterion: {self._cross_validation_config['choose_by']}):")
             best_epoch_metrics, solver = self._do_training_by_split(outer_split=outer_split,
                                                                     hyper_params=best_hyper_param_combination)
             split_results_outer.append(
@@ -310,7 +317,7 @@ class Trainer:
                                                         train_loader=train_loader,
                                                         val_loader=val_loader,
                                                         save_dict=save_dict
-                                                        )
+                                                    )
                                                     )
         else:
             if self._pretrained_model:
@@ -358,20 +365,31 @@ class Trainer:
 
         return epoch_iterations[solver.get_best_epoch()]
 
+    def _sort_according_to_chosen_metric(self, list_to_sort: List, key):
+        choose_by_metric = self._cross_validation_config["choose_by"]
+        reverse = choose_by_metric not in METRICS_WITHOUT_REVERSED_SORTING
+        return sorted(list_to_sort,
+                      key=key,
+                      reverse=reverse)
+
     def _get_best_model_of_splits(self, split_results: List[SplitResult]) -> SplitResult:
-        split_results_sorted = sorted(split_results,
-                                      key=lambda split_result: split_result.best_epoch_metrics["validation"]["loss"],
-                                      reverse=False)  # Lowest to highest loss
+        choose_by_metric = self._cross_validation_config["choose_by"]
+        split_results_sorted = self._sort_according_to_chosen_metric(split_results,
+                                                                     lambda split_result:
+                                                                     split_result.best_epoch_metrics["validation"][
+                                                                         choose_by_metric])
         best_split_result = split_results_sorted[0]
         if len(split_results) > 1:  # Not for hold_out cross validation
-            logger.info(f"Using best model from split {best_split_result.name} for test set evaluation")
+            logger.info(f"Using best model from split {best_split_result.name} "
+                        f"(criterion: {self._cross_validation_config['choose_by']}) for test set evaluation")
             self._output_vars["split_results"]["best_split"] = best_split_result.name
         return best_split_result
 
-    @staticmethod
-    def _get_average_loss_of_splits(split_results: List[SplitResult]) -> float:
-        sum_loss = sum([split_result.best_epoch_metrics["validation"]["loss"] for split_result in split_results])
-        return sum_loss / len(split_results)
+    def _get_average_of_chosen_metric_for_splits(self, split_results: List[SplitResult]) -> float:
+        choose_by_metric = self._cross_validation_config["choose_by"]
+        sum_metric = sum([split_result.best_epoch_metrics["validation"][choose_by_metric]
+                          for split_result in split_results])
+        return sum_metric / len(split_results)
 
     def _log_average_result_of_splits(self, split_results: List[SplitResult]):
         n = len(split_results)
