@@ -2,6 +2,7 @@ import os
 import math
 import torch
 import logging
+import torchmetrics
 
 from pathlib import Path
 from scipy.stats import norm
@@ -70,6 +71,7 @@ class Solver(ABC):
                     context=torch.no_grad, lengths=lengths
                 )
                 validation_iterations.append(iteration_result)
+            validation_epoch_metrics = self._compute_metrics()
 
             train_iterations = list()
             for i, (_, X, y, lengths) in enumerate(training_dataloader):
@@ -78,10 +80,11 @@ class Solver(ABC):
                     lengths=lengths
                 )
                 train_iterations.append(iteration_result)
+            train_epoch_metrics = self._compute_metrics()
 
             epoch_metrics = {
-                'training': Solver._aggregate_iteration_results(train_iterations),
-                'validation': Solver._aggregate_iteration_results(validation_iterations),
+                'training': {**Solver._aggregate_iteration_losses(train_iterations), **train_epoch_metrics},
+                'validation': {**Solver._aggregate_iteration_losses(validation_iterations), **validation_epoch_metrics},
                 'epoch': epoch
             }
 
@@ -130,8 +133,12 @@ class Solver(ABC):
             for idx, prediction in enumerate(iteration_result["prediction"]):
                 mapped_predictions[seq_ids[idx]] = prediction
 
+        metrics = None
+        if calculate_test_metrics:
+            metrics = {**Solver._aggregate_iteration_losses(predict_iterations), **self._compute_metrics()}
+
         return {
-            'metrics': Solver._aggregate_iteration_results(predict_iterations) if calculate_test_metrics else None,
+            'metrics': metrics,
             'mapped_predictions': mapped_predictions
         }
 
@@ -280,12 +287,9 @@ class Solver(ABC):
                 return False
 
     @staticmethod
-    def _aggregate_iteration_results(iteration_results) -> Dict[str, Any]:
-        metrics = dict()
-        iteration_metrics = [metric for metric in iteration_results[0].keys() if metric != "prediction"]
-        for metric in iteration_metrics:
-            metrics[metric] = sum([i[metric] for i in iteration_results]) / len(iteration_results)
-        return metrics
+    def _aggregate_iteration_losses(iteration_results) -> Dict[str, Any]:
+        mean_loss = sum([i["loss"] for i in iteration_results]) / len(iteration_results)
+        return {"loss": mean_loss}
 
     def _transform_network_output(self, network_output: torch.Tensor) -> torch.Tensor:
         """
@@ -348,7 +352,6 @@ class Solver(ABC):
             return {
                 'loss': loss.item(),
                 'prediction': prediction,
-                **metrics
             }
 
     def _prediction_iteration(self, x: torch.Tensor, lengths: Optional[torch.LongTensor] = None) -> \
@@ -365,12 +368,35 @@ class Solver(ABC):
             return {"prediction": prediction.tolist(),
                     "logits": prediction_logits}
 
+    @staticmethod
+    def _compute_metric(metric: torchmetrics.Metric, predicted: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+        """
+        Utility function to calculate metrics either on a per-epoch or a per-batch basis
+
+        :param metric: torchmetrics object
+        :param predicted: The predicted label/value for each sample
+        :param labels: The actual label for each sample
+
+        :return: metric result calculated via metric object
+        """
+        if predicted is None and labels is None:
+            # Per epoch
+            metric_result = metric.compute()
+            metric.reset()
+            return metric_result
+        else:
+            # Per batch
+            return metric(predicted.cpu().float(), labels.cpu().float())
+
     @abstractmethod
     def _compute_metrics(
-            self, predicted: torch.Tensor, labels: torch.Tensor
+            self, predicted: Optional[torch.Tensor] = None, labels: Optional[torch.Tensor] = None
     ) -> Dict[str, Union[int, float]]:
         """
-        Computes metrics, such as accuracy or RMSE between predicted (from the model used) and labels (from the data).
+        Computes metrics, such as accuracy or RMSE between predicted (from the model) and labels (from the data).
+
+        If both, predicted and labels are None, metrics for the whole epoch are calculated and the metric objects
+        are reset
 
         :param predicted: The predicted label/value for each sample
         :param labels: The actual label for each sample

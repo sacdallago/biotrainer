@@ -25,7 +25,7 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
         return predicted_classes
 
     def _compute_metrics(
-            self, predicted: torch.Tensor, labels: torch.Tensor
+            self, predicted: Optional[torch.Tensor] = None, labels: Optional[torch.Tensor] = None
     ) -> Dict[str, Union[int, float]]:
         # This will flatten everything!
         masks = labels != MASK_AND_LABELS_PAD_VALUE
