@@ -12,7 +12,7 @@ class ClassificationSolver(Solver):
         super().__init__(*args, **kwargs)
         # Init metrics
         self.num_classes = kwargs['num_classes']
-        task = "multiclass" if self.num_classes >= 1 else "binary"
+        task = "multiclass" if self.num_classes > 2 else "binary"
         self.acc = Accuracy(task=task, average="micro", num_classes=self.num_classes)
 
         self.macro_precision = Precision(task=task, average="macro", num_classes=self.num_classes)
