@@ -12,6 +12,7 @@ from contextlib import nullcontext as _nullcontext
 from typing import Callable, Optional, Union, Dict, List, Any
 
 from torch.utils.data import DataLoader
+from torchmetrics import SpearmanCorrCoef
 
 logger = logging.getLogger(__name__)
 
@@ -386,7 +387,10 @@ class Solver(ABC):
             return metric_result
         else:
             # Per batch
-            return metric(predicted.cpu().float(), labels.cpu().float())
+            if metric.__class__ == SpearmanCorrCoef:
+                # SCC only accepts float tensors
+                return metric(predicted.cpu().float(), labels.cpu().float())
+            return metric(predicted.cpu(), labels.cpu())
 
     @abstractmethod
     def _compute_metrics(
