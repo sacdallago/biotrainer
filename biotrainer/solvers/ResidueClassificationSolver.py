@@ -27,14 +27,17 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
     def _compute_metrics(
             self, predicted: Optional[torch.Tensor] = None, labels: Optional[torch.Tensor] = None
     ) -> Dict[str, Union[int, float]]:
-        # This will flatten everything!
-        masks = labels != MASK_AND_LABELS_PAD_VALUE
-        masks = masks.to(self.device)
+        if predicted is not None and labels is not None:
+            # This will flatten everything!
+            masks = labels != MASK_AND_LABELS_PAD_VALUE
+            masks = masks.to(self.device)
 
-        masked_predicted = torch.masked_select(predicted, masks)
-        masked_labels = torch.masked_select(labels, masks)
+            masked_predicted = torch.masked_select(predicted, masks)
+            masked_labels = torch.masked_select(labels, masks)
 
-        return super()._compute_metrics(predicted=masked_predicted, labels=masked_labels)
+            return super()._compute_metrics(predicted=masked_predicted, labels=masked_labels)
+        else:
+            return super()._compute_metrics(predicted=predicted, labels=labels)
 
     # Gets overwritten to shorten prediction lengths if necessary
     def _training_iteration(
