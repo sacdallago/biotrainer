@@ -122,9 +122,6 @@ class Inferencer:
                                                  split_name: str = "hold_out",
                                                  n_forward_passes: int = 30,
                                                  confidence_level: float = 0.05):
-        if "_value" not in self.protocol and "_interaction" not in self.protocol:
-            raise Exception(f"Monte carlo dropout only implemented for x_to_value "
-                            f"and protein_protein_interaction protocols!")  # TODO
 
         solver, dataloader = self._load_solver_and_dataloader(embeddings, split_name)
 
@@ -133,7 +130,11 @@ class Inferencer:
                                                            confidence_level=confidence_level)["mapped_predictions"]
 
         # For class predictions, revert from int (model output) to str (class name)
-        predictions = revert_mappings(protocol=self.protocol, test_predictions=predictions,
-                                      class_int2str=self.class_int2str)
+        for seq_id, prediction_dict in predictions.items():
+            prediction_dict["prediction"] = list(revert_mappings(protocol=self.protocol,
+                                                                 test_predictions={
+                                                                     seq_id: prediction_dict["prediction"]
+                                                                 },
+                                                                 class_int2str=self.class_int2str).values())[0]
 
         return predictions
