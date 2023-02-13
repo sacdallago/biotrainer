@@ -175,22 +175,25 @@ class Solver(ABC):
                 self.network = self.network.eval()
                 enable_dropout(self.network)
                 dropout_iteration_result = self._prediction_iteration(x=X, lengths=lengths)
+                # TODO: Workaround, must be improved to apply to all protocols
+                dropout_iteration_result["logits"] = torch.softmax(dropout_iteration_result["logits"], dim=1)
                 dropout_iterations.append(dropout_iteration_result)
 
-            dropout_logits = torch.stack([dropout_iteration["logits"] for dropout_iteration in dropout_iterations])
-            dropout_std_dev, dropout_mean = torch.std_mean(dropout_logits, dim=0, unbiased=True)
+            dropout_logits = torch.stack([dropout_iteration["logits"] for dropout_iteration in dropout_iterations],
+                                         dim=1)
+            dropout_std_dev, dropout_mean = torch.std_mean(dropout_logits, dim=1, unbiased=True)
             z_score = norm.ppf(q=1 - (confidence_level / 2))
             confidence_range = z_score * dropout_std_dev / (n_forward_passes ** 0.5)
-            prediction_by_mean = self._logits_to_predictions(dropout_mean)
+            _, prediction_by_mean = torch.max(dropout_mean, dim=1)
 
             # Create dict with seq_id: prediction
             for idx, prediction in enumerate(prediction_by_mean):
                 mapped_predictions[seq_ids[idx]] = {"prediction": prediction_by_mean[idx].item(),
-                                                    "mcd_mean": dropout_mean[idx].item(),
+                                                    "mcd_mean": dropout_mean[idx],
                                                     "mcd_lower_bound": (
-                                                            dropout_mean[idx] - confidence_range[idx]).item(),
+                                                            dropout_mean[idx] - confidence_range[idx]),
                                                     "mcd_upper_bound": (
-                                                            dropout_mean[idx] + confidence_range[idx]).item()
+                                                            dropout_mean[idx] + confidence_range[idx])
                                                     }
 
         return {
