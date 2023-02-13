@@ -85,21 +85,28 @@ class Inferencer:
             result_dict[split] = (solver, dataloader_function)
         return result_dict
 
-    def _load_solver_and_dataloader(self, embeddings: Iterable, split_name, targets: Optional[Iterable] = None):
+    def _load_solver_and_dataloader(self, embeddings: Union[Iterable, Dict],
+                                    split_name, targets: Optional[Iterable] = None):
         if split_name not in self.solvers_and_loaders_by_split.keys():
             raise Exception(f"Unknown split_name {split_name} for given configuration!")
 
+        if isinstance(embeddings, Dict):
+            embeddings_dict = embeddings
+        else:
+            embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
+
         solver, loader = self.solvers_and_loaders_by_split[split_name]
         dataset = get_dataset(self.protocol, samples=[
-            DatasetSample(idx, torch.tensor(np.array(embedding)),
+            DatasetSample(seq_id, torch.tensor(np.array(embedding)),
                           torch.empty(1) if not targets else torch.tensor(np.array(targets[idx])))
-            for idx, embedding in enumerate(embeddings)
+            for idx, (seq_id, embedding) in enumerate(embeddings_dict.items())
         ])
         dataloader = loader(dataset)
         return solver, dataloader
 
-    def from_embeddings(self, embeddings: Iterable, targets: Optional[Iterable] = None,
+    def from_embeddings(self, embeddings: Union[Iterable, Dict], targets: Optional[Iterable] = None,
                         split_name: str = "hold_out") -> Dict[str, Union[Dict, str, int, float]]:
+
         solver, dataloader = self._load_solver_and_dataloader(embeddings, split_name, targets)
 
         inference_dict = solver.inference(dataloader, calculate_test_metrics=targets is not None)
@@ -111,14 +118,7 @@ class Inferencer:
 
         return inference_dict
 
-    def from_dict(self, seq_id_to_embeddings: Dict[str, Any], targets: Optional[Iterable] = None,
-                  split_name: str = "hold_out") -> Dict[str, Union[str, int, float]]:
-        predictions = self.from_embeddings(embeddings=seq_id_to_embeddings.values(), split_name=split_name)
-
-        return {list(seq_id_to_embeddings.keys())[int(seq_id)]: prediction
-                for seq_id, prediction in predictions.items()}
-
-    def from_embeddings_with_monte_carlo_dropout(self, embeddings: Iterable,
+    def from_embeddings_with_monte_carlo_dropout(self, embeddings: Union[Iterable, Dict],
                                                  split_name: str = "hold_out",
                                                  n_forward_passes: int = 30,
                                                  confidence_level: float = 0.05):
