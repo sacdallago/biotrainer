@@ -112,6 +112,9 @@ def add_default_values_to_config(config: dict, output_dir: str, log_dir: str):
         if default_key not in config.keys():
             config[default_key] = default_value
 
+    if "choose_by" not in config["cross_validation_config"]:
+        config["cross_validation_config"]["choose_by"] = "loss"
+
     return config
 
 
