@@ -7,10 +7,8 @@ from collections import Counter
 from Bio.SeqRecord import SeqRecord
 from typing import Dict, Any, Tuple, Optional, List
 
-from .target_manager_utils import get_split_lists
-
 from ..utilities import get_attributes_from_seqrecords, get_attributes_from_seqrecords_for_protein_interactions, \
-    MASK_AND_LABELS_PAD_VALUE, read_FASTA, INTERACTION_INDICATOR, DatasetSample
+    get_split_lists, MASK_AND_LABELS_PAD_VALUE, read_FASTA, INTERACTION_INDICATOR, DatasetSample
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,8 @@ from .data_classes import Split, SplitResult, DatasetSample
 from .config import read_config_file, ConfigurationException
 from .constants import SEQUENCE_PAD_VALUE, MASK_AND_LABELS_PAD_VALUE, INTERACTION_INDICATOR, \
     METRICS_WITHOUT_REVERSED_SORTING
-from .FASTA import read_FASTA, get_attributes_from_seqrecords, get_attributes_from_seqrecords_for_protein_interactions
+from .FASTA import read_FASTA, get_attributes_from_seqrecords, \
+    get_attributes_from_seqrecords_for_protein_interactions, get_split_lists
 
 __all__ = [
     'seed_all',
@@ -16,6 +17,7 @@ __all__ = [
     'ConfigurationException',
     'get_attributes_from_seqrecords',
     'get_attributes_from_seqrecords_for_protein_interactions',
+    'get_split_lists',
     'SEQUENCE_PAD_VALUE',
     'MASK_AND_LABELS_PAD_VALUE',
     'INTERACTION_INDICATOR',
