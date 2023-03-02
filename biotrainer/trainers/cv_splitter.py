@@ -110,8 +110,9 @@ class CrossValidationSplitter:
         ys = [sample.target for sample in concat_dataset]
 
         split_base_name = "k_fold"
+        inner_or_outer_splits = "(inner split)" if not nested else "(outer splits)"
         if stratified:
-            logger.info(f"Splitting to stratified {k}-fold Cross Validation datasets")
+            logger.info(f"Splitting to stratified {k}-fold Cross Validation datasets {inner_or_outer_splits}")
             split_base_name += "-strat"
             if repeat > 1:
                 split_base_name += "-rep"
@@ -122,7 +123,7 @@ class CrossValidationSplitter:
             if "_value" in self._protocol:
                 ys = self._continuous_values_to_bins(ys)
         else:
-            logger.info(f"Splitting to {k}-fold Cross Validation datasets")
+            logger.info(f"Splitting to {k}-fold Cross Validation datasets {inner_or_outer_splits}")
             if repeat > 1:
                 split_base_name += "-rep"
                 kf = RepeatedKFold(n_splits=k, n_repeats=repeat)
