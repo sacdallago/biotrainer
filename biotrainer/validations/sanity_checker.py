@@ -173,7 +173,8 @@ class SanityChecker:
                                                         labels=torch.tensor(test_set_targets))
             logger.info(f"Bias Baseline for interactions: {bias_metrics}")
             logger.info(f"Dataset bias for interactions: {dataset_bias}")
-            return {"dataset_bias": dataset_bias, **bias_metrics}
+            return {"dataset_bias": {"bias": float(dataset_bias.statistic), "pvalue": float(dataset_bias.pvalue)},
+                    **bias_metrics}
 
 
 class SanityException(Exception):
