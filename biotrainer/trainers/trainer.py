@@ -17,11 +17,12 @@ from .embeddings import compute_embeddings, load_embeddings
 
 from ..losses import get_loss
 from ..optimizers import get_optimizer
-from ..models import count_parameters, get_model
+from ..validations import SanityChecker
 from ..solvers import get_solver, Solver
+from ..models import count_parameters, get_model
 from ..datasets import get_collate_function, get_dataset
-from ..utilities import seed_all, SanityChecker, Split, SplitResult, DatasetSample, METRICS_WITHOUT_REVERSED_SORTING, \
-    __version__
+from ..utilities import seed_all, Split, SplitResult, DatasetSample, METRICS_WITHOUT_REVERSED_SORTING, __version__
+
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +123,7 @@ class Trainer:
         test_loader = self._create_dataloader(dataset=test_dataset_embeddings, hyper_params=best_split.hyper_params)
         self._do_and_log_evaluation(best_split.solver, test_loader, target_manager)
 
-        # SANITY CHECKER TODO: Think about purpose and pros and cons, flags in config, tests..
+        # SANITY CHECKER
         sanity_checker = SanityChecker(output_vars=self._output_vars,
                                        train_val_dataset=train_dataset + val_dataset,
                                        test_dataset=test_dataset,

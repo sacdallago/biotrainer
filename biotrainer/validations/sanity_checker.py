@@ -4,13 +4,16 @@ from typing import Dict, List
 
 from scipy.stats import pearsonr
 
+from ..solvers import Solver
+from ..utilities import DatasetSample, INTERACTION_INDICATOR
+
 logger = logging.getLogger(__name__)
 
 
 class SanityChecker:
     def __init__(self, output_vars: Dict,
-                 train_val_dataset: List, test_dataset: List,
-                 solver,
+                 train_val_dataset: List[DatasetSample], test_dataset: List[DatasetSample],
+                 solver: Solver,
                  mode: str = "warn"):
         self.output_vars = output_vars
         self.train_val_dataset = train_val_dataset
@@ -130,8 +133,8 @@ class SanityChecker:
             negative_counts = {}
 
             for sample in (self.train_val_dataset + self.test_dataset):
-                interactor1 = sample.seq_id.split("&")[0]
-                interactor2 = sample.seq_id.split("&")[1]
+                interactor1 = sample.seq_id.split(INTERACTION_INDICATOR)[0]
+                interactor2 = sample.seq_id.split(INTERACTION_INDICATOR)[1]
                 for count_dict in [positive_counts, negative_counts]:
                     if interactor1 not in count_dict:
                         count_dict[interactor1] = 0
@@ -160,8 +163,8 @@ class SanityChecker:
             predictions = []
             test_set_targets = []
             for test_sample in self.test_dataset:
-                interactor1 = test_sample.seq_id.split("&")[0]
-                interactor2 = test_sample.seq_id.split("&")[1]
+                interactor1 = test_sample.seq_id.split(INTERACTION_INDICATOR)[0]
+                interactor2 = test_sample.seq_id.split(INTERACTION_INDICATOR)[1]
                 predictions.append(bias_predictor(interactor1, interactor2))
                 test_set_targets.append(test_sample.target)
 
