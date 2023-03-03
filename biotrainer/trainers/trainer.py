@@ -49,6 +49,7 @@ class Trainer:
                  limited_sample_size: int = -1,
                  cross_validation_config: Dict[str, Any] = None,
                  interaction: Optional[str] = None,
+                 sanity_check: bool = True,
                  # Ignore rest
                  **kwargs
                  ):
@@ -72,6 +73,7 @@ class Trainer:
         self._cross_validation_config = cross_validation_config
         self._cross_validation_splitter = CrossValidationSplitter(self._protocol, self._cross_validation_config)
         self._hp_manager = hp_manager
+        self._sanity_check = sanity_check
 
     def training_and_evaluation_routine(self):
         # SETUP
@@ -124,12 +126,13 @@ class Trainer:
         self._do_and_log_evaluation(best_split.solver, test_loader, target_manager)
 
         # SANITY CHECKER
-        sanity_checker = SanityChecker(output_vars=self._output_vars,
-                                       train_val_dataset=train_dataset + val_dataset,
-                                       test_dataset=test_dataset,
-                                       solver=best_split.solver,
-                                       mode="warn")
-        sanity_checker.check_test_results()
+        if self._sanity_check:
+            sanity_checker = SanityChecker(output_vars=self._output_vars,
+                                           train_val_dataset=train_dataset + val_dataset,
+                                           test_dataset=test_dataset,
+                                           solver=best_split.solver,
+                                           mode="warn")
+            sanity_checker.check_test_results()
 
         return self._output_vars
 

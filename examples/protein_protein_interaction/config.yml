@@ -11,5 +11,6 @@ batch_size: 64
 save_split_ids: True
 embedder_name: one_hot_encoding
 auto_resume: False
+sanity_check: True
 cross_validation_config:
   method: hold_out

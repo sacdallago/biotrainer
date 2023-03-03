@@ -14,10 +14,11 @@ class_str_to_int:
   F: 3
   V: 4
 cross_validation_config:
+  choose_by: loss
   method: hold_out
 device: cuda
 dropout_rate: 0.25
-elapsed_time_total: 2.562376295998547
+elapsed_time_total: 3.962203770000997
 embedder_name: one_hot_encoding
 embeddings_file: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/output/residue_to_class/one_hot_encoding/embeddings/embeddings_file.h5
 epsilon: 0.001
@@ -35,19 +36,20 @@ optimizer_choice: adam
 output_dir: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/output
 patience: 10
 protocol: residue_to_class
+sanity_check: true
 save_split_ids: false
 seed: 42
 sequence_file: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/sequences.fasta
 shuffle: true
 split_results:
   hold_out:
-    elapsed_time: 1.4386539299994183
-    end_time: 2023-01-21 21:11:46.992591
+    elapsed_time: 2.1898510430000897
+    end_time: 2023-03-03 09:55:58.685915
     n_free_parameters: 5861
     n_training_ids: 1
     n_validation_ids: 1
     split_hyper_params: {}
-    start_time: 2023-01-21 21:11:45.553933
+    start_time: 2023-03-03 09:55:56.496058
     training_iteration_result_best_epoch:
       epoch: 1
       training:
@@ -129,4 +131,5 @@ test_iterations_results:
     micro-precision: 0.0
     micro-recall: 0.0
     spearmans-corr-coeff: -0.14046210050582886
+  test_baselines: {}
 use_class_weights: true

@@ -49,6 +49,18 @@ A concrete output directory can be specified:
 output_dir: path/to/output_dir  # Default: path/to/config/output
 ```
 
+Biotrainer automatically performs sanity checks on your test results. The checks are handled by the 
+`validations` module. For example, a warning will be logged if the model predicts only one unique value for every
+entry in the test set. The module also automatically calculates baselines (e.g. predicting only `1` or `0` for all 
+entries in the test set) with the respective metrics for suitable protocols. All baselines are also stored in the
+output file.
+The behaviour is enabled by default but can be switched off:
+```yaml
+sanity_check: True | False  # Default: True
+```
+*Keep in mind that this can only be a first insight into the predictive capabilities of your model,
+no warnings in the logs do not imply that the results make (biological) sense!*
+
 ## Training data (protocol specific)
 
 Depending on the protocol that fits to your dataset, you have to provide different input files. For the data standards
