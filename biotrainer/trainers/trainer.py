@@ -118,12 +118,16 @@ class Trainer:
         best_split = self._get_best_model_of_splits(split_results)
 
         # TESTING
-        test_dataset = self._create_embeddings_dataset(test_dataset, mode="test")
-        test_loader = self._create_dataloader(dataset=test_dataset, hyper_params=best_split.hyper_params)
+        test_dataset_embeddings = self._create_embeddings_dataset(test_dataset, mode="test")
+        test_loader = self._create_dataloader(dataset=test_dataset_embeddings, hyper_params=best_split.hyper_params)
         self._do_and_log_evaluation(best_split.solver, test_loader, target_manager)
 
         # SANITY CHECKER TODO: Think about purpose and pros and cons, flags in config, tests..
-        sanity_checker = SanityChecker(output_vars=self._output_vars, mode="warn")
+        sanity_checker = SanityChecker(output_vars=self._output_vars,
+                                       train_val_dataset=train_dataset + val_dataset,
+                                       test_dataset=test_dataset,
+                                       solver=best_split.solver,
+                                       mode="warn")
         sanity_checker.check_test_results()
 
         return self._output_vars
