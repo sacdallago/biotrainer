@@ -121,7 +121,26 @@ class Inferencer:
     def from_embeddings_with_monte_carlo_dropout(self, embeddings: Union[Iterable, Dict],
                                                  split_name: str = "hold_out",
                                                  n_forward_passes: int = 30,
-                                                 confidence_level: float = 0.05):
+                                                 confidence_level: float = 0.05) -> Dict:
+        """
+        Calculate predictions by using Monte Carlo dropout.
+        Only works if the model has at least one dropout layer employed.
+        Method to quantify the uncertainty within the model.
+
+        :param embeddings: Iterable or dictionary containing the input embeddings to predict on.
+        :param split_name: Name of the split to use for prediction. Default is "hold_out".
+        :param n_forward_passes: Number of times to repeat the prediction calculation
+                                with different dropout nodes enabled.
+        :param confidence_level: Confidence level for the result confidence intervals. Default is 0.05,
+                                which corresponds to a 95% percentile.
+        :return: Dictionary containing the following values for each embedding:
+                 - 'prediction': Class or value prediction based on the mean over `n_forward_passes` forward passes.
+                 - 'mcd_mean': Average over `n_forward_passes` forward passes for each class.
+                 - 'mcd_lower_bound': Lower bound of the confidence interval using a normal distribution with the given
+                                      confidence level.
+                 - 'mcd_upper_bound': Upper bound of the confidence interval using a normal distribution with the given
+                                      confidence level.
+        """
 
         solver, dataloader = self._load_solver_and_dataloader(embeddings, split_name)
 
