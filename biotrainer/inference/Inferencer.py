@@ -130,11 +130,20 @@ class Inferencer:
                                                            confidence_level=confidence_level)["mapped_predictions"]
 
         # For class predictions, revert from int (model output) to str (class name)
-        for seq_id, prediction_dict in predictions.items():
-            prediction_dict["prediction"] = list(revert_mappings(protocol=self.protocol,
-                                                                 test_predictions={
-                                                                     seq_id: prediction_dict["prediction"]
-                                                                 },
-                                                                 class_int2str=self.class_int2str).values())[0]
+        if "residue_" in self.protocol:
+            for seq_id, prediction_list in predictions.items():
+                for prediction_dict in prediction_list:
+                    prediction_dict["prediction"] = list(revert_mappings(protocol=self.protocol,
+                                                                         test_predictions={
+                                                                             seq_id: prediction_dict["prediction"]
+                                                                         },
+                                                                         class_int2str=self.class_int2str).values())[0]
+        else:
+            for seq_id, prediction_dict in predictions.items():
+                prediction_dict["prediction"] = list(revert_mappings(protocol=self.protocol,
+                                                                     test_predictions={
+                                                                         seq_id: prediction_dict["prediction"]
+                                                                     },
+                                                                     class_int2str=self.class_int2str).values())[0]
 
         return predictions
