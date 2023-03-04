@@ -1,6 +1,6 @@
 # Biotrainer Changelog
 
-## 03.03.2023 - Version 0.3.0
+## 04.03.2023 - Version 0.3.0
 ### Features
 * **Interaction mode**: Embeddings from two proteins can now be either multiplied (element-wise) or concatenated 
 for protein-protein interaction prediction. This mode is not compatible with all protocols yet, 
