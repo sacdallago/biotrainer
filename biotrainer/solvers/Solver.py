@@ -175,13 +175,12 @@ class Solver(ABC):
                 self.network = self.network.eval()
                 enable_dropout(self.network)
                 dropout_iteration_result = self._prediction_iteration(x=X, lengths=lengths)
-                # TODO: Workaround, must be improved to apply to all protocols
-                dropout_iteration_result["logits"] = torch.softmax(dropout_iteration_result["logits"], dim=1)
                 dropout_iterations.append(dropout_iteration_result)
 
-            dropout_logits = torch.stack([dropout_iteration["logits"] for dropout_iteration in dropout_iterations],
-                                         dim=1)
-            dropout_std_dev, dropout_mean = torch.std_mean(dropout_logits, dim=1, unbiased=True)
+            dropout_raw_values = torch.stack([dropout_iteration["probabilities"]
+                                              for dropout_iteration in dropout_iterations], dim=1)
+
+            dropout_std_dev, dropout_mean = torch.std_mean(dropout_raw_values, dim=1, unbiased=True)
             z_score = norm.ppf(q=1 - (confidence_level / 2))
             confidence_range = z_score * dropout_std_dev / (n_forward_passes ** 0.5)
             _, prediction_by_mean = torch.max(dropout_mean, dim=1)
@@ -305,14 +304,25 @@ class Solver(ABC):
 
         return network_output
 
-    def _logits_to_predictions(self, logits: torch.Tensor) -> torch.Tensor:
+    def _logits_to_probabilities(self, logits: torch.Tensor) -> torch.Tensor:
         """
-        An optionable transform function which goes from logits to predictions (e.g. classes)
+        An optional transform function which goes from logits to probabilities (softmax)
+        Regression tasks simply ignore this step
 
         :param logits: The logits from the ML model employed
-        :return: A torch tensor of the transformed logits
+        :return: A torch tensor of the transformed logits (torch.softmax)
         """
         return logits
+
+    def _probabilities_to_predictions(self, probabilities: torch.Tensor) -> torch.Tensor:
+        """
+        An optional transform function which goes from logits or probabilities to predictions (e.g. classes)
+        Regression tasks simply ignore this step
+
+        :param probabilities: The probabilities from the transformed logits of the ML model employed
+        :return: A torch tensor of the discretised probabilities
+        """
+        return probabilities
 
     def _training_iteration(
             self, x: torch.Tensor, y: torch.Tensor, step=1, context: Optional[Callable] = None,
@@ -332,14 +342,16 @@ class Solver(ABC):
             if do_loss_propagation:
                 self.optimizer.zero_grad()
 
-            prediction = self.network(x)
+            logits = self.network(x)
 
             # Apply logit transformations before computing loss
-            prediction = self._transform_network_output(prediction)
-            loss = self.loss_function(prediction, y)
+            logits = self._transform_network_output(logits)
+            loss = self.loss_function(logits, y)
 
+            # Transform logits to probabilities if necessary
+            probabilities = self._logits_to_probabilities(logits)
             # Discretize predictions if necessary
-            prediction = self._logits_to_predictions(prediction)
+            prediction = self._probabilities_to_predictions(probabilities)
             metrics = self._compute_metrics(predicted=prediction, labels=y)
 
             if do_loss_propagation:
@@ -364,13 +376,15 @@ class Solver(ABC):
         with torch.no_grad():
             # Move everything on device
             x = x.to(self.device)
-            prediction_logits = self.network(x)
+            logits = self.network(x)
             # Apply transformations
-            prediction_logits = self._transform_network_output(prediction_logits)
+            logits = self._transform_network_output(logits)
+            # Transform logits to probabilities if necessary
+            probabilities = self._logits_to_probabilities(logits)
             # Discretize predictions if necessary
-            prediction = self._logits_to_predictions(prediction_logits)
+            prediction = self._probabilities_to_predictions(probabilities)
             return {"prediction": prediction.tolist(),
-                    "logits": prediction_logits}
+                    "probabilities": probabilities}
 
     @staticmethod
     def _compute_metric(metric: torchmetrics.Metric, predicted: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
