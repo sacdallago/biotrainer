@@ -80,6 +80,33 @@ number of residues.
 **For biotrainer to work with per-residue embeddings, there must be an exact 1:1 match 
 between number of residues and embeddings!**
 
+Here's an example of how to construct an `h5` file for a "per-sequence" dataset, you find more examples in [examples/custom_embeddings](examples/custom_embeddings):
+
+
+```
+import h5py
+
+per_sequence_embeddings_path = "/path/to/disk/file.h5"
+
+proteins = [
+  {
+    'id': "My fav sequence",
+    'embeddings': [4,3,2,4]
+    'sequence': 'SEQVENCE'
+  }
+]
+
+with h5py.File(per_sequence_embeddings_path, "w") as output_embeddings_file:
+    for i, protein in enumerate(proteins):
+        # Using f"S{i}" to avoid haing integer keys
+        output_embeddings_file.create_dataset(f"S{i}", data=protein['embeddings'])
+
+        # !!IMPORTANT:
+        # Don't use original sequence id as key in h5 file because h5 keys don't accept special characters
+        # re-assign the original id as an attribute to the dataset instead:
+        output_embeddings_file[f"S{i}"].attrs["original_id"] = protein['id']
+```
+
 ### Overview about the protocols
 
 ```text
