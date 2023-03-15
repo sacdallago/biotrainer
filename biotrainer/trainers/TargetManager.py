@@ -258,24 +258,34 @@ class TargetManager:
 
     def compute_class_weights(self) -> torch.FloatTensor:
         if 'class' in self.protocol:
-            # concatenate all labels irrespective of protein to count class sizes
+            training_targets = [self._id2target[training_id] for training_id in self.training_ids]
             if "residue_" in self.protocol:
-                counter = Counter(list(itertools.chain.from_iterable(
-                    [list(labels) for labels in self._id2target.values()]
-                )))
-            else:
-                counter = Counter([label.item() for label in self._id2target.values()])
+                # concatenate all targets irrespective of protein to count class sizes
+                training_targets = list(itertools.chain.
+                                        from_iterable([list(targets) for targets in training_targets]))
+                if self._mask_file:
+                    # Ignore unresolved residues for class weights
+                    training_targets = [target for target in training_targets if target != MASK_AND_LABELS_PAD_VALUE]
+
+                counter = Counter(training_targets)
+            else:  # Per-sequence
+                counter = Counter([target.item() for target in training_targets])
             # total number of samples in the set irrespective of classes
             n_samples = sum([counter[idx] for idx in range(len(self.class_str2int))])
+            n_classes = len(counter.keys())
             # balanced class weighting (inversely proportional to class size)
-            class_weights = [
-                (n_samples / (len(self.class_str2int) * counter[idx])) for idx in range(len(self.class_str2int))
-            ]
+            class_weights = [(n_samples / (n_classes * counter[idx])) if counter[idx] > 0 else 1
+                             for idx in range(len(self.class_str2int))]
 
             logger.info(f"Total number of sequences/residues: {n_samples}")
-            logger.info("Individual class counts and weights:")
-            for c in counter:
-                logger.info(f"\t{self.class_int2str[c]} : {counter[c]} ({class_weights[c]:.3f})")
+            logger.info("Individual class counts and weights (training set):")
+            for idx in range(len(self.class_str2int)):
+                logger.info(f"\t{self.class_int2str[idx]} : {counter[idx]} ({class_weights[idx]:.3f})")
+            if n_classes < len(self.class_str2int):
+                missing_classes = [self.class_int2str[idx] for idx in range(len(self.class_str2int))
+                                   if counter[idx] == 0]
+                logger.warning(f"The training set does not contain samples "
+                               f"for the following classes: {missing_classes}!")
             return torch.FloatTensor(class_weights)
         else:
             raise Exception(f"Class weights can only be calculated for classification tasks!")
