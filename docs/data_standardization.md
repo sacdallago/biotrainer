@@ -115,15 +115,15 @@ B=batch dimension (e.g. 30)
 L=sequence dimension (e.g. 350)
 C=number of classes (e.g. 13)
 
-- residue_to_class --> Predict a class C for each residue encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxLxC
-- residues_to_class --> Predict a class C for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxC
-- sequence_to_class --> Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output BxC
-- sequence_to_value --> Predict a value V for each sequence encoded in a fixed dimension D. Input BxD --> output BxV
+- residue_to_class --> Predict a class C for each residue encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxLx1
+- residues_to_class --> Predict a class C for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output Bx1
+- sequence_to_class --> Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output Bx1
+- sequence_to_value --> Predict a value V for each sequence encoded in a fixed dimension D. Input BxD --> output Bx1
 ```
 
 ### residue_to_class
 ```text
-Predict a class C for each residue encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxLxC
+Predict a class C for each residue encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxLx1
 ```
 
 You have an input protein sequence and want to predict 
@@ -146,7 +146,7 @@ DVCDVVDD
 
 ### residues_to_class
 ```text
-Predict a class C for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxC
+Predict a class C for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output Bx1
 ```
 
 You have an input protein sequence and want to predict a property for the whole sequence 
@@ -162,7 +162,7 @@ SEQWENCE
 
 ### sequence_to_class
 ```text
-Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output BxC
+Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output Bx1
 ```
 
 You have an input protein sequence and want to predict a property for the whole sequence
@@ -178,7 +178,7 @@ SEQWENCE
 
 ### sequence_to_value
 ```text
-Predict a value V for each sequence encoded in a fixed dimension D. Input BxD --> output BxV
+Predict a value V for each sequence encoded in a fixed dimension D. Input BxD --> output Bx1
 ```
 
 You have an input protein sequence and want to predict the value of a property for the whole sequence
