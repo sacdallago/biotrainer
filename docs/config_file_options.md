@@ -81,6 +81,8 @@ during training:
 ```yaml
 mask_file: path/to/mask.fasta
 ```
+The mask file must provide a value of `0` or `1` for each amino acid of every sequence. Unresolved residues are not
+included in class weight calculation.
 
 ## Embeddings
 
@@ -159,6 +161,8 @@ For classification tasks, the loss can also be calculated with class weights:
 ```yaml
 use_class_weights: True | False  # Default: False
 ```
+Class weights only take the training data into account for calculation. Masked residues, denoted in a mask file,
+are not included in class weight calculation as well.
 
 ## Training parameters
 
