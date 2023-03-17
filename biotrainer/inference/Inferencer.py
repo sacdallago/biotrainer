@@ -105,8 +105,24 @@ class Inferencer:
         return solver, dataloader
 
     def from_embeddings(self, embeddings: Union[Iterable, Dict], targets: Optional[Iterable] = None,
-                        split_name: str = "hold_out") -> Dict[str, Union[Dict, str, int, float]]:
+                        split_name: str = "hold_out",
+                        include_probabilities: bool = False) -> Dict[str, Union[Dict, str, int, float]]:
+        """
+        Calculate predictions from embeddings.
 
+        :param embeddings: Iterable or dictionary containing the input embeddings to predict on.
+        :param targets: Iterable that contains the targets to calculate metrics
+        :param split_name: Name of the split to use for prediction. Default is "hold_out".
+        :param include_probabilities: If True, the probabilities used to predict classes are also reported.
+                                      Is only useful for classification tasks, otherwise the "probabilities" are the
+                                      same as the predictions.
+        :return: Dictionary containing the following sub-dictionaries:
+                 - 'metrics': Calculated metrics if 'targets' are given, otherwise 'None'.
+                 - 'mapped_predictions': Class or value prediction from the given embeddings.
+                 - 'mapped_probabilities': Probabilities for classification tasks if include_probabilities is True.
+                 Predictions and probabilities are either 'mapped' to keys from an embeddings dict or indexes if
+                 embeddings are given as a list.
+        """
         solver, dataloader = self._load_solver_and_dataloader(embeddings, split_name, targets)
 
         inference_dict = solver.inference(dataloader, calculate_test_metrics=targets is not None)
@@ -116,7 +132,10 @@ class Inferencer:
         inference_dict["mapped_predictions"] = revert_mappings(protocol=self.protocol, test_predictions=predictions,
                                                                class_int2str=self.class_int2str)
 
-        return inference_dict
+        if include_probabilities:
+            return inference_dict
+        else:
+            return {**inference_dict["metrics"], **inference_dict["mapped_predictions"]}
 
     def from_embeddings_with_monte_carlo_dropout(self, embeddings: Union[Iterable, Dict],
                                                  split_name: str = "hold_out",
@@ -133,7 +152,8 @@ class Inferencer:
                                 with different dropout nodes enabled.
         :param confidence_level: Confidence level for the result confidence intervals. Default is 0.05,
                                 which corresponds to a 95% percentile.
-        :return: Dictionary containing the following values for each embedding:
+        :return: Dictionary containing with keys that will either be taken from the embeddings dict or
+         represent the indexes if embeddings are given as a list. Contains the following values for each key:
                  - 'prediction': Class or value prediction based on the mean over `n_forward_passes` forward passes.
                  - 'mcd_mean': Average over `n_forward_passes` forward passes for each class.
                  - 'mcd_lower_bound': Lower bound of the confidence interval using a normal distribution with the given

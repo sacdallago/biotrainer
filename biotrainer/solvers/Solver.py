@@ -120,6 +120,7 @@ class Solver(ABC):
 
         predict_iterations = list()
         mapped_predictions = dict()
+        mapped_probabilities = dict()
 
         for i, (seq_ids, X, y, lengths) in enumerate(dataloader):
             if calculate_test_metrics:  # For test set, y must be valid targets
@@ -134,13 +135,17 @@ class Solver(ABC):
             for idx, prediction in enumerate(iteration_result["prediction"]):
                 mapped_predictions[seq_ids[idx]] = prediction
 
+            for idx, probability in enumerate(iteration_result["probabilities"]):
+                mapped_probabilities[seq_ids[idx]] = probability
+
         metrics = None
         if calculate_test_metrics:
             metrics = {**Solver._aggregate_iteration_losses(predict_iterations), **self._compute_metrics()}
 
         return {
             'metrics': metrics,
-            'mapped_predictions': mapped_predictions
+            'mapped_predictions': mapped_predictions,
+            'mapped_probabilities': mapped_probabilities
         }
 
     def inference_monte_carlo_dropout(self, dataloader: DataLoader,
@@ -363,11 +368,10 @@ class Solver(ABC):
                 if self.log_writer:
                     self.log_writer.add_scalars("Step/train", metrics, step)
 
-            prediction = prediction.tolist()
-
             return {
                 'loss': loss.item(),
-                'prediction': prediction,
+                'prediction': prediction.tolist(),
+                'probabilities': probabilities
             }
 
     def _prediction_iteration(self, x: torch.Tensor, lengths: Optional[torch.LongTensor] = None) -> \
