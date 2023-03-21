@@ -23,7 +23,6 @@ from ..models import count_parameters, get_model
 from ..datasets import get_collate_function, get_dataset
 from ..utilities import seed_all, Split, SplitResult, DatasetSample, METRICS_WITHOUT_REVERSED_SORTING, __version__
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -421,7 +420,8 @@ class Trainer:
             test_results['mapped_predictions'] = revert_mappings(protocol=self._protocol,
                                                                  test_predictions=test_results['mapped_predictions'],
                                                                  class_int2str=target_manager.class_int2str)
-            self._output_vars['test_iterations_results'] = test_results
+            self._output_vars['test_iterations_results'] = {k: v for k, v in test_results.items()
+                                                            if k != "mapped_probabilities"}
         else:
             self._output_vars['test_iterations_results'] = {'metrics': test_results['metrics']}
 
