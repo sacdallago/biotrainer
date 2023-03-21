@@ -132,10 +132,10 @@ class Inferencer:
         inference_dict["mapped_predictions"] = revert_mappings(protocol=self.protocol, test_predictions=predictions,
                                                                class_int2str=self.class_int2str)
 
-        if include_probabilities:
-            return inference_dict
+        if not include_probabilities:
+            return {k: v for k, v in inference_dict.items() if k != "mapped_probabilities"}
         else:
-            return {**inference_dict["metrics"], **inference_dict["mapped_predictions"]}
+            return inference_dict
 
     def from_embeddings_with_monte_carlo_dropout(self, embeddings: Union[Iterable, Dict],
                                                  split_name: str = "hold_out",
