@@ -17,8 +17,8 @@ from ..models import get_model
 from ..solvers import get_solver
 from ..optimizers import get_optimizer
 from ..trainers import revert_mappings
-from ..utilities import get_device, DatasetSample
 from ..datasets import get_dataset, get_collate_function
+from ..utilities import get_device, seed_all, DatasetSample
 
 
 class Inferencer:
@@ -202,7 +202,8 @@ class Inferencer:
     def from_embeddings_with_monte_carlo_dropout(self, embeddings: Union[Iterable, Dict],
                                                  split_name: str = "hold_out",
                                                  n_forward_passes: int = 30,
-                                                 confidence_level: float = 0.05) -> Dict:
+                                                 confidence_level: float = 0.05,
+                                                 seed: int = 42) -> Dict:
         """
         Calculate predictions by using Monte Carlo dropout.
         Only works if the model has at least one dropout layer employed.
@@ -214,6 +215,8 @@ class Inferencer:
                                 with different dropout nodes enabled.
         :param confidence_level: Confidence level for the result confidence intervals. Default is 0.05,
                                 which corresponds to a 95% percentile.
+        :param seed: Seed to use for the dropout predictions
+
         :return: Dictionary containing with keys that will either be taken from the embeddings dict or
          represent the indexes if embeddings are given as a list. Contains the following values for each key:
                  - 'prediction': Class or value prediction based on the mean over `n_forward_passes` forward passes.
@@ -223,6 +226,9 @@ class Inferencer:
                  - 'mcd_upper_bound': Upper bound of the confidence interval using a normal distribution with the given
                                       confidence level.
         """
+
+        # Necessary because dropout layer have a random part by design
+        seed_all(seed)
 
         solver, dataloader = self._load_solver_and_dataloader(embeddings, split_name)
 

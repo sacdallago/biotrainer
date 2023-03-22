@@ -35,6 +35,7 @@ combination with the test set predictions in order to reproduce the splits creat
 * Removing `from_dict` function from Inferencer and moving its functionality to the `from_embeddings` function
 * Adding a `create_from_out_file` method to Inferencer to simplify the creation of an 
 Inferencer object from an out.yml file
+* Adding random seed to Inferencer method `from_embeddings_with_monte_carlo_dropout` to keep predictions reproducible 
 
 ### Bug fixes
 * **Fixing metrics calculation per epoch**: Previously, the mean over all batch results has been calculated, 
