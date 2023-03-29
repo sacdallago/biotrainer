@@ -4,6 +4,7 @@ import h5py
 import torch
 import shutil
 import logging
+import numpy as np
 
 from pathlib import Path
 from urllib import request
@@ -93,7 +94,7 @@ def load_embeddings(embeddings_file_path: str) -> Dict[str, Any]:
     embeddings_file = h5py.File(embeddings_file_path, 'r')
 
     # "original_id" from embeddings file -> Embedding
-    id2emb = {embeddings_file[idx].attrs["original_id"]: torch.tensor(embedding) for (idx, embedding) in
+    id2emb = {embeddings_file[idx].attrs["original_id"]: torch.tensor(np.array(embedding)) for (idx, embedding) in
               embeddings_file.items()}
 
     # Logging

@@ -1,12 +1,14 @@
 import torch
 
-from typing import Tuple
+from typing import Tuple, List
+
+from ..utilities import DatasetSample
 
 
 class __EmbeddingsDataset(torch.utils.data.Dataset):
-    def __init__(self, samples: dict):
+    def __init__(self, samples: List[DatasetSample]):
         self.ids, self.inputs, self.targets = zip(
-            *[(seq_id, inputs, targets) for seq_id, (inputs, targets) in samples.items()]
+            *[(sample.seq_id, sample.embedding, sample.target) for sample in samples]
         )
 
     def __len__(self):

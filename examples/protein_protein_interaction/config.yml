@@ -1,0 +1,16 @@
+sequence_file: interactions.fasta
+protocol: sequence_to_class
+interaction: multiply
+model_choice: DeeperFNN
+optimizer_choice: adam
+loss_choice: cross_entropy_loss
+num_epochs: 50
+use_class_weights: True
+learning_rate: 1e-3
+batch_size: 64
+save_split_ids: True
+embedder_name: one_hot_encoding
+auto_resume: False
+sanity_check: True
+cross_validation_config:
+  method: hold_out

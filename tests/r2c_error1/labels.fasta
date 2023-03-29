@@ -1,4 +1,0 @@
->Seq1 SET=train VALIDATION=False
-DVCDVVDD
->Seq2 SET=train VALIDATION=True
-DDDDDD

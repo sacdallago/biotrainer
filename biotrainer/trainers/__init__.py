@@ -1,10 +1,11 @@
+from .trainer import Trainer
+from .hp_manager import HyperParameterManager
 from .embeddings import download_embeddings
 from .target_manager_utils import revert_mappings
-from .trainer import training_and_evaluation_routine
-
 
 __all__ = [
-    'download_embeddings',
+    'Trainer',
     'revert_mappings',
-    'training_and_evaluation_routine',
+    'download_embeddings',
+    'HyperParameterManager',
 ]

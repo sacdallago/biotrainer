@@ -11,6 +11,14 @@ Choose a **protocol** that handles, how your provided data is interpreted:
 protocol: residue_to_class | residues_to_class | sequence_to_class | sequence_to_value
 ```
 
+To use interactions for your sequences, you need to indicate how embeddings of interacting sequences should be
+combined:
+```yaml
+interaction: multiply | concat  # Default: None
+```
+`multiply` does an element-wise multiplication of the two embeddings, so `torch.mul(emb1, emb2)`.
+`concat` concatenates both embeddings, so `torch.concat([emb1, emb2])`.
+
 The seed can also be changed (any positive integer):
 ```yaml
 seed: 1234  # Default: 42
@@ -21,10 +29,12 @@ You can also manually select a device for training:
 device: cpu | cuda  # Default: Uses cuda if cuda is available, otherwise cpu
 ```
 
-After all training is done, the model is evaluated on the test set. The predictions it makes can be stored in the
-output file. This behaviour is disabled by default, because the file can get very long for large datasets.
+The sequence ids associated with the generated or annotated splits can be saved in the output file.
+Furthermore, after all training is done, the (best) model is evaluated on the test set. 
+The predictions it makes are stored in the output file, if the following flag is set to `True`. 
+This behaviour is disabled by default, because the file can get very long for large datasets.
 ```yaml
-save_test_predictions: True | False  # Default: False
+save_split_ids: True | False  # Default: False
 ```
 
 Sometimes, your sequence or embeddings file might contain more or less sequences than your corresponding labels 
@@ -38,6 +48,18 @@ A concrete output directory can be specified:
 ```yaml
 output_dir: path/to/output_dir  # Default: path/to/config/output
 ```
+
+Biotrainer automatically performs sanity checks on your test results. The checks are handled by the 
+`validations` module. For example, a warning will be logged if the model predicts only one unique value for every
+entry in the test set. The module also automatically calculates baselines (e.g. predicting only `1` or `0` for all 
+entries in the test set) with the respective metrics for suitable protocols. All baselines are also stored in the
+output file.
+The behaviour is enabled by default but can be switched off:
+```yaml
+sanity_check: True | False  # Default: True
+```
+*Keep in mind that this can only be a first insight into the predictive capabilities of your model,
+no warnings in the logs do not imply that the results make (biological) sense!*
 
 ## Training data (protocol specific)
 
@@ -194,22 +216,126 @@ The dataloader can also shuffle the dataset on each epoch:
 shuffle: True | False  # Default: True
 ```
 
+## Cross Validation
+
+### Default
+
+By default, *biotrainer* will use the set annotations provided via the sequence annotations. Separating the 
+data this way into train, validation and test set is commonly known as **hold-out cross validation**.
+```yaml
+cross_validation_config:
+  method: hold_out  # Default: hold_out
+```
+This is the default option and specifying it in the config file is optional.
+
+Additionally, *biotrainer* supports a set of other cross validation methods, which can be configured in the 
+configuration file, as shown in the next sections. We assume knowledge of the methods and only provide the available
+configuration options.
+[This article](https://neptune.ai/blog/cross-validation-in-machine-learning-how-to-do-it-right) provides a more
+in-depth description of the implemented cross validation methods.
+
+### k-fold Cross Validation
+
+When using k-fold cross validation, sequences annotated with either "SET=train" or "VALIDATION=True" are combined
+to create the k splits. *Biotrainer* supports **repeated**, **stratified** and **nested** k-fold cross validation
+(and combinations of these techniques).
+```yaml
+cross_validation_config:
+  method: k_fold
+  k: 2  # k >= 2
+  stratified: True  # Default: False
+  repeat: 3  # Default: 1
+```
+The distribution of train to validation samples in the splits is `(k-1):1`, 
+so three times more train than validation samples for `k: 4`.
+
+The `stratified` option can also be used for regression tasks. In this case, the continuous values are converted
+to bins to calculate the stratified splits.
+
+To use **nested** k-fold cross validation, hyperparameters which should be optimized with the nested splits must
+be specified in the config file. This can be done by using lists explicitly, using pythonic list comprehensions
+or a range expression. The latter two have to be provided as string literals.
+The following example shows all three options:
+```yaml
+use_class_weights: [True, False]  # Explicit list
+learning_rate: "[10**-x for x in [2, 3, 4]]"  # List comprehension
+batch_size: "range(8, 132, 4)"  # Range expression
+```
+All parameters that change during training can be configured this way to be included in the hyperparameter optimization
+search. As search methods, **random search** and **grid search** have been implemented. 
+A complete nested k-fold cross validation config could look like this:
+```yaml
+cross_validation_config:
+  method: k_fold
+  k: 3  # k >= 2
+  stratified: True  # Default: False
+  repeat: 1  # Default: 1
+  nested: True
+  nested_k: 2  # nested_k >= 2
+  search_method: random_search
+  n_max_evaluations_random: 3  #  n_max_evaluations_random >= 2
+```
+
+Note that the total number of trained models will be `k * nested_k * n_max_evaluations_random` for random_search
+and `k * nested_k * len(possible_grid_combinations)`, so the training process can get very resource-heavy!
+
+Overview about all config options for k-fold cross validation:
+```yaml
+cross_validation_config:
+  method: k_fold
+  k: 5  # k >= 2
+  stratified: True | False # Default: False
+  repeat: 1  # repeat >= 1, Default: 1
+  nested: True | False  # Default: False
+  nested_k: 3  # nested_k >= 2, only nested
+  search_method: random_search | grid_search  # No default, but must be configured for nested k-fold cv, only nested
+  n_max_evaluations_random: 3  #  n_max_evaluations_random >= 2, only for random_search, only nested
+```
+
+### Leave-p-out Cross Validation
+
+This edge case of k-fold Cross Validation with (usually) very small validation sets is also implemented in
+*biotrainer*.
+Using it is quite simple:
+```yaml
+cross_validation_config:
+  method: leave_p_out
+  p: 5  # p >= 1
+```
+
+**Note that this might create a very high number of splits and is only recommended for small training and validation
+sets!**
+
+For both cross validation methods, you can also declare which metric to use to choose the best model
+(or the best hyperparameter combination for nested k-fold cross validation):
+```yaml
+cross_validation_config:
+  method: leave_p_out
+  choose_by: loss | accuracy | precision | recall | rmse | ... # Default: loss 
+  p: 5  # p >= 1
+```
+
 ## Special training modes
 
 On clusters for example, training can get interrupted for a numerous reasons. The implemented auto_resume mode 
 makes it possible to re-submit your job without changing anything in the configuration. It will automatically search
-for the latest available checkpoint at the default directory path. This behaviour is activated by default, but
-you can switch it off if necessary:
+for the latest available checkpoint at the default directory path. This behaviour is de-activated by default, but
+you can switch it on if necessary:
 ```yaml
 auto_resume: True | False  # Default: True
 ```
+This works for any cross validation method.
+**Due to randomness in the computation (especially when using GPU or random layers in the network like dropout),
+results might differ between originally trained checkpoints and resumed training!**
 
 If you are using an already pretrained model and want to continue to train it for more epochs, you can use the 
 following option:
 ```yaml
 pretrained_model: path/to/model_checkpoint.pt
 ```
-Biotrainer will now run until early stop was triggered, 
+**Note that `pretrained_model` only works in combination with `hold_out` cross validation!**
+
+*Biotrainer* will now run until early stop was triggered, 
 or `num_epochs - num_pretrained_epochs` (from the model state dict) is reached.
 
 **Note that `pretrained_model` and `auto_resume` options are incompatible.**
@@ -218,7 +344,7 @@ or `num_epochs - num_pretrained_epochs` (from the model state dict) is reached.
 
 
 Sometimes it might be useful to check your employed setup and architecture only on a small sub-sample of your 
-total dataset. This can also be automatically done for you in biotrainer:
+total dataset. This can also be automatically done for you in *biotrainer*:
 ```yaml
 limited_sample_size: 100  # Default: -1, must be > 0 to be applied
 ```

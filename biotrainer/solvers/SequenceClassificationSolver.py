@@ -6,8 +6,10 @@ from .ClassificationSolver import ClassificationSolver
 
 class SequenceClassificationSolver(ClassificationSolver, Solver):
 
-    def _logits_to_predictions(self, logits: torch.Tensor) -> torch.Tensor:
-        prediction_probabilities = torch.softmax(logits, dim=1)
-        _, predicted_classes = torch.max(prediction_probabilities, dim=1)
+    def _logits_to_probabilities(self, logits: torch.Tensor) -> torch.Tensor:
+        return torch.softmax(logits, dim=1)
+
+    def _probabilities_to_predictions(self, probabilities: torch.Tensor) -> torch.Tensor:
+        _, predicted_classes = torch.max(probabilities, dim=1)
 
         return predicted_classes
