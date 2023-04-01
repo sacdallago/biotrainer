@@ -1,14 +1,16 @@
 import os
+import shutil
 import logging
 
 from pathlib import Path
 from copy import deepcopy
+from urllib import request
 from urllib.parse import urlparse
 
 from .cuda_device import get_device
 from .config import validate_file, read_config_file, verify_config, write_config_file, add_default_values_to_config
 
-from ..trainers import download_embeddings, Trainer, HyperParameterManager
+from ..trainers import Trainer, HyperParameterManager
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,25 @@ def _setup_logging(output_dir: str):
                         )
     # Jax likes to print warnings
     logging.captureWarnings(True)
+
+
+def _download_file(url: str, script_path: str, key_name: str) -> str:
+    try:
+        logger.info(f"Trying to download {key_name} from {url}")
+        req = request.Request(url, headers={
+            'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"
+        })
+
+        file_name = url.split("/")[-1]
+        save_path = script_path + "/downloaded_" + file_name
+        with request.urlopen(req) as response, open(save_path, 'wb') as outfile:
+            if response.status == 200:
+                logger.info(f"OK - Downloading file {key_name} (size: {response.length / pow(2, 20)} MB)..")
+            shutil.copyfileobj(response, outfile)
+        logger.info(f"{key_name} successfully downloaded and stored at {save_path}.")
+        return save_path
+    except Exception as e:
+        raise Exception(f"Could not download {key_name} from url {url}") from e
 
 
 def parse_config_file_and_execute_run(config_file_path: str):
@@ -54,22 +75,17 @@ def parse_config_file_and_execute_run(config_file_path: str):
     # Verify config by protocol and check cross validation config
     verify_config(config, __PROTOCOLS)
 
-    # Make input file paths absolute
-    if "labels_file" in config.keys():
-        config["labels_file"] = str(input_file_path / config["labels_file"])
-    if "sequence_file" in config.keys():
-        config["sequence_file"] = str(input_file_path / config["sequence_file"])
-    if "mask_file" in config.keys():
-        config["mask_file"] = str(input_file_path / config["mask_file"])
-    if "embeddings_file" in config.keys():
-        embeddings_file = config["embeddings_file"]
-        if urlparse(embeddings_file).scheme in ["http", "https", "ftp"]:
-            embeddings_file = download_embeddings(url=config["embeddings_file"], script_path=str(input_file_path))
+    # Make input file paths absolute, download files if necessary
+    input_file_keys = ["sequence_file", "labels_file", "mask_file", "embeddings_file", "pretrained_model"]
+    for input_file_key in input_file_keys:
+        if input_file_key in config.keys():
+            if urlparse(config[input_file_key]).scheme in ["http", "https", "ftp"]:
+                save_path = _download_file(url=config[input_file_key], script_path=str(input_file_path),
+                                           key_name=input_file_key)
+                config[input_file_key] = save_path
+            config[input_file_key] = str(input_file_path / config[input_file_key])
 
-        config["embeddings_file"] = str(input_file_path / embeddings_file)
-        config["embedder_name"] = "custom_embeddings"
     if "pretrained_model" in config.keys():
-        config["pretrained_model"] = str(input_file_path / config["pretrained_model"])
         logger.info(f"Using pre_trained model: {config['pretrained_model']}")
 
     # Create log directory (if necessary)

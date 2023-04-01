@@ -2,12 +2,10 @@ import os
 import time
 import h5py
 import torch
-import shutil
 import logging
 import numpy as np
 
 from pathlib import Path
-from urllib import request
 from typing import Dict, Any
 
 from ..utilities import ConfigurationException
@@ -22,23 +20,6 @@ _REQUIRES_REDUCED_EMBEDDINGS = {
 }
 
 logger = logging.getLogger(__name__)
-
-
-def download_embeddings(url: str, script_path: str) -> str:
-    try:
-        logger.info(f"Trying to download embeddings from {url}")
-        req = request.Request(url, headers={
-            'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"
-        })
-
-        file_name = url.split("/")[-1]
-        save_path = script_path + "/downloaded_" + file_name
-        with request.urlopen(req) as response, open(save_path, 'wb') as outfile:
-            shutil.copyfileobj(response, outfile)
-        logger.info(f"Embeddings file successfully downloaded and stored at {save_path}.")
-        return save_path
-    except Exception as e:
-        raise Exception(f"Could not download embeddings from url {url}") from e
 
 
 def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:
