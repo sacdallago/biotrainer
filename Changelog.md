@@ -1,6 +1,6 @@
 # Biotrainer Changelog
 
-## DATE - Version 0.3.1
+## 03.04.2023 - Version 0.3.1
 ### Bug fixes
 * Fixing that using class weights for `residue_to_class` protocols did not work when providing a mask file.
 **Class weights are now only calculated for the training dataset and for resolved residues (residue_to_x)!**
