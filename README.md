@@ -138,5 +138,12 @@ Output can be found afterwards in the directory of the provided configuration fi
 If you are using *biotrainer* for your work, please add a citation:
 
 ```text
-Sanchez, J. G., Franz, S., Heinzinger, M., Rost, B., & Dallago, C. Standards, tooling and benchmarks to probe representation learning on proteins. In NeurIPS 2022 Workshop on Learning Meaningful Representations of Life.
+@inproceedings{
+sanchez2022standards,
+title={Standards, tooling and benchmarks to probe representation learning on proteins},
+author={Joaquin Gomez Sanchez and Sebastian Franz and Michael Heinzinger and Burkhard Rost and Christian Dallago},
+booktitle={NeurIPS 2022 Workshop on Learning Meaningful Representations of Life},
+year={2022},
+url={https://openreview.net/forum?id=adODyN-eeJ8}
+}
 ```
