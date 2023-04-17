@@ -70,12 +70,12 @@ class ESM2Embedder(CustomEmbedder):
                     embeddings_dict[label] = per_protein_embedding
                 else:
                     embeddings_dict[label] = embedding.squeeze()
-        
+
         with h5py.File(output_path, "w") as embeddings_file:
             idx = 0
             for seq_id, embedding in embeddings_dict.items():
                 embeddings_file.create_dataset(str(idx), data=embedding, compression="gzip", chunks=True)
                 embeddings_file[str(idx)].attrs["original_id"] = seq_id  # Follows biotrainer & bio_embeddings standard
                 idx += 1
-        
+
         return output_path

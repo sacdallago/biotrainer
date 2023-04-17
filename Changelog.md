@@ -1,5 +1,10 @@
 # Biotrainer Changelog
 
+## 17.04.2023 - Version 0.4.0
+### Features
+* Adding `CustomEmbedder`: It is now possible to use language models (embedders) that are not included in bio_embeddings
+directly in *biotrainer*. See `examples/custom_embedder` for more information and hands-on instructions.
+
 ## 03.04.2023 - Version 0.3.1
 ### Bug fixes
 * Fixing that using class weights for `residue_to_class` protocols did not work when providing a mask file.

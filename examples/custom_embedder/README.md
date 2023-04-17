@@ -12,6 +12,15 @@ Requires the ankh package:
 pip install ankh
 ```
 
+2. [ESM-2](https://github.com/facebookresearch/esm) large model from
+Lin et al. 2022: Language models of protein sequences at the scale of evolution enable accurate structure prediction
+(https://www.biorxiv.org/content/10.1101/2022.07.20.500902v1).
+
+Requires the esm package:
+```bash
+pip install fair-esm
+```
+
 All models need to inherit the following class from `biotrainer.trainers.custom_embedder.py`:
 ```python
 from abc import abstractmethod, ABC
