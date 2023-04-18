@@ -1,3 +1,4 @@
+import torch
 import inspect
 
 from .CNN import CNN
@@ -31,15 +32,16 @@ __MODELS = {
 
 def get_model(protocol: str, model_choice: str, n_classes: int, n_features: int,
               **kwargs):
-    model = __MODELS.get(protocol).get(model_choice)
+    model_class = __MODELS.get(protocol).get(model_choice)
 
-    if not model:
+    if not model_class:
         raise NotImplementedError
     else:
-        if "dropout_rate" in kwargs.keys() and "dropout_rate" not in inspect.signature(model).parameters:
+        if "dropout_rate" in kwargs.keys() and "dropout_rate" not in inspect.signature(model_class).parameters:
             raise NotImplementedError(f"dropout_rate not implemented for model_choice {model_choice}")
 
-        return model(n_classes=n_classes, n_features=n_features, **kwargs)
+        model = model_class(n_classes=n_classes, n_features=n_features, **kwargs)
+        return torch.compile(model, disable=True)  # Disabled - compile() does not seem to be fully production-ready
 
 
 def get_all_available_models():
