@@ -5,6 +5,13 @@
 * Adding `CustomEmbedder`: It is now possible to use language models (embedders) that are not included in bio_embeddings
 directly in *biotrainer*. See `examples/custom_embedder` for more information and hands-on instructions.
 
+### Maintenance
+* Updating dependencies. Enabled setup for the `torch.compile()` function of PyTorch 2.0. It is disabled for now
+because it does not seem to be fully compatible with all our setups and models yet.
+
+### Bug fixes
+* Fixed logging and creation point of `log_dir` in `executer.py`
+
 ## 03.04.2023 - Version 0.3.1
 ### Bug fixes
 * Fixing that using class weights for `residue_to_class` protocols did not work when providing a mask file.
