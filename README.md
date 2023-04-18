@@ -86,7 +86,7 @@ as described in the [configuration options](docs/config_file_options.md#embeddin
 
 1. Make sure you have [poetry](https://python-poetry.org/) installed: 
 ```bash
-curl -sSL https://install.python-poetry.org/ | python3 - --version 1.1.13
+curl -sSL https://install.python-poetry.org/ | python3 - --version 1.4.2
 ```
 
 2. Install dependencies and biotrainer via `poetry`:
