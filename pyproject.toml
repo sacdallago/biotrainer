@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "biotrainer"
-version = "0.3.1"
+version = "0.4.0"
 description = "Biotrainers for embeddings"
 authors = [
     "Christian Dallago <christian.dallago@tum.de>",
@@ -30,28 +30,28 @@ issues = "https://github.com/sacdallago/biotrainer/issues"
 repository = "https://github.com/sacdallago/biotrainer"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.10"
+python = ">=3.9,<3.10"
 
-biopython = ">=1.79,<2.0"
-matplotlib = ">=3.2.1,<4.0.0"
-h5py = ">=3.2.1,<4.0.0"
-numpy = "^1.23.5"
-plotly = ">=5.1.0,<6.0.0"
-protobuf = "^3.20.3"  # Latest version (4.21.1) conflicts with tensorboard writer
+biopython = ">=1.81,<2.0"
+matplotlib = ">=3.7.1,<4.0.0"
+h5py = ">=3.8.0,<4.0.0"
+numpy = "1.23.5"  # Latest version (1.24.2) incompatible with numba
+plotly = ">=5.14.1,<6.0.0"
+protobuf = "^4.22.3"  # Latest version (4.21.1) conflicts with tensorboard writer
 pyyaml = "6.0"
 "ruamel.yaml" = ">=0.17.10,<0.18.0"
-scipy = ">=1.4.1,<2.0.0"
-tensorboard = "^2.11.0"
-torch = "^1.13.0"
-tqdm = ">=4.45.0,<5.0.0"
-torchmetrics = "^0.11.0"
+scipy = ">=1.10.1,<2.0.0"
+tensorboard = "^2.12.2"
+torch = "^2.0.0"
+tqdm = ">=4.65.0,<5.0.0"
+torchmetrics = "^0.11.4"
 
 # Optional
 bio-embeddings = { git = "https://github.com/SebieF/bio_embeddings.git", branch = "biotrainer-compatible", optional = true, extras = ["all"] }
 jupyter = { version = "^1.0.0", optional = true }
 
 [tool.poetry.dev-dependencies]
-pytest = "7.2.0"
+pytest = "7.3.1"
 
 [tool.poetry.extras]
 bio-embeddings = ["bio-embeddings"]
