@@ -30,7 +30,7 @@ issues = "https://github.com/sacdallago/biotrainer/issues"
 repository = "https://github.com/sacdallago/biotrainer"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.10"
+python = ">=3.9,<3.11"
 
 biopython = ">=1.81,<2.0"
 matplotlib = ">=3.7.1,<4.0.0"
@@ -41,6 +41,7 @@ protobuf = "^4.22.3"  # Latest version (4.21.1) conflicts with tensorboard write
 pyyaml = "6.0"
 "ruamel.yaml" = ">=0.17.10,<0.18.0"
 scipy = ">=1.10.1,<2.0.0"
+scikit-learn = "^1.2.2"
 tensorboard = "^2.12.2"
 torch = "^2.0.0"
 tqdm = ">=4.65.0,<5.0.0"
