@@ -91,7 +91,7 @@ def validate_file(file_path: str):
         raise ConfigurationException(f"The configuration file at '{file_path}' does not exist") from e
 
 
-def add_default_values_to_config(config: dict, output_dir: str, log_dir: str):
+def add_default_values_to_config(config: dict, output_dir: str):
     default_values = {
         "auto_resume": False,
         "num_epochs": 200,
@@ -106,7 +106,6 @@ def add_default_values_to_config(config: dict, output_dir: str, log_dir: str):
         "save_split_ids": False,
         "sanity_check": True,
         "output_dir": output_dir,
-        "log_dir": log_dir,
         "cross_validation_config": {"method": "hold_out", "choose_by": "loss"}
     }
     for default_key, default_value in default_values.items():
