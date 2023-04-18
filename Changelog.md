@@ -1,13 +1,16 @@
 # Biotrainer Changelog
 
-## 17.04.2023 - Version 0.4.0
+## 18.04.2023 - Version 0.4.0
 ### Features
 * Adding `CustomEmbedder`: It is now possible to use language models (embedders) that are not included in bio_embeddings
 directly in *biotrainer*. See `examples/custom_embedder` for more information and hands-on instructions.
+**This might introduce a security risk when running biotrainer as a remote service. Downloading of any custom_embedder
+source file during execution is therefore disabled.** 
 
 ### Maintenance
 * Updating dependencies. Enabled setup for the `torch.compile()` function of PyTorch 2.0. It is disabled for now
 because it does not seem to be fully compatible with all our setups and models yet.
+* Updating Dockerfile. Does now no longer include `bio_embeddings` by default. The docker example was adjusted.
 
 ### Bug fixes
 * Fixed logging and creation point of `log_dir` in `executer.py`
