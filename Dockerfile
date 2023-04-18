@@ -1,27 +1,27 @@
 # This location of python in venv-build needs to match the location in the runtime image,
 # so we're manually installing the required python environment
-FROM ubuntu:20.04 as venv-build
+FROM ubuntu:22.04 as venv-build
 
 # build-essential is for jsonnet
 RUN apt-get update && \
     apt-get install -y curl build-essential python3 python3-pip python3-distutils python3-venv python3-dev python3-virtualenv git && \
-    curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python3 - --version 1.1.13
+    curl -sSL https://install.python-poetry.org/ | python3 - --version 1.4.2
 
 COPY pyproject.toml /app/pyproject.toml
 COPY poetry.lock /app/poetry.lock
 WORKDIR /app
 
 RUN python3 -m venv .venv && \
-    # Install a recent version of pip, otherwise the installation of manylinux2010 packages will fail
+    # Install a recent version of pip, otherwise the installation of many linux2010 packages will fail
     .venv/bin/pip install -U pip && \
     # Make sure poetry install the metadata for biotrainer
     mkdir biotrainer && \
     touch biotrainer/__init__.py && \
     touch README.md && \
     $HOME/.local/bin/poetry config virtualenvs.in-project true && \
-    $HOME/.local/bin/poetry install --no-dev --extras "bio-embeddings"
+    $HOME/.local/bin/poetry install --no-dev
 
-FROM nvidia/cuda:11.4.3-runtime-ubuntu20.04
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
 ENV PYTHONUNBUFFERED=1
 
@@ -42,4 +42,3 @@ COPY . /app/
 WORKDIR /app
 
 ENTRYPOINT ["/app/.venv/bin/python", "-m", "biotrainer.utilities.cli"]
-
