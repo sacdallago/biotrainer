@@ -90,12 +90,6 @@ def parse_config_file_and_execute_run(config_file_path: str):
     if "pretrained_model" in config.keys():
         logger.info(f"Using pre_trained model: {config['pretrained_model']}")
 
-    # Create log directory (if necessary)
-    log_dir = output_dir / config["model_choice"] / config["embedder_name"]
-    if not log_dir.is_dir():
-        logger.info(f"Creating log-directory: {log_dir}")
-        log_dir.mkdir(parents=True)
-
     # Check for a custom embedder script
     if "embedder_name" in config.keys():
         if ".py" in config["embedder_name"]:
@@ -105,7 +99,14 @@ def parse_config_file_and_execute_run(config_file_path: str):
             config["embedder_name"] = str(input_file_path / config["embedder_name"])
 
     # Add default hyper_parameters to config if not defined by user
-    config = add_default_values_to_config(config, output_dir=str(output_dir), log_dir=str(log_dir))
+    config = add_default_values_to_config(config, output_dir=str(output_dir))
+
+    # Create log directory (if necessary)
+    log_dir = output_dir / config["model_choice"] / config["embedder_name"]
+    if not log_dir.is_dir():
+        logger.info(f"Creating log-directory: {log_dir}")
+        log_dir.mkdir(parents=True)
+    config["log_dir"] = log_dir
 
     # Get device once at the beginning
     device = get_device(config["device"] if "device" in config.keys() else None)
