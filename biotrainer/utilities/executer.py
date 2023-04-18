@@ -1,6 +1,7 @@
 import os
 import shutil
 import logging
+import torch._dynamo as dynamo
 
 from pathlib import Path
 from copy import deepcopy
@@ -29,8 +30,9 @@ def _setup_logging(output_dir: str):
                             logging.FileHandler(output_dir + "/logger_out.log"),
                             logging.StreamHandler()]
                         )
-    # Jax likes to print warnings
     logging.captureWarnings(True)
+    # Suppress info logging from TorchDynamo (torch.compile(model)) with logging.ERROR
+    dynamo.config.log_level = logging.INFO
 
 
 def _download_file(url: str, script_path: str, key_name: str) -> str:
