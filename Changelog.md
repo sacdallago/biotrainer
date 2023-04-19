@@ -11,6 +11,7 @@ source file during execution is therefore disabled.**
 * Updating dependencies. Enabled setup for the `torch.compile()` function of PyTorch 2.0. It is disabled for now
 because it does not seem to be fully compatible with all our setups and models yet.
 * Updating Dockerfile. Does now no longer include `bio_embeddings` by default. The docker example was adjusted.
+* Adding `adam` as default `optimizer_choice` in `config.py`.
 
 ### Bug fixes
 * Fixed logging and creation point of `log_dir` in `executer.py`
