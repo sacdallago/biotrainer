@@ -16,6 +16,11 @@ Thus, our problem belongs to the [residue_to_class protocol](data_standardizatio
 
 ## Installation of biotrainer
 
+We are using poetry for this tutorial, please install it if you haven't already:
+```bash
+curl -sSL https://install.python-poetry.org/ | python3 - --version 1.4.2
+```
+
 Make sure that you have *biotrainer* [installed](../README.md#installation) with *extra* `bio-embeddings`:
 ```bash
 poetry install --extras "bio-embeddings"
@@ -27,14 +32,18 @@ Next, we need to download our dataset. The conservation dataset we use is includ
 [FLIP repository](https://github.com/J-SNACKKB/FLIP), which contains multiple standardized datasets and benchmarks 
 for relevant protein engineering and prediction tasks. In the repository, select 
 [splits -> conservation](https://github.com/J-SNACKKB/FLIP/tree/main/splits/conservation) 
-and download the *splits.zip* file.
-Create a new directory in your biotrainer folder and extract the zip file there. 
+and download the *splits.zip* file. 
+Create a new directory in your biotrainer folder and move the files from the zip there.
+Alternatively, you can download the files directly via the links below.
+
 You should now have access to two files: 
-1. **sequences.fasta**: This file contains the sequence id, e.g. `3p6z-C` and the amino acid sequence.
+1. [sequences.fasta](http://data.bioembeddings.com/public/FLIP/fasta/conservation/sequences.fasta): 
+This file contains the sequence id, e.g. `3p6z-C` and the amino acid sequence.
 By using the sequence id, you can look up your protein at [PDB](https://www.rcsb.org/structure/3P6Z) for example.
 The letter after the dash indicates the 
 [chain](https://biology.stackexchange.com/questions/37495/what-is-chain-identifier-in-pdb).
-2. **sampled.fasta**: This is our labels file, which contains the conservation scores for each residue in the amino
+2. [sampled.fasta](http://data.bioembeddings.com/public/FLIP/fasta/conservation/sampled.fasta): 
+This is our labels file, which contains the conservation scores for each residue in the amino
 acid sequences. Of course, the corresponding sequence ids have to match here. Additionally, it also includes
 the dataset annotations, which divide the sequences into `train/validation/test` sets. As the name of the file suggests,
 splits have been generated randomly, with a distribution of about 90% train, 5% validation, 5% test.
@@ -46,17 +55,18 @@ Now that we have the dataset files ready, we need to specify a config file in `.
 Create and save the following file in the directory you created before:
 ```yaml
 # config.yml
-sequence_file: splits/sequences.fasta
-labels_file: splits/sampled.fasta
+sequence_file: sequences.fasta
+labels_file: sampled.fasta
 protocol: residue_to_class
 model_choice: CNN
 optimizer_choice: adam
+learning_rate: 1e-3
 loss_choice: cross_entropy_loss
 num_epochs: 30
-use_class_weights: True
-learning_rate: 1e-3
 batch_size: 128
 ignore_file_inconsistencies: True
+cross_validation_config:
+  method: hold_out
 embedder_name: one_hot_encoding
 ```
 
@@ -82,7 +92,7 @@ file in an *output* subdirectory in the folder of your config file.
 ## Where to go from here
 
 Congratulations, you finished your first run of *biotrainer*!
-In our test run, we got an accuracy of about 0.19 on the test set. We are confident that you could improve that
+In our test run, we got an accuracy of about 0.20 on the test set. We are confident that you could improve that
 result by using different model and training parameters or a more sophisticated embedding method!
 
 Of course, you can now start to use *biotrainer* on your own protein data. Or you could employ your own embedder
