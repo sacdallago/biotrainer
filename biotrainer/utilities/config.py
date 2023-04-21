@@ -9,7 +9,7 @@ from ruamel import yaml
 from ruamel.yaml import YAMLError
 from ruamel.yaml.comments import CommentedBase
 
-from ..models import get_all_available_models
+from ..models import get_available_models_dict
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ def add_default_values_to_config(config: dict, output_dir: str):
         "shuffle": True,
         "seed": 42,
         "patience": 10,
-        "epsilon": 0.001,
+        "epsilon": 1e-3,
         "learning_rate": 1e-3,
         "save_split_ids": False,
         "sanity_check": True,
@@ -152,7 +152,7 @@ def verify_config(config: dict, protocols: set):
 
     # Check model for protocol
     model = config["model_choice"]
-    if model not in get_all_available_models().get(protocol):
+    if model not in get_available_models_dict().get(protocol):
         raise ConfigurationException("Model " + model + " not available for protocol: " + protocol)
 
     # Check pretraining
