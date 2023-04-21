@@ -96,7 +96,19 @@ embedding methods.
 A list of all current embedding config options can be found, for example, 
 [in this file](https://github.com/sacdallago/bio_embeddings/blob/efb9801f0de9b9d51d19b741088763a7d2d0c3a2/bio_embeddings/embed/pipeline.py#L253). 
 
-It is, furthermore, also possible to provide a custom embeddings file in h5 format (take a look at the 
+If you want to use your own embedder directly in biotrainer, you can provide it as a python script. 
+You only need to extend the `CustomEmbedder` class from the `trainers` module. Please take a look at the
+example implementations of `ankh` and `esm-2` in the [custom_embedder example](../examples/custom_embedder/).
+Then, use the `embedder_name` option to declare the path to your script:
+```yaml
+embedder_name: your_script.py  # The script path must be relative to the configuration file.
+```
+**Security measures are in place to prevent arbitrary code from execution. 
+Still, this might introduce a security risk when running biotrainer as a remote service. 
+Downloading of any custom_embedder source file during execution is therefore disabled. Please only run scripts
+from sources you trust.** 
+
+It is also possible to provide a custom embeddings file in h5 format (take a look at the 
 [examples folder](../examples/custom_embeddings/) for more information). Please also have a look at the 
 [data standardization](data_standardization.md#embeddings) for the specification requirements of your embeddings.
 
