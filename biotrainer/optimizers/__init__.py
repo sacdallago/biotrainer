@@ -1,8 +1,7 @@
-from typing import Set, Dict, Any
-
 import torch
 
-from biotrainer.config import Protocols
+from typing import Set, Dict, Any
+from ..protocols import Protocols
 
 __OPTIMIZERS = {
     Protocols.residue_to_class: {

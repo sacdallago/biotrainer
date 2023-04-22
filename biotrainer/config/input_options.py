@@ -1,7 +1,7 @@
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption, FileOption
-from .protocols import Protocols
+from ..protocols import Protocols
 
 
 class SequenceFile(FileOption):
@@ -72,3 +72,6 @@ class MaskFile(FileOption):
 
     def allowed_protocols(self) -> List[Protocols]:
         return [Protocols.residue_to_class]
+
+
+input_options: List = [SequenceFile, LabelsFile, MaskFile]

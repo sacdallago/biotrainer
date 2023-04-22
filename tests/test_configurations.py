@@ -3,8 +3,14 @@ import unittest
 from ruamel import yaml
 from biotrainer.utilities import config
 from biotrainer.utilities.executer import __PROTOCOLS as PROTOCOLS
+from biotrainer.config import Configurator
 
 configurations = {
+    "prohibited": {
+        "sequence_file": "dummy_seq.fasta",
+        "labels_file": "dummy_labels.fasta",
+        "protocol": "sequence_to_class"
+    },
     "minimal": {
         "sequence_file": "dummy.fasta",
         "protocol": "sequence_to_class",
@@ -32,6 +38,9 @@ configurations = {
 
 
 class ConfigurationVerificationTests(unittest.TestCase):
+
+    def test_prohibited(self):
+        configurator = Configurator.from_config_dict(configurations["prohibited"])
 
     def test_minimal_configuration(self):
         config_dict = config.parse_config(yaml.dump(configurations["minimal"]))

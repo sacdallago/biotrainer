@@ -1,14 +1,14 @@
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption
-from .protocols import Protocols
+from ..protocols import Protocols
 
 
 class ProtocolOption(ConfigOption):
 
     @property
     def name(self) -> str:
-        return "protocol_option"
+        return "protocol"
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
@@ -111,3 +111,6 @@ class IgnoreFileInconsistencies(ConfigOption):
 
     def is_value_valid(self, value: Any) -> bool:
         return value in [True, False]
+
+
+general_options: List = [ProtocolOption, Interaction, Seed, SaveSplitIds, SanityCheck, IgnoreFileInconsistencies]

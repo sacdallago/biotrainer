@@ -3,7 +3,7 @@ from typing import List, Type, Any, Union
 from bio_embeddings.embed import __all__ as bio_embedders
 
 from .config_option import ConfigOption, FileOption
-from .protocols import Protocols
+from ..protocols import Protocols
 
 
 class EmbedderName(FileOption):
@@ -55,3 +55,6 @@ class EmbeddingsFile(FileOption):
 
     def allow_download(self) -> bool:
         return True
+
+
+embedding_options: List = [EmbedderName, EmbeddingsFile]

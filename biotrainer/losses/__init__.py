@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from typing import Optional, Union, Dict, Any, Set
 
-from ..config import Protocols
+from ..protocols import Protocols
 from ..utilities import MASK_AND_LABELS_PAD_VALUE
 
 __LOSSES = {

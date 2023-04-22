@@ -3,7 +3,7 @@ import typing
 from typing import List, Union, Any, Type
 from abc import ABC, abstractmethod
 
-from .protocols import Protocols
+from ..protocols import Protocols
 
 
 class ConfigurationException(Exception):
@@ -19,18 +19,18 @@ class ConfigOption(ABC):
     def __init__(self, protocol: Protocols):
         self._protocol = protocol
 
-    @abstractmethod
     @property
+    @abstractmethod
     def name(self) -> str:
         return "config_option"
 
-    @abstractmethod
     @property
+    @abstractmethod
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "config_option"
 
-    @abstractmethod
     @property
+    @abstractmethod
     def possible_types(self) -> List[Type]:
         return [Any]
 
@@ -42,27 +42,27 @@ class ConfigOption(ABC):
     def allowed_protocols(self) -> List[Protocols]:
         return Protocols.all()
 
-    @property
-    def allow_download(self) -> bool:
-        return False
-
 
 class FileOption(ConfigOption, ABC):
 
-    @abstractmethod
     @property
+    @abstractmethod
     def name(self) -> str:
         return "file_option"
 
-    @abstractmethod
     @property
+    @abstractmethod
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "file_option"
 
-    @abstractmethod
     @property
+    @abstractmethod
     def allowed_formats(self) -> List[str]:
         pass
+
+    @property
+    def allow_download(self) -> bool:
+        return False
 
     @staticmethod
     def _validate_file(file_path: str):

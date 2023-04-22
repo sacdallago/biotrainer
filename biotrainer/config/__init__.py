@@ -1,5 +1,5 @@
-from .protocols import Protocols
+from .configurator import Configurator
 
 __all__ = [
-    Protocols
+    Configurator
 ]

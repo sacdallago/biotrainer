@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Type, Union
 
 from .config_option import ConfigOption
-from .protocols import Protocols
+from ..protocols import Protocols
 
 
 class ConfigRule(ABC):

@@ -1,7 +1,7 @@
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption, FileOption
-from .protocols import Protocols
+from ..protocols import Protocols
 
 
 class NumberEpochs(ConfigOption):
@@ -144,3 +144,7 @@ class LimitedSampleSize(ConfigOption):
 
     def is_value_valid(self, value: Any) -> bool:
         return value > 0
+
+
+training_options: List = [NumberEpochs, BatchSize, Patience, Shuffle,
+                          UseClassWeights, AutoResume, PretrainedModel, LimitedSampleSize]

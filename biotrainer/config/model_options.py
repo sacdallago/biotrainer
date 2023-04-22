@@ -1,7 +1,7 @@
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption
-from .protocols import Protocols
+from ..protocols import Protocols
 
 from ..models import get_available_models_dict
 from ..losses import get_available_losses_dict
@@ -100,3 +100,6 @@ class LossChoice(ConfigOption):
 
     def is_value_valid(self, value: Any) -> bool:
         return value in list(get_available_losses_dict()[self._protocol].keys())
+
+
+model_options: List = [ModelChoice, OptimizerChoice, LearningRate, Epsilon, LossChoice]

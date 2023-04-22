@@ -9,7 +9,7 @@ from .FNN import FNN, DeeperFNN
 from .LightAttention import LightAttention
 from .model_params import count_parameters
 
-from ..config import Protocols
+from ..protocols import Protocols
 
 __MODELS = {
     Protocols.residue_to_class: {
