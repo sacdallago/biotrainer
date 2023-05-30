@@ -12,7 +12,10 @@ def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
         else:
             return torch.device("cpu")
     elif device:
-        return torch.device(device)
+        if "cuda" in device and torch.cuda.is_available():
+            return torch.device(device)
+        else:
+            return torch.device("cpu")
     elif torch.cuda.is_available():
         return torch.device("cuda")
     else:
