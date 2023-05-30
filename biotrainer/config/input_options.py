@@ -21,6 +21,7 @@ class SequenceFile(FileOption):
     def possible_types(self) -> List[Type]:
         return [str]
 
+    @property
     def allow_download(self) -> bool:
         return True
 
@@ -43,9 +44,11 @@ class LabelsFile(FileOption):
     def possible_types(self) -> List[Type]:
         return [str]
 
+    @property
     def allow_download(self) -> bool:
         return True
 
+    @property
     def allowed_protocols(self) -> List[Protocols]:
         return [Protocols.residue_to_class]
 
@@ -67,9 +70,11 @@ class MaskFile(FileOption):
     def possible_types(self) -> List[Type]:
         return [str]
 
+    @property
     def allow_download(self) -> bool:
         return True
 
+    @property
     def allowed_protocols(self) -> List[Protocols]:
         return [Protocols.residue_to_class]
 

@@ -6,7 +6,7 @@ from ruamel.yaml.comments import CommentedBase
 
 from ..protocols import Protocols
 from .config_option import ConfigurationException, ConfigOption
-from .config_rules import MutualExclusive, ProtocolRequires, ProtocolProhibits
+from .config_rules import MutualExclusive, ProtocolRequires, ProtocolProhibits, ConfigRule
 from .input_options import SequenceFile, LabelsFile, MaskFile, input_options
 from .training_options import AutoResume, PretrainedModel, training_options
 from .embedding_options import EmbedderName, EmbeddingsFile, embedding_options
@@ -32,9 +32,16 @@ all_options_list: List[
 
 class Configurator:
     def __init__(self, config_dict: Dict):
-        protocol = self.get_protocol_from_config_dict(config_dict)
-        mapping_dict = self.parse_config_dict(config_dict=config_dict, protocol=protocol)
-        self.apply_rules(protocol, mapping_dict)
+        self.config_dict = config_dict
+        self.protocol = self.get_protocol_from_config_dict(config_dict)
+
+    def get_options_by_protocol(self):
+        result = []
+        for option_class in all_options_list:
+            option = option_class(self.protocol)
+            if self.protocol in option.allowed_protocols:
+                result.append(option.to_dict())
+        return result
 
     @classmethod
     def from_config_dict(cls, config_dict: Dict[str, Any]):
@@ -86,8 +93,9 @@ class Configurator:
                 raise ConfigurationException(f"Unknown configuration option: {key}!")
         return mapping_dict
 
-    def apply_rules(self, protocol: Protocols, mapping_dict: Dict[str, ConfigOption]):
+    def apply_rules(self):
+        mapping_dict = self.parse_config_dict(config_dict=self.config_dict, protocol=self.protocol)
         config_options = list(mapping_dict.values())
         for rule in protocol_rules:
-            if not rule.apply(protocol=protocol, config=config_options):
+            if not rule.apply(protocol=self.protocol, config=config_options):
                 raise ConfigurationException(f"Incorrect protocol rule")  # TODO

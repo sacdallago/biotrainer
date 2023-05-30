@@ -28,3 +28,6 @@ class Protocols(Enum):
     @staticmethod
     def per_residue_protocols() -> List[Protocols]:
         return [Protocols.residue_to_class]
+
+    def __str__(self):
+        return self.name

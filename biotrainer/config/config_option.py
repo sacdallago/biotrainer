@@ -34,13 +34,23 @@ class ConfigOption(ABC):
     def possible_types(self) -> List[Type]:
         return [Any]
 
-    @abstractmethod
+    @property
+    def possible_values(self) -> List[Any]:
+        # List is not empty if this config option is restricted to certain values
+        return []
+
     def is_value_valid(self, value: Any) -> bool:
-        return value in ["config_option"]
+        return value in self.possible_values
 
     @property
     def allowed_protocols(self) -> List[Protocols]:
         return Protocols.all()
+
+    def to_dict(self):
+        return {"name": str(self.name),
+                "default_value": str(self.default_value),
+                "possible_values": list(map(str, self.possible_values)),
+                }
 
 
 class FileOption(ConfigOption, ABC):

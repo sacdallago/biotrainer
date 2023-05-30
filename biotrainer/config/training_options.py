@@ -70,8 +70,9 @@ class Shuffle(ConfigOption):
     def possible_types(self) -> List[Type]:
         return [bool]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value in [True, False]
+    @property
+    def possible_values(self) -> List[Any]:
+        return [True, False]
 
 
 class UseClassWeights(ConfigOption):
@@ -87,8 +88,9 @@ class UseClassWeights(ConfigOption):
     def possible_types(self) -> List[Type]:
         return [bool]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value in [True, False]
+    @property
+    def possible_values(self) -> List[Any]:
+        return [True, False]
 
 
 class AutoResume(ConfigOption):
@@ -104,8 +106,9 @@ class AutoResume(ConfigOption):
     def possible_types(self) -> List[Type]:
         return [bool]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value in [True, False]
+    @property
+    def possible_values(self) -> List[Any]:
+        return [True, False]
 
 
 class PretrainedModel(FileOption):
@@ -125,6 +128,7 @@ class PretrainedModel(FileOption):
     def possible_types(self) -> List[Type]:
         return [str]
 
+    @property
     def allow_download(self) -> bool:
         return False
 
@@ -132,7 +136,7 @@ class PretrainedModel(FileOption):
 class LimitedSampleSize(ConfigOption):
     @property
     def name(self) -> str:
-        return "limited_sample_size: 100"
+        return "limited_sample_size"
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:

@@ -12,14 +12,15 @@ class ProtocolOption(ConfigOption):
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
-        return None
+        return ""
 
     @property
     def possible_types(self) -> List[Type]:
         return [type(Protocols)]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value in Protocols.all()
+    @property
+    def possible_values(self) -> List[Any]:
+        return Protocols.all()
 
 
 class Interaction(ConfigOption):
@@ -36,9 +37,11 @@ class Interaction(ConfigOption):
     def possible_types(self) -> List[Type]:
         return [str]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value in ["multiply", "concat"]
+    @property
+    def possible_values(self) -> List[Any]:
+        return ["multiply", "concat"]
 
+    @property
     def allowed_protocols(self) -> List[Protocols]:
         return [Protocols.sequence_to_class, Protocols.sequence_to_value]
 
@@ -75,8 +78,9 @@ class SaveSplitIds(ConfigOption):
     def possible_types(self) -> List[Type]:
         return [bool]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value in [True, False]
+    @property
+    def possible_values(self) -> List[Any]:
+        return [True, False]
 
 
 class SanityCheck(ConfigOption):
@@ -92,8 +96,9 @@ class SanityCheck(ConfigOption):
     def possible_types(self) -> List[Type]:
         return [bool]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value in [True, False]
+    @property
+    def possible_values(self) -> List[Any]:
+        return [True, False]
 
 
 class IgnoreFileInconsistencies(ConfigOption):
@@ -109,8 +114,9 @@ class IgnoreFileInconsistencies(ConfigOption):
     def possible_types(self) -> List[Type]:
         return [bool]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value in [True, False]
+    @property
+    def possible_values(self) -> List[Any]:
+        return [True, False]
 
 
 general_options: List = [ProtocolOption, Interaction, Seed, SaveSplitIds, SanityCheck, IgnoreFileInconsistencies]

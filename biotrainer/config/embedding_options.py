@@ -1,7 +1,5 @@
 from typing import List, Type, Any, Union
 
-from bio_embeddings.embed import __all__ as bio_embedders
-
 from .config_option import ConfigOption, FileOption
 from ..protocols import Protocols
 
@@ -21,9 +19,17 @@ class EmbedderName(FileOption):
         return [str]
 
     @property
+    def possible_values(self) -> List[Any]:
+        from bio_embeddings.embed import __all__ as bio_embedders
+        available_embedders = [available_embedder for available_embedder in bio_embedders
+                               if "Interface" not in available_embedder]
+        return available_embedders
+
+    @property
     def allowed_formats(self) -> List[str]:
         return [".py"]
 
+    @property
     def allow_download(self) -> bool:
         return False
 
@@ -31,9 +37,7 @@ class EmbedderName(FileOption):
         if ".py" in value:
             return self._validate_file(value)
         else:
-            available_embedders = [available_embedder for available_embedder in bio_embedders
-                                   if "Interface" not in available_embedder]
-            return value in available_embedders
+            return value in self.possible_values
 
 
 class EmbeddingsFile(FileOption):
@@ -53,6 +57,7 @@ class EmbeddingsFile(FileOption):
     def possible_types(self) -> List[Type]:
         return [str]
 
+    @property
     def allow_download(self) -> bool:
         return True
 
