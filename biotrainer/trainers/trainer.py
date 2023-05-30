@@ -85,6 +85,7 @@ class Trainer:
         target_manager = TargetManager(protocol=self._protocol, sequence_file=self._sequence_file,
                                        labels_file=self._labels_file, mask_file=self._mask_file,
                                        ignore_file_inconsistencies=self._ignore_file_inconsistencies,
+                                       cross_validation_method=self._cross_validation_config["method"],
                                        interaction=self._interaction)
         train_dataset, val_dataset, test_dataset = target_manager.get_datasets_by_annotations(id2emb)
         del id2emb  # No longer required and should not be used later in the routine
