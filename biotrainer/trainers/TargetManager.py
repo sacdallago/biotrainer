@@ -38,12 +38,14 @@ class TargetManager:
     def __init__(self, protocol: str, sequence_file: str,
                  labels_file: Optional[str] = None, mask_file: Optional[str] = None,
                  ignore_file_inconsistencies: Optional[bool] = False,
+                 cross_validation_method: str = "",
                  interaction: Optional[str] = None):
         self.protocol = protocol
         self._sequence_file = sequence_file
         self._labels_file = labels_file
         self._mask_file = mask_file
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
+        self._cross_validation_method = cross_validation_method
         self._interaction = interaction
 
     def _calculate_targets(self):
@@ -223,6 +225,18 @@ class TargetManager:
 
         # Get dataset splits from file
         self.training_ids, self.validation_ids, self.testing_ids = get_split_lists(self._id2attributes)
+
+        # Check dataset splits are not empty
+        def except_on_empty(split_ids: List[str], name: str):
+            if len(split_ids) == 0:
+                raise Exception(f"The provided {name} set is empty! Please provide at least one sequence for "
+                                f"the {name} set.")
+
+        if not self._ignore_file_inconsistencies:
+            except_on_empty(split_ids=self.training_ids, name="training")
+            if self._cross_validation_method == "hold_out":
+                except_on_empty(split_ids=self.validation_ids, name="validation")
+            except_on_empty(split_ids=self.testing_ids, name="test")
 
         # Combine embeddings for protein_protein_interaction
         if self._interaction:
