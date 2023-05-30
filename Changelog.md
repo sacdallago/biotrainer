@@ -1,5 +1,14 @@
 # Biotrainer Changelog
 
+## 30.05.2023 - Version 0.5.0
+### Maintenance
+* Adding a check in the `TargetManager.py` class that all provided splits are not empty.
+This avoids getting an error after costly training if the test set was empty.
+* Adding double-check if the cuda device from the out.yml file is available for the Inferencer 
+module in `cuda_device.py`
+* Simplifying the predict example.
+Manual path correction is no longer necessary. Also added fix for mapped_predictions to show up correctly
+
 ## 18.04.2023 - Version 0.4.0
 ### Features
 * Adding `CustomEmbedder`: It is now possible to use language models (embedders) that are not included in bio_embeddings
