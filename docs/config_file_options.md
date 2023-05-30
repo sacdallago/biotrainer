@@ -43,6 +43,7 @@ If this is intended, you can tell *biotrainer* to simply ignore those redundant 
 ```yaml
 ignore_file_inconsistencies: True | False  # Default: False
 ```
+If `True`, *biotrainer* will also not check if you provided at least one sample for each split set. 
 
 A concrete output directory can be specified:
 ```yaml
