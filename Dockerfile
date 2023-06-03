@@ -21,7 +21,7 @@ RUN python3 -m venv .venv && \
     $HOME/.local/bin/poetry config virtualenvs.in-project true && \
     $HOME/.local/bin/poetry install --no-dev
 
-FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
 
 ENV PYTHONUNBUFFERED=1
 
