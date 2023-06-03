@@ -1,10 +1,18 @@
+from abc import ABC
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption, FileOption
 from ..protocols import Protocols
 
 
-class EmbedderName(FileOption):
+class EmbeddingOption(ConfigOption, ABC):
+
+    @property
+    def category(self) -> str:
+        return "embedding_option"
+
+
+class EmbedderName(EmbeddingOption, FileOption):
 
     @property
     def name(self) -> str:
@@ -26,6 +34,10 @@ class EmbedderName(FileOption):
         return available_embedders
 
     @property
+    def required(self) -> bool:
+        return True
+
+    @property
     def allowed_formats(self) -> List[str]:
         return [".py"]
 
@@ -40,7 +52,8 @@ class EmbedderName(FileOption):
             return value in self.possible_values
 
 
-class EmbeddingsFile(FileOption):
+class EmbeddingsFile(EmbeddingOption, FileOption):
+
     @property
     def name(self) -> str:
         return "embeddings_file"
@@ -56,6 +69,10 @@ class EmbeddingsFile(FileOption):
     @property
     def possible_types(self) -> List[Type]:
         return [str]
+
+    @property
+    def required(self) -> bool:
+        return False
 
     @property
     def allow_download(self) -> bool:

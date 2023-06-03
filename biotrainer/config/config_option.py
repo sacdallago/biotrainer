@@ -1,7 +1,7 @@
 import os
-import typing
-from typing import List, Union, Any, Type
+
 from abc import ABC, abstractmethod
+from typing import List, Union, Any, Type
 
 from ..protocols import Protocols
 
@@ -39,6 +39,11 @@ class ConfigOption(ABC):
         # List is not empty if this config option is restricted to certain values
         return []
 
+    @property
+    @abstractmethod
+    def required(self) -> bool:
+        return False
+
     def is_value_valid(self, value: Any) -> bool:
         return value in self.possible_values
 
@@ -46,8 +51,14 @@ class ConfigOption(ABC):
     def allowed_protocols(self) -> List[Protocols]:
         return Protocols.all()
 
+    @property
+    def category(self) -> str:
+        return "config_option"
+
     def to_dict(self):
         return {"name": str(self.name),
+                "category": str(self.category),
+                "required": str(self.required),
                 "default_value": str(self.default_value),
                 "possible_values": list(map(str, self.possible_values)),
                 }
@@ -73,6 +84,10 @@ class FileOption(ConfigOption, ABC):
     @property
     def allow_download(self) -> bool:
         return False
+
+    @property
+    def category(self) -> str:
+        return "file_option"
 
     @staticmethod
     def _validate_file(file_path: str):

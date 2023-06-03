@@ -1,10 +1,18 @@
+from abc import ABC
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption
 from ..protocols import Protocols
 
 
-class ProtocolOption(ConfigOption):
+class GeneralOption(ConfigOption, ABC):
+
+    @property
+    def category(self) -> str:
+        return "general_option"
+
+
+class ProtocolOption(GeneralOption, ConfigOption):
 
     @property
     def name(self) -> str:
@@ -22,8 +30,12 @@ class ProtocolOption(ConfigOption):
     def possible_values(self) -> List[Any]:
         return Protocols.all()
 
+    @property
+    def required(self) -> bool:
+        return True
 
-class Interaction(ConfigOption):
+
+class Interaction(GeneralOption, ConfigOption):
 
     @property
     def name(self) -> str:
@@ -45,8 +57,12 @@ class Interaction(ConfigOption):
     def allowed_protocols(self) -> List[Protocols]:
         return [Protocols.sequence_to_class, Protocols.sequence_to_value]
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class Seed(ConfigOption):
+
+class Seed(GeneralOption, ConfigOption):
 
     @property
     def name(self) -> str:
@@ -64,8 +80,12 @@ class Seed(ConfigOption):
         # For range see: https://pytorch.org/docs/stable/generated/torch.manual_seed.html#torch.manual_seed
         return -0x8000_0000_0000_0000 < value < 0xffff_ffff_ffff_ffff
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class SaveSplitIds(ConfigOption):
+
+class SaveSplitIds(GeneralOption, ConfigOption):
     @property
     def name(self) -> str:
         return "save_split_ids"
@@ -82,8 +102,12 @@ class SaveSplitIds(ConfigOption):
     def possible_values(self) -> List[Any]:
         return [True, False]
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class SanityCheck(ConfigOption):
+
+class SanityCheck(GeneralOption, ConfigOption):
     @property
     def name(self) -> str:
         return "sanity_check"
@@ -100,8 +124,12 @@ class SanityCheck(ConfigOption):
     def possible_values(self) -> List[Any]:
         return [True, False]
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class IgnoreFileInconsistencies(ConfigOption):
+
+class IgnoreFileInconsistencies(GeneralOption, ConfigOption):
     @property
     def name(self) -> str:
         return "ignore_file_inconsistencies"
@@ -117,6 +145,10 @@ class IgnoreFileInconsistencies(ConfigOption):
     @property
     def possible_values(self) -> List[Any]:
         return [True, False]
+
+    @property
+    def required(self) -> bool:
+        return False
 
 
 general_options: List = [ProtocolOption, Interaction, Seed, SaveSplitIds, SanityCheck, IgnoreFileInconsistencies]

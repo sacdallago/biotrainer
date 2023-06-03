@@ -1,10 +1,18 @@
+from abc import ABC
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption, FileOption
 from ..protocols import Protocols
 
 
-class NumberEpochs(ConfigOption):
+class TrainingOption(ConfigOption, ABC):
+
+    @property
+    def category(self) -> str:
+        return "training_option"
+
+
+class NumberEpochs(TrainingOption, ConfigOption):
     @property
     def name(self) -> str:
         return "num_epochs"
@@ -20,8 +28,12 @@ class NumberEpochs(ConfigOption):
     def is_value_valid(self, value: Any) -> bool:
         return value > 0
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class BatchSize(ConfigOption):
+
+class BatchSize(TrainingOption, ConfigOption):
 
     @property
     def name(self) -> str:
@@ -38,8 +50,12 @@ class BatchSize(ConfigOption):
     def is_value_valid(self, value: Any) -> bool:
         return value > 0
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class Patience(ConfigOption):
+
+class Patience(TrainingOption, ConfigOption):
 
     @property
     def name(self) -> str:
@@ -56,8 +72,12 @@ class Patience(ConfigOption):
     def is_value_valid(self, value: Any) -> bool:
         return value > 0
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class Shuffle(ConfigOption):
+
+class Shuffle(TrainingOption, ConfigOption):
     @property
     def name(self) -> str:
         return "shuffle"
@@ -74,8 +94,12 @@ class Shuffle(ConfigOption):
     def possible_values(self) -> List[Any]:
         return [True, False]
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class UseClassWeights(ConfigOption):
+
+class UseClassWeights(TrainingOption, ConfigOption):
     @property
     def name(self) -> str:
         return "use_class_weights"
@@ -92,8 +116,12 @@ class UseClassWeights(ConfigOption):
     def possible_values(self) -> List[Any]:
         return [True, False]
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class AutoResume(ConfigOption):
+
+class AutoResume(TrainingOption, ConfigOption):
     @property
     def name(self) -> str:
         return "auto_resume"
@@ -110,8 +138,12 @@ class AutoResume(ConfigOption):
     def possible_values(self) -> List[Any]:
         return [True, False]
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class PretrainedModel(FileOption):
+
+class PretrainedModel(TrainingOption, FileOption):
     @property
     def name(self) -> str:
         return "pretrained_model"
@@ -132,8 +164,12 @@ class PretrainedModel(FileOption):
     def allow_download(self) -> bool:
         return False
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class LimitedSampleSize(ConfigOption):
+
+class LimitedSampleSize(TrainingOption, ConfigOption):
     @property
     def name(self) -> str:
         return "limited_sample_size"
@@ -148,6 +184,10 @@ class LimitedSampleSize(ConfigOption):
 
     def is_value_valid(self, value: Any) -> bool:
         return value > 0
+
+    @property
+    def required(self) -> bool:
+        return False
 
 
 training_options: List = [NumberEpochs, BatchSize, Patience, Shuffle,

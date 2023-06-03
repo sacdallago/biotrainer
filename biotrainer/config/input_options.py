@@ -1,10 +1,18 @@
+from abc import ABC
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption, FileOption
 from ..protocols import Protocols
 
 
-class SequenceFile(FileOption):
+class InputOption(FileOption, ABC):
+
+    @property
+    def category(self) -> str:
+        return "input_option"
+
+
+class SequenceFile(InputOption, FileOption):
     @property
     def name(self) -> str:
         return "sequence_file"
@@ -25,8 +33,12 @@ class SequenceFile(FileOption):
     def allow_download(self) -> bool:
         return True
 
+    @property
+    def required(self) -> bool:
+        return True
 
-class LabelsFile(FileOption):
+
+class LabelsFile(InputOption, FileOption):
 
     @property
     def name(self) -> str:
@@ -52,8 +64,12 @@ class LabelsFile(FileOption):
     def allowed_protocols(self) -> List[Protocols]:
         return [Protocols.residue_to_class]
 
+    @property
+    def required(self) -> bool:
+        return self._protocol in Protocols.per_residue_protocols()
 
-class MaskFile(FileOption):
+
+class MaskFile(InputOption, FileOption):
     @property
     def name(self) -> str:
         return "mask_file"
@@ -77,6 +93,10 @@ class MaskFile(FileOption):
     @property
     def allowed_protocols(self) -> List[Protocols]:
         return [Protocols.residue_to_class]
+
+    @property
+    def required(self) -> bool:
+        return False
 
 
 input_options: List = [SequenceFile, LabelsFile, MaskFile]

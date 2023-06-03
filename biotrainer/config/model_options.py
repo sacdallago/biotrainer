@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption
@@ -8,7 +9,14 @@ from ..losses import get_available_losses_dict
 from ..optimizers import get_available_optimizers_dict
 
 
-class ModelChoice(ConfigOption):
+class ModelOption(ConfigOption, ABC):
+
+    @property
+    def category(self) -> str:
+        return "model_option"
+
+
+class ModelChoice(ModelOption, ConfigOption):
 
     @property
     def name(self) -> str:
@@ -29,8 +37,12 @@ class ModelChoice(ConfigOption):
     def possible_values(self) -> List[Any]:
         return list(get_available_models_dict()[self._protocol].keys())
 
+    @property
+    def required(self) -> bool:
+        return True
 
-class OptimizerChoice(ConfigOption):
+
+class OptimizerChoice(ModelOption, ConfigOption):
 
     @property
     def name(self) -> str:
@@ -48,8 +60,12 @@ class OptimizerChoice(ConfigOption):
     def possible_values(self) -> List[Any]:
         return list(get_available_optimizers_dict()[self._protocol].keys())
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class LearningRate(ConfigOption):
+
+class LearningRate(ModelOption, ConfigOption):
     @property
     def name(self) -> str:
         return "learning_rate"
@@ -65,8 +81,12 @@ class LearningRate(ConfigOption):
     def is_value_valid(self, value) -> bool:
         return 0.0 < value < 1.0
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class Epsilon(ConfigOption):
+
+class Epsilon(ModelOption, ConfigOption):
 
     @property
     def name(self) -> str:
@@ -83,8 +103,12 @@ class Epsilon(ConfigOption):
     def is_value_valid(self, value: Any) -> bool:
         return 0.0 < value < 1.0
 
+    @property
+    def required(self) -> bool:
+        return False
 
-class LossChoice(ConfigOption):
+
+class LossChoice(ModelOption, ConfigOption):
     @property
     def name(self) -> str:
         return "loss_choice"
@@ -103,6 +127,10 @@ class LossChoice(ConfigOption):
     @property
     def possible_values(self) -> List[Any]:
         return list(get_available_losses_dict()[self._protocol].keys())
+
+    @property
+    def required(self) -> bool:
+        return False
 
 
 model_options: List = [ModelChoice, OptimizerChoice, LearningRate, Epsilon, LossChoice]
