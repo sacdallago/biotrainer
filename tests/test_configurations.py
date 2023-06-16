@@ -3,16 +3,16 @@ import unittest
 from ruamel import yaml
 from biotrainer.utilities import config
 from biotrainer.utilities.executer import __PROTOCOLS as PROTOCOLS
-from biotrainer.config import Configurator
+from biotrainer.config import Configurator, ConfigurationException
 
 configurations = {
     "prohibited": {
-        "sequence_file": "dummy_seq.fasta",
-        "labels_file": "dummy_labels.fasta",
+        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "labels_file": "test_input_files/r2c/labels.fasta",
         "protocol": "sequence_to_class"
     },
     "minimal": {
-        "sequence_file": "dummy.fasta",
+        "sequence_file": "test_input_files/r2c/sequences.fasta",
         "protocol": "sequence_to_class",
         "model_choice": "FNN"
     },
@@ -39,20 +39,24 @@ configurations = {
 
 class ConfigurationVerificationTests(unittest.TestCase):
 
+    def test_minimal_configuration(self):
+        configurator = Configurator.from_config_dict(configurations["minimal"])
+        self.assertTrue(configurator.verify_config(), "Minimal config does not work!")
+
     def test_prohibited(self):
         configurator = Configurator.from_config_dict(configurations["prohibited"])
-        configurator.verify_config()
-
-    def test_minimal_configuration(self):
-        config_dict = config.parse_config(yaml.dump(configurations["minimal"]))
-        self.assertTrue(config.verify_config(config_dict, PROTOCOLS), "Minimal config does not work!")
+        with self.assertRaises(ConfigurationException,
+                               msg="Config with prohibited config option does not throw an error!"):
+            configurator.verify_config()
 
     def test_wrong_model(self):
-        config_dict = config.parse_config(yaml.dump(configurations["minimal"]))
+        config_dict = configurations["minimal"]
         config_dict["model_choice"] = "RNN123"
-        with self.assertRaises(config.ConfigurationException,
+        configurator = Configurator.from_config_dict(config_dict)
+
+        with self.assertRaises(ConfigurationException,
                                msg="Config with wrong model does not throw an exception"):
-            config.verify_config(config_dict, PROTOCOLS)
+            configurator.verify_config()
 
     def test_k_fold(self):
         config_dict = config.parse_config(yaml.dump({**configurations["minimal"], **configurations["k_fold"]}))
