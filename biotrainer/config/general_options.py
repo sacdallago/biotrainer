@@ -34,6 +34,9 @@ class ProtocolOption(GeneralOption, ConfigOption):
     def required(self) -> bool:
         return True
 
+    def is_value_valid(self, value: Any) -> bool:
+        return Protocol.__getitem__(value) is not None
+
 
 class Interaction(GeneralOption, ConfigOption):
 
