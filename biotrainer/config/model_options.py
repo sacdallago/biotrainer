@@ -2,7 +2,7 @@ from abc import ABC
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption
-from ..protocols import Protocols
+from ..protocols import Protocol
 
 from ..models import get_available_models_dict
 from ..losses import get_available_losses_dict
@@ -24,7 +24,7 @@ class ModelChoice(ModelOption, ConfigOption):
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
-        if self._protocol == Protocols.residues_to_class:
+        if self._protocol == Protocol.residues_to_class:
             return "LightAttention"
         else:
             return "FNN"
@@ -115,7 +115,7 @@ class LossChoice(ModelOption, ConfigOption):
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
-        if self._protocol in Protocols.regression_protocols():
+        if self._protocol in Protocol.regression_protocols():
             return "mean_squared_error"
         else:
             return "cross_entropy_loss"

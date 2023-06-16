@@ -2,7 +2,7 @@ from abc import ABC
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption, FileOption
-from ..protocols import Protocols
+from ..protocols import Protocol
 
 
 class TrainingOption(ConfigOption, ABC):

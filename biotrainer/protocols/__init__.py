@@ -1,5 +1,5 @@
-from .protocols import Protocols
+from .protocol import Protocol
 
 __all__ = [
-    Protocols
+    Protocol
 ]

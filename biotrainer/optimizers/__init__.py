@@ -1,25 +1,25 @@
 import torch
 
 from typing import Set, Dict, Any
-from ..protocols import Protocols
+from ..protocols import Protocol
 
 __OPTIMIZERS = {
-    Protocols.residue_to_class: {
+    Protocol.residue_to_class: {
         'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
     },
-    Protocols.residues_to_class: {
+    Protocol.residues_to_class: {
         'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
     },
-    Protocols.sequence_to_class: {
+    Protocol.sequence_to_class: {
         'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
     },
-    Protocols.sequence_to_value: {
+    Protocol.sequence_to_value: {
         'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
     },
 }
 
 
-def get_optimizer(protocol: Protocols, optimizer_choice: str, model_parameters: torch.Tensor, learning_rate: float,
+def get_optimizer(protocol: Protocol, optimizer_choice: str, model_parameters: torch.Tensor, learning_rate: float,
                   **kwargs):
 
     optimizer = __OPTIMIZERS.get(protocol).get(optimizer_choice)
@@ -30,7 +30,7 @@ def get_optimizer(protocol: Protocols, optimizer_choice: str, model_parameters: 
         return optimizer(params=model_parameters, lr=learning_rate)
 
 
-def get_available_optimizers_dict() -> Dict[Protocols, Dict[str, Any]]:
+def get_available_optimizers_dict() -> Dict[Protocol, Dict[str, Any]]:
     return dict(__OPTIMIZERS)
 
 

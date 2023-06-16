@@ -2,7 +2,7 @@ from abc import ABC
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption, FileOption
-from ..protocols import Protocols
+from ..protocols import Protocol
 
 
 class InputOption(FileOption, ABC):
@@ -61,12 +61,12 @@ class LabelsFile(InputOption, FileOption):
         return True
 
     @property
-    def allowed_protocols(self) -> List[Protocols]:
-        return [Protocols.residue_to_class]
+    def allowed_protocols(self) -> List[Protocol]:
+        return [Protocol.residue_to_class]
 
     @property
     def required(self) -> bool:
-        return self._protocol in Protocols.per_residue_protocols()
+        return self._protocol in Protocol.per_residue_protocols()
 
 
 class MaskFile(InputOption, FileOption):
@@ -91,8 +91,8 @@ class MaskFile(InputOption, FileOption):
         return True
 
     @property
-    def allowed_protocols(self) -> List[Protocols]:
-        return [Protocols.residue_to_class]
+    def allowed_protocols(self) -> List[Protocol]:
+        return [Protocol.residue_to_class]
 
     @property
     def required(self) -> bool:

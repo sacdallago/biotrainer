@@ -2,7 +2,7 @@ from abc import ABC
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption
-from ..protocols import Protocols
+from ..protocols import Protocol
 
 
 class GeneralOption(ConfigOption, ABC):
@@ -24,11 +24,11 @@ class ProtocolOption(GeneralOption, ConfigOption):
 
     @property
     def possible_types(self) -> List[Type]:
-        return [type(Protocols)]
+        return [type(Protocol)]
 
     @property
     def possible_values(self) -> List[Any]:
-        return Protocols.all()
+        return Protocol.all()
 
     @property
     def required(self) -> bool:
@@ -54,8 +54,8 @@ class Interaction(GeneralOption, ConfigOption):
         return ["multiply", "concat"]
 
     @property
-    def allowed_protocols(self) -> List[Protocols]:
-        return [Protocols.sequence_to_class, Protocols.sequence_to_value]
+    def allowed_protocols(self) -> List[Protocol]:
+        return [Protocol.sequence_to_class, Protocol.sequence_to_value]
 
     @property
     def required(self) -> bool:

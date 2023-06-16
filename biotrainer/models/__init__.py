@@ -9,24 +9,24 @@ from .FNN import FNN, DeeperFNN
 from .LightAttention import LightAttention
 from .model_params import count_parameters
 
-from ..protocols import Protocols
+from ..protocols import Protocol
 
 __MODELS = {
-    Protocols.residue_to_class: {
+    Protocol.residue_to_class: {
         'CNN': CNN,
         'FNN': FNN,
         'DeeperFNN': DeeperFNN,
         'LogReg': LogReg,
     },
-    Protocols.residues_to_class: {
+    Protocol.residues_to_class: {
         'LightAttention': LightAttention,
     },
-    Protocols.sequence_to_class: {
+    Protocol.sequence_to_class: {
         'FNN': FNN,
         'DeeperFNN': DeeperFNN,
         'LogReg': LogReg
     },
-    Protocols.sequence_to_value: {
+    Protocol.sequence_to_value: {
         'FNN': FNN,
         'DeeperFNN': DeeperFNN,
         'LogReg': LogReg
@@ -34,7 +34,7 @@ __MODELS = {
 }
 
 
-def get_model(protocol: Protocols, model_choice: str, n_classes: int, n_features: int,
+def get_model(protocol: Protocol, model_choice: str, n_classes: int, n_features: int,
               **kwargs):
     model_class = __MODELS.get(protocol).get(model_choice)
 
@@ -48,7 +48,7 @@ def get_model(protocol: Protocols, model_choice: str, n_classes: int, n_features
         return torch.compile(model, disable=True)  # Disabled - compile() does not seem to be fully production-ready
 
 
-def get_available_models_dict() -> Dict[Protocols, Dict[str, Any]]:
+def get_available_models_dict() -> Dict[Protocol, Dict[str, Any]]:
     return dict(__MODELS)
 
 

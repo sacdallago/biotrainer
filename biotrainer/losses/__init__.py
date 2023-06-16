@@ -3,26 +3,26 @@ import torch.nn as nn
 
 from typing import Optional, Union, Dict, Any, Set
 
-from ..protocols import Protocols
+from ..protocols import Protocol
 from ..utilities import MASK_AND_LABELS_PAD_VALUE
 
 __LOSSES = {
-    Protocols.residue_to_class: {
+    Protocol.residue_to_class: {
         'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
-    Protocols.residues_to_class: {
+    Protocol.residues_to_class: {
         'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
-    Protocols.sequence_to_class: {
+    Protocol.sequence_to_class: {
         'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
-    Protocols.sequence_to_value: {
+    Protocol.sequence_to_value: {
         'mean_squared_error': lambda **kwargs: nn.MSELoss(**kwargs)
     },
 }
 
 
-def get_loss(protocol: Protocols, loss_choice: str, device: Union[str, torch.device],
+def get_loss(protocol: Protocol, loss_choice: str, device: Union[str, torch.device],
              weight: Optional[torch.Tensor] = None, **kwargs):
     loss = __LOSSES.get(protocol).get(loss_choice)
 
@@ -35,7 +35,7 @@ def get_loss(protocol: Protocols, loss_choice: str, device: Union[str, torch.dev
             return loss().to(device)
 
 
-def get_available_losses_dict() -> Dict[Protocols, Dict[str, Any]]:
+def get_available_losses_dict() -> Dict[Protocol, Dict[str, Any]]:
     return dict(__LOSSES)
 
 

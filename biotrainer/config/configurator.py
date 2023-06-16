@@ -4,7 +4,7 @@ from ruamel import yaml
 from ruamel.yaml import YAMLError
 from ruamel.yaml.comments import CommentedBase
 
-from ..protocols import Protocols
+from ..protocols import Protocol
 from .config_option import ConfigurationException, ConfigOption
 from .config_rules import MutualExclusive, ProtocolRequires, ProtocolProhibits, ConfigRule
 from .input_options import SequenceFile, LabelsFile, MaskFile, input_options
@@ -16,9 +16,9 @@ from .model_options import model_options
 # Optional attribute for ConfigOption!
 
 protocol_rules = [
-    ProtocolRequires(protocol=Protocols.per_residue_protocols(), requires=[SequenceFile, LabelsFile]),
-    ProtocolRequires(protocol=Protocols.per_protein_protocols(), requires=[SequenceFile]),
-    ProtocolProhibits(protocol=Protocols.per_protein_protocols(), prohibits=[LabelsFile, MaskFile])
+    ProtocolRequires(protocol=Protocol.per_residue_protocols(), requires=[SequenceFile, LabelsFile]),
+    ProtocolRequires(protocol=Protocol.per_protein_protocols(), requires=[SequenceFile]),
+    ProtocolProhibits(protocol=Protocol.per_protein_protocols(), prohibits=[LabelsFile, MaskFile])
 ]
 
 config_option_rules = [
@@ -78,12 +78,12 @@ class Configurator:
     def get_protocol_from_config_dict(config_dict: Dict[str, Any]):
         try:
             protocol = config_dict["protocol"]
-            return Protocols[protocol]
+            return Protocol[protocol]
         except KeyError:
             raise ConfigurationException(f"No protocol specified in config file!")
 
     @staticmethod
-    def parse_config_dict(config_dict: Dict[str, Any], protocol: Protocols):
+    def parse_config_dict(config_dict: Dict[str, Any], protocol: Protocol):
         all_options_dict = {option(protocol).name: option for option in all_options_list}
         mapping_dict = {}
         for key in config_dict.keys():
@@ -93,7 +93,7 @@ class Configurator:
                 raise ConfigurationException(f"Unknown configuration option: {key}!")
         return mapping_dict
 
-    def apply_rules(self):
+    def verify_config(self):
         mapping_dict = self.parse_config_dict(config_dict=self.config_dict, protocol=self.protocol)
         config_options = list(mapping_dict.values())
         for rule in protocol_rules:

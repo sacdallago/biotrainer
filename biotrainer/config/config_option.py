@@ -3,7 +3,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import List, Union, Any, Type
 
-from ..protocols import Protocols
+from ..protocols import Protocol
 
 
 class ConfigurationException(Exception):
@@ -14,9 +14,9 @@ class ConfigurationException(Exception):
 
 class ConfigOption(ABC):
 
-    _protocol: Protocols = None
+    _protocol: Protocol = None
 
-    def __init__(self, protocol: Protocols):
+    def __init__(self, protocol: Protocol):
         self._protocol = protocol
 
     @property
@@ -48,8 +48,8 @@ class ConfigOption(ABC):
         return value in self.possible_values
 
     @property
-    def allowed_protocols(self) -> List[Protocols]:
-        return Protocols.all()
+    def allowed_protocols(self) -> List[Protocol]:
+        return Protocol.all()
 
     @property
     def category(self) -> str:

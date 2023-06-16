@@ -41,6 +41,7 @@ class ConfigurationVerificationTests(unittest.TestCase):
 
     def test_prohibited(self):
         configurator = Configurator.from_config_dict(configurations["prohibited"])
+        configurator.verify_config()
 
     def test_minimal_configuration(self):
         config_dict = config.parse_config(yaml.dump(configurations["minimal"]))
