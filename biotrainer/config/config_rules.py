@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Type, Union
+from typing import List, Type, Union, Tuple
 
 from .config_option import ConfigOption
 from ..protocols import Protocol
@@ -7,7 +7,14 @@ from ..protocols import Protocol
 
 class ConfigRule(ABC):
     @abstractmethod
-    def apply(self, protocol: Protocol, config: List) -> bool:
+    def apply(self, protocol: Protocol, config: List) -> Tuple[bool, str]:
+        """
+        Applies the config rule to the given protocol and config
+        :param protocol: Chosen protocol
+        :param config: Provided config
+        :return: Tuple: [0] - True/False indicating if the rule holds for the config
+                        [1] - Reason if the rule does not apply for the given config
+        """
         raise NotImplementedError
 
 
@@ -16,14 +23,16 @@ class MutualExclusive(ConfigRule):
     def __init__(self, exclusive: List[Type]):
         self.exclusive_options = [exclusive_option.__class__ for exclusive_option in exclusive]
 
-    def apply(self, protocol: Protocol, config: List[ConfigOption]) -> bool:
+    def apply(self, protocol: Protocol, config: List[ConfigOption]) -> Tuple[bool, str]:
         occurrences = 0
         for config_option in config:
             if config_option.__class__ in self.exclusive_options:
                 occurrences += 1
 
             if occurrences > 1:
-                return False
+                return False, f"{config_option} is mutual exclusive with {self.exclusive_options}."
+
+        return True, ""
 
 
 class ProtocolRequires(ConfigRule):
@@ -33,36 +42,15 @@ class ProtocolRequires(ConfigRule):
             self._protocols = [protocol]
         else:
             self._protocols = protocol
-        self._config_options = [config_option.__class__ for config_option in requires]
+        self._required_options = requires
 
-    def apply(self, protocol: Protocol, config: List) -> bool:
+    def apply(self, protocol: Protocol, config: List) -> Tuple[bool, str]:
         if protocol not in self._protocols:
-            return True
+            return True, ""
         else:
             config_classes = [config_option.__class__ for config_option in config]
-            for config_option in self._config_options:
-                if config_option not in config_classes:
-                    return False
+            for required_option in self._required_options:
+                if required_option not in config_classes:
+                    return False, f"{protocol} requires {required_option(protocol).name} to be set."
 
-            return True
-
-
-class ProtocolProhibits(ConfigRule):
-
-    def __init__(self, protocol: Union[Protocol, List[Protocol]], prohibits: List[Type]):
-        if type(protocol) == Protocol:
-            self._protocols = [protocol]
-        else:
-            self._protocols = protocol
-        self._config_options = [config_option.__class__ for config_option in prohibits]
-
-    def apply(self, protocol: Protocol, config: List) -> bool:
-        if protocol not in self._protocols:
-            return True
-        else:
-            config_classes = [config_option.__class__ for config_option in config]
-            for config_option in self._config_options:
-                if config_option in config_classes:
-                    return False
-
-            return True
+            return True, ""
