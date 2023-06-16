@@ -1,3 +1,5 @@
+import os
+from collections import namedtuple
 from typing import Union, List, Dict, Any
 from pathlib import Path
 from ruamel import yaml
@@ -27,11 +29,14 @@ config_option_rules = [
 all_options_list: List[
     ConfigOption] = general_options + input_options + model_options + training_options + embedding_options
 
+_ConfigMap = namedtuple("ConfigMap", "key value object")
+
 
 class Configurator:
-    def __init__(self, config_dict: Dict):
-        self.config_dict = config_dict
-        self.protocol = self.get_protocol_from_config_dict(config_dict)
+
+    def __init__(self, config_dict: Dict, input_file_path: Path = None):
+        self.protocol = self._get_protocol_from_config_dict(config_dict)
+        self.config_map = self._get_config_map(config_dict, self.protocol, input_file_path)
 
     def get_options_by_protocol(self):
         result = []
@@ -47,7 +52,8 @@ class Configurator:
 
     @classmethod
     def from_config_path(cls, config_path: Union[str, Path]):
-        return cls(config_dict=cls._read_config_file(config_path))
+        return cls(config_dict=cls._read_config_file(config_path),
+                   input_file_path=Path(os.path.dirname(os.path.abspath(config_path))))
 
     @staticmethod
     def _read_config_file(config_path: Union[str, Path], preserve_order: bool = True) -> dict:
@@ -73,7 +79,7 @@ class Configurator:
                 ) from e
 
     @staticmethod
-    def get_protocol_from_config_dict(config_dict: Dict[str, Any]):
+    def _get_protocol_from_config_dict(config_dict: Dict[str, Any]):
         try:
             protocol = config_dict["protocol"]
             return Protocol[protocol]
@@ -81,27 +87,34 @@ class Configurator:
             raise ConfigurationException(f"No protocol specified in config file!")
 
     @staticmethod
-    def get_mapping_dict(config_dict: Dict[str, Any], protocol: Protocol) -> Dict[str, ConfigOption]:
+    def _get_config_map(config_dict: Dict[str, Any], protocol: Protocol, input_file_path: Path = None) -> List[
+        _ConfigMap]:
         all_options_dict = {option(protocol).name: option for option in all_options_list}
 
-        mapping_dict = {}
+        config_map = []
         for key in config_dict.keys():
             try:
-                mapping_dict[key] = all_options_dict[key](protocol)
+                value = config_dict[key]
+                config_object = all_options_dict[key](protocol)
+                if input_file_path:
+                    if config_object.category == "input_option":
+                        value = input_file_path / value
+                config_map.append(
+                    _ConfigMap(key=key, value=value, object=config_object))
             except KeyError:
                 raise ConfigurationException(f"Unknown configuration option: {key}!")
-        return mapping_dict
+        return config_map
 
     def verify_config(self) -> bool:
-        mapping_dict = self.get_mapping_dict(config_dict=self.config_dict, protocol=self.protocol)
-        for config_key, config_option in mapping_dict.items():
-            if self.protocol not in config_option.allowed_protocols:
-                raise ConfigurationException(f"{config_option.name} not allowed for protocol {self.protocol}.")
-            if not config_option.is_value_valid(self.config_dict[config_key]):
-                raise ConfigurationException(f"{self.config_dict[config_key]} not valid for option {config_key}.")
+        for config in self.config_map:
+            if self.protocol not in config.object.allowed_protocols:
+                raise ConfigurationException(f"{config.object.name} not allowed for protocol {self.protocol}.")
+            if not config.object.is_value_valid(config.value):
+                raise ConfigurationException(f"{config.value} not valid for option {config.key}.")
 
         for rule in protocol_rules:
-            success, reason = rule.apply(protocol=self.protocol, config=list(mapping_dict.values()))
+            success, reason = rule.apply(protocol=self.protocol,
+                                         config=list([config.object for config in self.config_map]))
             if not success:
                 raise ConfigurationException(reason)
 

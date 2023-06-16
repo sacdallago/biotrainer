@@ -1,3 +1,5 @@
+import inspect
+
 from abc import ABC
 from typing import List, Type, Any, Union
 
@@ -49,7 +51,13 @@ class EmbedderName(EmbeddingOption, FileOption):
         if ".py" in value:
             return self._validate_file(value)
         else:
-            return value in self.possible_values
+            import bio_embeddings
+            # Also allow name of embedders instead of class names
+            # (one_hot_encoding: name, OneHotEncodingEmbedder: class name)
+            all_embedders = [embedder[1].name for embedder in
+                             inspect.getmembers(bio_embeddings.embed, inspect.isclass)
+                             if "Interface" not in embedder[0]]
+            return value in self.possible_values or value in all_embedders
 
 
 class EmbeddingsFile(EmbeddingOption, FileOption):

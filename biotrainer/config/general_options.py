@@ -1,3 +1,4 @@
+import os.path
 from abc import ABC
 from typing import List, Type, Any, Union
 
@@ -154,4 +155,35 @@ class IgnoreFileInconsistencies(GeneralOption, ConfigOption):
         return False
 
 
-general_options: List = [ProtocolOption, Interaction, Seed, SaveSplitIds, SanityCheck, IgnoreFileInconsistencies]
+class OutputDirectory(GeneralOption, ConfigOption):
+
+    @property
+    def name(self) -> str:
+        return "output_dir"
+
+    @property
+    def default_value(self) -> Union[str, int, float, bool, Any]:
+        return "output"
+
+    @property
+    def possible_types(self) -> List[Type]:
+        return [str]
+
+    @property
+    def possible_values(self) -> List[Any]:
+        return []
+
+    @property
+    def allowed_protocols(self) -> List[Protocol]:
+        return Protocol.all()
+
+    @property
+    def required(self) -> bool:
+        return False
+
+    def is_value_valid(self, value: Any) -> bool:
+        return os.path.exists(str(value))
+
+
+general_options: List = [ProtocolOption, Interaction, Seed, SaveSplitIds, SanityCheck, IgnoreFileInconsistencies,
+                         OutputDirectory]

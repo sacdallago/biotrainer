@@ -89,8 +89,7 @@ class FileOption(ConfigOption, ABC):
     def category(self) -> str:
         return "file_option"
 
-    @staticmethod
-    def _validate_file(file_path: str):
+    def _validate_file(self, file_path: str):
         """
         Verify if a file exists and is not empty.
         Parameters
@@ -108,7 +107,7 @@ class FileOption(ConfigOption, ABC):
                 raise ConfigurationException(f"The file at '{file_path}' is empty")
             return True
         except (OSError, TypeError) as e:
-            raise ConfigurationException(f"The configuration file at '{file_path}' does not exist") from e
+            raise ConfigurationException(f"The {self.name} at '{file_path}' does not exist") from e
 
     def is_value_valid(self, value: Any) -> bool:
         return self._validate_file(value)

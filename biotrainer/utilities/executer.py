@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 
 from .cuda_device import get_device
 from .config import validate_file, read_config_file, verify_config, write_config_file, add_default_values_to_config
+from ..config import Configurator
 
 from ..trainers import Trainer, HyperParameterManager
 
@@ -70,6 +71,9 @@ def parse_config_file_and_execute_run(config_file_path: str):
         logger.info(f"Creating output dir: {output_dir}")
         output_dir.mkdir(parents=True)
     config["output_dir"] = str(output_dir)
+
+    configurator = Configurator.from_config_path(config_file_path)
+    configurator.verify_config()
 
     # Setup logging
     _setup_logging(str(output_dir))
