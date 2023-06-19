@@ -7,7 +7,7 @@ from .config_option import ConfigOption, FileOption
 from ..protocols import Protocol
 
 
-class EmbeddingOption(ConfigOption, ABC):
+class EmbeddingOption(FileOption, ABC):
 
     @property
     def category(self) -> str:
@@ -30,10 +30,13 @@ class EmbedderName(EmbeddingOption, FileOption):
 
     @property
     def possible_values(self) -> List[Any]:
-        from bio_embeddings.embed import __all__ as bio_embedders
-        available_embedders = [available_embedder for available_embedder in bio_embedders
-                               if "Interface" not in available_embedder]
-        return available_embedders
+        try:
+            from bio_embeddings.embed import __all__ as bio_embedders
+            available_embedders = [available_embedder for available_embedder in bio_embedders
+                                   if "Interface" not in available_embedder]
+            return available_embedders
+        except ImportError:
+            return []
 
     @property
     def required(self) -> bool:
@@ -48,9 +51,7 @@ class EmbedderName(EmbeddingOption, FileOption):
         return False
 
     def is_value_valid(self, value: Any) -> bool:
-        if ".py" in value:
-            return self._validate_file(value)
-        else:
+        if ".py" not in value:
             import bio_embeddings
             # Also allow name of embedders instead of class names
             # (one_hot_encoding: name, OneHotEncodingEmbedder: class name)
@@ -58,6 +59,8 @@ class EmbedderName(EmbeddingOption, FileOption):
                              inspect.getmembers(bio_embeddings.embed, inspect.isclass)
                              if "Interface" not in embedder[0]]
             return value in self.possible_values or value in all_embedders
+        else:
+            return super().is_value_valid(value)
 
 
 class EmbeddingsFile(EmbeddingOption, FileOption):

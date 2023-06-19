@@ -183,7 +183,7 @@ class LimitedSampleSize(TrainingOption, ConfigOption):
         return [int]
 
     def is_value_valid(self, value: Any) -> bool:
-        return value > 0
+        return value > 0 or value == -1
 
     @property
     def required(self) -> bool:

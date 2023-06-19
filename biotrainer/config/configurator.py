@@ -1,12 +1,18 @@
 import os
+import logging
+import shutil
+
 from collections import namedtuple
 from typing import Union, List, Dict, Any
 from pathlib import Path
+from urllib import request
+from urllib.parse import urlparse
+
 from ruamel import yaml
 from ruamel.yaml import YAMLError
 
 from ..protocols import Protocol
-from .config_option import ConfigurationException, ConfigOption
+from .config_option import ConfigurationException, ConfigOption, FileOption
 from .config_rules import MutualExclusive, ProtocolRequires
 from .input_options import SequenceFile, LabelsFile, MaskFile, input_options
 from .training_options import AutoResume, PretrainedModel, training_options
@@ -36,15 +42,7 @@ class Configurator:
 
     def __init__(self, config_dict: Dict, input_file_path: Path = None):
         self.protocol = self._get_protocol_from_config_dict(config_dict)
-        self.config_map = self._get_config_map(config_dict, self.protocol, input_file_path)
-
-    def get_options_by_protocol(self):
-        result = []
-        for option_class in all_options_list:
-            option = option_class(self.protocol)
-            if self.protocol in option.allowed_protocols:
-                result.append(option.to_dict())
-        return result
+        self.config_maps: Dict[str, _ConfigMap] = self._get_config_maps(config_dict, self.protocol, input_file_path)
 
     @classmethod
     def from_config_dict(cls, config_dict: Dict[str, Any]):
@@ -56,14 +54,50 @@ class Configurator:
                    input_file_path=Path(os.path.dirname(os.path.abspath(config_path))))
 
     @staticmethod
-    def _read_config_file(config_path: Union[str, Path], preserve_order: bool = True) -> dict:
+    def get_options_by_protocol(protocol: Protocol):
+        result = []
+        for option_class in all_options_list:
+            option = option_class(protocol)
+            if protocol in option.allowed_protocols:
+                result.append(option.to_dict())
+        return result
 
+    def _verify_config(self) -> bool:
+        for config in self.config_maps.values():
+            # Check protocol
+            if self.protocol not in config.object.allowed_protocols:
+                raise ConfigurationException(f"{config.object.name} not allowed for protocol {self.protocol}.")
+            # Check value
+            if not config.object.is_value_valid(config.value):
+                raise ConfigurationException(f"{config.value} not valid for option {config.key}.")
+
+        for rule in protocol_rules:
+            success, reason = rule.apply(protocol=self.protocol,
+                                         config=list([config.object for config in self.config_maps.values()]))
+            if not success:
+                raise ConfigurationException(reason)
+
+        return True
+
+    def get_output_dir(self) -> Path:
+        return Path(self.config_maps["output_dir"].value)
+
+    def get_verified_config(self) -> Dict[str, Any]:
+        self._verify_config()
+        result = {}
+        for config_map in self.config_maps.values():
+            result[config_map.key] = config_map.value
+
+        return result
+
+    @staticmethod
+    def _read_config_file(config_path: Union[str, Path], preserve_order: bool = True) -> dict:
         """
         Read config from path to file.
 
         :param config_path: path to .yml config file
-        :param preserve_order:
-        :return:
+        :param preserve_order: Preserve order in file
+        :return: Config file parsed as dict
         """
         with open(config_path, "r") as fp:
             try:
@@ -87,35 +121,35 @@ class Configurator:
             raise ConfigurationException(f"No protocol specified in config file!")
 
     @staticmethod
-    def _get_config_map(config_dict: Dict[str, Any], protocol: Protocol, input_file_path: Path = None) -> List[
-        _ConfigMap]:
-        all_options_dict = {option(protocol).name: option for option in all_options_list}
+    def _get_config_maps(config_dict: Dict[str, Any], protocol: Protocol, input_file_path: Path = None) \
+            -> Dict[str, _ConfigMap]:
+        all_options_dict: Dict[str, ConfigOption] = {option(protocol).name: option(protocol) for option in
+                                                     all_options_list}
 
-        config_map = []
-        for key in config_dict.keys():
+        config_maps = {}
+        for config_name in config_dict.keys():
             try:
-                value = config_dict[key]
-                config_object = all_options_dict[key](protocol)
+                value = config_dict[config_name]
+                config_object = all_options_dict[config_name]
+                # Download file if necessary and allowed
+                if config_object is FileOption:
+                    value = config_object.download_file_if_necessary(value, str(input_file_path))
+                # Make file paths absolute
                 if input_file_path:
-                    if config_object.category == "input_option":
-                        value = input_file_path / value
-                config_map.append(
-                    _ConfigMap(key=key, value=value, object=config_object))
+                    if Path in config_object.possible_types:
+                        value = str(input_file_path / value)
+                config_maps[config_name] = _ConfigMap(key=config_name, value=value, object=config_object)
             except KeyError:
-                raise ConfigurationException(f"Unknown configuration option: {key}!")
-        return config_map
+                raise ConfigurationException(f"Unknown configuration option: {config_name}!")
+        # Add default values
+        all_options_for_protocol: List[ConfigOption] = [option for option in
+                                                        all_options_dict.values()
+                                                        if protocol in option.allowed_protocols]
+        for option in all_options_for_protocol:
+            if option.name not in config_dict.keys() and option.default_value != "":
+                value = str(input_file_path / option.default_value) \
+                    if Path in option.possible_types else option.default_value
 
-    def verify_config(self) -> bool:
-        for config in self.config_map:
-            if self.protocol not in config.object.allowed_protocols:
-                raise ConfigurationException(f"{config.object.name} not allowed for protocol {self.protocol}.")
-            if not config.object.is_value_valid(config.value):
-                raise ConfigurationException(f"{config.value} not valid for option {config.key}.")
+                config_maps[option.name] = _ConfigMap(key=option.name, value=value, object=option)
 
-        for rule in protocol_rules:
-            success, reason = rule.apply(protocol=self.protocol,
-                                         config=list([config.object for config in self.config_map]))
-            if not success:
-                raise ConfigurationException(reason)
-
-        return True
+        return config_maps

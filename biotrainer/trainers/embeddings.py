@@ -10,6 +10,7 @@ from typing import Dict, Any
 from importlib.util import spec_from_file_location, module_from_spec
 
 from .custom_embedder import CustomEmbedder
+from ..protocols import Protocol
 from ..utilities import ConfigurationException
 
 # Defines if reduced embeddings from bio_embeddings should be used.
@@ -24,8 +25,9 @@ _REQUIRES_REDUCED_EMBEDDINGS = {
 logger = logging.getLogger(__name__)
 
 
-def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:
+def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: Protocol) -> str:
     # Create protocol path to embeddings, because bio-embeddings can't handle recursive dir creation
+    protocol = protocol.name
     output_dir /= protocol
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)

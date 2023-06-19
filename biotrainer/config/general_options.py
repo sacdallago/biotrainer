@@ -1,5 +1,6 @@
 import os.path
 from abc import ABC
+from pathlib import Path
 from typing import List, Type, Any, Union
 
 from .config_option import ConfigOption
@@ -167,7 +168,7 @@ class OutputDirectory(GeneralOption, ConfigOption):
 
     @property
     def possible_types(self) -> List[Type]:
-        return [str]
+        return [str, Path]
 
     @property
     def possible_values(self) -> List[Any]:

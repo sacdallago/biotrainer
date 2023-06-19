@@ -1,7 +1,8 @@
 from abc import ABC
+from pathlib import Path
 from typing import List, Type, Any, Union
 
-from .config_option import ConfigOption, FileOption
+from .config_option import FileOption
 from ..protocols import Protocol
 
 
@@ -27,7 +28,7 @@ class SequenceFile(InputOption, FileOption):
 
     @property
     def possible_types(self) -> List[Type]:
-        return [str]
+        return [str, Path]
 
     @property
     def allow_download(self) -> bool:
@@ -54,7 +55,7 @@ class LabelsFile(InputOption, FileOption):
 
     @property
     def possible_types(self) -> List[Type]:
-        return [str]
+        return [str, Path]
 
     @property
     def allow_download(self) -> bool:
@@ -84,7 +85,7 @@ class MaskFile(InputOption, FileOption):
 
     @property
     def possible_types(self) -> List[Type]:
-        return [str]
+        return [str, Path]
 
     @property
     def allow_download(self) -> bool:

@@ -1,9 +1,16 @@
 import os
+import logging
+import shutil
 
 from abc import ABC, abstractmethod
 from typing import List, Union, Any, Type
+from urllib import request
+from urllib.parse import urlparse
 
 from ..protocols import Protocol
+
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigurationException(Exception):
@@ -27,7 +34,7 @@ class ConfigOption(ABC):
     @property
     @abstractmethod
     def default_value(self) -> Union[str, int, float, bool, Any]:
-        return "config_option"
+        return ""
 
     @property
     @abstractmethod
@@ -74,7 +81,7 @@ class FileOption(ConfigOption, ABC):
     @property
     @abstractmethod
     def default_value(self) -> Union[str, int, float, bool, Any]:
-        return "file_option"
+        return ""
 
     @property
     @abstractmethod
@@ -109,5 +116,32 @@ class FileOption(ConfigOption, ABC):
         except (OSError, TypeError) as e:
             raise ConfigurationException(f"The {self.name} at '{file_path}' does not exist") from e
 
+    @staticmethod
+    def _is_url(value: str):
+        return urlparse(value).scheme in ["http", "https", "ftp"]
+
+    def download_file_if_necessary(self, url: str, script_path: str) -> str:
+        if self._is_url(url) and self.is_value_valid(url):
+            try:
+                logger.info(f"Trying to download {self.name} from {url}")
+                req = request.Request(url, headers={
+                    'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"
+                })
+
+                file_name = url.split("/")[-1]
+                save_path = script_path + "/downloaded_" + file_name
+                with request.urlopen(req) as response, open(save_path, 'wb') as outfile:
+                    if response.status == 200:
+                        logger.info(f"OK - Downloading file {self.name} (size: {response.length / pow(2, 20)} MB)..")
+                    shutil.copyfileobj(response, outfile)
+                logger.info(f"{self.name} successfully downloaded and stored at {save_path}.")
+                return save_path
+            except Exception as e:
+                raise Exception(f"Could not download {self.name} from url {url}") from e
+        else:
+            return url
+
     def is_value_valid(self, value: Any) -> bool:
+        if self._is_url(str(value)):
+            return self.allow_download
         return self._validate_file(value)
