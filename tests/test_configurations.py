@@ -6,15 +6,26 @@ from biotrainer.utilities.executer import __PROTOCOLS as PROTOCOLS
 from biotrainer.config import Configurator, ConfigurationException
 
 configurations = {
+    "minimal": {
+        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "protocol": "sequence_to_class",
+        "model_choice": "FNN"
+    },
     "prohibited": {
         "sequence_file": "test_input_files/r2c/sequences.fasta",
         "labels_file": "test_input_files/r2c/labels.fasta",
         "protocol": "sequence_to_class"
     },
-    "minimal": {
-        "sequence_file": "test_input_files/r2c/sequences.fasta",
-        "protocol": "sequence_to_class",
-        "model_choice": "FNN"
+    "required": {
+        # Missing sequence file
+        "labels_file": "test_input_files/r2c/labels.fasta",
+        "protocol": "residue_to_class"
+    },
+    "download": {
+
+    },
+    "download_prohibited": {
+
     },
     "k_fold": {
         "cross_validation_config": {
@@ -47,6 +58,12 @@ class ConfigurationVerificationTests(unittest.TestCase):
         configurator = Configurator.from_config_dict(configurations["prohibited"])
         with self.assertRaises(ConfigurationException,
                                msg="Config with prohibited config option does not throw an error!"):
+            configurator.get_verified_config()
+
+    def test_required(self):
+        configurator = Configurator.from_config_dict(configurations["required"])
+        with self.assertRaises(ConfigurationException,
+                               msg="Config with missing required config option does not throw an error!"):
             configurator.get_verified_config()
 
     def test_wrong_model(self):
