@@ -1,20 +1,15 @@
 import os
-import logging
-import shutil
-
-from collections import namedtuple
-from typing import Union, List, Dict, Any
-from pathlib import Path
-from urllib import request
-from urllib.parse import urlparse
 
 from ruamel import yaml
+from pathlib import Path
 from ruamel.yaml import YAMLError
+from collections import namedtuple
+from typing import Union, List, Dict, Any
 
 from ..protocols import Protocol
 from .config_option import ConfigurationException, ConfigOption, FileOption
 from .config_rules import MutualExclusive, ProtocolRequires
-from .input_options import SequenceFile, LabelsFile, MaskFile, input_options
+from .input_options import SequenceFile, LabelsFile, input_options
 from .training_options import AutoResume, PretrainedModel, training_options
 from .embedding_options import EmbedderName, EmbeddingsFile, embedding_options
 from .general_options import general_options
@@ -24,7 +19,7 @@ from .model_options import model_options
 
 protocol_rules = [
     ProtocolRequires(protocol=Protocol.per_residue_protocols(), requires=[SequenceFile, LabelsFile]),
-    ProtocolRequires(protocol=Protocol.per_protein_protocols(), requires=[SequenceFile]),
+    ProtocolRequires(protocol=Protocol.per_sequence_protocols(), requires=[SequenceFile]),
 ]
 
 config_option_rules = [
@@ -41,6 +36,8 @@ _ConfigMap = namedtuple("ConfigMap", "key value object")
 class Configurator:
 
     def __init__(self, config_dict: Dict, input_file_path: Path = None):
+        if not input_file_path:
+            input_file_path = Path("")
         self.protocol = self._get_protocol_from_config_dict(config_dict)
         self.config_maps: Dict[str, _ConfigMap] = self._get_config_maps(config_dict, self.protocol, input_file_path)
 
@@ -80,7 +77,10 @@ class Configurator:
         return True
 
     def get_output_dir(self) -> Path:
-        return Path(self.config_maps["output_dir"].value)
+        output_dir_path = Path(self.config_maps["output_dir"].value)
+        if not output_dir_path.is_dir():
+            output_dir_path.mkdir(parents=True)
+        return output_dir_path
 
     def get_verified_config(self) -> Dict[str, Any]:
         self._verify_config()

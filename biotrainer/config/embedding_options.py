@@ -58,7 +58,7 @@ class EmbedderName(EmbeddingOption, FileOption):
             all_embedders = [embedder[1].name for embedder in
                              inspect.getmembers(bio_embeddings.embed, inspect.isclass)
                              if "Interface" not in embedder[0]]
-            return value in self.possible_values or value in all_embedders
+            return value in self.possible_values or value in all_embedders or value == self.default_value
         else:
             return super().is_value_valid(value)
 

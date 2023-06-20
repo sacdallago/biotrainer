@@ -16,6 +16,7 @@ from .target_manager_utils import revert_mappings
 from .embeddings import compute_embeddings, load_embeddings
 
 from ..losses import get_loss
+from ..protocols import Protocol
 from ..optimizers import get_optimizer
 from ..validations import SanityChecker
 from ..solvers import get_solver, Solver
@@ -32,7 +33,8 @@ class Trainer:
     def __init__(self,
                  # Needed
                  sequence_file: str,
-                 protocol: str, output_dir: str,
+                 protocol: Protocol,
+                 output_dir: str,
                  hp_manager: HyperParameterManager,
                  output_vars: Dict[str, Any],
                  # Optional with defaults
@@ -167,7 +169,7 @@ class Trainer:
     def _get_class_weights(self, target_manager: TargetManager) -> Union[None, torch.FloatTensor]:
         # Get x_to_class specific logs and weights
         class_weights = None
-        if 'class' in self._protocol:
+        if self._protocol in Protocol.classification_protocols():
             self._output_vars['class_int_to_string'] = target_manager.class_int2str
             self._output_vars['class_str_to_int'] = target_manager.class_str2int
             logger.info(f"Number of classes: {self._output_vars['n_classes']}")

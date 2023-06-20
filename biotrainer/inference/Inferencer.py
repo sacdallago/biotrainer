@@ -15,6 +15,7 @@ from typing import Union, Optional, Dict, Iterable, Tuple, Any, List
 
 from ..losses import get_loss
 from ..models import get_model
+from ..protocols import Protocol
 from ..optimizers import get_optimizer
 from ..trainers import revert_mappings
 from ..datasets import get_dataset, get_collate_function
@@ -27,7 +28,7 @@ class Inferencer:
     def __init__(
             self,
             # Constant parameters for all split solvers
-            protocol: str,
+            protocol: Protocol,
             embedder_name: str,
             # Optional constant parameters
             class_int_to_string: Optional[Dict[int, str]] = None,

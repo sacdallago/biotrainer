@@ -41,13 +41,13 @@ class ConfigurationVerificationTests(unittest.TestCase):
 
     def test_minimal_configuration(self):
         configurator = Configurator.from_config_dict(configurations["minimal"])
-        self.assertTrue(configurator.verify_config(), "Minimal config does not work!")
+        self.assertTrue(configurator.get_verified_config(), "Minimal config does not work!")
 
     def test_prohibited(self):
         configurator = Configurator.from_config_dict(configurations["prohibited"])
         with self.assertRaises(ConfigurationException,
                                msg="Config with prohibited config option does not throw an error!"):
-            configurator.verify_config()
+            configurator.get_verified_config()
 
     def test_wrong_model(self):
         config_dict = configurations["minimal"]
@@ -56,7 +56,7 @@ class ConfigurationVerificationTests(unittest.TestCase):
 
         with self.assertRaises(ConfigurationException,
                                msg="Config with wrong model does not throw an exception"):
-            configurator.verify_config()
+            configurator.get_verified_config()
 
     def test_k_fold(self):
         config_dict = config.parse_config(yaml.dump({**configurations["minimal"], **configurations["k_fold"]}))

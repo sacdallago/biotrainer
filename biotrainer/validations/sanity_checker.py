@@ -5,6 +5,7 @@ from typing import Dict, List
 from scipy.stats import pearsonr
 
 from ..solvers import Solver
+from ..protocols import Protocol
 from ..utilities import DatasetSample, INTERACTION_INDICATOR
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class SanityChecker:
     def _check_metrics(self):
         test_results = self.output_vars['test_iterations_results']
 
-        if "_class" in self.output_vars["protocol"]:
+        if self.output_vars["protocol"] in Protocol.classification_protocols():
             if "metrics" in test_results.keys():
                 test_result_metrics = test_results['metrics']
             else:
@@ -69,7 +70,7 @@ class SanityChecker:
     def _check_baselines(self):
         self.output_vars["test_iterations_results"]["test_baselines"] = {}
         baseline_dict = self.output_vars["test_iterations_results"]["test_baselines"]
-        if "_class" in self.output_vars["protocol"]:
+        if self.output_vars["protocol"] in Protocol.classification_protocols():
             # Only for binary classification tasks at the moment:
             if self.output_vars['n_classes'] <= 2:
                 baseline_dict["one_only"] = self._one_only_baseline()
@@ -77,14 +78,15 @@ class SanityChecker:
                 if "interaction" in self.output_vars:
                     baseline_dict["bias_predictions"] = self._bias_interaction_baseline()
 
-        elif "_value" in self.output_vars["protocol"]:
+        elif self.output_vars["protocol"] in Protocol.regression_protocols():
             baseline_dict["mean_only"] = self._mean_only_baseline()
 
     def _one_only_baseline(self):
         """
         Predicts "1" for every sample in the test set. (Only for binary classification)
         """
-        if self.output_vars["protocol"] in ["sequence_to_class", "residues_to_class"]:
+        protocol: Protocol = self.output_vars["protocol"]
+        if protocol in Protocol.per_sequence_protocols() and protocol in Protocol.classification_protocols():
             ones = torch.ones(len(self.test_dataset))
             one_only_metrics = self.solver._compute_metrics(predicted=ones,
                                                             labels=torch.tensor(
@@ -96,7 +98,8 @@ class SanityChecker:
         """
         Predicts "0" for every sample in the test set. (Only for binary classification)
         """
-        if self.output_vars["protocol"] in ["sequence_to_class", "residues_to_class"]:
+        protocol: Protocol = self.output_vars["protocol"]
+        if protocol in Protocol.per_sequence_protocols() and protocol in Protocol.classification_protocols():
             zeros = torch.zeros(len(self.test_dataset))
             zero_only_metrics = self.solver._compute_metrics(predicted=zeros,
                                                              labels=torch.tensor(
@@ -108,7 +111,7 @@ class SanityChecker:
         """
         Predicts the mean of the test set for every sample in the test set. (Only for regression)
         """
-        if self.output_vars["protocol"] in ["sequence_to_value"]:
+        if self.output_vars["protocol"] in Protocol.regression_protocols():
             test_set_targets = torch.tensor([sample.target for sample in self.test_dataset])
             test_set_means = torch.full((len(test_set_targets),), torch.mean(test_set_targets).item())
             mean_only_metrics = self.solver._compute_metrics(predicted=test_set_means,
@@ -126,8 +129,8 @@ class SanityChecker:
             The predictor itself just sums up the positive and negative counts for both interactors and "predicts"
             the higher value.
         """
-
-        if self.output_vars["protocol"] in ["sequence_to_class", "residues_to_class"]:
+        protocol: Protocol = self.output_vars["protocol"]
+        if protocol in Protocol.per_sequence_protocols() and protocol in Protocol.classification_protocols():
             # 1. Calculate protein counts
             positive_counts = {}
             negative_counts = {}

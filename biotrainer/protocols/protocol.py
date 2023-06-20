@@ -18,11 +18,15 @@ class Protocol(Enum):
                 Protocol.sequence_to_value]
 
     @staticmethod
+    def classification_protocols() -> List[Protocol]:
+        return [Protocol.residue_to_class, Protocol.residues_to_class, Protocol.sequence_to_class]
+
+    @staticmethod
     def regression_protocols() -> List[Protocol]:
         return [Protocol.sequence_to_value]
 
     @staticmethod
-    def per_protein_protocols() -> List[Protocol]:
+    def per_sequence_protocols() -> List[Protocol]:
         return [Protocol.residues_to_class, Protocol.sequence_to_class, Protocol.sequence_to_value]
 
     @staticmethod
