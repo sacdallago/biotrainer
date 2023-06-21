@@ -136,6 +136,8 @@ class Trainer:
                                            mode="warn")
             sanity_checker.check_test_results()
 
+        # CONVERT PROTOCOL CLASS TO STRING
+        self._output_vars["protocol"] = self._output_vars["protocol"].name
         return self._output_vars
 
     def _setup(self):
