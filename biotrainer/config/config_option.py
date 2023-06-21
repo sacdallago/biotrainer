@@ -62,6 +62,9 @@ class ConfigOption(ABC):
     def category(self) -> str:
         return "config_option"
 
+    def download_file_if_necessary(self, url: str, script_path: str) -> str:
+        raise NotImplementedError
+
     def to_dict(self):
         return {"name": str(self.name),
                 "category": str(self.category),

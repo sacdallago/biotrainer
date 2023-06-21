@@ -9,7 +9,6 @@ configurations = {
     "minimal": {
         "sequence_file": "test_input_files/r2c/sequences.fasta",
         "protocol": "sequence_to_class",
-        "model_choice": "FNN"
     },
     "prohibited": {
         "sequence_file": "test_input_files/r2c/sequences.fasta",
@@ -22,11 +21,17 @@ configurations = {
         "protocol": "residue_to_class"
     },
     "download": {
-
+        "sequence_file": "https://example.com/sequences.fasta",
+        "protocol": "sequence_to_class",
+        "model_choice": "FNN",
     },
     "download_prohibited": {
-
+        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "protocol": "sequence_to_class",
+        "model_choice": "FNN",
+        "embedder_name": "https://example.com/payload.py"
     },
+    # TODO "auto_resume/pretrained model, for every rule one test"
     "k_fold": {
         "cross_validation_config": {
             "method": "k_fold",
@@ -72,7 +77,31 @@ class ConfigurationVerificationTests(unittest.TestCase):
         configurator = Configurator.from_config_dict(config_dict)
 
         with self.assertRaises(ConfigurationException,
-                               msg="Config with wrong model does not throw an exception"):
+                               msg="Config with arbitrary model does not throw an exception"):
+            configurator.get_verified_config()
+
+        config_dict["model_choice"] = "LightAttention"
+        configurator = Configurator.from_config_dict(config_dict)
+
+        with self.assertRaises(ConfigurationException,
+                               msg="Config with unavailable model for the protocol does not throw an exception"):
+            configurator.get_verified_config()
+
+    def test_download(self):
+        config_dict = configurations["download"]
+        configurator = Configurator.from_config_dict(config_dict)
+
+        # Download allowed but must not work from arbitrary URL
+        with self.assertRaisesRegex(Exception, expected_regex="Could not download",
+                                    msg="Config downloading a sequence file does not throw Exception"):
+            configurator.get_verified_config()
+
+    def test_download_prohibited(self):
+        config_dict = configurations["download_prohibited"]
+        configurator = Configurator.from_config_dict(config_dict)
+
+        with self.assertRaises(ConfigurationException,
+                               msg="Config downloading an embedding script does not throw an exception"):
             configurator.get_verified_config()
 
     def test_k_fold(self):
