@@ -38,13 +38,16 @@ def _setup_logging(output_dir: str):
 
 
 def parse_config_file_and_execute_run(config_file_path: str):
+    # Verify config via configurator
     configurator = Configurator.from_config_path(config_file_path)
-    # Setup logging
-    output_dir = configurator.get_output_dir()
-    _setup_logging(str(output_dir))
-
     config = configurator.get_verified_config()
     config["protocol"] = Protocol[config["protocol"]]
+
+    # Create output dir and setup logging
+    output_dir = Path(config["output_dir"])
+    if not output_dir.is_dir():
+        output_dir.mkdir(parents=True)
+    _setup_logging(str(output_dir))
 
     if "pretrained_model" in config.keys():
         logger.info(f"Using pre_trained model: {config['pretrained_model']}")

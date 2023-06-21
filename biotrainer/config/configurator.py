@@ -35,11 +35,12 @@ _ConfigMap = namedtuple("ConfigMap", "key value object")
 
 class Configurator:
 
-    def __init__(self, config_dict: Dict, input_file_path: Path = None):
-        if not input_file_path:
-            input_file_path = Path("")
+    def __init__(self, config_dict: Dict, config_file_path: Path = None):
+        if not config_file_path:
+            config_file_path = Path("")
+        self._config_file_path = config_file_path
+        self._config_dict = config_dict
         self.protocol = self._get_protocol_from_config_dict(config_dict)
-        self.config_maps: Dict[str, _ConfigMap] = self._get_config_maps(config_dict, self.protocol, input_file_path)
 
     @classmethod
     def from_config_dict(cls, config_dict: Dict[str, Any]):
@@ -48,7 +49,7 @@ class Configurator:
     @classmethod
     def from_config_path(cls, config_path: Union[str, Path]):
         return cls(config_dict=cls._read_config_file(config_path),
-                   input_file_path=Path(os.path.dirname(os.path.abspath(config_path))))
+                   config_file_path=Path(os.path.dirname(os.path.abspath(config_path))))
 
     @staticmethod
     def get_options_by_protocol(protocol: Protocol):
@@ -59,36 +60,23 @@ class Configurator:
                 result.append(option.to_dict())
         return result
 
-    def _verify_config(self) -> bool:
-        for config in self.config_maps.values():
+    @staticmethod
+    def _verify_config(protocol: Protocol, config_maps: Dict[str, _ConfigMap]) -> bool:
+        for config in config_maps.values():
             # Check protocol
-            if self.protocol not in config.object.allowed_protocols:
-                raise ConfigurationException(f"{config.object.name} not allowed for protocol {self.protocol}.")
+            if protocol not in config.object.allowed_protocols:
+                raise ConfigurationException(f"{config.object.name} not allowed for protocol {protocol}.")
             # Check value
             if not config.object.is_value_valid(config.value):
                 raise ConfigurationException(f"{config.value} not valid for option {config.key}.")
 
         for rule in protocol_rules:
-            success, reason = rule.apply(protocol=self.protocol,
-                                         config=list([config.object for config in self.config_maps.values()]))
+            success, reason = rule.apply(protocol=protocol,
+                                         config=list([config.object for config in config_maps.values()]))
             if not success:
                 raise ConfigurationException(reason)
 
         return True
-
-    def get_output_dir(self) -> Path:
-        output_dir_path = Path(self.config_maps["output_dir"].value)
-        if not output_dir_path.is_dir():
-            output_dir_path.mkdir(parents=True)
-        return output_dir_path
-
-    def get_verified_config(self) -> Dict[str, Any]:
-        self._verify_config()
-        result = {}
-        for config_map in self.config_maps.values():
-            result[config_map.key] = config_map.value
-
-        return result
 
     @staticmethod
     def _read_config_file(config_path: Union[str, Path], preserve_order: bool = True) -> dict:
@@ -121,7 +109,7 @@ class Configurator:
             raise ConfigurationException(f"No protocol specified in config file!")
 
     @staticmethod
-    def _get_config_maps(config_dict: Dict[str, Any], protocol: Protocol, input_file_path: Path = None) \
+    def _get_config_maps(protocol: Protocol, config_dict: Dict[str, Any], config_file_path: Path = None) \
             -> Dict[str, _ConfigMap]:
         all_options_dict: Dict[str, ConfigOption] = {option(protocol).name: option(protocol) for option in
                                                      all_options_list}
@@ -130,14 +118,14 @@ class Configurator:
         for config_name in config_dict.keys():
             try:
                 value = config_dict[config_name]
-                config_object = all_options_dict[config_name]
+                config_object: ConfigOption = all_options_dict[config_name]
                 # Download file if necessary and allowed
-                if config_object is FileOption:
-                    value = config_object.download_file_if_necessary(value, str(input_file_path))
+                if issubclass(config_object.__class__, FileOption):
+                    value = config_object.download_file_if_necessary(value, str(config_file_path))
                 # Make file paths absolute
-                if input_file_path:
+                if config_file_path:
                     if Path in config_object.possible_types:
-                        value = str(input_file_path / value)
+                        value = str(config_file_path / value)
                 config_maps[config_name] = _ConfigMap(key=config_name, value=value, object=config_object)
             except KeyError:
                 raise ConfigurationException(f"Unknown configuration option: {config_name}!")
@@ -147,9 +135,20 @@ class Configurator:
                                                         if protocol in option.allowed_protocols]
         for option in all_options_for_protocol:
             if option.name not in config_dict.keys() and option.default_value != "":
-                value = str(input_file_path / option.default_value) \
+                value = str(config_file_path / option.default_value) \
                     if Path in option.possible_types else option.default_value
 
                 config_maps[option.name] = _ConfigMap(key=option.name, value=value, object=option)
 
         return config_maps
+
+    def get_verified_config(self) -> Dict[str, Any]:
+        config_maps: Dict[str, _ConfigMap] = self._get_config_maps(protocol=self.protocol,
+                                                                   config_dict=self._config_dict,
+                                                                   config_file_path=self._config_file_path)
+        self._verify_config(protocol=self.protocol, config_maps=config_maps)
+        result = {}
+        for config_map in config_maps.values():
+            result[config_map.key] = config_map.value
+
+        return result
