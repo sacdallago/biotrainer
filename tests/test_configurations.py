@@ -31,7 +31,18 @@ configurations = {
         "model_choice": "FNN",
         "embedder_name": "https://example.com/payload.py"
     },
-    # TODO "auto_resume/pretrained model, for every rule one test"
+    "auto_resume_pretrained_model_mutual_exclusive": {
+        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "protocol": "sequence_to_class",
+        "auto_resume": True,
+        "pretrained_model": "placeholder.pt"
+    },
+    "embeddings_file_embedder_name_mutual_exclusive": {
+        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "protocol": "sequence_to_class",
+        "embeddings_file": "placeholder.h5",
+        "embedder_name": "one_hot_encoding"
+    },
     "k_fold": {
         "cross_validation_config": {
             "method": "k_fold",
@@ -87,6 +98,15 @@ class ConfigurationVerificationTests(unittest.TestCase):
                                msg="Config with unavailable model for the protocol does not throw an exception"):
             configurator.get_verified_config()
 
+    def test_non_existing_embedder(self):
+        config_dict = configurations["minimal"]
+        config_dict["embedder_name"] = "two_hot_encodings"
+        configurator = Configurator.from_config_dict(config_dict)
+
+        with self.assertRaises(ConfigurationException,
+                               msg="Config with non_existing_embedder does not throw an exception"):
+            configurator.get_verified_config()
+
     def test_download(self):
         config_dict = configurations["download"]
         configurator = Configurator.from_config_dict(config_dict)
@@ -102,6 +122,23 @@ class ConfigurationVerificationTests(unittest.TestCase):
 
         with self.assertRaises(ConfigurationException,
                                msg="Config downloading an embedding script does not throw an exception"):
+            configurator.get_verified_config()
+
+    def test_auto_resume_pretrained_model_mutual_exclusive(self):
+        config_dict = configurations["auto_resume_pretrained_model_mutual_exclusive"]
+        configurator = Configurator.from_config_dict(config_dict)
+
+        with self.assertRaisesRegex(ConfigurationException, expected_regex="mutual exclusive",
+                                    msg="Config with auto_resume and pretrained_model does not throw an error"):
+            configurator.get_verified_config()
+
+    def test_embeddings_file_embedder_name_mutual_exclusive(self):
+        config_dict = configurations["embeddings_file_embedder_name_mutual_exclusive"]
+        configurator = Configurator.from_config_dict(config_dict)
+        configurator.get_verified_config()
+
+        with self.assertRaisesRegex(ConfigurationException, expected_regex="mutual exclusive",
+                                    msg="Config with embeddings file and embedder name does not throw an error"):
             configurator.get_verified_config()
 
     def test_k_fold(self):
