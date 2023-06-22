@@ -1,19 +1,18 @@
 from abc import ABC
 from typing import List, Type, Any, Union
 
-from .config_option import ConfigOption, FileOption
-from ..protocols import Protocol
+from .config_option import ConfigOption, FileOption, classproperty
 
 
 class TrainingOption(ConfigOption, ABC):
 
-    @property
+    @classproperty
     def category(self) -> str:
         return "training_option"
 
 
 class NumberEpochs(TrainingOption, ConfigOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "num_epochs"
 
@@ -21,21 +20,21 @@ class NumberEpochs(TrainingOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return 200
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [int]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value > 0
+    def is_value_valid(self) -> bool:
+        return self.value > 0
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class BatchSize(TrainingOption, ConfigOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "batch_size"
 
@@ -43,21 +42,21 @@ class BatchSize(TrainingOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return 128
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [int]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value > 0
+    def is_value_valid(self) -> bool:
+        return self.value > 0
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class Patience(TrainingOption, ConfigOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "patience"
 
@@ -65,20 +64,20 @@ class Patience(TrainingOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return 10
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [int]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value > 0
+    def is_value_valid(self) -> bool:
+        return self.value > 0
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class Shuffle(TrainingOption, ConfigOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "shuffle"
 
@@ -86,7 +85,7 @@ class Shuffle(TrainingOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return True
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [bool]
 
@@ -94,13 +93,13 @@ class Shuffle(TrainingOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return [True, False]
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class UseClassWeights(TrainingOption, ConfigOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "use_class_weights"
 
@@ -108,7 +107,7 @@ class UseClassWeights(TrainingOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return False
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [bool]
 
@@ -116,13 +115,13 @@ class UseClassWeights(TrainingOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return [True, False]
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class AutoResume(TrainingOption, ConfigOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "auto_resume"
 
@@ -130,7 +129,7 @@ class AutoResume(TrainingOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return False
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [bool]
 
@@ -138,13 +137,13 @@ class AutoResume(TrainingOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return [True, False]
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class PretrainedModel(TrainingOption, FileOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "pretrained_model"
 
@@ -152,25 +151,25 @@ class PretrainedModel(TrainingOption, FileOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return ""
 
-    @property
+    @classproperty
     def allowed_formats(self) -> List[str]:
         return [".pt"]
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str]
 
-    @property
+    @classproperty
     def allow_download(self) -> bool:
         return False
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class LimitedSampleSize(TrainingOption, ConfigOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "limited_sample_size"
 
@@ -178,14 +177,14 @@ class LimitedSampleSize(TrainingOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return -1
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [int]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value > 0 or value == -1
+    def is_value_valid(self) -> bool:
+        return self.value > 0 or self.value == self.default_value
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 

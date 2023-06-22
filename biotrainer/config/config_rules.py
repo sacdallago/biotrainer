@@ -20,24 +20,31 @@ class ConfigRule(ABC):
 
 class MutualExclusive(ConfigRule):
 
-    def __init__(self, exclusive: List[Type]):
-        self.exclusive_options = [exclusive_option.__class__ for exclusive_option in exclusive]
+    def __init__(self, exclusive: List, allowed_values: List[str] = None, error_message: str = ""):
+        if allowed_values is None:
+            allowed_values = []
+        self.exclusive_options = exclusive
+        self.allowed_values = allowed_values
+        self.error_message = "\n" + error_message if error_message != "" else ""
 
     def apply(self, protocol: Protocol, config: List[ConfigOption]) -> Tuple[bool, str]:
         occurrences = 0
         for config_option in config:
-            if config_option.__class__ in self.exclusive_options:
+            if config_option.__class__ in self.exclusive_options and config_option.value not in self.allowed_values:
                 occurrences += 1
 
             if occurrences > 1:
-                return False, f"{config_option} is mutual exclusive with {self.exclusive_options}."
+                other_exclusive_options = [exclusive_option.name for exclusive_option in self.exclusive_options
+                                           if exclusive_option != config_option.__class__]
+                return False, f"{config_option.name} is mutual exclusive with {other_exclusive_options}." \
+                              f"{self.error_message}"
 
         return True, ""
 
 
 class ProtocolRequires(ConfigRule):
 
-    def __init__(self, protocol: Union[Protocol, List[Protocol]], requires: List[Type]):
+    def __init__(self, protocol: Union[Protocol, List[Protocol]], requires: List):
         if type(protocol) == Protocol:
             self._protocols = [protocol]
         else:
@@ -51,6 +58,6 @@ class ProtocolRequires(ConfigRule):
             config_classes = [config_option.__class__ for config_option in config]
             for required_option in self._required_options:
                 if required_option not in config_classes:
-                    return False, f"{protocol} requires {required_option(protocol).name} to be set."
+                    return False, f"{protocol} requires {required_option.name} to be set."
 
             return True, ""

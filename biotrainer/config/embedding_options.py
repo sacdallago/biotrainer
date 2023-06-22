@@ -3,20 +3,19 @@ import inspect
 from abc import ABC
 from typing import List, Type, Any, Union
 
-from .config_option import ConfigOption, FileOption
-from ..protocols import Protocol
+from .config_option import FileOption, classproperty
 
 
 class EmbeddingOption(FileOption, ABC):
 
-    @property
+    @classproperty
     def category(self) -> str:
         return "embedding_option"
 
 
 class EmbedderName(EmbeddingOption, FileOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "embedder_name"
 
@@ -24,7 +23,7 @@ class EmbedderName(EmbeddingOption, FileOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "custom_embeddings"
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str]
 
@@ -38,34 +37,34 @@ class EmbedderName(EmbeddingOption, FileOption):
         except ImportError:
             return []
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return True
 
-    @property
+    @classproperty
     def allowed_formats(self) -> List[str]:
         return [".py"]
 
-    @property
+    @classproperty
     def allow_download(self) -> bool:
         return False
 
-    def is_value_valid(self, value: Any) -> bool:
-        if ".py" not in value:
+    def is_value_valid(self) -> bool:
+        if ".py" not in self.value:
             import bio_embeddings
             # Also allow name of embedders instead of class names
             # (one_hot_encoding: name, OneHotEncodingEmbedder: class name)
             all_embedders = [embedder[1].name for embedder in
                              inspect.getmembers(bio_embeddings.embed, inspect.isclass)
                              if "Interface" not in embedder[0]]
-            return value in self.possible_values or value in all_embedders or value == self.default_value
+            return self.value in self.possible_values or self.value in all_embedders or self.value == self.default_value
         else:
-            return super().is_value_valid(value)
+            return super().is_value_valid()
 
 
 class EmbeddingsFile(EmbeddingOption, FileOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "embeddings_file"
 
@@ -73,19 +72,19 @@ class EmbeddingsFile(EmbeddingOption, FileOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return ""
 
-    @property
+    @classproperty
     def allowed_formats(self) -> List[str]:
         return ["h5"]
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str]
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
-    @property
+    @classproperty
     def allow_download(self) -> bool:
         return True
 

@@ -156,12 +156,12 @@ def verify_config(config: dict, protocols: set):
         raise ConfigurationException("Model " + model + " not available for protocol: " + protocol)
 
     # Check pretraining
-    if "auto_resume" in config.keys() and "pretrained_model" in config.keys():
-        if config["auto_resume"]:
-            raise ConfigurationException("auto_resume and pretrained_model are mutually exclusive.\n"
-                                         "Use auto_resume in case you need to "
-                                         "restart your training job multiple times.\n"
-                                         "Use pretrained_model if you want to continue to train a specific model.")
+    #if "auto_resume" in config.keys() and "pretrained_model" in config.keys():
+    #    if config["auto_resume"]:
+    #        raise ConfigurationException("auto_resume and pretrained_model are mutually exclusive.\n"
+    #                                     "Use auto_resume in case you need to "
+    #                                     "restart your training job multiple times.\n"
+    #                                     "Use pretrained_model if you want to continue to train a specific model.")
 
     # Check embeddings input
     if "embedder_name" in config.keys() and "embeddings_file" in config.keys():

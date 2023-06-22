@@ -3,6 +3,7 @@ import logging
 import shutil
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import List, Union, Any, Type
 from urllib import request
 from urllib.parse import urlparse
@@ -19,14 +20,22 @@ class ConfigurationException(Exception):
     """
 
 
+class classproperty(property):
+    def __get__(self, cls, owner):
+        return classmethod(self.fget).__get__(None, owner)()
+
+
 class ConfigOption(ABC):
 
     _protocol: Protocol = None
 
-    def __init__(self, protocol: Protocol):
+    def __init__(self, protocol: Protocol, value: Any = None):
         self._protocol = protocol
+        if value is None:
+            value = self.default_value
+        self.value = value
 
-    @property
+    @classproperty
     @abstractmethod
     def name(self) -> str:
         return "config_option"
@@ -36,7 +45,7 @@ class ConfigOption(ABC):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return ""
 
-    @property
+    @classproperty
     @abstractmethod
     def possible_types(self) -> List[Type]:
         return [Any]
@@ -46,23 +55,26 @@ class ConfigOption(ABC):
         # List is not empty if this config option is restricted to certain values
         return []
 
-    @property
+    @classproperty
     @abstractmethod
     def required(self) -> bool:
         return False
 
-    def is_value_valid(self, value: Any) -> bool:
-        return value in self.possible_values
+    def is_value_valid(self) -> bool:
+        return self.value in self.possible_values
 
-    @property
+    @classproperty
     def allowed_protocols(self) -> List[Protocol]:
         return Protocol.all()
 
-    @property
+    @classproperty
     def category(self) -> str:
         return "config_option"
 
-    def download_file_if_necessary(self, url: str, script_path: str) -> str:
+    def download_file_if_necessary(self, url: str, script_path: Path):
+        raise NotImplementedError
+
+    def make_file_path_absolute(self, config_file_path: Path):
         raise NotImplementedError
 
     def to_dict(self):
@@ -76,26 +88,26 @@ class ConfigOption(ABC):
 
 class FileOption(ConfigOption, ABC):
 
-    @property
+    @classproperty
     @abstractmethod
     def name(self) -> str:
         return "file_option"
 
-    @property
+    @classproperty
     @abstractmethod
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return ""
 
-    @property
+    @classproperty
     @abstractmethod
     def allowed_formats(self) -> List[str]:
         pass
 
-    @property
+    @classproperty
     def allow_download(self) -> bool:
         return False
 
-    @property
+    @classproperty
     def category(self) -> str:
         return "file_option"
 
@@ -123,8 +135,8 @@ class FileOption(ConfigOption, ABC):
     def _is_url(value: str):
         return urlparse(value).scheme in ["http", "https", "ftp"]
 
-    def download_file_if_necessary(self, url: str, script_path: str) -> str:
-        if self._is_url(url) and self.is_value_valid(url):
+    def download_file_if_necessary(self, url: str, script_path: Path):
+        if self._is_url(url) and self.allow_download:
             try:
                 logger.info(f"Trying to download {self.name} from {url}")
                 req = request.Request(url, headers={
@@ -132,19 +144,20 @@ class FileOption(ConfigOption, ABC):
                 })
 
                 file_name = url.split("/")[-1]
-                save_path = script_path + "/downloaded_" + file_name
+                save_path = str(script_path) + "/downloaded_" + file_name
                 with request.urlopen(req) as response, open(save_path, 'wb') as outfile:
                     if response.status == 200:
                         logger.info(f"OK - Downloading file {self.name} (size: {response.length / pow(2, 20)} MB)..")
                     shutil.copyfileobj(response, outfile)
                 logger.info(f"{self.name} successfully downloaded and stored at {save_path}.")
-                return save_path
+                self.value = save_path
             except Exception as e:
                 raise Exception(f"Could not download {self.name} from url {url}") from e
-        else:
-            return url
 
-    def is_value_valid(self, value: Any) -> bool:
-        if self._is_url(str(value)):
+    def make_file_path_absolute(self, config_file_path: Path):
+        self.value = str(config_file_path / self.value)
+
+    def is_value_valid(self) -> bool:
+        if self._is_url(str(self.value)):
             return self.allow_download
-        return self._validate_file(value)
+        return self._validate_file(self.value)

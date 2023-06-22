@@ -2,19 +2,19 @@ from abc import ABC
 from pathlib import Path
 from typing import List, Type, Any, Union
 
-from .config_option import FileOption
+from .config_option import FileOption, classproperty
 from ..protocols import Protocol
 
 
 class InputOption(FileOption, ABC):
 
-    @property
+    @classproperty
     def category(self) -> str:
         return "input_option"
 
 
 class SequenceFile(InputOption, FileOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "sequence_file"
 
@@ -22,26 +22,26 @@ class SequenceFile(InputOption, FileOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return ""
 
-    @property
+    @classproperty
     def allowed_formats(self) -> List[str]:
         return ["fasta"]
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str, Path]
 
-    @property
+    @classproperty
     def allow_download(self) -> bool:
         return True
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return True
 
 
 class LabelsFile(InputOption, FileOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "labels_file"
 
@@ -49,29 +49,29 @@ class LabelsFile(InputOption, FileOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return ""
 
-    @property
+    @classproperty
     def allowed_formats(self) -> List[str]:
         return ["fasta"]
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str, Path]
 
-    @property
+    @classproperty
     def allow_download(self) -> bool:
         return True
 
-    @property
+    @classproperty
     def allowed_protocols(self) -> List[Protocol]:
         return [Protocol.residue_to_class]
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return self._protocol in Protocol.per_residue_protocols()
 
 
 class MaskFile(InputOption, FileOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "mask_file"
 
@@ -79,23 +79,23 @@ class MaskFile(InputOption, FileOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return ""
 
-    @property
+    @classproperty
     def allowed_formats(self) -> List[str]:
         return ["fasta"]
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str, Path]
 
-    @property
+    @classproperty
     def allow_download(self) -> bool:
         return True
 
-    @property
+    @classproperty
     def allowed_protocols(self) -> List[Protocol]:
         return [Protocol.residue_to_class]
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 

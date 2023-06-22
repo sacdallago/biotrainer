@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import List, Type, Any, Union
 
-from .config_option import ConfigOption
+from .config_option import ConfigOption, classproperty
 from ..protocols import Protocol
 
 from ..models import get_available_models_dict
@@ -11,14 +11,14 @@ from ..optimizers import get_available_optimizers_dict
 
 class ModelOption(ConfigOption, ABC):
 
-    @property
+    @classproperty
     def category(self) -> str:
         return "model_option"
 
 
 class ModelChoice(ModelOption, ConfigOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "model_choice"
 
@@ -29,7 +29,7 @@ class ModelChoice(ModelOption, ConfigOption):
         else:
             return "FNN"
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str]
 
@@ -37,14 +37,14 @@ class ModelChoice(ModelOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return list(get_available_models_dict()[self._protocol].keys())
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return True
 
 
 class OptimizerChoice(ModelOption, ConfigOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "optimizer_choice"
 
@@ -52,7 +52,7 @@ class OptimizerChoice(ModelOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "adam"
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str]
 
@@ -60,13 +60,13 @@ class OptimizerChoice(ModelOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return list(get_available_optimizers_dict()[self._protocol].keys())
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class LearningRate(ModelOption, ConfigOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "learning_rate"
 
@@ -74,21 +74,21 @@ class LearningRate(ModelOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return 1e-3
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [float]
 
-    def is_value_valid(self, value) -> bool:
-        return 0.0 < value < 1.0
+    def is_value_valid(self) -> bool:
+        return 0.0 < self.value < 1.0
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class Epsilon(ModelOption, ConfigOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "epsilon"
 
@@ -96,20 +96,20 @@ class Epsilon(ModelOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return 1e-3
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [float]
 
-    def is_value_valid(self, value: Any) -> bool:
-        return 0.0 < value < 1.0
+    def is_value_valid(self) -> bool:
+        return 0.0 < self.value < 1.0
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class LossChoice(ModelOption, ConfigOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "loss_choice"
 
@@ -120,7 +120,7 @@ class LossChoice(ModelOption, ConfigOption):
         else:
             return "cross_entropy_loss"
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str]
 
@@ -128,7 +128,7 @@ class LossChoice(ModelOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return list(get_available_losses_dict()[self._protocol].keys())
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 

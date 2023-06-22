@@ -3,20 +3,20 @@ from abc import ABC
 from pathlib import Path
 from typing import List, Type, Any, Union
 
-from .config_option import ConfigOption
+from .config_option import ConfigOption, classproperty
 from ..protocols import Protocol
 
 
 class GeneralOption(ConfigOption, ABC):
 
-    @property
+    @classproperty
     def category(self) -> str:
         return "general_option"
 
 
 class ProtocolOption(GeneralOption, ConfigOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "protocol"
 
@@ -24,7 +24,7 @@ class ProtocolOption(GeneralOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return ""
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [type(Protocol)]
 
@@ -32,17 +32,17 @@ class ProtocolOption(GeneralOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return Protocol.all()
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return True
 
-    def is_value_valid(self, value: Any) -> bool:
-        return Protocol.__getitem__(value) is not None
+    def is_value_valid(self) -> bool:
+        return Protocol.__getitem__(self.value) is not None
 
 
 class Interaction(GeneralOption, ConfigOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "interaction"
 
@@ -50,7 +50,7 @@ class Interaction(GeneralOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return ""
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str]
 
@@ -58,18 +58,18 @@ class Interaction(GeneralOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return ["multiply", "concat"]
 
-    @property
+    @classproperty
     def allowed_protocols(self) -> List[Protocol]:
         return [Protocol.sequence_to_class, Protocol.sequence_to_value]
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class Seed(GeneralOption, ConfigOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "seed"
 
@@ -77,21 +77,21 @@ class Seed(GeneralOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return 42
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [int]
 
-    def is_value_valid(self, value: Any) -> bool:
+    def is_value_valid(self) -> bool:
         # For range see: https://pytorch.org/docs/stable/generated/torch.manual_seed.html#torch.manual_seed
-        return -0x8000_0000_0000_0000 < value < 0xffff_ffff_ffff_ffff
+        return -0x8000_0000_0000_0000 < self.value < 0xffff_ffff_ffff_ffff
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class SaveSplitIds(GeneralOption, ConfigOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "save_split_ids"
 
@@ -99,7 +99,7 @@ class SaveSplitIds(GeneralOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return False
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [bool]
 
@@ -107,13 +107,13 @@ class SaveSplitIds(GeneralOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return [True, False]
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class SanityCheck(GeneralOption, ConfigOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "sanity_check"
 
@@ -121,7 +121,7 @@ class SanityCheck(GeneralOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return True
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [bool]
 
@@ -129,13 +129,13 @@ class SanityCheck(GeneralOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return [True, False]
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class IgnoreFileInconsistencies(GeneralOption, ConfigOption):
-    @property
+    @classproperty
     def name(self) -> str:
         return "ignore_file_inconsistencies"
 
@@ -143,7 +143,7 @@ class IgnoreFileInconsistencies(GeneralOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return False
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [bool]
 
@@ -151,14 +151,14 @@ class IgnoreFileInconsistencies(GeneralOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return [True, False]
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
 
 class OutputDirectory(GeneralOption, ConfigOption):
 
-    @property
+    @classproperty
     def name(self) -> str:
         return "output_dir"
 
@@ -166,7 +166,7 @@ class OutputDirectory(GeneralOption, ConfigOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "output"
 
-    @property
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str, Path]
 
@@ -174,16 +174,16 @@ class OutputDirectory(GeneralOption, ConfigOption):
     def possible_values(self) -> List[Any]:
         return []
 
-    @property
+    @classproperty
     def allowed_protocols(self) -> List[Protocol]:
         return Protocol.all()
 
-    @property
+    @classproperty
     def required(self) -> bool:
         return False
 
-    def is_value_valid(self, value: Any) -> bool:
-        return os.path.exists(str(value))
+    def is_value_valid(self) -> bool:
+        return os.path.exists(str(self.value))
 
 
 general_options: List = [ProtocolOption, Interaction, Seed, SaveSplitIds, SanityCheck, IgnoreFileInconsistencies,

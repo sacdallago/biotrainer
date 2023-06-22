@@ -135,7 +135,6 @@ class ConfigurationVerificationTests(unittest.TestCase):
     def test_embeddings_file_embedder_name_mutual_exclusive(self):
         config_dict = configurations["embeddings_file_embedder_name_mutual_exclusive"]
         configurator = Configurator.from_config_dict(config_dict)
-        configurator.get_verified_config()
 
         with self.assertRaisesRegex(ConfigurationException, expected_regex="mutual exclusive",
                                     msg="Config with embeddings file and embedder name does not throw an error"):
