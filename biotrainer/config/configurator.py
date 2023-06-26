@@ -101,11 +101,7 @@ class Configurator:
             try:
                 value = config_dict[config_name]
                 config_object: ConfigOption = all_options_dict[config_name](protocol=protocol, value=value)
-                # Download file if necessary and allowed
-                if issubclass(config_object.__class__, FileOption):
-                    config_object.download_file_if_necessary(value, config_file_path)
-                    if config_file_path:
-                        config_object.make_file_path_absolute(config_file_path)
+                config_object.transform_value_if_necessary(config_file_path)
                 config_map[config_name] = config_object
             except KeyError:
                 raise ConfigurationException(f"Unknown configuration option: {config_name}!")
@@ -116,8 +112,7 @@ class Configurator:
         for option in all_options_for_protocol:
             config_object = option(protocol=protocol)
             if config_object.name not in config_dict.keys() and config_object.default_value != "":
-                if issubclass(config_object.__class__, FileOption):
-                    config_object.make_file_path_absolute(config_file_path)
+                config_object.transform_value_if_necessary(config_file_path)
                 config_map[option.name] = config_object
 
         return config_map
@@ -145,8 +140,8 @@ class Configurator:
 
     def get_verified_config(self) -> Dict[str, Any]:
         config_map: Dict[str, ConfigOption] = self._get_config_map(protocol=self.protocol,
-                                                                    config_dict=self._config_dict,
-                                                                    config_file_path=self._config_file_path)
+                                                                   config_dict=self._config_dict,
+                                                                   config_file_path=self._config_file_path)
         self._verify_config(protocol=self.protocol, config_map=config_map)
         result = {}
         for config_object in config_map.values():

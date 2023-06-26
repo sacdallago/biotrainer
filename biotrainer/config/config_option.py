@@ -71,11 +71,8 @@ class ConfigOption(ABC):
     def category(self) -> str:
         return "config_option"
 
-    def download_file_if_necessary(self, url: str, script_path: Path):
-        raise NotImplementedError
-
-    def make_file_path_absolute(self, config_file_path: Path):
-        raise NotImplementedError
+    def transform_value_if_necessary(self, config_file_path: Path):
+        pass
 
     def to_dict(self):
         return {"name": str(self.name),
@@ -135,7 +132,8 @@ class FileOption(ConfigOption, ABC):
     def _is_url(value: str):
         return urlparse(value).scheme in ["http", "https", "ftp"]
 
-    def download_file_if_necessary(self, url: str, script_path: Path):
+    def _download_file_if_necessary(self, config_file_path: Path):
+        url = self.value
         if self._is_url(url) and self.allow_download:
             try:
                 logger.info(f"Trying to download {self.name} from {url}")
@@ -144,7 +142,7 @@ class FileOption(ConfigOption, ABC):
                 })
 
                 file_name = url.split("/")[-1]
-                save_path = str(script_path) + "/downloaded_" + file_name
+                save_path = str(config_file_path) + "/downloaded_" + file_name
                 with request.urlopen(req) as response, open(save_path, 'wb') as outfile:
                     if response.status == 200:
                         logger.info(f"OK - Downloading file {self.name} (size: {response.length / pow(2, 20)} MB)..")
@@ -154,8 +152,14 @@ class FileOption(ConfigOption, ABC):
             except Exception as e:
                 raise Exception(f"Could not download {self.name} from url {url}") from e
 
-    def make_file_path_absolute(self, config_file_path: Path):
-        self.value = str(config_file_path / self.value)
+    def _make_path_absolute_if_necessary(self, config_file_path: Path):
+        absolute_path = (config_file_path / self.value).absolute()
+        if absolute_path.is_file() or absolute_path.is_dir():
+            self.value = str(absolute_path)
+
+    def transform_value_if_necessary(self, config_file_path: Path):
+        self._download_file_if_necessary(config_file_path)
+        self._make_path_absolute_if_necessary(config_file_path)
 
     def is_value_valid(self) -> bool:
         if self._is_url(str(self.value)):

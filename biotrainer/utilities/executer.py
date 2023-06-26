@@ -55,13 +55,9 @@ def parse_config_file_and_execute_run(config_file_path: str):
     # Add default hyper_parameters to config if not defined by user
     config = add_default_values_to_config(config, output_dir=str(output_dir))
 
-    # Custom embedder name
-    embedder_name = config["embedder_name"]
-    if ".py" in embedder_name:
-        config["embedder_name"] = str(input_file_path / config["embedder_name"])
-
     # Create log directory (if necessary)
-    log_dir = output_dir / config["model_choice"] / str(embedder_name).replace(".py", "/")
+    embedder_name = config["embedder_name"].split("/")[-1].replace(".py", "")  # Accounting for custom embedder script
+    log_dir = output_dir / config["model_choice"] / embedder_name
     if not log_dir.is_dir():
         logger.info(f"Creating log-directory: {log_dir}")
         log_dir.mkdir(parents=True)

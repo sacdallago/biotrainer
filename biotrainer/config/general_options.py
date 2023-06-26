@@ -182,8 +182,11 @@ class OutputDirectory(GeneralOption, ConfigOption):
     def required(self) -> bool:
         return False
 
+    def transform_value_if_necessary(self, config_file_path: Path):
+        self.value = str((config_file_path / self.value).absolute())
+
     def is_value_valid(self) -> bool:
-        return os.path.exists(str(self.value))
+        return type(self.value) in self.possible_types
 
 
 general_options: List = [ProtocolOption, Interaction, Seed, SaveSplitIds, SanityCheck, IgnoreFileInconsistencies,
