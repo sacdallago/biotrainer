@@ -43,6 +43,11 @@ configurations = {
         "embeddings_file": "placeholder.h5",
         "embedder_name": "one_hot_encoding"
     },
+    "local_custom_embedder": {
+        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "protocol": "sequence_to_class",
+        "embedder_name": "../examples/custom_embedder/ankh/ankh_embedder.py"
+    },
     "k_fold": {
         "cross_validation_config": {
             "method": "k_fold",
@@ -139,6 +144,10 @@ class ConfigurationVerificationTests(unittest.TestCase):
         with self.assertRaisesRegex(ConfigurationException, expected_regex="mutual exclusive",
                                     msg="Config with embeddings file and embedder name does not throw an error"):
             configurator.get_verified_config()
+
+    def test_local_custom_embedder(self):
+        configurator = Configurator.from_config_dict(configurations["local_custom_embedder"])
+        self.assertTrue(configurator.get_verified_config(), "Local custom embedder config does not work!")
 
     def test_k_fold(self):
         config_dict = config.parse_config(yaml.dump({**configurations["minimal"], **configurations["k_fold"]}))
