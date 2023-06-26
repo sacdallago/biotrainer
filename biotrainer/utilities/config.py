@@ -3,6 +3,7 @@ import logging
 
 from pathlib import Path
 from typing import Union
+from urllib.parse import urlparse
 
 from ruamel import yaml
 from ruamel.yaml import YAMLError
@@ -167,6 +168,12 @@ def verify_config(config: dict, protocols: set):
         raise ConfigurationException("embedder_name and embeddings_file are mutually exclusive. "
                                      "Please provide either an embedder_name to calculate embeddings from scratch or "
                                      "an embeddings_file to use pre-computed embeddings.")
+
+    if "embedder_name" in config.keys():
+        if ".py" in config["embedder_name"]:
+            if urlparse(config["embedder_name"]).scheme in ["http", "https", "ftp"]:
+                raise ConfigurationException(f"Downloading a custom embedder script is not allowed!\n"
+                                             f"embedder_name: {config['embedder_name']}")
 
     # Check cross validation configuration
     if "cross_validation_config" in config.keys():
