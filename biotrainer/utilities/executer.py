@@ -90,19 +90,16 @@ def parse_config_file_and_execute_run(config_file_path: str):
     if "pretrained_model" in config.keys():
         logger.info(f"Using pre_trained model: {config['pretrained_model']}")
 
-    # Check for a custom embedder script
-    if "embedder_name" in config.keys():
-        if ".py" in config["embedder_name"]:
-            if urlparse(config["embedder_name"]).scheme in ["http", "https", "ftp"]:
-                raise Exception(f"Downloading a custom embedder script is not allowed!\n"
-                                f"embedder_name: {config['embedder_name']}")
-            config["embedder_name"] = str(input_file_path / config["embedder_name"])
-
     # Add default hyper_parameters to config if not defined by user
     config = add_default_values_to_config(config, output_dir=str(output_dir))
 
+    # Custom embedder name
+    embedder_name = config["embedder_name"]
+    if ".py" in embedder_name:
+        config["embedder_name"] = str(input_file_path / config["embedder_name"])
+
     # Create log directory (if necessary)
-    log_dir = output_dir / config["model_choice"] / config["embedder_name"]
+    log_dir = output_dir / config["model_choice"] / str(embedder_name).replace(".py", "/")
     if not log_dir.is_dir():
         logger.info(f"Creating log-directory: {log_dir}")
         log_dir.mkdir(parents=True)
