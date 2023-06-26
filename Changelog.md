@@ -1,5 +1,10 @@
 # Biotrainer Changelog
 
+## 26.06.2023 - Version 0.5.1
+### Bug fixes
+* Fixing bug that using a custom embedder script failed to create the log directory properly. This includes
+moving the prohibited download check of `embedder_name` to the verify_config function of config.py.
+
 ## 30.05.2023 - Version 0.5.0
 ### Maintenance
 * Adding a check in the `TargetManager.py` class that all provided splits are not empty.
