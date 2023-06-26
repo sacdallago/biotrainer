@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from ruamel import yaml
 from biotrainer.utilities import config
@@ -47,6 +48,14 @@ configurations = {
         "sequence_file": "test_input_files/r2c/sequences.fasta",
         "protocol": "sequence_to_class",
         "embedder_name": "../examples/custom_embedder/ankh/ankh_embedder.py"
+    },
+    "file_paths": {
+        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "labels_file": "test_input_files/r2c/labels.fasta",
+        "mask_file": "test_input_files/r2c/mask.fasta",
+        "embedder_name": "../examples/custom_embedder/ankh/ankh_embedder.py",
+        "output_dir": "test_output",
+        "protocol": "residue_to_class"
     },
     "k_fold": {
         "cross_validation_config": {
@@ -148,6 +157,14 @@ class ConfigurationVerificationTests(unittest.TestCase):
     def test_local_custom_embedder(self):
         configurator = Configurator.from_config_dict(configurations["local_custom_embedder"])
         self.assertTrue(configurator.get_verified_config(), "Local custom embedder config does not work!")
+
+    def test_file_paths_absolute_after_verification(self):
+        config_file_paths = configurations["file_paths"]
+        configurator = Configurator.from_config_dict(config_file_paths)
+        verified_config = configurator.get_verified_config()
+        for key in config_file_paths.keys():
+            if key != "protocol":
+                self.assertTrue(Path(verified_config[key]).is_absolute(), "File paths not absolute after verification!")
 
     def test_k_fold(self):
         config_dict = config.parse_config(yaml.dump({**configurations["minimal"], **configurations["k_fold"]}))
