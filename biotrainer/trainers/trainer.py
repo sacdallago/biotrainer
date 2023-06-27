@@ -210,14 +210,10 @@ class Trainer:
         return writer
 
     def _create_solver(self, split_name, model, loss_function, optimizer, writer, hyper_params: Dict) -> Solver:
-        return get_solver(
-            protocol=self._protocol, name=split_name,
-            network=model, loss_function=loss_function, optimizer=optimizer, device=self._device,
-            number_of_epochs=hyper_params["num_epochs"], patience=hyper_params["patience"],
-            epsilon=hyper_params["epsilon"],
-            log_writer=writer, experiment_dir=hyper_params["log_dir"],
-            num_classes=self._output_vars['n_classes']
-        )
+        return get_solver(protocol=self._protocol, name=split_name, network=model, optimizer=optimizer,
+                          loss_function=loss_function, device=self._device, number_of_epochs=hyper_params["num_epochs"],
+                          patience=hyper_params["patience"], epsilon=hyper_params["epsilon"], log_writer=writer,
+                          log_dir=hyper_params["log_dir"], num_classes=self._output_vars['n_classes'])
 
     def _run_cross_validation(self, splits: List[Split]) -> List[SplitResult]:
         split_results = list()

@@ -103,7 +103,7 @@ def parse_config_file_and_execute_run(config_file_path: str):
     if not log_dir.is_dir():
         logger.info(f"Creating log-directory: {log_dir}")
         log_dir.mkdir(parents=True)
-    config["log_dir"] = log_dir
+    config["log_dir"] = str(log_dir)
 
     # Get device once at the beginning
     device = get_device(config["device"] if "device" in config.keys() else None)

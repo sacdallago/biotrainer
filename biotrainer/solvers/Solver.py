@@ -23,7 +23,7 @@ class Solver(ABC):
                  # Necessary
                  name, network, optimizer, loss_function,
                  # Optional with defaults
-                 log_writer: Optional = None, experiment_dir: str = "",
+                 log_writer: Optional = None, log_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
                  device: Union[None, str, torch.device] = None,
                  # Used by classification subclasses
@@ -38,7 +38,7 @@ class Solver(ABC):
         self.number_of_epochs = number_of_epochs
         self.patience = patience
         self.epsilon = epsilon
-        self.experiment_dir = experiment_dir
+        self.log_dir = log_dir
 
         # Early stopping internal variables
         self._best_epoch = 0
@@ -206,7 +206,7 @@ class Solver(ABC):
 
     def auto_resume(self, training_dataloader: DataLoader, validation_dataloader: DataLoader,
                     train_wrapper):
-        available_checkpoints = [checkpoint for checkpoint in os.listdir(self.experiment_dir)
+        available_checkpoints = [checkpoint for checkpoint in os.listdir(self.log_dir)
                                  if checkpoint.split("_")[0] == self.checkpoint_name.split("_")[0]]
         if self.checkpoint_name in available_checkpoints:
             # Hold out
@@ -240,8 +240,8 @@ class Solver(ABC):
     def load_checkpoint(self, checkpoint_path: str = None, resume_training: bool = False):
         if checkpoint_path:
             state = torch.load(checkpoint_path, map_location=torch.device(self.device))
-        elif self.experiment_dir:
-            state = torch.load(str(Path(self.experiment_dir) / self.checkpoint_name),
+        elif self.log_dir:
+            state = torch.load(str(Path(self.log_dir) / self.checkpoint_name),
                                map_location=torch.device(self.device))
         else:
             state = torch.load(str(Path(self._tempdir.name) / self.checkpoint_name),
@@ -273,8 +273,8 @@ class Solver(ABC):
             'optimizer': self.optimizer.state_dict(),
         }
 
-        if self.experiment_dir:
-            torch.save(state, str(Path(self.experiment_dir) / self.checkpoint_name))
+        if self.log_dir:
+            torch.save(state, str(Path(self.log_dir) / self.checkpoint_name))
         else:
             torch.save(state, str(Path(self._tempdir.name) / self.checkpoint_name))
 
