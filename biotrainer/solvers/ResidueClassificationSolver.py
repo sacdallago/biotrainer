@@ -7,6 +7,7 @@ from typing import Dict, Union, Optional, Callable, List
 
 from .Solver import Solver
 from .ClassificationSolver import ClassificationSolver
+from .solver_utils import get_mean_and_confidence_range
 
 from ..utilities import MASK_AND_LABELS_PAD_VALUE
 
@@ -66,9 +67,10 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
             dropout_raw_values = torch.stack([dropout_iteration["probabilities"]
                                               for dropout_iteration in dropout_iterations], dim=1)
 
-            dropout_std_dev, dropout_mean = torch.std_mean(dropout_raw_values, dim=1, unbiased=True)
-            z_score = norm.ppf(q=1 - (confidence_level / 2))
-            confidence_range = z_score * dropout_std_dev / (n_forward_passes ** 0.5)
+            dropout_mean, confidence_range = get_mean_and_confidence_range(values=dropout_raw_values,
+                                                                           dimension=1,
+                                                                           n=n_forward_passes,
+                                                                           confidence_level=confidence_level)
             _, prediction_by_mean = torch.max(dropout_mean, dim=1)
 
             dropout_mean = dropout_mean.permute(0, 2, 1)

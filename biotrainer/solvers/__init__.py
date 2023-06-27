@@ -1,9 +1,10 @@
 from typing import Optional
+from .Solver import Solver
+from .solver_utils import get_mean_and_confidence_range
 from .ResidueClassificationSolver import ResidueClassificationSolver
 from .ResiduesClassificationSolver import ResiduesClassificationSolver
 from .SequenceClassificationSolver import SequenceClassificationSolver
 from .SequenceRegressionSolver import SequenceRegressionSolver
-from .Solver import Solver
 
 __SOLVERS = {
     'residue_to_class': ResidueClassificationSolver,
@@ -37,4 +38,5 @@ def get_solver(protocol: str, name: str,
 __all__ = [
     'Solver',
     'get_solver',
+    'get_mean_and_confidence_range'
 ]
