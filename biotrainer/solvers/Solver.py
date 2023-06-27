@@ -5,14 +5,14 @@ import logging
 import torchmetrics
 
 from pathlib import Path
-from scipy.stats import norm
 from abc import ABC, abstractmethod
 from tempfile import TemporaryDirectory
+from torch.utils.data import DataLoader
+from torchmetrics import SpearmanCorrCoef
 from contextlib import nullcontext as _nullcontext
 from typing import Callable, Optional, Union, Dict, List, Any
 
-from torch.utils.data import DataLoader
-from torchmetrics import SpearmanCorrCoef
+from .solver_utils import get_mean_and_confidence_range
 
 logger = logging.getLogger(__name__)
 
@@ -185,9 +185,10 @@ class Solver(ABC):
             dropout_raw_values = torch.stack([dropout_iteration["probabilities"]
                                               for dropout_iteration in dropout_iterations], dim=1)
 
-            dropout_std_dev, dropout_mean = torch.std_mean(dropout_raw_values, dim=1, unbiased=True)
-            z_score = norm.ppf(q=1 - (confidence_level / 2))
-            confidence_range = z_score * dropout_std_dev / (n_forward_passes ** 0.5)
+            dropout_mean, confidence_range = get_mean_and_confidence_range(values=dropout_raw_values,
+                                                                           dimension=1,
+                                                                           n=n_forward_passes,
+                                                                           confidence_level=confidence_level)
             _, prediction_by_mean = torch.max(dropout_mean, dim=1)
 
             # Create dict with seq_id: prediction
