@@ -117,7 +117,7 @@ class Inferencer:
             loss_choice = split_config.pop("loss_choice")
             optimizer_choice = split_config.pop("optimizer_choice")
             learning_rate = split_config.pop("learning_rate")
-            experiment_dir = split_config.pop("log_dir")
+            log_dir = split_config.pop("log_dir")
 
             model = get_model(protocol=self.protocol, model_choice=model_choice,
                               n_classes=n_classes, n_features=n_features,
@@ -132,11 +132,9 @@ class Inferencer:
                                       **split_config
                                       )
 
-            solver = get_solver(
-                protocol=self.protocol, name=split,
-                network=model, optimizer=optimizer, loss_function=loss_function, device=self.device,
-                experiment_dir=experiment_dir, num_classes=n_classes
-            )
+            solver = get_solver(protocol=self.protocol, name=split, network=model, optimizer=optimizer,
+                                loss_function=loss_function, device=self.device, log_dir=log_dir,
+                                num_classes=n_classes)
             solver.load_checkpoint(resume_training=False)
 
             def dataloader_function(dataset):
