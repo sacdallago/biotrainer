@@ -9,16 +9,17 @@ import numpy as np
 from ruamel import yaml
 from pathlib import Path
 from copy import deepcopy
+from sklearn.utils import resample
 from torch.utils.data import DataLoader
-from typing import Union, Optional, Dict, Iterable, Tuple, Any
+from typing import Union, Optional, Dict, Iterable, Tuple, Any, List
 
 from ..losses import get_loss
 from ..models import get_model
-from ..solvers import get_solver
 from ..optimizers import get_optimizer
 from ..trainers import revert_mappings
 from ..datasets import get_dataset, get_collate_function
 from ..utilities import get_device, seed_all, DatasetSample
+from ..solvers import get_solver, get_mean_and_confidence_range
 
 
 class Inferencer:
@@ -30,6 +31,7 @@ class Inferencer:
             embedder_name: str,
             # Optional constant parameters
             class_int_to_string: Optional[Dict[int, str]] = None,
+            class_str_to_int: Optional[Dict[str, int]] = None,
             device: Union[None, str, torch.device] = None,
             # Everything else
             **kwargs
@@ -38,6 +40,7 @@ class Inferencer:
         self.device = get_device(device)
         self.embedder_name = embedder_name
         self.class_int2str = class_int_to_string
+        self.class_str2int = class_str_to_int
         self.collate_function = get_collate_function(protocol)
 
         self.solvers_and_loaders_by_split = self._create_solvers_and_loaders_by_split(**kwargs)
@@ -146,7 +149,7 @@ class Inferencer:
         return result_dict
 
     def _load_solver_and_dataloader(self, embeddings: Union[Iterable, Dict],
-                                    split_name, targets: Optional[Iterable] = None):
+                                    split_name, targets: Optional[List] = None):
         if split_name not in self.solvers_and_loaders_by_split.keys():
             raise Exception(f"Unknown split_name {split_name} for given configuration!")
 
@@ -164,7 +167,7 @@ class Inferencer:
         dataloader = loader(dataset)
         return solver, dataloader
 
-    def from_embeddings(self, embeddings: Union[Iterable, Dict], targets: Optional[Iterable] = None,
+    def from_embeddings(self, embeddings: Union[Iterable, Dict], targets: Optional[List] = None,
                         split_name: str = "hold_out",
                         include_probabilities: bool = False) -> Dict[str, Union[Dict, str, int, float]]:
         """
@@ -196,6 +199,81 @@ class Inferencer:
             return {k: v for k, v in inference_dict.items() if k != "mapped_probabilities"}
         else:
             return inference_dict
+
+    def from_embeddings_with_bootstrapping(self, embeddings: Union[Iterable, Dict], targets: List,
+                                           split_name: str = "hold_out",
+                                           iterations: int = 30,
+                                           sample_size: int = -1,
+                                           confidence_level: float = 0.05,
+                                           seed: int = 42) -> Dict[str, Dict[str, float]]:
+        """
+        Calculate predictions from embeddings.
+
+        :param embeddings: Iterable or dictionary containing the input embeddings to predict on.
+        :param targets: Iterable that contains the targets to calculate metrics
+        :param split_name: Name of the split to use for prediction. Default is "hold_out".
+        :param iterations: Number of iterations to perform bootstrapping
+        :param sample_size: Sample size to use for bootstrapping. -1 defaults to all embeddings
+        :param confidence_level: Confidence level for result error intervals (0.05 => 95% percentile)
+        :param seed: Seed to use for the bootstrapping algorithm
+        :return: Dictionary containing the following sub-dictionaries:
+                 - 'metrics': Calculated metrics if 'targets' are given, otherwise 'None'.
+                 - 'mapped_predictions': Class or value prediction from the given embeddings.
+                 - 'mapped_probabilities': Probabilities for classification tasks if include_probabilities is True.
+                 Predictions and probabilities are either 'mapped' to keys from an embeddings dict or indexes if
+                 embeddings are given as a list.
+        """
+        if not 0 < confidence_level < 1:
+            raise Exception(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
+
+        seed_all(seed)
+
+        if isinstance(embeddings, Dict):
+            embeddings_dict = embeddings
+        else:
+            embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
+
+        def convert_target(target_to_convert: str):
+            if "residue_" in self.protocol:
+                return [self.class_str2int[t] for t in target_to_convert]
+            else:
+                return self.class_str2int[target_to_convert]
+
+        converted_targets = []
+        for target in targets:
+            if type(target) is str:
+                converted_targets.append(convert_target(target))
+            else:
+                converted_targets.append(target)
+
+        embedding_target_dict = {key: converted_targets[i] for i, key in enumerate(embeddings_dict.keys())}
+        embedding_target_dict_keys = list(embedding_target_dict.keys())
+
+        if sample_size == -1:
+            sample_size = len(embedding_target_dict_keys)
+        if sample_size > len(embedding_target_dict_keys):
+            sample_size = len(embedding_target_dict_keys)
+
+        # Bootstrapping: Resample over keys to keep track of associated targets
+        iteration_results = []
+        for iteration in range(iterations):
+            bootstrapping_sample = resample(embedding_target_dict_keys, replace=True, n_samples=sample_size)
+            sampled_embeddings = {key: embeddings_dict[key] for key in bootstrapping_sample}
+            sampled_targets = [embedding_target_dict[key] for key in bootstrapping_sample]
+            iteration_result = self.from_embeddings(sampled_embeddings, sampled_targets, split_name=split_name)
+            iteration_results.append(iteration_result["metrics"])
+
+        # Calculate mean and error margin for each metric
+        metrics = list(iteration_results[0].keys())
+        result_dict = {}
+        for metric in metrics:
+            all_metric_values = [iteration_result[metric] for iteration_result in iteration_results]
+            mean, confidence_range = get_mean_and_confidence_range(values=torch.tensor(all_metric_values),
+                                                                   dimension=0,
+                                                                   confidence_level=confidence_level,
+                                                                   n=iterations)
+            result_dict[metric] = {"mean": mean.item(), "error": confidence_range.item()}
+        return result_dict
 
     def from_embeddings_with_monte_carlo_dropout(self, embeddings: Union[Iterable, Dict],
                                                  split_name: str = "hold_out",
