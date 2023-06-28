@@ -148,6 +148,12 @@ class Inferencer:
             result_dict[split] = (solver, dataloader_function)
         return result_dict
 
+    def _convert_target(self, target_to_convert: str):
+        if "residue_" in self.protocol:
+            return [self.class_str2int[t] for t in target_to_convert]
+        else:
+            return self.class_str2int[target_to_convert]
+
     def _load_solver_and_dataloader(self, embeddings: Union[Iterable, Dict],
                                     split_name, targets: Optional[List] = None):
         if split_name not in self.solvers_and_loaders_by_split.keys():
@@ -158,10 +164,19 @@ class Inferencer:
         else:
             embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
 
+        converted_targets = None
+        if targets:
+            converted_targets = []
+            for target in targets:
+                if type(target) is str:
+                    converted_targets.append(self._convert_target(target))
+                else:
+                    converted_targets.append(target)
+
         solver, loader = self.solvers_and_loaders_by_split[split_name]
         dataset = get_dataset(self.protocol, samples=[
             DatasetSample(seq_id, torch.tensor(np.array(embedding)),
-                          torch.empty(1) if not targets else torch.tensor(np.array(targets[idx])))
+                          torch.empty(1) if not targets else torch.tensor(np.array(converted_targets[idx])))
             for idx, (seq_id, embedding) in enumerate(embeddings_dict.items())
         ])
         dataloader = loader(dataset)
@@ -233,20 +248,7 @@ class Inferencer:
         else:
             embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
 
-        def convert_target(target_to_convert: str):
-            if "residue_" in self.protocol:
-                return [self.class_str2int[t] for t in target_to_convert]
-            else:
-                return self.class_str2int[target_to_convert]
-
-        converted_targets = []
-        for target in targets:
-            if type(target) is str:
-                converted_targets.append(convert_target(target))
-            else:
-                converted_targets.append(target)
-
-        embedding_target_dict = {key: converted_targets[i] for i, key in enumerate(embeddings_dict.keys())}
+        embedding_target_dict = {key: targets[i] for i, key in enumerate(embeddings_dict.keys())}
         embedding_target_dict_keys = list(embedding_target_dict.keys())
 
         if sample_size == -1:
