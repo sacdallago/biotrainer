@@ -1,0 +1,64 @@
+auto_resume: false
+batch_size: 128
+biotrainer_version: 0.5.0
+cross_validation_config:
+  choose_by: loss
+  method: hold_out
+device: cuda
+elapsed_time_total: 2.69968143099959
+embedder_name: one_hot_encoding
+embeddings_file: 
+  /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_value/output/sequence_to_value/one_hot_encoding/embeddings/reduced_embeddings_file.h5
+epsilon: 0.001
+learning_rate: 0.001
+log_dir: 
+  /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_value/output/FNN/one_hot_encoding
+loss_choice: mean_squared_error
+model_choice: FNN
+n_classes: 1
+n_features: 21
+n_testing_ids: 2
+num_epochs: 200
+optimizer_choice: adam
+output_dir: /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_value/output
+patience: 10
+protocol: sequence_to_value
+sanity_check: true
+save_split_ids: false
+seed: 42
+sequence_file: 
+  /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_value/sequences.fasta
+shuffle: true
+split_results:
+  hold_out:
+    elapsed_time: 1.723036016000151
+    end_time: 2023-06-28 10:59:31.955876
+    n_free_parameters: 737
+    n_training_ids: 1
+    n_validation_ids: 1
+    split_hyper_params: {}
+    start_time: 2023-06-28 10:59:30.232837
+    training_iteration_result_best_epoch:
+      epoch: 13
+      training:
+        loss: 1400.1734619140625
+        mse: 1400.1734619140625
+        rmse: 37.41889190673828
+        spearmans-corr-coeff: 0.0
+      validation:
+        loss: 1774.8096923828125
+        mse: 1774.8096923828125
+        rmse: 42.12849044799805
+        spearmans-corr-coeff: 0.0
+test_iterations_results:
+  metrics:
+    loss: 1598.2464599609375
+    mse: 1598.2464599609375
+    rmse: 39.97807312011719
+    spearmans-corr-coeff: 0.9999959468841553
+  test_baselines:
+    mean_only:
+      mse: 461.5345458984375
+      rmse: 21.483354568481445
+      spearmans-corr-coeff: 0.0
+use_class_weights: false
