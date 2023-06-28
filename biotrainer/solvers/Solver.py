@@ -389,7 +389,7 @@ class Solver(ABC):
             # Discretize predictions if necessary
             prediction = self._probabilities_to_predictions(probabilities)
             return {"prediction": prediction.tolist(),
-                    "probabilities": probabilities}
+                    "probabilities": probabilities.tolist()}
 
     @staticmethod
     def _compute_metric(metric: torchmetrics.Metric, predicted: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
