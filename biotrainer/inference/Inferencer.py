@@ -260,7 +260,7 @@ class Inferencer:
         iteration_results = []
         for iteration in range(iterations):
             bootstrapping_sample = resample(embedding_target_dict_keys, replace=True, n_samples=sample_size)
-            sampled_embeddings = {key: embeddings_dict[key] for key in bootstrapping_sample}
+            sampled_embeddings = [embeddings_dict[key] for key in bootstrapping_sample]
             sampled_targets = [embedding_target_dict[key] for key in bootstrapping_sample]
             iteration_result = self.from_embeddings(sampled_embeddings, sampled_targets, split_name=split_name)
             iteration_results.append(iteration_result["metrics"])
