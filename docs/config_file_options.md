@@ -102,7 +102,7 @@ You only need to extend the `CustomEmbedder` class from the `trainers` module. P
 example implementations of `ankh` and `esm-2` in the [custom_embedder example](../examples/custom_embedder/).
 Then, use the `embedder_name` option to declare the path to your script:
 ```yaml
-embedder_name: your_script.py  # The script path must be relative to the configuration file.
+embedder_name: your_script.py  # The script path must be relative to the configuration file or absolute.
 ```
 **Security measures are in place to prevent arbitrary code from execution. 
 Still, this might introduce a security risk when running biotrainer as a remote service. 
