@@ -1,0 +1,135 @@
+auto_resume: false
+batch_size: 128
+biotrainer_version: 0.3.0
+class_int_to_string:
+  0: C
+  1: D
+  2: E
+  3: F
+  4: V
+class_str_to_int:
+  C: 0
+  D: 1
+  E: 2
+  F: 3
+  V: 4
+cross_validation_config:
+  choose_by: loss
+  method: hold_out
+device: cuda
+dropout_rate: 0.25
+elapsed_time_total: 3.962203770000997
+embedder_name: one_hot_encoding
+embeddings_file: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/output/residue_to_class/one_hot_encoding/embeddings/embeddings_file.h5
+epsilon: 0.001
+ignore_file_inconsistencies: false
+labels_file: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/labels.fasta
+learning_rate: 0.001
+log_dir: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/output/CNN/one_hot_encoding
+loss_choice: cross_entropy_loss
+model_choice: CNN
+n_classes: 5
+n_features: 21
+n_testing_ids: 1
+num_epochs: 200
+optimizer_choice: adam
+output_dir: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/output
+patience: 10
+protocol: residue_to_class
+sanity_check: true
+save_split_ids: false
+seed: 42
+sequence_file: /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/sequences.fasta
+shuffle: true
+split_results:
+  hold_out:
+    elapsed_time: 2.1898510430000897
+    end_time: 2023-03-03 09:55:58.685915
+    n_free_parameters: 5861
+    n_training_ids: 1
+    n_validation_ids: 1
+    split_hyper_params: {}
+    start_time: 2023-03-03 09:55:56.496058
+    training_iteration_result_best_epoch:
+      epoch: 1
+      training:
+        '- f1_score class 0': 0.0
+        '- f1_score class 1': 0.0
+        '- f1_score class 2': 0.0
+        '- f1_score class 3': 0.0
+        '- f1_score class 4': 0.0
+        '- precission class 0': 0.0
+        '- precission class 1': 0.0
+        '- precission class 2': 0.0
+        '- precission class 3': 0.0
+        '- precission class 4': 0.0
+        '- recall class 0': 0.0
+        '- recall class 1': 0.0
+        '- recall class 2': 0.0
+        '- recall class 3': 0.0
+        '- recall class 4': 0.0
+        accuracy: 0.0
+        loss: 1.6459145545959473
+        macro-f1_score: 0.0
+        macro-precision: 0.0
+        macro-recall: 0.0
+        matthews-corr-coeff: -0.03181423991918564
+        micro-f1_score: 0.0
+        micro-precision: 0.0
+        micro-recall: 0.0
+        spearmans-corr-coeff: -0.2646577060222626
+      validation:
+        '- f1_score class 0': 0.0
+        '- f1_score class 1': 0.2857142984867096
+        '- f1_score class 2': 0.0
+        '- f1_score class 3': 0.0
+        '- f1_score class 4': 0.0
+        '- precission class 0': 0.0
+        '- precission class 1': 1.0
+        '- precission class 2': 0.0
+        '- precission class 3': 0.0
+        '- precission class 4': 0.0
+        '- recall class 0': 0.0
+        '- recall class 1': 0.1666666716337204
+        '- recall class 2': 0.0
+        '- recall class 3': 0.0
+        '- recall class 4': 0.0
+        accuracy: 0.1666666716337204
+        loss: 1.6044654846191406
+        macro-f1_score: 0.05714286118745804
+        macro-precision: 0.20000000298023224
+        macro-recall: 0.03333333507180214
+        matthews-corr-coeff: 0
+        micro-f1_score: 0.1666666716337204
+        micro-precision: 0.1666666716337204
+        micro-recall: 0.1666666716337204
+        spearmans-corr-coeff: 0.0
+test_iterations_results:
+  metrics:
+    '- f1_score class 0': 0.0
+    '- f1_score class 1': 0.0
+    '- f1_score class 2': 0.0
+    '- f1_score class 3': 0.0
+    '- f1_score class 4': 0.0
+    '- precission class 0': 0.0
+    '- precission class 1': 0.0
+    '- precission class 2': 0.0
+    '- precission class 3': 0.0
+    '- precission class 4': 0.0
+    '- recall class 0': 0.0
+    '- recall class 1': 0.0
+    '- recall class 2': 0.0
+    '- recall class 3': 0.0
+    '- recall class 4': 0.0
+    accuracy: 0.0
+    loss: 1.623467206954956
+    macro-f1_score: 0.0
+    macro-precision: 0.0
+    macro-recall: 0.0
+    matthews-corr-coeff: -0.3000600337982178
+    micro-f1_score: 0.0
+    micro-precision: 0.0
+    micro-recall: 0.0
+    spearmans-corr-coeff: -0.14046210050582886
+  test_baselines: {}
+use_class_weights: true
