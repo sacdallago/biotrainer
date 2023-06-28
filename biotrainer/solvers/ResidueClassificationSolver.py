@@ -43,36 +43,22 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
         if not 0 < confidence_level < 1:
             raise Exception(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
 
-        def enable_dropout(model):
-            """ Function to enable the dropout layers during test-time """
-            number_dropout_layers = 0
-            for m in model.modules():
-                if m.__class__.__name__.startswith('Dropout'):
-                    m.train()
-                    if m.p > 0.0:
-                        number_dropout_layers += 1
-            if not number_dropout_layers > 0:
-                raise Exception("Trying to do monte carlo dropout inference on model without dropout!")
-
-        mapped_predictions = dict()
+        mapped_predictions = {}
 
         for i, (seq_ids, X, y, lengths) in enumerate(dataloader):
-            dropout_iterations = list()
-            for idx_forward_pass in range(n_forward_passes):
-                self.network = self.network.eval()
-                enable_dropout(self.network)
-                dropout_iteration_result = self._prediction_iteration(x=X, lengths=lengths)
-                dropout_iterations.append(dropout_iteration_result)
+            dropout_iterations = self._do_dropout_iterations(X, lengths, n_forward_passes)
 
-            sequence_probabilities = {}
+            # Get class probabilities individually for each sequence
+            class_probabilities_by_sequence = {}
             for dropout_iteration in dropout_iterations:
                 dropout_probabilities = dropout_iteration["probabilities"]
-                for idx, sequence in enumerate(dropout_probabilities):
-                    if seq_ids[idx] not in sequence_probabilities.keys():
-                        sequence_probabilities[seq_ids[idx]] = []
-                    sequence_probabilities[seq_ids[idx]].append(sequence)
+                for idx, class_probabilities in enumerate(dropout_probabilities):
+                    if seq_ids[idx] not in class_probabilities_by_sequence.keys():
+                        class_probabilities_by_sequence[seq_ids[idx]] = []
+                    class_probabilities_by_sequence[seq_ids[idx]].append(class_probabilities)
 
-            for seq_id, dropout_residues in sequence_probabilities.items():
+            # Calculate dropout mean and confidence range for each residue in sequence
+            for seq_id, dropout_residues in class_probabilities_by_sequence.items():
                 stacked_residues_tensor = torch.stack([torch.tensor(by_class) for by_class in dropout_residues], dim=1)
 
                 dropout_mean, confidence_range = get_mean_and_confidence_range(values=stacked_residues_tensor,
