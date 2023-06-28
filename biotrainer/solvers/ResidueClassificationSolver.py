@@ -64,33 +64,38 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
                 dropout_iteration_result = self._prediction_iteration(x=X, lengths=lengths)
                 dropout_iterations.append(dropout_iteration_result)
 
-            dropout_raw_values = torch.stack([dropout_iteration["probabilities"]
-                                              for dropout_iteration in dropout_iterations], dim=1)
+            sequence_probabilities = {}
+            for dropout_iteration in dropout_iterations:
+                dropout_probabilities = dropout_iteration["probabilities"]
+                for idx, sequence in enumerate(dropout_probabilities):
+                    if seq_ids[idx] not in sequence_probabilities.keys():
+                        sequence_probabilities[seq_ids[idx]] = []
+                    sequence_probabilities[seq_ids[idx]].append(sequence)
 
-            dropout_mean, confidence_range = get_mean_and_confidence_range(values=dropout_raw_values,
-                                                                           dimension=1,
-                                                                           n=n_forward_passes,
-                                                                           confidence_level=confidence_level)
-            _, prediction_by_mean = torch.max(dropout_mean, dim=1)
+            for seq_id, dropout_residues in sequence_probabilities.items():
+                stacked_residues_tensor = torch.stack([torch.tensor(by_class) for by_class in dropout_residues], dim=1)
 
-            dropout_mean = dropout_mean.permute(0, 2, 1)
-            confidence_range = confidence_range.permute(0, 2, 1)
-            # Create dict with seq_id: prediction
-            for idx, prediction in enumerate(prediction_by_mean):
-                mapped_predictions[seq_ids[idx]] = []
-                for residue_idx in range(len(prediction)):
-                    mapped_predictions[seq_ids[idx]].append(
-                        {"prediction": prediction_by_mean[idx][residue_idx].item(),
-                         "mcd_mean": dropout_mean[idx][residue_idx],
+                dropout_mean, confidence_range = get_mean_and_confidence_range(values=stacked_residues_tensor,
+                                                                               dimension=1,
+                                                                               n=n_forward_passes,
+                                                                               confidence_level=confidence_level)
+                _, prediction_by_mean = torch.max(dropout_mean, dim=0)
+
+                # Create dict with seq_id: prediction
+                mapped_predictions[seq_id] = []
+                for residue_idx, residue_prediction in enumerate(prediction_by_mean):
+                    mapped_predictions[seq_id].append(
+                        {"prediction": residue_prediction.item(),
+                         "mcd_mean": dropout_mean.T[residue_idx],
                          "mcd_lower_bound": (
-                                 dropout_mean[idx][residue_idx] - confidence_range[idx][residue_idx]),
+                                 dropout_mean.T[residue_idx] - confidence_range.T[residue_idx]),
                          "mcd_upper_bound": (
-                                 dropout_mean[idx][residue_idx] + confidence_range[idx][residue_idx])
+                                 dropout_mean.T[residue_idx] + confidence_range.T[residue_idx])
                          })
 
-        return {
-            'mapped_predictions': mapped_predictions
-        }
+            return {
+                'mapped_predictions': mapped_predictions
+            }
 
     def _compute_metrics(
             self, predicted: Optional[torch.Tensor] = None, labels: Optional[torch.Tensor] = None
@@ -132,13 +137,21 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
     def _prediction_iteration(self, x: torch.Tensor, lengths: Optional[torch.LongTensor] = None) -> Dict[str, List]:
         result_dict = super()._prediction_iteration(x, lengths)
         with torch.no_grad():
-            prediction = result_dict['prediction']
-            # If lengths is defined, we need to shorten the residue predictions to the length
+            predictions = result_dict['prediction']
+            probabilities = result_dict['probabilities']
+            # If lengths is defined, we need to shorten the residue predictions and probabilities to the length
             if lengths is not None:
-                return_pred = list()
-                for pred_x, length_x in zip(prediction, lengths):
-                    return_pred.append(pred_x[:length_x])
+                shortened_predictions = []
+                shortened_probabilities = []
+                for original_prediction, original_probability, length_to_shorten in zip(predictions, probabilities,
+                                                                                        lengths):
+                    shortened_predictions.append(original_prediction[:length_to_shorten])
+                    shortened_per_class_probabilities = []
+                    for per_class_probabilities in original_probability:
+                        shortened_per_class_probabilities.append(per_class_probabilities[:length_to_shorten])
+                    shortened_probabilities.append(shortened_per_class_probabilities)
 
-                result_dict['prediction'] = return_pred
+                result_dict['prediction'] = shortened_predictions
+                result_dict['probabilities'] = shortened_probabilities
 
             return result_dict
