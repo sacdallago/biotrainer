@@ -1,5 +1,27 @@
 # Biotrainer Changelog
 
+## 28.06.2023 - Version 0.6.0
+### Features
+* Adding **bootstrapping** as a method to the Inferencer class. It allows to easily calculate error
+margins for each metric. It can be called like this:
+```python
+result_dict = inferencer.from_embeddings_with_bootstrapping(per_residue_embeddings,
+                                                            targets_r2c,
+                                                            iterations=30,
+                                                            seed=42)
+```
+
+### Maintenance
+* Simplifying and re-using code for monte_carlo_dropout predictions for solvers
+
+### Bug fixes
+* Fixed monte carlo dropout predictions for per-residue protocols
+* Fixed version in `version.py`
+
+### Tests
+* Adding tests for Inferencer module. At the moment, all inferencer API methods are covered for protocols
+`residue_to_class` and `sequence_to_value`
+
 ## 26.06.2023 - Version 0.5.1
 ### Bug fixes
 * Fixing bug that using a custom embedder script failed to create the log directory properly. This includes
