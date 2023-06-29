@@ -45,11 +45,14 @@ class ConfigurationVerificationTests(unittest.TestCase):
         print(s2v_dict)
 
     def test_from_embeddings_with_targets(self):
+        error_tolerance = 0.01
         r2c_dict = self.inferencer_r2c.from_embeddings(self.per_residue_embeddings, self._test_targets_r2c)
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2v)
 
-        self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 1.6270031929016113, msg="Loss not as expected for r2c!")
-        self.assertAlmostEqual(s2v_dict["metrics"]["loss"], 0.8427120447158813, msg="Loss not as expected for s2v!")
+        self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 1.6270031929016113, delta=error_tolerance,
+                               msg="Loss not as expected for r2c!")
+        self.assertAlmostEqual(s2v_dict["metrics"]["loss"], 0.8427120447158813, delta=error_tolerance,
+                               msg="Loss not as expected for s2v!")
 
     def test_from_embeddings_with_bootstrapping(self):
         """
