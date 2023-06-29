@@ -251,6 +251,9 @@ class Inferencer:
         :param split_name: Name of the split to use for prediction. Default is "hold_out".
         :param iterations: Number of iterations to perform bootstrapping
         :param sample_size: Sample size to use for bootstrapping. -1 defaults to all embeddings
+                            It is possible, but not recommended to use a sample size larger than the number of
+                            embeddings, because this might render the variance estimate unreliable.
+                            See: https://math.mit.edu/~dav/05.dir/class24-prep-a.pdf (6.2)
         :param confidence_level: Confidence level for result error intervals (0.05 => 95% percentile)
         :param seed: Seed to use for the bootstrapping algorithm
         :return: Dictionary containing the following sub-dictionaries:
@@ -272,8 +275,6 @@ class Inferencer:
 
         seq_ids = list(embeddings_dict.keys())
         if sample_size == -1:
-            sample_size = len(seq_ids)
-        if sample_size > len(seq_ids):
             sample_size = len(seq_ids)
 
         all_predictions = self.from_embeddings(embeddings_dict, targets)["mapped_predictions"]
