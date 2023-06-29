@@ -301,10 +301,11 @@ class Inferencer:
         result_dict = {}
         for metric in metrics:
             all_metric_values = [iteration_result[metric] for iteration_result in iteration_results]
-            mean, confidence_range = get_mean_and_confidence_range(values=torch.tensor(all_metric_values),
-                                                                   dimension=0,
-                                                                   confidence_level=confidence_level,
-                                                                   n=iterations)
+            mean, confidence_range = get_mean_and_confidence_range(
+                values=torch.tensor(all_metric_values, dtype=torch.float16),
+                dimension=0,
+                confidence_level=confidence_level,
+                n=iterations)
             result_dict[metric] = {"mean": mean.item(), "error": confidence_range.item()}
         return result_dict
 
