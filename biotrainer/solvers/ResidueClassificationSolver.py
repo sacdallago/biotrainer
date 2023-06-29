@@ -63,7 +63,6 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
 
                 dropout_mean, confidence_range = get_mean_and_confidence_range(values=stacked_residues_tensor,
                                                                                dimension=1,
-                                                                               n=n_forward_passes,
                                                                                confidence_level=confidence_level)
                 _, prediction_by_mean = torch.max(dropout_mean, dim=0)
 

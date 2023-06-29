@@ -193,7 +193,6 @@ class Solver(ABC):
 
             dropout_mean, confidence_range = get_mean_and_confidence_range(values=dropout_raw_values,
                                                                            dimension=1,
-                                                                           n=n_forward_passes,
                                                                            confidence_level=confidence_level)
             prediction_by_mean = self._probabilities_to_predictions(dropout_mean)
 
