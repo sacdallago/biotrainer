@@ -41,8 +41,6 @@ class ConfigurationVerificationTests(unittest.TestCase):
                         "Inferencer predicted a non existing class!")
         self.assertTrue(all([type(value) is float for value in s2v_dict["mapped_predictions"].values()]),
                         "Type of all sequence to value predictions is not float!")
-        print(r2c_dict)
-        print(s2v_dict)
 
     def test_from_embeddings_with_targets(self):
         error_tolerance = 0.01
