@@ -18,8 +18,8 @@ from ..models import get_model
 from ..optimizers import get_optimizer
 from ..trainers import revert_mappings
 from ..datasets import get_dataset, get_collate_function
-from ..utilities import get_device, seed_all, DatasetSample
 from ..solvers import get_solver, get_mean_and_confidence_range
+from ..utilities import get_device, seed_all, DatasetSample, MASK_AND_LABELS_PAD_VALUE
 
 
 class Inferencer:
@@ -148,11 +148,38 @@ class Inferencer:
             result_dict[split] = (solver, dataloader_function)
         return result_dict
 
-    def _convert_target(self, target_to_convert: str):
-        if "residue_" in self.protocol:
-            return [self.class_str2int[t] for t in target_to_convert]
+    def _convert_class_str2int(self, to_convert: str):
+        if type(to_convert) is str:
+            if "residue_" in self.protocol:
+                return [self.class_str2int[t] for t in to_convert]
+            else:
+                return self.class_str2int[to_convert]
         else:
-            return self.class_str2int[target_to_convert]
+            return to_convert
+
+    def _pad_target(self, sequence: Union[List, Any], length_to_pad: int):
+        if "residue_" in self.protocol:
+            if type(sequence) is not list:
+                return sequence
+
+            if len(sequence) < length_to_pad:
+                return sequence + [MASK_AND_LABELS_PAD_VALUE] * (length_to_pad - len(sequence))
+            else:
+                return sequence
+        else:
+            return sequence
+
+    def _convert_target_dict(self, target_dict: Dict[str, str]):
+        if "residue_" in self.protocol:
+            max_prediction_length = len(max(target_dict.values(), key=len))
+            return {seq_id: torch.tensor(self._pad_target(self._convert_class_str2int(prediction),
+                                                          length_to_pad=max_prediction_length),
+                                         device=self.device)
+                    for seq_id, prediction in target_dict.items()}
+        else:
+            return {seq_id: torch.tensor(self._convert_class_str2int(prediction),
+                                         device=self.device)
+                    for seq_id, prediction in target_dict.items()}
 
     def _load_solver_and_dataloader(self, embeddings: Union[Iterable, Dict],
                                     split_name, targets: Optional[List] = None):
@@ -166,12 +193,7 @@ class Inferencer:
 
         converted_targets = None
         if targets:
-            converted_targets = []
-            for target in targets:
-                if type(target) is str:
-                    converted_targets.append(self._convert_target(target))
-                else:
-                    converted_targets.append(target)
+            converted_targets = [self._convert_class_str2int(target) for target in targets]
 
         solver, loader = self.solvers_and_loaders_by_split[split_name]
         dataset = get_dataset(self.protocol, samples=[
@@ -248,22 +270,31 @@ class Inferencer:
         else:
             embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
 
-        embedding_target_dict = {key: targets[i] for i, key in enumerate(embeddings_dict.keys())}
-        embedding_target_dict_keys = list(embedding_target_dict.keys())
-
+        seq_ids = list(embeddings_dict.keys())
         if sample_size == -1:
-            sample_size = len(embedding_target_dict_keys)
-        if sample_size > len(embedding_target_dict_keys):
-            sample_size = len(embedding_target_dict_keys)
+            sample_size = len(seq_ids)
+        if sample_size > len(seq_ids):
+            sample_size = len(seq_ids)
+
+        all_predictions = self.from_embeddings(embeddings_dict, targets)["mapped_predictions"]
+
+        all_predictions_dict = {seq_id: prediction for seq_id, prediction in all_predictions.items()}
+        all_predictions_dict = self._convert_target_dict(all_predictions_dict)
+        all_targets_dict = {seq_id: targets[idx] for idx, seq_id in enumerate(seq_ids)}
+        all_targets_dict = self._convert_target_dict(all_targets_dict)
+
+        solver, _ = self.solvers_and_loaders_by_split[split_name]
 
         # Bootstrapping: Resample over keys to keep track of associated targets
         iteration_results = []
+
         for iteration in range(iterations):
-            bootstrapping_sample = resample(embedding_target_dict_keys, replace=True, n_samples=sample_size)
-            sampled_embeddings = [embeddings_dict[key] for key in bootstrapping_sample]
-            sampled_targets = [embedding_target_dict[key] for key in bootstrapping_sample]
-            iteration_result = self.from_embeddings(sampled_embeddings, sampled_targets, split_name=split_name)
-            iteration_results.append(iteration_result["metrics"])
+            bootstrapping_sample = resample(seq_ids, replace=True, n_samples=sample_size)
+            sampled_predictions = torch.stack([all_predictions_dict[seq_id] for seq_id in bootstrapping_sample])
+            sampled_targets = torch.stack([all_targets_dict[seq_id] for seq_id in bootstrapping_sample])
+            iteration_result = solver._compute_metrics(predicted=sampled_predictions,
+                                                       labels=sampled_targets)
+            iteration_results.append(iteration_result)
 
         # Calculate mean and error margin for each metric
         metrics = list(iteration_results[0].keys())
