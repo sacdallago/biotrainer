@@ -13,14 +13,24 @@ result_dict = inferencer.from_embeddings_with_bootstrapping(per_residue_embeddin
 
 ### Maintenance
 * Simplifying and re-using code for monte_carlo_dropout predictions for solvers
+* Changing confidence interval calculation for monte_carlo_dropout predictions and bootstrapping. 
+The number of iterations is now no longer included for calculating the interval:
+```python
+std_dev, mean = torch.std_mean(values, dim=dimension, unbiased=True)
+    # Use normal distribution for critical value (z_score)
+    z_score = norm.ppf(q=1 - (confidence_level / 2))
+    # Confidence range does not include number of iterations:
+    # https://moderndive.com/8-confidence-intervals.html#se-method
+    # Note that the number of iterations influences the precision of the standard deviation, however.
+    confidence_range = z_score * std_dev
+```
 
 ### Bug fixes
 * Fixed monte carlo dropout predictions for per-residue protocols
 * Fixed version in `version.py`
 
 ### Tests
-* Adding tests for Inferencer module. At the moment, all inferencer API methods are covered for protocols
-`residue_to_class` and `sequence_to_value`
+* Adding tests for Inferencer module. All inferencer API methods are covered for all protocols
 
 ## 26.06.2023 - Version 0.5.1
 ### Bug fixes
