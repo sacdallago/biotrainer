@@ -63,7 +63,7 @@ class ConfigurationVerificationTests(unittest.TestCase):
                                                                                         sample_size=3,
                                                                                         seed=42)
         r2c_dict = self.inferencer_r2c.from_embeddings(self.per_residue_embeddings, self._test_targets_r2c)
-        for metric in r2c_dict["metrics"].keys():
+        for metric in r2c_dict_bootstrapping.keys():
             self.assertAlmostEqual(r2c_dict["metrics"][metric], r2c_dict_bootstrapping[metric]["mean"],
                                    delta=r2c_dict_bootstrapping[metric]["error"] * error_tolerance_factor)
 
@@ -73,7 +73,7 @@ class ConfigurationVerificationTests(unittest.TestCase):
                                                                                         sample_size=2,
                                                                                         seed=42)
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2v)
-        for metric in s2v_dict["metrics"].keys():
+        for metric in s2v_dict_bootstrapping.keys():
             self.assertAlmostEqual(s2v_dict["metrics"][metric], s2v_dict_bootstrapping[metric]["mean"],
                                    delta=s2v_dict_bootstrapping[metric]["error"] * error_tolerance_factor)
 
