@@ -28,6 +28,16 @@ class ConfigurationVerificationTests(unittest.TestCase):
         per_sequence_embeddings_dict = {f"Seq{idx}": embed for idx, embed in enumerate(per_sequence_embeddings)}
         return per_residue_embeddings_dict, per_sequence_embeddings_dict
 
+    def test_padding(self):
+        max_seq_length = len(max(self._test_targets_r2c, key=len))
+        for target in self._test_targets_r2c:
+            self.assertTrue(len(self.inferencer_r2c._pad_target(self.inferencer_r2c._convert_class_str2int(target),
+                                                                max_seq_length)) == max_seq_length,
+                            "Padding did not enlarge target sequence to correct size!")
+        for target in self._test_targets_s2v:
+            self.assertTrue(self.inferencer_s2v._pad_target(target, max_seq_length) == target,
+                            "Padding changed a non-list value!")
+
     def test_from_embeddings(self):
         r2c_dict = self.inferencer_r2c.from_embeddings(self.per_residue_embeddings)
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings)
