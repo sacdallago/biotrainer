@@ -98,6 +98,12 @@ class ConfigurationVerificationTests(unittest.TestCase):
                                                                    iterations=10,
                                                                    sample_size=1,
                                                                    seed=42)
+        # Check that larger sample sizes than provided sequence number work
+        _ = self.inferencer_s2v.from_embeddings_with_bootstrapping(self.per_sequence_embeddings,
+                                                                   self._test_targets_s2v,
+                                                                   iterations=5,
+                                                                   sample_size=100,
+                                                                   seed=42)
 
     def test_from_embeddings_with_dropout(self):
         r2c_dict = self.inferencer_r2c.from_embeddings_with_monte_carlo_dropout(self.per_residue_embeddings,
