@@ -4,7 +4,7 @@ from biotrainer.inference import Inferencer
 from bio_embeddings.embed import OneHotEncodingEmbedder
 
 
-class ConfigurationVerificationTests(unittest.TestCase):
+class InferencerTests(unittest.TestCase):
     _test_sequences = ["SEQVENCEPRTEI",
                        "SEQWENCE",
                        "PRTEIN"]
