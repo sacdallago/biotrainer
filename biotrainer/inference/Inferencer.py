@@ -28,7 +28,7 @@ class Inferencer:
     def __init__(
             self,
             # Constant parameters for all split solvers
-            protocol: Protocol,
+            protocol: str,
             embedder_name: str,
             # Optional constant parameters
             class_int_to_string: Optional[Dict[int, str]] = None,
@@ -37,12 +37,12 @@ class Inferencer:
             # Everything else
             **kwargs
     ):
-        self.protocol = protocol
+        self.protocol = Protocol[protocol]
         self.device = get_device(device)
         self.embedder_name = embedder_name
         self.class_int2str = class_int_to_string
         self.class_str2int = class_str_to_int
-        self.collate_function = get_collate_function(protocol)
+        self.collate_function = get_collate_function(self.protocol)
 
         self.solvers_and_loaders_by_split = self._create_solvers_and_loaders_by_split(**kwargs)
         print(f"Got {len(self.solvers_and_loaders_by_split.keys())} split(s): "
@@ -151,7 +151,7 @@ class Inferencer:
 
     def _convert_class_str2int(self, to_convert: str):
         if type(to_convert) is str:
-            if "residue_" in self.protocol:
+            if self.protocol in Protocol.per_residue_protocols():
                 return [self.class_str2int[t] for t in to_convert]
             else:
                 return self.class_str2int[to_convert]
@@ -159,7 +159,7 @@ class Inferencer:
             return to_convert
 
     def _pad_target(self, sequence: Union[List, Any], length_to_pad: int):
-        if "residue_" in self.protocol:
+        if self.protocol in Protocol.per_residue_protocols():
             if type(sequence) is not list:
                 return sequence
 
@@ -171,7 +171,7 @@ class Inferencer:
             return sequence
 
     def _convert_target_dict(self, target_dict: Dict[str, str]):
-        if "residue_" in self.protocol:
+        if self.protocol in Protocol.per_residue_protocols():
             max_prediction_length = len(max(target_dict.values(), key=len))
             return {seq_id: torch.tensor(self._pad_target(self._convert_class_str2int(prediction),
                                                           length_to_pad=max_prediction_length),
@@ -348,7 +348,7 @@ class Inferencer:
                                                            confidence_level=confidence_level)["mapped_predictions"]
 
         # For class predictions, revert from int (model output) to str (class name)
-        if "residue_" in self.protocol:
+        if self.protocol in Protocol.per_residue_protocols():
             for seq_id, prediction_list in predictions.items():
                 for prediction_dict in prediction_list:
                     prediction_dict["prediction"] = list(revert_mappings(protocol=self.protocol,
