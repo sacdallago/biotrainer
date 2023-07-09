@@ -41,7 +41,6 @@ class ConfigOption(ABC):
         return "config_option"
 
     @property
-    @abstractmethod
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return ""
 
@@ -71,7 +70,7 @@ class ConfigOption(ABC):
     def category(self) -> str:
         return "config_option"
 
-    def transform_value_if_necessary(self, config_file_path: Path):
+    def transform_value_if_necessary(self, config_file_path: Path = None):
         pass
 
     def to_dict(self):
@@ -157,7 +156,7 @@ class FileOption(ConfigOption, ABC):
         if absolute_path.is_file() or absolute_path.is_dir():
             self.value = str(absolute_path)
 
-    def transform_value_if_necessary(self, config_file_path: Path):
+    def transform_value_if_necessary(self, config_file_path: Path = None):
         self._download_file_if_necessary(config_file_path)
         self._make_path_absolute_if_necessary(config_file_path)
 

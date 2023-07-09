@@ -182,7 +182,7 @@ class OutputDirectory(GeneralOption, ConfigOption):
     def required(self) -> bool:
         return False
 
-    def transform_value_if_necessary(self, config_file_path: Path):
+    def transform_value_if_necessary(self, config_file_path: Path = None):
         self.value = str((config_file_path / self.value).absolute())
 
     def is_value_valid(self) -> bool:

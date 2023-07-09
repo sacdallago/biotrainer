@@ -3,16 +3,19 @@ import os
 from ruamel import yaml
 from pathlib import Path
 from ruamel.yaml import YAMLError
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Tuple
 
-from ..protocols import Protocol
-from .config_option import ConfigurationException, ConfigOption, FileOption
-from .config_rules import MutualExclusive, ProtocolRequires
+from .model_options import model_options
+from .general_options import general_options
 from .input_options import SequenceFile, LabelsFile, input_options
+from .config_option import ConfigurationException, ConfigOption, FileOption
 from .training_options import AutoResume, PretrainedModel, training_options
 from .embedding_options import EmbedderName, EmbeddingsFile, embedding_options
-from .general_options import general_options
-from .model_options import model_options
+from .config_rules import MutualExclusive, ProtocolRequires, OptionValueRequires
+from .cross_validation_options import cross_validation_options, CROSS_VALIDATION_CONFIG_KEY, Method, ChooseBy, \
+    CrossValidationOption, K, Nested, NestedK, SearchMethod, NMaxEvaluationsRandom, P
+
+from ..protocols import Protocol
 
 protocol_rules = [
     ProtocolRequires(protocol=Protocol.per_residue_protocols(), requires=[SequenceFile, LabelsFile]),
@@ -30,9 +33,18 @@ config_option_rules = [
                                   "an embeddings_file to use pre-computed embeddings.")
 ]
 
+cross_validation_option_rules = [
+    OptionValueRequires(option=Method, value="k_fold", requires=[K]),
+    OptionValueRequires(option=Nested, value=True, requires=[NestedK, SearchMethod]),
+    OptionValueRequires(option=SearchMethod, value="random_search", requires=[NMaxEvaluationsRandom]),
+    OptionValueRequires(option=Method, value="leave_p_out", requires=[P])
+]
+
 all_options_dict: Dict[str, ConfigOption] = {option.name: option for option in
                                              general_options + input_options + model_options +
                                              training_options + embedding_options}
+
+cross_validation_dict: Dict[str, ConfigOption] = {option.name: option for option in cross_validation_options}
 
 
 class Configurator:
@@ -54,9 +66,11 @@ class Configurator:
                    config_file_path=Path(os.path.dirname(os.path.abspath(config_path))))
 
     @staticmethod
-    def get_option_dicts_by_protocol(protocol: Protocol):
+    def get_option_dicts_by_protocol(protocol: Protocol, include_cross_validation_options: bool = False):
         result = []
-        for option_class in all_options_dict.values():
+        all_config_options_dict = all_options_dict | cross_validation_dict \
+            if include_cross_validation_options else all_options_dict
+        for option_class in all_config_options_dict.values():
             option = option_class(protocol=protocol, value="")
             if protocol in option.allowed_protocols:
                 result.append(option.to_dict())
@@ -93,16 +107,47 @@ class Configurator:
             raise ConfigurationException(f"No protocol specified in config file!")
 
     @staticmethod
-    def _get_config_map(protocol: Protocol, config_dict: Dict[str, Any], config_file_path: Path = None) \
-            -> Dict[str, ConfigOption]:
+    def _get_cross_validation_map(protocol: Protocol, cv_dict: Dict[str, Any]) -> Dict[str, ConfigOption]:
+        cv_map = {}
+        method = ""
+        for cv_name in cv_dict.keys():
+            try:
+                value = cv_dict[cv_name]
+                if cv_name == Method.name:
+                    method = value
+                cv_object: ConfigOption = cross_validation_dict[cv_name](protocol=protocol, value=value)
+                cv_object.transform_value_if_necessary()
+                cv_map[cv_name] = cv_object
+            except KeyError:
+                raise ConfigurationException(f"Unknown cross validation option: {cv_name}!")
+
+        if method == "":
+            raise ConfigurationException(f"Required option method is missing from cross_validation_config!")
+        else:
+            # Add default value for choose by
+            if ChooseBy.name not in cv_dict.keys() and method in ChooseBy.cv_methods:
+                cv_dict[ChooseBy.name] = ChooseBy(protocol=protocol, value=ChooseBy.default_value)
+
+        return cv_map
+
+    @staticmethod
+    def _get_config_maps(protocol: Protocol, config_dict: Dict[str, Any], config_file_path: Path = None) \
+            -> Tuple[Dict[str, ConfigOption], Dict[str, CrossValidationOption]]:
 
         config_map = {}
+        cv_map = {}
+        contains_cross_validation_config = False
         for config_name in config_dict.keys():
             try:
-                value = config_dict[config_name]
-                config_object: ConfigOption = all_options_dict[config_name](protocol=protocol, value=value)
-                config_object.transform_value_if_necessary(config_file_path)
-                config_map[config_name] = config_object
+                if config_name == CROSS_VALIDATION_CONFIG_KEY:
+                    cv_map = Configurator._get_cross_validation_map(protocol=protocol,
+                                                                    cv_dict=config_dict[config_name])
+                    contains_cross_validation_config = True
+                else:
+                    value = config_dict[config_name]
+                    config_object: ConfigOption = all_options_dict[config_name](protocol=protocol, value=value)
+                    config_object.transform_value_if_necessary(config_file_path)
+                    config_map[config_name] = config_object
             except KeyError:
                 raise ConfigurationException(f"Unknown configuration option: {config_name}!")
         # Add default values
@@ -115,12 +160,18 @@ class Configurator:
                 config_object.transform_value_if_necessary(config_file_path)
                 config_map[option.name] = config_object
 
-        return config_map
+        # Add default cross validation method if necessary
+        if not contains_cross_validation_config:
+            # hold_out by default, does not need any additional parameters
+            cv_map[Method.name] = Method(protocol=protocol, value=Method.default_value)
+
+        return config_map, cv_map
 
     @staticmethod
-    def _verify_config(protocol: Protocol, config_map: Dict[str, ConfigOption]) -> bool:
-        # Check rules
+    def _verify_config(protocol: Protocol, config_map: Dict[str, ConfigOption]):
         config_objects = list([config_object for config_object in config_map.values()])
+
+        # Check rules
         all_rules = protocol_rules + config_option_rules
         for rule in all_rules:
             success, reason = rule.apply(protocol=protocol,
@@ -128,21 +179,46 @@ class Configurator:
             if not success:
                 raise ConfigurationException(reason)
 
+        # Check protocol and value
         for config_object in config_objects:
-            # Check protocol
             if protocol not in config_object.allowed_protocols:
-                raise ConfigurationException(f"{config_object.name} not allowed for protocol {protocol}.")
-            # Check value
-            if not config_object.is_value_valid():
-                raise ConfigurationException(f"{config_object.value} not valid for option {config_object.name}.")
+                raise ConfigurationException(f"{config_object.name} not allowed for protocol {protocol}!")
 
-        return True
+            if not config_object.is_value_valid():
+                raise ConfigurationException(f"{config_object.value} not valid for option {config_object.name}!")
+
+    @staticmethod
+    def _verify_cv_config(protocol: Protocol, cv_config: Dict[str, CrossValidationOption]):
+        cv_objects = list([cv_object for cv_object in cv_config.values()])
+        if Method.name not in cv_config.keys():
+            raise ConfigurationException(f"Required option method is missing from cross_validation_config!")
+        method = cv_config[Method.name]
+
+        # Check rules
+        for rule in cross_validation_option_rules:
+            success, reason = rule.apply(protocol=protocol,
+                                         config=cv_objects)
+            if not success:
+                raise ConfigurationException(reason)
+
+        # Check method and value
+        if method == "hold_out" and len(cv_objects) > 1:
+            raise ConfigurationException(f"Cross validation method hold_out does not allow any other options!")
+
+        for cv_object in cv_objects:
+            if cv_object.cv_methods != [] and method.value not in cv_object.cv_methods:
+                raise ConfigurationException(
+                    f"Option {cv_object.name} not allowed for cross validation method {method.name}!")
+
+            if not cv_object.is_value_valid():
+                raise ConfigurationException(
+                    f"{cv_object.value} not valid for cross validation option {cv_object.name}!")
 
     def get_verified_config(self) -> Dict[str, Any]:
-        config_map: Dict[str, ConfigOption] = self._get_config_map(protocol=self.protocol,
-                                                                   config_dict=self._config_dict,
-                                                                   config_file_path=self._config_file_path)
+        config_map, cv_map = self._get_config_maps(protocol=self.protocol, config_dict=self._config_dict,
+                                                   config_file_path=self._config_file_path)
         self._verify_config(protocol=self.protocol, config_map=config_map)
+        self._verify_cv_config(protocol=self.protocol, cv_config=cv_map)
         result = {}
         for config_object in config_map.values():
             result[config_object.name] = config_object.value

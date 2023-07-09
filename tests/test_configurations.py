@@ -62,7 +62,7 @@ configurations = {
             "method": "k_fold",
             "k": 3,
             "stratified": True,
-            "repeated": True
+            "repeat": 1
         }
     },
     "nested_k_fold": {
@@ -167,13 +167,14 @@ class ConfigurationVerificationTests(unittest.TestCase):
                 self.assertTrue(Path(verified_config[key]).is_absolute(), "File paths not absolute after verification!")
 
     def test_k_fold(self):
-        config_dict = config.parse_config(yaml.dump({**configurations["minimal"], **configurations["k_fold"]}))
-        config_dict["cross_validation_config"] = dict(config_dict["cross_validation_config"])
-        self.assertTrue(config.verify_config(config_dict, PROTOCOLS), "k_fold does not work!")
-        with self.assertRaises(config.ConfigurationException,
+        config_dict = {**configurations["minimal"], **configurations["k_fold"]}
+        configurator = Configurator.from_config_dict(config_dict)
+        self.assertTrue(configurator.get_verified_config(), "k_fold does not work!")
+
+        with self.assertRaises(ConfigurationException,
                                msg="Config with missing k_fold params does not throw an exception"):
             config_dict["cross_validation_config"].pop("k")
-            config.verify_config(config_dict, PROTOCOLS)
+            configurator.from_config_dict(config_dict).get_verified_config()
 
     def test_nested_k_fold(self):
         config_dict = config.parse_config(yaml.dump({**configurations["minimal"], **configurations["nested_k_fold"]}))

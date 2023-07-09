@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Type, Union, Any
+from typing import List, Type, Union, Any, Final
 
 from .config_option import ConfigOption, classproperty
 
@@ -10,27 +10,31 @@ class CrossValidationOption(ConfigOption, ABC):
     def category(self) -> str:
         return "cross_validation_option"
 
-    @abstractmethod
     @classproperty
-    def methods(self) -> List[str]:
+    @abstractmethod
+    def cv_methods(self) -> List[str]:
         return []
 
 
 class Method(CrossValidationOption):
 
+    @classproperty
     def name(self) -> str:
         return "method"
 
-    def methods(self) -> List[str]:
+    @classproperty
+    def cv_methods(self) -> List[str]:
         return []
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "hold_out"
 
+    @classproperty
     def possible_values(self) -> List[Any]:
         return ["hold_out", "k_fold", "leave_p_out"]
 
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str]
 
@@ -40,16 +44,15 @@ class Method(CrossValidationOption):
 
 class K(CrossValidationOption):
 
+    @classproperty
     def name(self) -> str:
         return "k"
 
-    def methods(self) -> List[str]:
+    @classproperty
+    def cv_methods(self) -> List[str]:
         return ["k_fold"]
 
-    @property
-    def default_value(self) -> Union[str, int, float, bool, Any]:
-        return 5
-
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [int]
 
@@ -62,19 +65,23 @@ class K(CrossValidationOption):
 
 class Stratified(CrossValidationOption):
 
+    @classproperty
     def name(self) -> str:
         return "stratified"
 
-    def methods(self) -> List[str]:
+    @classproperty
+    def cv_methods(self) -> List[str]:
         return ["k_fold"]
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return False
 
+    @classproperty
     def possible_values(self) -> List[Any]:
         return [True, False]
 
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [bool]
 
@@ -84,16 +91,19 @@ class Stratified(CrossValidationOption):
 
 class Repeat(CrossValidationOption):
 
+    @classproperty
     def name(self) -> str:
         return "repeat"
 
-    def methods(self) -> List[str]:
+    @classproperty
+    def cv_methods(self) -> List[str]:
         return ["k_fold"]
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return 1  # No repeat
 
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [int]
 
@@ -106,19 +116,23 @@ class Repeat(CrossValidationOption):
 
 class Nested(CrossValidationOption):
 
+    @classproperty
     def name(self) -> str:
         return "nested"
 
-    def methods(self) -> List[str]:
+    @classproperty
+    def cv_methods(self) -> List[str]:
         return ["k_fold"]
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return False
 
+    @classproperty
     def possible_values(self) -> List[Any]:
         return [True, False]
 
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [bool]
 
@@ -128,16 +142,15 @@ class Nested(CrossValidationOption):
 
 class NestedK(CrossValidationOption):
 
+    @classproperty
     def name(self) -> str:
         return "nested_k"
 
-    def methods(self) -> List[str]:
+    @classproperty
+    def cv_methods(self) -> List[str]:
         return ["k_fold"]
 
-    @property
-    def default_value(self) -> Union[str, int, float, bool, Any]:
-        return 3
-
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [int]
 
@@ -150,16 +163,15 @@ class NestedK(CrossValidationOption):
 
 class SearchMethod(CrossValidationOption):
 
+    @classproperty
     def name(self) -> str:
         return "search_method"
 
-    def methods(self) -> List[str]:
+    @classproperty
+    def cv_methods(self) -> List[str]:
         return ["k_fold"]
 
-    @property
-    def default_value(self) -> Union[str, int, float, bool, Any]:
-        return ""
-
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str]
 
@@ -169,16 +181,15 @@ class SearchMethod(CrossValidationOption):
 
 class NMaxEvaluationsRandom(CrossValidationOption):
 
+    @classproperty
     def name(self) -> str:
         return "n_max_evaluations_random"
 
-    def methods(self) -> List[str]:
+    @classproperty
+    def cv_methods(self) -> List[str]:
         return ["k_fold"]
 
-    @property
-    def default_value(self) -> Union[str, int, float, bool, Any]:
-        return 3
-
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [int]
 
@@ -191,19 +202,23 @@ class NMaxEvaluationsRandom(CrossValidationOption):
 
 class ChooseBy(CrossValidationOption):
 
+    @classproperty
     def name(self) -> str:
         return "choose_by"
 
-    def methods(self) -> List[str]:
+    @classproperty
+    def cv_methods(self) -> List[str]:
         return ["k_fold", "leave_p_out"]
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "loss"
 
+    @classproperty
     def possible_values(self) -> List[Any]:
         return []  # Add possible metrics to protocol enum
 
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [str]
 
@@ -216,13 +231,15 @@ class P(CrossValidationOption):
     def name(self) -> str:
         return "p"
 
-    def methods(self) -> List[str]:
+    @classproperty
+    def cv_methods(self) -> List[str]:
         return ["leave_p_out"]
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return 5
 
+    @classproperty
     def possible_types(self) -> List[Type]:
         return [int]
 
@@ -231,3 +248,8 @@ class P(CrossValidationOption):
 
     def is_value_valid(self) -> bool:
         return self.value >= 1
+
+
+CROSS_VALIDATION_CONFIG_KEY: Final[str] = "cross_validation_config"
+cross_validation_options: List = [Method, K, Stratified, Repeat, Nested, NestedK,
+                                  SearchMethod, NMaxEvaluationsRandom, ChooseBy, P]
