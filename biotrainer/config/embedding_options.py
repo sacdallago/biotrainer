@@ -1,6 +1,7 @@
 import inspect
 
 from abc import ABC
+from pathlib import Path
 from typing import List, Type, Any, Union
 
 from .config_option import FileOption, classproperty
@@ -60,6 +61,16 @@ class EmbedderName(EmbeddingOption, FileOption):
             return self.value in self.possible_values or self.value in all_embedders or self.value == self.default_value
         else:
             return super().is_value_valid()
+
+    def transform_value_if_necessary(self, config_file_path: Path = None):
+        # Convert class name to bio_embeddings name
+        if ".py" not in self.value:
+            import bio_embeddings
+            all_embedders_dict = {embedder[0]: embedder[1].name for embedder in
+                                  inspect.getmembers(bio_embeddings.embed, inspect.isclass)
+                                  if "Interface" not in embedder[0]}
+            if self.value in all_embedders_dict.keys():
+                self.value = all_embedders_dict[self.value]
 
 
 class EmbeddingsFile(EmbeddingOption, FileOption):
