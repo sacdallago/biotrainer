@@ -26,7 +26,7 @@ class Method(CrossValidationOption):
     def cv_methods(self) -> List[str]:
         return []
 
-    @property
+    @classproperty
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "hold_out"
 
