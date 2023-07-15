@@ -175,6 +175,10 @@ class SearchMethod(CrossValidationOption):
     def possible_types(self) -> List[Type]:
         return [str]
 
+    @classproperty
+    def possible_values(self) -> List[Any]:
+        return ["random_search", "grid_search"]
+
     def required(self) -> bool:
         return False
 
@@ -228,6 +232,7 @@ class ChooseBy(CrossValidationOption):
 
 class P(CrossValidationOption):
 
+    @classproperty
     def name(self) -> str:
         return "p"
 

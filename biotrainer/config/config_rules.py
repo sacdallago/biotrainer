@@ -72,12 +72,12 @@ class OptionValueRequires(ConfigRule):
         self._required_options = requires
 
     def apply(self, protocol: Protocol, config: List) -> Tuple[bool, str]:
-        config_class_dict = {config_option.__class__: config_option.value for config_option in config}
+        config_class_dict = {config_option.name: config_option.value for config_option in config}
 
-        if self._option.__class__ in config_class_dict.keys() and \
-                config_class_dict[self._option.__class__] == self._value:
+        if self._option.name in config_class_dict.keys() and \
+                config_class_dict[self._option.name] == self._value:
             for required_option in self._required_options:
-                if required_option not in config_class_dict.keys():
+                if required_option.name not in config_class_dict.keys():
                     return False, f"{self._option.name} with value {self._value} requires {required_option.name} " \
                                   f"to be set."
 

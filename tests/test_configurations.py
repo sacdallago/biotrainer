@@ -1,9 +1,8 @@
 import unittest
-from pathlib import Path
 
-from ruamel import yaml
-from biotrainer.utilities import config
-from biotrainer.utilities.executer import __PROTOCOLS as PROTOCOLS
+from pathlib import Path
+from copy import deepcopy
+
 from biotrainer.config import Configurator, ConfigurationException
 
 configurations = {
@@ -68,11 +67,18 @@ configurations = {
     "nested_k_fold": {
         "cross_validation_config": {
             "method": "k_fold",
+            "repeat": 2,
             "k": 4,
             "nested": True,
             "nested_k": 3,
             "search_method": "random_search",
             "n_max_evaluations_random": 5
+        }
+    },
+    "leave_p_out": {
+        "cross_validation_config": {
+            "method": "leave_p_out",
+            "p": 5,
         }
     }
 }
@@ -177,10 +183,29 @@ class ConfigurationVerificationTests(unittest.TestCase):
             configurator.from_config_dict(config_dict).get_verified_config()
 
     def test_nested_k_fold(self):
-        config_dict = config.parse_config(yaml.dump({**configurations["minimal"], **configurations["nested_k_fold"]}))
-        config_dict["cross_validation_config"] = dict(config_dict["cross_validation_config"])
-        self.assertTrue(config.verify_config(config_dict, PROTOCOLS), "nested k_fold does not work!")
-        with self.assertRaises(config.ConfigurationException,
-                               msg="Config with missing nested k_fold params does not throw an exception"):
+        config_dict = {**configurations["minimal"], **configurations["nested_k_fold"]}
+        original_config = deepcopy(config_dict)
+
+        configurator = Configurator.from_config_dict(config_dict)
+        self.assertTrue(configurator.get_verified_config(), "nested k_fold does not work!")
+
+        with self.assertRaises(ConfigurationException,
+                               msg="Config with missing nested k_fold param does not throw an exception"):
             config_dict["cross_validation_config"].pop("nested_k")
-            config.verify_config(config_dict, PROTOCOLS)
+            configurator.from_config_dict(config_dict).get_verified_config()
+
+        config_dict = deepcopy(original_config)
+        with self.assertRaises(ConfigurationException,
+                               msg="Config with missing search method for nested k_fold does not throw an exception"):
+            config_dict["cross_validation_config"].pop("search_method")
+            configurator.from_config_dict(config_dict).get_verified_config()
+
+    def test_leave_p_out(self):
+        config_dict = {**configurations["minimal"], **configurations["leave_p_out"]}
+        configurator = Configurator.from_config_dict(config_dict)
+        self.assertTrue(configurator.get_verified_config(), "leave_p_out does not work!")
+
+        with self.assertRaises(ConfigurationException,
+                               msg="Config with missing p param does not throw an exception"):
+            config_dict["cross_validation_config"].pop("p")
+            configurator.from_config_dict(config_dict).get_verified_config()
