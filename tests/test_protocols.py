@@ -4,7 +4,7 @@ import tempfile
 
 from pathlib import Path
 from biotrainer.utilities import ConfigurationException
-from biotrainer.utilities import headless_main as biotrainer_headless_main
+from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
 
 protocol_to_input = {
     'residue_to_class': {'sequence_file': "test_input_files/r2c/sequences.fasta",

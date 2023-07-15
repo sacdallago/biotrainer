@@ -1,5 +1,4 @@
 from .seeder import seed_all
-from .cli import headless_main
 from .version import __version__
 from .cuda_device import get_device
 from .data_classes import Split, SplitResult, DatasetSample
@@ -13,7 +12,6 @@ __all__ = [
     'seed_all',
     'get_device',
     'read_FASTA',
-    'headless_main',
     'read_config_file',
     'ConfigurationException',
     'get_attributes_from_seqrecords',

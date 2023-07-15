@@ -4,7 +4,7 @@ import tempfile
 from ruamel import yaml
 from pathlib import Path
 from biotrainer.utilities import ConfigurationException
-from biotrainer.utilities import headless_main as biotrainer_headless_main
+from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
 
 
 def test_cross_validation(cv_config: dict):
