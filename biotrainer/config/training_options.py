@@ -12,6 +12,7 @@ class TrainingOption(ConfigOption, ABC):
 
 
 class NumberEpochs(TrainingOption, ConfigOption):
+
     @classproperty
     def name(self) -> str:
         return "num_epochs"
@@ -21,11 +22,12 @@ class NumberEpochs(TrainingOption, ConfigOption):
         return 200
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [int]
+    def allow_multiple_values(self) -> bool:
+        return True
 
-    def is_value_valid(self) -> bool:
-        return self.value > 0
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return value > 0
 
     @classproperty
     def required(self) -> bool:
@@ -43,11 +45,12 @@ class BatchSize(TrainingOption, ConfigOption):
         return 128
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [int]
+    def allow_multiple_values(self) -> bool:
+        return True
 
-    def is_value_valid(self) -> bool:
-        return self.value > 0
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return value > 0
 
     @classproperty
     def required(self) -> bool:
@@ -65,11 +68,12 @@ class Patience(TrainingOption, ConfigOption):
         return 10
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [int]
+    def allow_multiple_values(self) -> bool:
+        return True
 
-    def is_value_valid(self) -> bool:
-        return self.value > 0
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return value > 0
 
     @classproperty
     def required(self) -> bool:
@@ -77,6 +81,7 @@ class Patience(TrainingOption, ConfigOption):
 
 
 class Shuffle(TrainingOption, ConfigOption):
+
     @classproperty
     def name(self) -> str:
         return "shuffle"
@@ -86,8 +91,8 @@ class Shuffle(TrainingOption, ConfigOption):
         return True
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [bool]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @property
     def possible_values(self) -> List[Any]:
@@ -99,6 +104,7 @@ class Shuffle(TrainingOption, ConfigOption):
 
 
 class UseClassWeights(TrainingOption, ConfigOption):
+
     @classproperty
     def name(self) -> str:
         return "use_class_weights"
@@ -108,8 +114,8 @@ class UseClassWeights(TrainingOption, ConfigOption):
         return False
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [bool]
+    def allow_multiple_values(self) -> bool:
+        return True
 
     @property
     def possible_values(self) -> List[Any]:
@@ -121,6 +127,7 @@ class UseClassWeights(TrainingOption, ConfigOption):
 
 
 class AutoResume(TrainingOption, ConfigOption):
+
     @classproperty
     def name(self) -> str:
         return "auto_resume"
@@ -130,8 +137,8 @@ class AutoResume(TrainingOption, ConfigOption):
         return False
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [bool]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @property
     def possible_values(self) -> List[Any]:
@@ -143,6 +150,7 @@ class AutoResume(TrainingOption, ConfigOption):
 
 
 class PretrainedModel(TrainingOption, FileOption):
+
     @classproperty
     def name(self) -> str:
         return "pretrained_model"
@@ -156,8 +164,8 @@ class PretrainedModel(TrainingOption, FileOption):
         return [".pt"]
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @classproperty
     def allow_download(self) -> bool:
@@ -169,6 +177,7 @@ class PretrainedModel(TrainingOption, FileOption):
 
 
 class LimitedSampleSize(TrainingOption, ConfigOption):
+
     @classproperty
     def name(self) -> str:
         return "limited_sample_size"
@@ -178,11 +187,12 @@ class LimitedSampleSize(TrainingOption, ConfigOption):
         return -1
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [int]
+    def allow_multiple_values(self) -> bool:
+        return False
 
-    def is_value_valid(self) -> bool:
-        return self.value > 0 or self.value == self.default_value
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return value > 0 or value == config_option.default_value
 
     @classproperty
     def required(self) -> bool:

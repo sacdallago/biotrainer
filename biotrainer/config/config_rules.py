@@ -82,3 +82,30 @@ class OptionValueRequires(ConfigRule):
                                   f"to be set."
 
         return True, ""
+
+
+class AllowHyperparameterOptimization:
+
+    def __init__(self, option: Any, value: Any):
+        self._option = option
+        self._value = value
+
+    def apply(self, protocol: Protocol, config: List) -> Tuple[bool, str]:
+        config_class_dict = {config_option.name: config_option for config_option in config}
+        all_list_options = [config_option.is_list_option() for config_option in config_class_dict.values()]
+
+        if self._option.name in config_class_dict.keys():
+            if config_class_dict[self._option.name].value == self._value:
+                if True not in all_list_options:
+                    return False, (
+                        f"{self._option.name}={self._option.value} requires at least "
+                        f"one hyperparameter to be optimized. Provide "
+                        f"such a parameter via a list, list comprehension or range expression.")
+            else:
+                if True in all_list_options:
+                    return False, (
+                        f"{self._option.name}={self._option.value} does not allow for hyperparameter optimization.")
+        else:
+            if True in all_list_options:
+                return False, f"Hyperparameter optimization not allowed if {self._option} is missing!"
+        return True, ""

@@ -4,7 +4,7 @@ from abc import ABC
 from pathlib import Path
 from typing import List, Type, Any, Union
 
-from .config_option import FileOption, classproperty
+from .config_option import FileOption, classproperty, ConfigOption
 
 
 class EmbeddingOption(FileOption, ABC):
@@ -12,6 +12,10 @@ class EmbeddingOption(FileOption, ABC):
     @classproperty
     def category(self) -> str:
         return "embedding_option"
+
+    @classproperty
+    def allow_multiple_values(self) -> bool:
+        return False
 
 
 class EmbedderName(EmbeddingOption, FileOption):
@@ -23,10 +27,6 @@ class EmbedderName(EmbeddingOption, FileOption):
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "custom_embeddings"
-
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str]
 
     @property
     def possible_values(self) -> List[Any]:
@@ -50,17 +50,19 @@ class EmbedderName(EmbeddingOption, FileOption):
     def allow_download(self) -> bool:
         return False
 
-    def is_value_valid(self) -> bool:
-        if ".py" not in self.value:
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        if ".py" not in value:
             import bio_embeddings
             # Also allow name of embedders instead of class names
             # (one_hot_encoding: name, OneHotEncodingEmbedder: class name)
             all_embedders = [embedder[1].name for embedder in
                              inspect.getmembers(bio_embeddings.embed, inspect.isclass)
                              if "Interface" not in embedder[0]]
-            return self.value in self.possible_values or self.value in all_embedders or self.value == self.default_value
+            return (value in config_option.possible_values or
+                    value in all_embedders or value == config_option.default_value)
         else:
-            return super().is_value_valid()
+            return super()._is_value_valid(config_option, value)
 
     def transform_value_if_necessary(self, config_file_path: Path = None):
         # Convert class name to bio_embeddings name
@@ -71,6 +73,8 @@ class EmbedderName(EmbeddingOption, FileOption):
                                   if "Interface" not in embedder[0]}
             if self.value in all_embedders_dict.keys():
                 self.value = all_embedders_dict[self.value]
+        else:
+            super().transform_value_if_necessary(config_file_path)
 
 
 class EmbeddingsFile(EmbeddingOption, FileOption):
@@ -86,10 +90,6 @@ class EmbeddingsFile(EmbeddingOption, FileOption):
     @classproperty
     def allowed_formats(self) -> List[str]:
         return ["h5"]
-
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str]
 
     @classproperty
     def required(self) -> bool:

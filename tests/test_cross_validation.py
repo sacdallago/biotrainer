@@ -18,6 +18,8 @@ def test_cross_validation(cv_config: dict):
         if cv_config["method"] == "k_fold" and cv_config["nested"] is True:
             # Add optimizable hyperparameter for nested k_fold cross validation
             base_config["learning_rate"] = [1e-3, 1e-4]
+        else:
+            base_config["learning_rate"] = 1e-3
         base_config["cross_validation_config"] = cv_config
         base_config["sequence_file"] = str(Path("test_input_files/cv_s2v/meltome_cv_test.fasta").absolute())
         with open(tmp_config_path, "w") as tmp_config_file:

@@ -8,12 +8,14 @@ from typing import Union, List, Dict, Any, Tuple
 from .model_options import model_options
 from .general_options import general_options
 from .input_options import SequenceFile, LabelsFile, input_options
-from .config_option import ConfigurationException, ConfigOption, FileOption
+from .config_option import ConfigurationException, ConfigOption
 from .training_options import AutoResume, PretrainedModel, training_options
 from .embedding_options import EmbedderName, EmbeddingsFile, embedding_options
-from .config_rules import MutualExclusive, ProtocolRequires, OptionValueRequires
-from .cross_validation_options import cross_validation_options, CROSS_VALIDATION_CONFIG_KEY, Method, ChooseBy, \
-    CrossValidationOption, K, Nested, NestedK, SearchMethod, NMaxEvaluationsRandom, P
+from .config_rules import (MutualExclusive, ProtocolRequires, OptionValueRequires,
+                           AllowHyperparameterOptimization)
+from .cross_validation_options import (cross_validation_options, CROSS_VALIDATION_CONFIG_KEY, Method, ChooseBy,
+                                       CrossValidationOption, K, Nested, NestedK, SearchMethod, NMaxEvaluationsRandom,
+                                       P)
 
 from ..protocols import Protocol
 
@@ -30,14 +32,18 @@ config_option_rules = [
     MutualExclusive(exclusive=[EmbedderName, EmbeddingsFile],
                     allowed_values=["custom_embeddings"],
                     error_message="Please provide either an embedder_name to calculate embeddings from scratch or \n"
-                                  "an embeddings_file to use pre-computed embeddings.")
+                                  "an embeddings_file to use pre-computed embeddings."),
 ]
 
-cross_validation_option_rules = [
+optimization_rules = [
+    AllowHyperparameterOptimization(option=Nested, value=True),
+]
+
+cross_validation_rules = [
     OptionValueRequires(option=Method, value="k_fold", requires=[K]),
     OptionValueRequires(option=Nested, value=True, requires=[NestedK, SearchMethod]),
     OptionValueRequires(option=SearchMethod, value="random_search", requires=[NMaxEvaluationsRandom]),
-    OptionValueRequires(option=Method, value="leave_p_out", requires=[P])
+    OptionValueRequires(option=Method, value="leave_p_out", requires=[P]),
 ]
 
 all_options_dict: Dict[str, ConfigOption] = {option.name: option for option in
@@ -125,8 +131,8 @@ class Configurator:
             raise ConfigurationException(f"Required option method is missing from cross_validation_config!")
         else:
             # Add default value for choose by
-            if ChooseBy.name not in cv_dict.keys() and method in ChooseBy.cv_methods:
-                cv_dict[ChooseBy.name] = ChooseBy(protocol=protocol, value=ChooseBy.default_value)
+            if ChooseBy.name not in cv_dict.keys():
+                cv_map[ChooseBy.name] = ChooseBy(protocol=protocol)
 
         return cv_map
 
@@ -145,6 +151,8 @@ class Configurator:
                     contains_cross_validation_config = True
                 else:
                     value = config_dict[config_name]
+                    if value == "":  # Ignore empty values
+                        continue
                     config_object: ConfigOption = all_options_dict[config_name](protocol=protocol, value=value)
                     config_object.transform_value_if_necessary(config_file_path)
                     config_map[config_name] = config_object
@@ -163,7 +171,8 @@ class Configurator:
         # Add default cross validation method if necessary
         if not contains_cross_validation_config:
             # hold_out by default, does not need any additional parameters
-            cv_map[Method.name] = Method(protocol=protocol, value=Method.default_value)
+            cv_map[Method.name] = Method(protocol=protocol)
+            cv_map[ChooseBy.name] = ChooseBy(protocol=protocol)
 
         return config_map, cv_map
 
@@ -184,20 +193,28 @@ class Configurator:
             if protocol not in config_object.allowed_protocols:
                 raise ConfigurationException(f"{config_object.name} not allowed for protocol {protocol}!")
 
-            if not config_object.is_value_valid():
+            if not config_object.check_value():
                 raise ConfigurationException(f"{config_object.value} not valid for option {config_object.name}!")
 
     @staticmethod
-    def _verify_cv_config(protocol: Protocol, cv_config: Dict[str, CrossValidationOption]):
+    def _verify_cv_config(protocol: Protocol, config_map: Dict[str, ConfigOption],
+                          cv_config: Dict[str, CrossValidationOption]):
         cv_objects = list([cv_object for cv_object in cv_config.values()])
+        config_objects = list([config_object for config_object in config_map.values()])
+
         if Method.name not in cv_config.keys():
             raise ConfigurationException(f"Required option method is missing from cross_validation_config!")
         method = cv_config[Method.name]
 
         # Check rules
-        for rule in cross_validation_option_rules:
+        for rule in cross_validation_rules:
             success, reason = rule.apply(protocol=protocol,
                                          config=cv_objects)
+            if not success:
+                raise ConfigurationException(reason)
+        for rule in optimization_rules:
+            success, reason = rule.apply(protocol, config=cv_objects + config_objects)
+
             if not success:
                 raise ConfigurationException(reason)
 
@@ -210,7 +227,7 @@ class Configurator:
                 raise ConfigurationException(
                     f"Option {cv_object.name} not allowed for cross validation method {method.name}!")
 
-            if not cv_object.is_value_valid():
+            if not cv_object.check_value():
                 raise ConfigurationException(
                     f"{cv_object.value} not valid for cross validation option {cv_object.name}!")
 
@@ -218,9 +235,12 @@ class Configurator:
         config_map, cv_map = self._get_config_maps(protocol=self.protocol, config_dict=self._config_dict,
                                                    config_file_path=self._config_file_path)
         self._verify_config(protocol=self.protocol, config_map=config_map)
-        self._verify_cv_config(protocol=self.protocol, cv_config=cv_map)
+        self._verify_cv_config(protocol=self.protocol, config_map=config_map, cv_config=cv_map)
         result = {}
         for config_object in config_map.values():
             result[config_object.name] = config_object.value
+        result[CROSS_VALIDATION_CONFIG_KEY] = {}
+        for cv_object in cv_map.values():
+            result[CROSS_VALIDATION_CONFIG_KEY][cv_object.name] = cv_object.value
 
         return result

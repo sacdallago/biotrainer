@@ -52,9 +52,6 @@ def parse_config_file_and_execute_run(config_file_path: str):
     if "pretrained_model" in config.keys():
         logger.info(f"Using pre_trained model: {config['pretrained_model']}")
 
-    # Add default hyper_parameters to config if not defined by user
-    config = add_default_values_to_config(config, output_dir=str(output_dir))
-
     # Create log directory (if necessary)
     embedder_name = config["embedder_name"].split("/")[-1].replace(".py", "")  # Accounting for custom embedder script
     log_dir = output_dir / config["model_choice"] / embedder_name

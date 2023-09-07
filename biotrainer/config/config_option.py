@@ -1,15 +1,16 @@
+from __future__ import annotations
+
 import os
 import logging
 import shutil
 
-from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Union, Any, Type
 from urllib import request
 from urllib.parse import urlparse
+from abc import ABC, abstractmethod
+from typing import List, Union, Any
 
 from ..protocols import Protocol
-
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,6 @@ class classproperty(property):
 
 
 class ConfigOption(ABC):
-
     _protocol: Protocol = None
 
     def __init__(self, protocol: Protocol, value: Any = None):
@@ -46,8 +46,8 @@ class ConfigOption(ABC):
 
     @classproperty
     @abstractmethod
-    def possible_types(self) -> List[Type]:
-        return [Any]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @property
     def possible_values(self) -> List[Any]:
@@ -59,8 +59,27 @@ class ConfigOption(ABC):
     def required(self) -> bool:
         return False
 
-    def is_value_valid(self) -> bool:
-        return self.value in self.possible_values
+    def is_list_option(self) -> bool:
+        return ("range" in str(self.value) or type(self.value) is list or
+                (type(self.value) is str and "[" in self.value and "]" in self.value))
+
+    def check_value(self) -> bool:
+        # Check for valid list option (range, list, list comprehension)
+        if self.is_list_option():
+            if not self.allow_multiple_values:
+                return False
+
+            value_eval = eval(str(self.value))
+            value_type = type(value_eval)
+            if value_type in [list, range]:
+                return all([self._is_value_valid(self, value) for value in value_eval])
+            else:
+                raise ConfigurationException(f"Failed to parse list options for option {self.name}: {self.value}")
+        return self._is_value_valid(self, self.value)
+
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return value in config_option.possible_values
 
     @classproperty
     def allowed_protocols(self) -> List[Protocol]:
@@ -160,7 +179,8 @@ class FileOption(ConfigOption, ABC):
         self._download_file_if_necessary(config_file_path)
         self._make_path_absolute_if_necessary(config_file_path)
 
-    def is_value_valid(self) -> bool:
-        if self._is_url(str(self.value)):
-            return self.allow_download
-        return self._validate_file(self.value)
+    @staticmethod
+    def _is_value_valid(config_option: FileOption, value) -> bool:
+        if config_option._is_url(str(value)):
+            return config_option.allow_download
+        return config_option._validate_file(value)

@@ -15,6 +15,10 @@ class CrossValidationOption(ConfigOption, ABC):
     def cv_methods(self) -> List[str]:
         return []
 
+    @classproperty
+    def allow_multiple_values(self) -> bool:
+        return False
+
 
 class Method(CrossValidationOption):
 
@@ -30,13 +34,9 @@ class Method(CrossValidationOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "hold_out"
 
-    @classproperty
+    @property
     def possible_values(self) -> List[Any]:
         return ["hold_out", "k_fold", "leave_p_out"]
-
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str]
 
     def required(self) -> bool:
         return True
@@ -52,15 +52,12 @@ class K(CrossValidationOption):
     def cv_methods(self) -> List[str]:
         return ["k_fold"]
 
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [int]
-
     def required(self) -> bool:
         return False
 
-    def is_value_valid(self) -> bool:
-        return self.value >= 2
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return value >= 2
 
 
 class Stratified(CrossValidationOption):
@@ -77,13 +74,9 @@ class Stratified(CrossValidationOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return False
 
-    @classproperty
+    @property
     def possible_values(self) -> List[Any]:
         return [True, False]
-
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [bool]
 
     def required(self) -> bool:
         return False
@@ -103,15 +96,12 @@ class Repeat(CrossValidationOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return 1  # No repeat
 
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [int]
-
     def required(self) -> bool:
         return False
 
-    def is_value_valid(self) -> bool:
-        return self.value >= 1
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return value >= 1
 
 
 class Nested(CrossValidationOption):
@@ -128,13 +118,9 @@ class Nested(CrossValidationOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return False
 
-    @classproperty
+    @property
     def possible_values(self) -> List[Any]:
         return [True, False]
-
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [bool]
 
     def required(self) -> bool:
         return False
@@ -150,15 +136,12 @@ class NestedK(CrossValidationOption):
     def cv_methods(self) -> List[str]:
         return ["k_fold"]
 
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [int]
-
     def required(self) -> bool:
         return False
 
-    def is_value_valid(self) -> bool:
-        return self.value >= 2
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return value >= 2
 
 
 class SearchMethod(CrossValidationOption):
@@ -171,11 +154,7 @@ class SearchMethod(CrossValidationOption):
     def cv_methods(self) -> List[str]:
         return ["k_fold"]
 
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str]
-
-    @classproperty
+    @property
     def possible_values(self) -> List[Any]:
         return ["random_search", "grid_search"]
 
@@ -193,15 +172,12 @@ class NMaxEvaluationsRandom(CrossValidationOption):
     def cv_methods(self) -> List[str]:
         return ["k_fold"]
 
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [int]
-
     def required(self) -> bool:
         return False
 
-    def is_value_valid(self) -> bool:
-        return self.value >= 2
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return value >= 2
 
 
 class ChooseBy(CrossValidationOption):
@@ -212,19 +188,15 @@ class ChooseBy(CrossValidationOption):
 
     @classproperty
     def cv_methods(self) -> List[str]:
-        return ["k_fold", "leave_p_out"]
+        return ["hold_out", "k_fold", "leave_p_out"]
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "loss"
 
-    @classproperty
+    @property
     def possible_values(self) -> List[Any]:
-        return []  # Add possible metrics to protocol enum
-
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str]
+        return ["loss", "accuracy", "precision", "recall"]  # Add possible metrics to protocol enum
 
     def required(self) -> bool:
         return False
@@ -244,15 +216,12 @@ class P(CrossValidationOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return 5
 
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [int]
-
     def required(self) -> bool:
         return False
 
-    def is_value_valid(self) -> bool:
-        return self.value >= 1
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return value >= 1
 
 
 CROSS_VALIDATION_CONFIG_KEY: Final[str] = "cross_validation_config"

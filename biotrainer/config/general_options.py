@@ -25,8 +25,8 @@ class ProtocolOption(GeneralOption, ConfigOption):
         return ""
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [type(Protocol)]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @property
     def possible_values(self) -> List[Any]:
@@ -36,8 +36,9 @@ class ProtocolOption(GeneralOption, ConfigOption):
     def required(self) -> bool:
         return True
 
-    def is_value_valid(self) -> bool:
-        return Protocol.__getitem__(self.value) is not None
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return Protocol.__getitem__(value) is not None
 
 
 class Interaction(GeneralOption, ConfigOption):
@@ -51,8 +52,8 @@ class Interaction(GeneralOption, ConfigOption):
         return ""
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @property
     def possible_values(self) -> List[Any]:
@@ -78,12 +79,13 @@ class Seed(GeneralOption, ConfigOption):
         return 42
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [int]
+    def allow_multiple_values(self) -> bool:
+        return False
 
-    def is_value_valid(self) -> bool:
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
         # For range see: https://pytorch.org/docs/stable/generated/torch.manual_seed.html#torch.manual_seed
-        return -0x8000_0000_0000_0000 < self.value < 0xffff_ffff_ffff_ffff
+        return -0x8000_0000_0000_0000 < value < 0xffff_ffff_ffff_ffff
 
     @classproperty
     def required(self) -> bool:
@@ -100,8 +102,8 @@ class SaveSplitIds(GeneralOption, ConfigOption):
         return False
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [bool]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @property
     def possible_values(self) -> List[Any]:
@@ -113,6 +115,7 @@ class SaveSplitIds(GeneralOption, ConfigOption):
 
 
 class SanityCheck(GeneralOption, ConfigOption):
+
     @classproperty
     def name(self) -> str:
         return "sanity_check"
@@ -122,8 +125,8 @@ class SanityCheck(GeneralOption, ConfigOption):
         return True
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [bool]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @property
     def possible_values(self) -> List[Any]:
@@ -144,8 +147,8 @@ class IgnoreFileInconsistencies(GeneralOption, ConfigOption):
         return False
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [bool]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @property
     def possible_values(self) -> List[Any]:
@@ -167,8 +170,8 @@ class OutputDirectory(GeneralOption, ConfigOption):
         return "output"
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str, Path]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @property
     def possible_values(self) -> List[Any]:
@@ -185,8 +188,9 @@ class OutputDirectory(GeneralOption, ConfigOption):
     def transform_value_if_necessary(self, config_file_path: Path = None):
         self.value = str((config_file_path / self.value).absolute())
 
-    def is_value_valid(self) -> bool:
-        return type(self.value) in self.possible_types
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return type(value) in [str, Path]
 
 
 general_options: List = [ProtocolOption, Interaction, Seed, SaveSplitIds, SanityCheck, IgnoreFileInconsistencies,

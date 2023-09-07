@@ -30,8 +30,8 @@ class ModelChoice(ModelOption, ConfigOption):
             return "FNN"
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str]
+    def allow_multiple_values(self) -> bool:
+        return True
 
     @property
     def possible_values(self) -> List[Any]:
@@ -53,8 +53,8 @@ class OptimizerChoice(ModelOption, ConfigOption):
         return "adam"
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @property
     def possible_values(self) -> List[Any]:
@@ -66,6 +66,7 @@ class OptimizerChoice(ModelOption, ConfigOption):
 
 
 class LearningRate(ModelOption, ConfigOption):
+
     @classproperty
     def name(self) -> str:
         return "learning_rate"
@@ -75,11 +76,12 @@ class LearningRate(ModelOption, ConfigOption):
         return 1e-3
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [float]
+    def allow_multiple_values(self) -> bool:
+        return True
 
-    def is_value_valid(self) -> bool:
-        return 0.0 < self.value < 1.0
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return 0.0 < value < 1.0
 
     @classproperty
     def required(self) -> bool:
@@ -97,11 +99,12 @@ class Epsilon(ModelOption, ConfigOption):
         return 1e-3
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [float]
+    def allow_multiple_values(self) -> bool:
+        return True
 
-    def is_value_valid(self) -> bool:
-        return 0.0 < self.value < 1.0
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return 0.0 < value < 1.0
 
     @classproperty
     def required(self) -> bool:
@@ -109,6 +112,7 @@ class Epsilon(ModelOption, ConfigOption):
 
 
 class LossChoice(ModelOption, ConfigOption):
+
     @classproperty
     def name(self) -> str:
         return "loss_choice"
@@ -121,8 +125,8 @@ class LossChoice(ModelOption, ConfigOption):
             return "cross_entropy_loss"
 
     @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str]
+    def allow_multiple_values(self) -> bool:
+        return False
 
     @property
     def possible_values(self) -> List[Any]:

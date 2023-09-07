@@ -12,8 +12,13 @@ class InputOption(FileOption, ABC):
     def category(self) -> str:
         return "input_option"
 
+    @classproperty
+    def allow_multiple_values(self) -> bool:
+        return False
+
 
 class SequenceFile(InputOption, FileOption):
+
     @classproperty
     def name(self) -> str:
         return "sequence_file"
@@ -25,10 +30,6 @@ class SequenceFile(InputOption, FileOption):
     @classproperty
     def allowed_formats(self) -> List[str]:
         return ["fasta"]
-
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str, Path]
 
     @classproperty
     def allow_download(self) -> bool:
@@ -52,10 +53,6 @@ class LabelsFile(InputOption, FileOption):
     @classproperty
     def allowed_formats(self) -> List[str]:
         return ["fasta"]
-
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str, Path]
 
     @classproperty
     def allow_download(self) -> bool:
@@ -82,10 +79,6 @@ class MaskFile(InputOption, FileOption):
     @classproperty
     def allowed_formats(self) -> List[str]:
         return ["fasta"]
-
-    @classproperty
-    def possible_types(self) -> List[Type]:
-        return [str, Path]
 
     @classproperty
     def allow_download(self) -> bool:
