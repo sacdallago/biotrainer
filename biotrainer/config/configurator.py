@@ -77,7 +77,7 @@ class Configurator:
         all_config_options_dict = all_options_dict | cross_validation_dict \
             if include_cross_validation_options else all_options_dict
         for option_class in all_config_options_dict.values():
-            option = option_class(protocol=protocol, value="")
+            option = option_class(protocol=protocol)
             if protocol in option.allowed_protocols:
                 result.append(option.to_dict())
         return result
