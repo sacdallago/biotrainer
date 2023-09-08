@@ -1,18 +1,15 @@
-import os
-import shutil
 import logging
 import torch._dynamo as dynamo
 
+from ruamel import yaml
 from pathlib import Path
 from copy import deepcopy
-from urllib import request
-from urllib.parse import urlparse
+from ruamel.yaml.comments import CommentedBase
 
 from .cuda_device import get_device
-from .config import validate_file, read_config_file, verify_config, write_config_file, add_default_values_to_config
+
 from ..config import Configurator
 from ..protocols import Protocol
-
 from ..trainers import Trainer, HyperParameterManager
 
 logger = logging.getLogger(__name__)
@@ -35,6 +32,28 @@ def _setup_logging(output_dir: str):
     logging.captureWarnings(True)
     # Suppress info logging from TorchDynamo (torch.compile(model)) with logging.ERROR
     dynamo.config.log_level = logging.INFO
+
+
+def _write_output_file(out_filename: str, config: dict) -> None:
+    """
+    Save configuration data structure in YAML file.
+
+    Parameters
+    ----------
+    out_filename : str
+        Filename of output file
+    config : dict
+        Config data that will be written to file
+    """
+    if isinstance(config, CommentedBase):
+        dumper = yaml.RoundTripDumper
+    else:
+        dumper = yaml.Dumper
+
+    with open(out_filename, "w") as f:
+        f.write(
+            yaml.dump(config, Dumper=dumper, default_flow_style=False)
+        )
 
 
 def parse_config_file_and_execute_run(config_file_path: str):
@@ -78,7 +97,7 @@ def parse_config_file_and_execute_run(config_file_path: str):
     out_config = trainer.training_and_evaluation_routine()
 
     # Save output_variables in out.yml
-    write_config_file(
+    _write_output_file(
         str(Path(out_config['output_dir']) / "out.yml"),
         out_config
     )
