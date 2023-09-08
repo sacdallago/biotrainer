@@ -4,7 +4,7 @@ import itertools
 
 from typing import Dict, Any, Generator, Union
 
-from ..utilities import ConfigurationException
+from ..config import ConfigurationException
 
 logger = logging.getLogger(__name__)
 

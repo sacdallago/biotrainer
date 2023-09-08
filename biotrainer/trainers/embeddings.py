@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Dict, Any
 from importlib.util import spec_from_file_location, module_from_spec
 
-from ..protocols import Protocol
 from .custom_embedder import CustomEmbedder
-from ..utilities import ConfigurationException
+
+from ..protocols import Protocol
+from ..config import ConfigurationException
 
 # Defines if reduced embeddings from bio_embeddings should be used.
 # Reduced means that the per-residue embeddings are reduced to a per-sequence embedding

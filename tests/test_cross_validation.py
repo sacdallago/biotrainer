@@ -3,7 +3,7 @@ import tempfile
 
 from ruamel import yaml
 from pathlib import Path
-from biotrainer.utilities import ConfigurationException
+from biotrainer.config import ConfigurationException
 from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
 
 
