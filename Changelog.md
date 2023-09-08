@@ -1,5 +1,20 @@
 # Biotrainer Changelog
 
+## 08.09.2023 - Version 0.7.0
+### Maintenance
+* Added `config` module to read and verify the given config file. It was decided to refactor the handling of the
+configuration file to allow for higher complexity of the config and to be able to expose the configuration options
+to third party applications, such as servers and file linters. This should pay off for the increase in code complexity.
+All config option classes are as much encapsulated as possible. They are able to validate their given value and
+transform it if necessary (e.g. making file paths absolute or downloading files).
+In addition to the option classes, rules have been defined which can be applied to the whole configuration file.
+They can, amongst others, be used to define mutual exclusive or required options and files, 
+depending on the protocol of the value of other options.
+* Updating dependencies
+
+### Tests
+* Added new unit tests to check the config module
+
 ## 28.06.2023 - Version 0.6.0
 ### Features
 * Adding **bootstrapping** as a method to the Inferencer class. It allows to easily calculate error
