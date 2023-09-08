@@ -19,21 +19,16 @@ protocol_to_input = {
                                 'labels_file': "test_input_files/r2c_error2/labels.fasta",
                                 'loss_choice': "cross_entropy_loss"},
     'residues_to_class': {'sequence_file': "test_input_files/s2c/sequences.fasta",
-                          'labels_file': "",
                           'loss_choice': "cross_entropy_loss"},
     'sequence_to_class': {'sequence_file': "test_input_files/s2c/sequences.fasta",
-                          'labels_file': "",
                           'loss_choice': "cross_entropy_loss"},
     'sequence_to_class-interactionmultiply': {'sequence_file': "test_input_files/ppi/interactions.fasta",
-                                              'labels_file': "",
                                               'loss_choice': "cross_entropy_loss",
                                               'interaction': "multiply"},
     'sequence_to_class-interactionconcat': {'sequence_file': "test_input_files/ppi/interactions.fasta",
-                                            'labels_file': "",
                                             'loss_choice': "cross_entropy_loss",
                                             'interaction': "concat"},
     'sequence_to_value': {'sequence_file': "test_input_files/s2v/sequences.fasta",
-                          'labels_file': "",
                           'loss_choice': "mean_squared_error"},
 
 }
@@ -42,12 +37,14 @@ protocol_to_input = {
 def setup_config(protocol: str, model_choice: str, embedder_name: str, tmp_config_path: str):
     template_config_file_path = "test_config.yml"
     with open(template_config_file_path, "r") as config_file:
-        config = yaml.safe_load(config_file)
+        config: dict = yaml.safe_load(config_file)
         sequence_path_absolute = str(Path(protocol_to_input[protocol]["sequence_file"]).absolute())
         config["sequence_file"] = sequence_path_absolute
-        labels_path_absolute = "" if protocol_to_input[protocol]["labels_file"] == "" else str(
-            Path(protocol_to_input[protocol]["labels_file"]).absolute())
-        config["labels_file"] = labels_path_absolute
+        if "labels_file" in protocol_to_input[protocol]:
+            labels_path_absolute = str(Path(protocol_to_input[protocol]["labels_file"]).absolute())
+            config["labels_file"] = labels_path_absolute
+        else:
+            config.pop("labels_file")
         config["loss_choice"] = protocol_to_input[protocol]["loss_choice"]
         actual_protocol = protocol.split("-")[0]
         if len(protocol.split("-")) > 1 and "interaction" in protocol.split("-")[1]:

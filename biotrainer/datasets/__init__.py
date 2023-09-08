@@ -4,22 +4,24 @@ from .collate_functions import pad_sequence_embeddings, pad_residue_embeddings, 
 from .EmbeddingsDataset import ResidueEmbeddingsClassificationDataset, SequenceEmbeddingsClassificationDataset, \
     SequenceEmbeddingsRegressionDataset
 
+from ..protocols import Protocol
+
 __DATASETS = {
-    'residue_to_class': ResidueEmbeddingsClassificationDataset,
-    'residues_to_class': ResidueEmbeddingsClassificationDataset,
-    'sequence_to_class': SequenceEmbeddingsClassificationDataset,
-    'sequence_to_value': SequenceEmbeddingsRegressionDataset,
+    Protocol.residue_to_class: ResidueEmbeddingsClassificationDataset,
+    Protocol.residues_to_class: ResidueEmbeddingsClassificationDataset,
+    Protocol.sequence_to_class: SequenceEmbeddingsClassificationDataset,
+    Protocol.sequence_to_value: SequenceEmbeddingsRegressionDataset,
 }
 
 __COLLATE_FUNCTIONS = {
-    'residue_to_class': pad_residue_embeddings,
-    'residues_to_class': pad_residues_embeddings,
-    'sequence_to_class': pad_sequence_embeddings,
-    'sequence_to_value': pad_sequence_embeddings,
+    Protocol.residue_to_class: pad_residue_embeddings,
+    Protocol.residues_to_class: pad_residues_embeddings,
+    Protocol.sequence_to_class: pad_sequence_embeddings,
+    Protocol.sequence_to_value: pad_sequence_embeddings,
 }
 
 
-def get_dataset(protocol: str, samples: List):
+def get_dataset(protocol: Protocol, samples: List):
     dataset = __DATASETS.get(protocol)
 
     if not dataset:
@@ -28,7 +30,7 @@ def get_dataset(protocol: str, samples: List):
         return dataset(samples=samples)
 
 
-def get_collate_function(protocol: str):
+def get_collate_function(protocol: Protocol):
     collate_function = __COLLATE_FUNCTIONS.get(protocol)
 
     return collate_function

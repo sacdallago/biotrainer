@@ -9,24 +9,25 @@ from pathlib import Path
 from typing import Dict, Any
 from importlib.util import spec_from_file_location, module_from_spec
 
+from ..protocols import Protocol
 from .custom_embedder import CustomEmbedder
 from ..utilities import ConfigurationException
 
 # Defines if reduced embeddings from bio_embeddings should be used.
 # Reduced means that the per-residue embeddings are reduced to a per-sequence embedding
 _REQUIRES_REDUCED_EMBEDDINGS = {
-    'residue_to_class': False,
-    'residues_to_class': False,
-    'sequence_to_class': True,
-    'sequence_to_value': True
+    Protocol.residue_to_class: False,
+    Protocol.residues_to_class: False,
+    Protocol.sequence_to_class: True,
+    Protocol.sequence_to_value: True
 }
 
 logger = logging.getLogger(__name__)
 
 
-def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:
+def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: Protocol) -> str:
     # Create protocol path to embeddings, because bio-embeddings can't handle recursive dir creation
-    output_dir /= protocol
+    output_dir /= protocol.name
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
 
@@ -46,7 +47,7 @@ def compute_embeddings(embedder_name: str, sequence_file: str, output_dir: Path,
                                            output_dir=output_dir, protocol=protocol)
 
 
-def _compute_via_custom_embedder(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:
+def _compute_via_custom_embedder(embedder_name: str, sequence_file: str, output_dir: Path, protocol: Protocol) -> str:
     # Load the module from the file path
     spec = spec_from_file_location("module_name", embedder_name)
     module = module_from_spec(spec)
@@ -82,7 +83,7 @@ def _compute_via_custom_embedder(embedder_name: str, sequence_file: str, output_
                                                reduce_per_protein=use_reduced_embeddings)
 
 
-def _compute_via_bio_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: str) -> str:
+def _compute_via_bio_embeddings(embedder_name: str, sequence_file: str, output_dir: Path, protocol: Protocol) -> str:
     use_reduced_embeddings = _REQUIRES_REDUCED_EMBEDDINGS[protocol]
 
     try:

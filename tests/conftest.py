@@ -2,18 +2,12 @@
 
 from copy import deepcopy
 from itertools import product
-from biotrainer.utilities.executer import __PROTOCOLS
-from biotrainer.models import get_all_available_models
+from biotrainer.protocols import Protocol
+from biotrainer.models import get_available_models_dict, get_available_models_set
 
 
-def get_all_available_models_set():
-    all_models_by_protocol = [list(protocol.keys()) for protocol in get_all_available_models().values()]
-    all_models_list = [model for model_list in all_models_by_protocol for model in model_list]
-    return set(all_models_list)
-
-
-protocols = __PROTOCOLS
-models = get_all_available_models_set()
+protocols = set([protocol.name for protocol in Protocol.all()])
+models = get_available_models_set()
 embedder_names = ["one_hot_encoding", "word2vec"]
 
 all_params = {
@@ -37,7 +31,7 @@ def generate_tests_protocols(metafunc):
             all_params["test_protocol_config"]["values"].append([protocol, "CNN", "one_hot_encoding", True])
             continue
         for model in models:
-            should_fail = True if model not in get_all_available_models().get(protocol) else False
+            should_fail = True if model not in get_available_models_dict().get(Protocol[protocol]) else False
             for embedder_name in embedder_names:
                 all_params["test_protocol_config"]["values"].append([protocol, model, embedder_name, should_fail])
 
