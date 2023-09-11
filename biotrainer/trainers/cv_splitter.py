@@ -5,13 +5,14 @@ from typing import Any, Dict, List, Optional
 from sklearn.model_selection import KFold, StratifiedKFold, RepeatedStratifiedKFold, RepeatedKFold, LeavePOut
 
 from ..utilities import Split, DatasetSample
+from ..protocols import Protocol
 
 logger = logging.getLogger(__name__)
 
 
 class CrossValidationSplitter:
 
-    def __init__(self, protocol, cross_validation_config: Dict[str, Any]):
+    def __init__(self, protocol: Protocol, cross_validation_config: Dict[str, Any]):
         self._protocol = protocol
 
         self._split_strategy = None
@@ -120,7 +121,7 @@ class CrossValidationSplitter:
             else:
                 kf = StratifiedKFold(n_splits=k)
             # Change continuous values to bins for stratified split
-            if "_value" in self._protocol:
+            if self._protocol in Protocol.regression_protocols():
                 ys = self._continuous_values_to_bins(ys)
         else:
             logger.info(f"Splitting to {k}-fold Cross Validation datasets {inner_or_outer_splits}")

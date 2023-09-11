@@ -1,7 +1,5 @@
 import unittest
 
-from functools import reduce
-from itertools import combinations
 from biotrainer.trainers.cv_splitter import CrossValidationSplitter
 
 

@@ -7,6 +7,7 @@ from collections import Counter
 from Bio.SeqRecord import SeqRecord
 from typing import Dict, Any, Tuple, Optional, List
 
+from ..protocols import Protocol
 from ..utilities import get_attributes_from_seqrecords, get_attributes_from_seqrecords_for_protein_interactions, \
     get_split_lists, MASK_AND_LABELS_PAD_VALUE, read_FASTA, INTERACTION_INDICATOR, DatasetSample
 
@@ -35,7 +36,7 @@ class TargetManager:
         "concat": lambda embedding_left, embedding_right: torch.concat([embedding_left, embedding_right])
     }
 
-    def __init__(self, protocol: str, sequence_file: str,
+    def __init__(self, protocol: Protocol, sequence_file: str,
                  labels_file: Optional[str] = None, mask_file: Optional[str] = None,
                  ignore_file_inconsistencies: Optional[bool] = False,
                  cross_validation_method: str = "",
@@ -57,7 +58,7 @@ class TargetManager:
             attributes_from_seqrecords_function = get_attributes_from_seqrecords_for_protein_interactions
 
         # 1. Residue Level
-        if 'residue_' in self.protocol:
+        if self.protocol in Protocol.per_residue_protocols():
             # Expect labels file to be in FASTA format, with each "residue" being the residue-associated-label
             label_sequences = read_FASTA(self._labels_file)
             self._id2attributes = attributes_from_seqrecords_function(label_sequences)
@@ -66,7 +67,7 @@ class TargetManager:
             self._id2target = {label.id: str(label.seq) for label in label_sequences}
 
             # a) Class output
-            if 'class' in self.protocol:
+            if self.protocol in Protocol.classification_protocols():
                 class_labels_temp = set()
 
                 # Infer classes from data
@@ -98,7 +99,7 @@ class TargetManager:
                 raise NotImplementedError
 
         # 2. Sequence Level
-        elif 'sequence_' in self.protocol or 'residues_' in self.protocol:
+        elif self.protocol in Protocol.per_sequence_protocols():
 
             # In sequence task, split definitions are in sequence header, as well as target
             # For more info check file specifications!
@@ -106,7 +107,7 @@ class TargetManager:
 
             self._id2target = {seq_id: seq_vals["TARGET"] for seq_id, seq_vals in self._id2attributes.items()}
             # a) Class output
-            if 'class' in self.protocol:
+            if self.protocol in Protocol.classification_protocols():
                 # Infer classes from data
                 self._class_labels = sorted(set(self._id2target.values()))
                 self.number_of_outputs = len(self._class_labels)
@@ -120,7 +121,7 @@ class TargetManager:
                                    for identifier, label in self._id2target.items()}  # classes idxs (zero-based)
 
             # b) Value output
-            elif 'value' in self.protocol:
+            elif self.protocol in Protocol.regression_protocols():
                 self._id2target = {seq_id: float(seq_val) for seq_id, seq_val in self._id2target.items()}
                 self.number_of_outputs = 1
             else:
@@ -156,7 +157,7 @@ class TargetManager:
             if seq_id not in all_ids_with_target:
                 embeddings_without_labels.append(seq_id)
             # Make sure the length of the sequences in the embeddings match the length of the seqs in the labels
-            elif "residue_" in self.protocol and len(seq) != self._id2target[seq_id].size:
+            elif self.protocol in Protocol.per_residue_protocols() and len(seq) != self._id2target[seq_id].size:
                 invalid_sequence_lengths.append((seq_id, len(seq), self._id2target[seq_id].size))
 
         for seq_id in all_ids_with_target:
@@ -271,9 +272,9 @@ class TargetManager:
         return train_dataset, val_dataset, test_dataset
 
     def compute_class_weights(self) -> torch.FloatTensor:
-        if 'class' in self.protocol:
+        if self.protocol in Protocol.classification_protocols():
             training_targets = [self._id2target[training_id] for training_id in self.training_ids]
-            if "residue_" in self.protocol:
+            if self.protocol in Protocol.per_residue_protocols():
                 # concatenate all targets irrespective of protein to count class sizes
                 training_targets = list(itertools.chain.
                                         from_iterable([list(targets) for targets in training_targets]))

@@ -6,15 +6,17 @@ from .ResiduesClassificationSolver import ResiduesClassificationSolver
 from .SequenceClassificationSolver import SequenceClassificationSolver
 from .SequenceRegressionSolver import SequenceRegressionSolver
 
+from ..protocols import Protocol
+
 __SOLVERS = {
-    'residue_to_class': ResidueClassificationSolver,
-    'residues_to_class': ResiduesClassificationSolver,
-    'sequence_to_class': SequenceClassificationSolver,
-    'sequence_to_value': SequenceRegressionSolver,
+    Protocol.residue_to_class: ResidueClassificationSolver,
+    Protocol.residues_to_class: ResiduesClassificationSolver,
+    Protocol.sequence_to_class: SequenceClassificationSolver,
+    Protocol.sequence_to_value: SequenceRegressionSolver,
 }
 
 
-def get_solver(protocol: str, name: str,
+def get_solver(protocol: Protocol, name: str,
                network: Optional = None, optimizer: Optional = None, loss_function: Optional = None,
                device: Optional = None, number_of_epochs: Optional = None,
                patience: Optional = None, epsilon: Optional = None, log_writer: Optional = None,
