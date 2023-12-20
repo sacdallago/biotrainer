@@ -6,23 +6,22 @@ import datetime
 
 from pathlib import Path
 from torch.utils.data import DataLoader
-from typing import Optional, Dict, Any, Union, List
 from torch.utils.tensorboard import SummaryWriter
+from typing import Optional, Dict, Any, Union, List
 
 from .TargetManager import TargetManager
-from .hp_manager import HyperParameterManager
 from .cv_splitter import CrossValidationSplitter
+from .hp_manager import HyperParameterManager
 from .target_manager_utils import revert_mappings
-from .embeddings import compute_embeddings, load_embeddings
-
-from ..losses import get_loss
-from ..protocols import Protocol
-from ..optimizers import get_optimizer
-from ..validations import SanityChecker
-from ..solvers import get_solver, Solver
-from ..models import count_parameters, get_model
 from ..datasets import get_collate_function, get_dataset
+from ..embedders import EmbeddingService, get_embedding_service
+from ..losses import get_loss
+from ..models import count_parameters, get_model
+from ..optimizers import get_optimizer
+from ..protocols import Protocol
+from ..solvers import get_solver, Solver
 from ..utilities import seed_all, Split, SplitResult, DatasetSample, METRICS_WITHOUT_REVERSED_SORTING, __version__
+from ..validations import SanityChecker
 
 logger = logging.getLogger(__name__)
 
@@ -152,9 +151,13 @@ class Trainer:
     def _create_and_load_embeddings(self) -> Dict[str, Any]:
         # Generate embeddings if necessary, otherwise use existing embeddings and overwrite embedder_name
         embeddings_file = self._embeddings_file
+        embedding_service: EmbeddingService = get_embedding_service(embeddings_file_path=embeddings_file,
+                                                                    embedder_name=self._embedder_name,
+                                                                    half_precision=False,  # TODO
+                                                                    device=self._device)
         if not embeddings_file or not Path(embeddings_file).is_file():
-            embeddings_file = compute_embeddings(
-                embedder_name=self._embedder_name, sequence_file=self._sequence_file,
+            embeddings_file = embedding_service.compute_embeddings(
+                sequence_file=self._sequence_file,
                 protocol=self._protocol, output_dir=self._output_dir
             )
             # Add to out config
@@ -164,7 +167,7 @@ class Trainer:
             self._embedder_name = f"precomputed_{Path(embeddings_file).stem}_{self._embedder_name}"
 
         # Mapping from id to embeddings
-        id2emb = load_embeddings(embeddings_file_path=embeddings_file)
+        id2emb = embedding_service.load_embeddings(embeddings_file_path=embeddings_file)
 
         return id2emb
 
