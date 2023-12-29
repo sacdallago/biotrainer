@@ -39,6 +39,7 @@ class Trainer:
                  # Optional with defaults
                  labels_file: Optional[str] = None, mask_file: Optional[str] = None,
                  embedder_name: str = "custom_embeddings",
+                 use_half_precision: bool = False,
                  embeddings_file: str = None,
                  seed: int = 42,
                  device: torch.device = None,
@@ -61,6 +62,7 @@ class Trainer:
         self._labels_file = labels_file
         self._mask_file = mask_file
         self._embedder_name = embedder_name
+        self._use_half_precision = use_half_precision
         self._embeddings_file = embeddings_file
         self._seed = seed
         self._device = device
@@ -153,7 +155,7 @@ class Trainer:
         embeddings_file = self._embeddings_file
         embedding_service: EmbeddingService = get_embedding_service(embeddings_file_path=embeddings_file,
                                                                     embedder_name=self._embedder_name,
-                                                                    half_precision=False,  # TODO
+                                                                    use_half_precision=self._use_half_precision,
                                                                     device=self._device)
         if not embeddings_file or not Path(embeddings_file).is_file():
             embeddings_file = embedding_service.compute_embeddings(

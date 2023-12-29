@@ -1,13 +1,13 @@
-import inspect
-
 from abc import ABC
 from pathlib import Path
-from typing import List, Type, Any, Union
+from typing import List, Any, Union
 
 from .config_option import FileOption, classproperty, ConfigOption
 
+from ..embedders import get_predefined_embedder_names
 
-class EmbeddingOption(FileOption, ABC):
+
+class EmbeddingOption(ConfigOption, ABC):
 
     @classproperty
     def category(self) -> str:
@@ -28,16 +28,6 @@ class EmbedderName(EmbeddingOption, FileOption):
     def default_value(self) -> Union[str, int, float, bool, Any]:
         return "custom_embeddings"
 
-    @property
-    def possible_values(self) -> List[Any]:
-        try:
-            from bio_embeddings.embed import __all__ as bio_embedders
-            available_embedders = [available_embedder for available_embedder in bio_embedders
-                                   if "Interface" not in available_embedder]
-            return available_embedders
-        except ImportError:
-            return []
-
     @classproperty
     def required(self) -> bool:
         return True
@@ -52,29 +42,36 @@ class EmbedderName(EmbeddingOption, FileOption):
 
     @staticmethod
     def _is_value_valid(config_option: ConfigOption, value) -> bool:
-        if ".py" not in value:
-            import bio_embeddings
-            # Also allow name of embedders instead of class names
-            # (one_hot_encoding: name, OneHotEncodingEmbedder: class name)
-            all_embedders = [embedder[1].name for embedder in
-                             inspect.getmembers(bio_embeddings.embed, inspect.isclass)
-                             if "Interface" not in embedder[0]]
-            return (value in config_option.possible_values or
-                    value in all_embedders or value == config_option.default_value)
-        else:
-            return super()._is_value_valid(config_option, value)
+        if ".py" not in value and "/" not in value:
+            return value in get_predefined_embedder_names() or value == config_option.default_value
+        return config_option.allow_download if super()._is_url(value) else True
 
     def transform_value_if_necessary(self, config_file_path: Path = None):
-        # Convert class name to bio_embeddings name
-        if ".py" not in self.value:
-            import bio_embeddings
-            all_embedders_dict = {embedder[0]: embedder[1].name for embedder in
-                                  inspect.getmembers(bio_embeddings.embed, inspect.isclass)
-                                  if "Interface" not in embedder[0]}
-            if self.value in all_embedders_dict.keys():
-                self.value = all_embedders_dict[self.value]
-        else:
+        if ".py" in self.value:
             super().transform_value_if_necessary(config_file_path)
+
+
+class HalfPrecision(EmbeddingOption, ConfigOption):
+
+    @classproperty
+    def name(self) -> str:
+        return "use_half_precision"
+
+    @property
+    def default_value(self) -> Union[str, int, float, bool, Any]:
+        return False
+
+    @classproperty
+    def allow_multiple_values(self) -> bool:
+        return False
+
+    @property
+    def possible_values(self) -> List[Any]:
+        return [True, False]
+
+    @classproperty
+    def required(self) -> bool:
+        return False
 
 
 class EmbeddingsFile(EmbeddingOption, FileOption):
@@ -100,4 +97,4 @@ class EmbeddingsFile(EmbeddingOption, FileOption):
         return True
 
 
-embedding_options: List = [EmbedderName, EmbeddingsFile]
+embedding_options: List = [EmbedderName, HalfPrecision, EmbeddingsFile]

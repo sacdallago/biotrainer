@@ -11,16 +11,16 @@ from .embedder_interfaces import EmbedderWithFallback
 
 class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
-    def __init__(self, name: str, model, tokenizer, half_precision: bool, device: Union[str, torch.device]):
+    def __init__(self, name: str, model, tokenizer, use_half_precision: bool, device: Union[str, torch.device]):
         self.name = name
         self._model = model
         self._tokenizer = tokenizer
-        self._half_precision = half_precision
+        self._use_half_precision = use_half_precision
         self._device = device
 
     def _get_fallback_model(self):
         """ Returns the CPU model """
-        if self._half_precision:
+        if self._use_half_precision:
             raise NotImplementedError(
                 "You sequence was too long for the GPU, "
                 "but we can't fall back to the CPU with half_precision_model=True "
