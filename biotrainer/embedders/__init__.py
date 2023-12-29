@@ -94,7 +94,14 @@ def _load_custom_embedder(embedder_name: str) -> EmbedderInterface:
     return custom_embedder_instance
 
 
+def get_predefined_embedder_names() -> List[str]:
+    return list(__PREDEFINED_EMBEDDERS.keys())
+
+
 __all__ = [
     "EmbeddingService",
-    "get_embedding_service"
+    "OneHotEncodingEmbedder",
+    "CustomEmbedder",
+    "get_embedding_service",
+    "get_predefined_embedder_names"
 ]

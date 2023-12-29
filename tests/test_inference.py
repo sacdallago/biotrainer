@@ -1,7 +1,7 @@
 import unittest
 
 from biotrainer.inference import Inferencer
-from bio_embeddings.embed import OneHotEncodingEmbedder
+from biotrainer.embedders import OneHotEncodingEmbedder
 
 
 class InferencerTests(unittest.TestCase):

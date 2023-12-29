@@ -8,7 +8,7 @@ from biotrainer.models import get_available_models_dict, get_available_models_se
 
 protocols = set([protocol.name for protocol in Protocol.all()])
 models = get_available_models_set()
-embedder_names = ["one_hot_encoding", "word2vec"]
+embedder_names = ["one_hot_encoding"]
 
 all_params = {
     'test_protocol_config': {
