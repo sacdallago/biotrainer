@@ -28,8 +28,9 @@ logger = logging.getLogger(__name__)
 
 class EmbeddingService:
 
-    def __init__(self, embedder: EmbedderInterface = None):
-        self.embedder = embedder
+    def __init__(self, embedder: EmbedderInterface = None, use_half_precision: bool = False):
+        self._embedder = embedder
+        self._use_half_precision = use_half_precision
 
     def compute_embeddings(self, sequence_file: str, output_dir: Path, protocol: Protocol) -> str:
         # Create protocol path to embeddings
@@ -39,12 +40,12 @@ class EmbeddingService:
 
         use_reduced_embeddings = _REQUIRES_REDUCED_EMBEDDINGS[protocol]
 
-        embedder_name = self.embedder.name.split("/")[-1]
+        embedder_name = self._embedder.name.split("/")[-1]
         embeddings_file_path /= embedder_name
         if not os.path.isdir(embeddings_file_path):
             os.mkdir(embeddings_file_path)
         embeddings_file_path /= (("reduced_" if use_reduced_embeddings else "")
-                                 + f"embeddings_file_{embedder_name}.h5")
+                                 + f"embeddings_file_{embedder_name}{'_half' if self._use_half_precision else ''}.h5")
 
         # Avoid re-computation if file already exists
         if embeddings_file_path.is_file():
@@ -57,10 +58,10 @@ class EmbeddingService:
                                                                     reverse=True)}
 
         embeddings = list(
-            tqdm(self.embedder.embed_many(protein_sequences.values()), total=len(protein_sequences.values())))
+            tqdm(self._embedder.embed_many(protein_sequences.values()), total=len(protein_sequences.values())))
 
         if use_reduced_embeddings:
-            embeddings = [self.embedder.reduce_per_protein(embedding) for embedding in embeddings]
+            embeddings = [self._embedder.reduce_per_protein(embedding) for embedding in embeddings]
 
         with h5py.File(embeddings_file_path, "w") as embeddings_file:
             idx = 0
