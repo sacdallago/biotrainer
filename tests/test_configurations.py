@@ -52,7 +52,7 @@ configurations = {
         "sequence_file": "test_input_files/r2c/sequences.fasta",
         "labels_file": "test_input_files/r2c/labels.fasta",
         "mask_file": "test_input_files/r2c/mask.fasta",
-        "embedder_name": "../examples/custom_embedder/ankh/ankh_embedder.py",
+        "embedder_name": "../examples/custom_embedder/esm2/esm2_embedder.py",
         "output_dir": "test_output",
         "protocol": "residue_to_class"
     },
