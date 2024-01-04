@@ -51,7 +51,7 @@ class EmbedderName(EmbeddingOption, FileOption):
             super().transform_value_if_necessary(config_file_path)
 
 
-class HalfPrecision(EmbeddingOption, ConfigOption):
+class UseHalfPrecision(EmbeddingOption, ConfigOption):
 
     @classproperty
     def name(self) -> str:
@@ -97,4 +97,4 @@ class EmbeddingsFile(EmbeddingOption, FileOption):
         return True
 
 
-embedding_options: List = [EmbedderName, HalfPrecision, EmbeddingsFile]
+embedding_options: List = [EmbedderName, UseHalfPrecision, EmbeddingsFile]
