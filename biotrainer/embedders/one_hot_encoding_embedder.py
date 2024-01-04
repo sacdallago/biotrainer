@@ -1,4 +1,4 @@
-# Changed version from the orignal one from Konstantin Schütze (konstin, https://github.com/konstin) from
+# Changed version from the original one from Konstantin Schütze (konstin, https://github.com/konstin) from
 # bio_embeddings repository (https://github.com/sacdallago/bio_embeddings)
 # Original file: https://github.com/sacdallago/bio_embeddings/blob/efb9801f0de9b9d51d19b741088763a7d2d0c3a2/bio_embeddings/embed/one_hot_encoding_embedder.py
 
