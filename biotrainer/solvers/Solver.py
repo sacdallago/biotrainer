@@ -57,8 +57,11 @@ class Solver(ABC):
         # Get things ready
         self.network = self.network.train()
         self._min_loss = math.inf
-
         epoch_iterations = list()
+
+        # Make an initial save of the model if trained from scratch
+        if self.start_epoch == 0:
+            self._save_checkpoint(0)
 
         for epoch in range(self.start_epoch, self.number_of_epochs):
 
