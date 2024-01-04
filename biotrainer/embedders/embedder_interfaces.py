@@ -11,7 +11,7 @@ import torch
 import logging
 import regex as re
 
-from typing import List, Generator, Optional, Iterable, ClassVar, Any, Dict, Union
+from typing import List, Generator, Optional, Iterable, Any, Union
 from numpy import ndarray
 
 

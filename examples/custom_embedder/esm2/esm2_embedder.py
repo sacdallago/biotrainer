@@ -1,11 +1,11 @@
 import esm
-import h5py
 import torch
 import logging
 
-from Bio import SeqIO
 from tqdm import tqdm
-from biotrainer.trainers import CustomEmbedder
+from numpy import ndarray
+from biotrainer.embedders import CustomEmbedder
+from typing import Generator, Iterable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -22,30 +22,24 @@ class ESM2Embedder(CustomEmbedder):
 
     name: str = "esm2_embedder"
 
-    def embed_many(self, sequence_file: str, output_path: str, reduce_per_protein: bool) -> str:
+    def embed_many(
+            self, sequences: Iterable[str], batch_size: Optional[int] = None
+    ) -> Generator[ndarray, None, None]:
         """
-        Method to embed all sequences from the provided sequence file.
+        Method to embed all sequences from the provided iterable.
+        This is the function that should be overwritten by most custom embedders, because it allows full control
+        over the whole embeddings generation process. Other functions are optional to use and overwrite, except
+        reduce_per_protein (if necessary).
 
-        It must handle the following steps:
-        1. Read the sequences from the provided sequence_file (fasta)
-        2. Embed these sequences using the custom embedder
-        3. Reduce them to per-protein embeddings if necessary
-        4. Write them as h5 File to the given output_path
-            -> Make sure to apply the biotrainer/bio_embeddings h5 file standard here:
-            Sequence ids must be given as an attribute: embeddings_file[str(idx)].attrs["original_id"] = seq_id
+        Yields embedding for one sequence at a time.
 
-        :param sequence_file: Path to the sequence file
-        :param output_path: Output path where to store the generated embeddings
-        :param reduce_per_protein: If True, per-residue embeddings must be reduced to per-protein embeddings
+        :param sequences: List of proteins as AA strings
+        :param batch_size: For embedders that profit from batching, this is maximum number of AA per batch
 
-        :return: File path of generated embeddings file. Should equal output_path but can be modified if necessary.
+        :return: A list object with embeddings of the sequences.
         """
-        protein_sequences = [
-            (record.id, str(record.seq))
-            for record in sorted(list(SeqIO.parse(sequence_file, "fasta")), key=lambda record: len(record.seq))
-            if len(str(record.seq)) <= 2048
-        ]
-        logger.info(f"ESM-2: Embedding {len(protein_sequences)} protein sequences!")
+
+        logger.info(f"ESM-2: Embedding protein sequences!")
 
         model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
         batch_converter = alphabet.get_batch_converter()
@@ -54,28 +48,16 @@ class ESM2Embedder(CustomEmbedder):
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
         model.to(device)
 
-        batch_labels, batch_strs, batch_tokens = batch_converter(protein_sequences)
+        batch_labels, batch_strs, batch_tokens = batch_converter(sequences)
 
         with torch.no_grad():
-            embeddings_dict = {}
             for label, seq, tokens in tqdm(zip(batch_labels, batch_strs, batch_tokens), total=len(batch_tokens)):
                 embeddings = model(
                     torch.reshape(tokens, (1, tokens.shape[0])).to(device),
                     repr_layers=[33]
                 )
-                embedding = embeddings["representations"][33][0].detach().cpu()
+                yield embeddings["representations"][33][0].detach().cpu()
 
-                if reduce_per_protein:
-                    per_protein_embedding = torch.mean(embedding.squeeze(), dim=0)
-                    embeddings_dict[label] = per_protein_embedding
-                else:
-                    embeddings_dict[label] = embedding.squeeze()
-
-        with h5py.File(output_path, "w") as embeddings_file:
-            idx = 0
-            for seq_id, embedding in embeddings_dict.items():
-                embeddings_file.create_dataset(str(idx), data=embedding, compression="gzip", chunks=True)
-                embeddings_file[str(idx)].attrs["original_id"] = seq_id  # Follows biotrainer & bio_embeddings standard
-                idx += 1
-
-        return output_path
+    @staticmethod
+    def reduce_per_protein(embedding: ndarray) -> ndarray:
+        return torch.mean(torch.tensor(embedding).squeeze(), dim=0).numpy()
