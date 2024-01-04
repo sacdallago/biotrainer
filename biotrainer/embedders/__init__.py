@@ -12,6 +12,8 @@ from .embedder_interfaces import EmbedderInterface
 from .one_hot_encoding_embedder import OneHotEncodingEmbedder
 from .huggingface_transformer_embedder import HuggingfaceTransformerEmbedder
 
+from ..utilities import is_device_cpu
+
 __PREDEFINED_EMBEDDERS = {
     "one_hot_encoding": OneHotEncodingEmbedder
 }
@@ -45,6 +47,9 @@ def _get_embedder(embedder_name: str, use_half_precision: bool,
         return _load_custom_embedder(embedder_name=embedder_name)
 
     # Huggingface Transformer Embedders
+    if use_half_precision and is_device_cpu(device):
+        raise Exception(f"use_half_precision mode is not compatible with embedding "
+                        f"on the CPU. (See: https://github.com/huggingface/transformers/issues/11546)")
     torch_dtype = torch.float16 if use_half_precision else torch.float32
     auto_tokenizer = False
     try:
