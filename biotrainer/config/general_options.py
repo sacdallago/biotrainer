@@ -41,6 +41,33 @@ class ProtocolOption(GeneralOption, ConfigOption):
         return Protocol.__getitem__(value) is not None
 
 
+class Device(GeneralOption, ConfigOption):
+
+    @classproperty
+    def name(self) -> str:
+        return "device"
+
+    @property
+    def default_value(self) -> Union[str, int, float, bool, Any]:
+        return ""
+
+    @classproperty
+    def allow_multiple_values(self) -> bool:
+        return False
+
+    @property
+    def possible_values(self) -> List[Any]:
+        return ["cpu", "cuda"]
+
+    @classproperty
+    def allowed_protocols(self) -> List[Protocol]:
+        return Protocol.all()
+
+    @classproperty
+    def required(self) -> bool:
+        return False
+
+
 class Interaction(GeneralOption, ConfigOption):
 
     @classproperty
@@ -193,5 +220,5 @@ class OutputDirectory(GeneralOption, ConfigOption):
         return type(value) in [str, Path]
 
 
-general_options: List = [ProtocolOption, Interaction, Seed, SaveSplitIds, SanityCheck, IgnoreFileInconsistencies,
-                         OutputDirectory]
+general_options: List = [ProtocolOption, Device, Interaction,
+                         Seed, SaveSplitIds, SanityCheck, IgnoreFileInconsistencies, OutputDirectory]
