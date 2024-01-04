@@ -12,14 +12,14 @@ docker build -t biotrainer .
 # Run
 docker run --rm \
     -v "$(pwd)/examples/docker":/mnt \
-    -v bio_embeddings_weights_cache:/root/.cache/bio_embeddings \
     -u $(id -u ${USER}):$(id -g ${USER}) \
     biotrainer:latest /mnt/config.yml
 ```
 
 Note that the image created by the standard `Dockerfile` does no longer include 
 [bio_embeddings](https://github.com/sacdallago/bio_embeddings/).
-If you do want to use `bio_embeddings`, you can simply change the installation command in the Dockerfile:
+If you do want to use `bio_embeddings` (only possible with biotrainer version <= 0.7.0), 
+you can simply change the installation command in the Dockerfile:
 ```dockerfile
 RUN python3 -m venv .venv && \
     # Install a recent version of pip, otherwise the installation of many linux2010 packages will fail
