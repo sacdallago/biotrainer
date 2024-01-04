@@ -87,19 +87,29 @@ included in class weight calculation.
 
 ## Embeddings
 
-In *biotrainer*, it is possible to calculate embeddings automatically using *bio_embeddings*. To do this, only
-a valid embedder name has to be provided:
+In *biotrainer*, it is possible to calculate embeddings automatically. Since of version 0.8.0, *bio_embeddings* has
+been deprecated as package for embeddings calculation. Instead, *biotrainer* now supports embedding calculation
+directly via [huggingface transformers](https://huggingface.co/docs/transformers/index).
+The following embedders have been successfully tested with *biotrainer*:
 ```yaml
-embedder_name: prottrans_t5_xl_u50 | esm | esm1b | seqvec | fasttext | word2vec | one_hot_encoding | ...
+embedder_name: Rostlab/prot_t5_xl_uniref50 | ElnaggarLab/ankh-large | Rostlab/prot_t5_xl_bfd
 ```
-Take a look at [bio_embeddings](https://github.com/sacdallago/bio_embeddings/) to find out about all the available
-embedding methods. 
-A list of all current embedding config options can be found, for example, 
-[in this file](https://github.com/sacdallago/bio_embeddings/blob/efb9801f0de9b9d51d19b741088763a7d2d0c3a2/bio_embeddings/embed/pipeline.py#L253). 
 
-If you want to use your own embedder directly in biotrainer, you can provide it as a python script. 
-You only need to extend the `CustomEmbedder` class from the `trainers` module. Please take a look at the
-example implementations of `ankh` and `esm-2` in the [custom_embedder example](../examples/custom_embedder/).
+Transformer embedders provide the ability to use half-precision (float16) mode:
+```yaml
+use_half_precision: True | False # Default: False
+```
+*Note that use_half_precision mode is not compatible with embedding on the CPU 
+([see this GitHub Issue](https://github.com/huggingface/transformers/issues/11546)).*
+
+To compute baselines, there are also predefined embedders directly included in *biotrainer*:
+```yaml
+embedder_name: one_hot_encoding
+```
+
+If you want to use your own embedder directly in *biotrainer*, you can provide it as a python script. 
+You only need to extend the `CustomEmbedder` class from the `embeddings` module. Please take a look at the
+example implementations of `esm-2` in the [custom_embedder example](../examples/custom_embedder/).
 Then, use the `embedder_name` option to declare the path to your script:
 ```yaml
 embedder_name: your_script.py  # The script path must be relative to the configuration file or absolute.

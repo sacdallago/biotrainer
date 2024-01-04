@@ -10,7 +10,7 @@ The architecture can be generally summarized by the following diagram:
 graph LR;
     A(<b>run-biotrainer.py config.yaml</b>) --> B(<b>executer.py</b> <br /> * Parse configuration file <br /> * Verify configuration file via <b>config.py</b> <br /> * Create logging and output directories)
     B --> C(<b>trainer.py</b> <br /> Training and evaluation pipeline)
-    C --> D(<b>embeddings.py</b> <br /> Compute and load embeddings)
+    C --> D(<b>embedders</b> <br /> Compute and load embeddings)
     C --> E(<b>TargetManager.py</b> <br /> * Handle labels <br /> * Create datasets from splits)
     C --> F(<b>Models</b> <br /> * FNN <br /> * CNN <br /> * LogReg <br /> * LightAttention)
     C --> G(<b>Solver.py</b> <br /> * Controls training process <br /> * Transforms network output <br /> * Calculates metrics)
@@ -30,7 +30,7 @@ is valid, i.e. it includes all necessary input file paths, and it does not inclu
 `training_and_evaluation_routine` function, which orchestrates all further parts. It was intentionally decided not to
 split it in multiple functions, besides two small exceptions, mainly for readability reasons. More information can be
 found [here](adrs/ADR002_trainer_module.md).
-* **embeddings.py**: The first part of the pipeline. If no pre-computed embeddings have been provided, they are now
+* **embedders**: The first part of the pipeline. If no pre-computed embeddings have been provided, they are now
 computed based on the provided input file and the protocol. Once embeddings exist, they are loaded and mapped to
 a dictionary (`id2emb`) in the trainer routine. Hence, the `id2emb` dictionary maps the sequence id 
 from the sequence file to the associated embedding. 
