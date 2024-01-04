@@ -65,7 +65,7 @@ loss_choice: cross_entropy_loss # Loss function
 use_class_weights: True # Balance class weights by using class sample size in the given dataset
 num_epochs: 200 # Number of maximum epochs
 batch_size: 128 # Batch size
-embedder_name: prottrans_t5_xl_u50 # Embedder to use
+embedder_name: Rostlab/prot_t5_xl_uniref50 # Embedder to use
 ```
 
 ### (Bio-)Embeddings
@@ -74,9 +74,9 @@ To convert the sequence data to more meaningful input for a model, embeddings ge
 *protein language models* (pLMs) have become widely applied in the last years. 
 Hence, *biotrainer* enables automatic calculation of embeddings on a *per-sequence* and *per-residue* level, 
 depending on the protocol. 
-Take a look at [bio_embeddings](https://github.com/sacdallago/bio_embeddings/) to find out about all the available
-embedding methods. However, it is also possible to provide your own embeddings file using your own embedder, 
-independent of *bio_embeddings*. Please refer to the 
+Take a look at the [embeddings options](docs/config_file_options.md#embeddings) to find out about all the available
+embedding methods. It is also possible to provide your own embeddings file using your own embedder, 
+independent of the provided calculation pipeline. Please refer to the 
 [data standardization](docs/data_standardization.md#embeddings) document and the 
 [relevant examples](examples/custom_embeddings/) to learn how to do this. Pre-calculated embeddings can be used for
 the training process via the `embeddings_file` parameter, 
@@ -93,8 +93,6 @@ curl -sSL https://install.python-poetry.org/ | python3 - --version 1.4.2
 ```bash
 # In the base directory:
 poetry install
-# Optional: Add bio-embeddings to compute embeddings
-poetry install --extras "bio-embeddings"
 # Optional: Add jupyter to use notebooks
 poetry install --extras "jupyter"
 # You can also install all extras at once
@@ -125,12 +123,11 @@ docker build -t biotrainer .
 # Run
 docker run --rm \
     -v "$(pwd)/examples/docker":/mnt \
-    -v bio_embeddings_weights_cache:/root/.cache/bio_embeddings \
     -u $(id -u ${USER}):$(id -g ${USER}) \
     biotrainer:latest /mnt/config.yml
 ```
 
-Output can be found afterwards in the directory of the provided configuration file.
+Output can be found afterward in the directory of the provided configuration file.
 
 
 ## Citation
