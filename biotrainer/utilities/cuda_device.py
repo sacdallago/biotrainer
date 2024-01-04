@@ -20,3 +20,13 @@ def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
         return torch.device("cuda")
     else:
         return torch.device("cpu")
+
+
+def is_device_cpu(device: Union[None, str, torch.device] = None) -> bool:
+    if device is None:
+        return False
+    if isinstance(device, torch.device):
+        return device.type == "cpu"
+    if device is str:
+        return device == "cpu"
+    return False
