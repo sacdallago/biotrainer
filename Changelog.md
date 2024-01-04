@@ -1,5 +1,26 @@
 # Biotrainer Changelog
 
+## 04.01.2024 - Version 0.8.0
+### Maintenance
+* Removing dependency on *bio_embeddings* entirely. *bio_embeddings* is not really maintained 
+anymore (last commit 2 years ago) and being dependent on a specific external module for embeddings calculation
+shrinks the overall capabilities of biotrainer. Now, for example, adding LORA layers becomes much easier.
+While *bio_embeddings* does have its advantages such as a well-defined pipeline and a lot of utilities, it also 
+provides a lot of functionalities that is not used by biotrainer. Therefore, a new `embedders` module was introduced
+to biotrainer that mimics some aspects of *bio_embeddings* and takes inspiration from it. However, it is built in a more
+generic way and enables, in principle, all huggingface transformer embedders to be used by biotrainer.
+* Ankh custom embedder was removed, because it can now be used directly in biotrainer:
+```yaml
+embedder_name: ElnaggarLab/ankh-large
+```
+* Adding new use_half_precision option for transformer embedders
+* Adding missing device option
+
+### Bug fixes
+* Fixed a minor problem for model saving in `Solver.py`: 
+If a new model was trained, and it does not improve until `early_stop` is triggered, it was not saved as a checkpoint.
+
+
 ## 08.09.2023 - Version 0.7.0
 ### Maintenance
 * Added `config` module to read and verify the given config file. It was decided to refactor the handling of the
