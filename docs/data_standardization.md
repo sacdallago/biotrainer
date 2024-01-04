@@ -110,7 +110,7 @@ proteins = [
 
 with h5py.File(per_sequence_embeddings_path, "w") as output_embeddings_file:
     for i, protein in enumerate(proteins):
-        # Using f"S{i}" to avoid haing integer keys
+        # Using f"S{i}" to avoid having integer keys
         output_embeddings_file.create_dataset(f"S{i}", data=protein['embeddings'])
 
         # !!IMPORTANT:
