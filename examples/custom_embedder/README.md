@@ -1,6 +1,6 @@
 # custom_embedder example
 
-The examples in this folder show how to use a custom embedder that is not included in *bio_embeddings*.
+The examples in this folder show how to use a custom embedder that is not included in *biotrainer*.
 
 **Example models**:
 1. [ESM-2](https://github.com/facebookresearch/esm) large model from

@@ -14,7 +14,7 @@ from .embedder_interfaces import EmbedderInterface
 from ..protocols import Protocol
 from ..utilities import read_FASTA
 
-# Defines if reduced embeddings from bio_embeddings should be used.
+# Defines if reduced embeddings should be used.
 # Reduced means that the per-residue embeddings are reduced to a per-sequence embedding
 _REQUIRES_REDUCED_EMBEDDINGS = {
     Protocol.residue_to_class: False,
