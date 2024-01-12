@@ -160,4 +160,28 @@ class LossChoice(ModelOption, ConfigOption):
         return False
 
 
-model_options: List = [ModelChoice, OptimizerChoice, LearningRate, Epsilon, LossChoice]
+class DisablePytorchCompile(ModelOption, ConfigOption):
+
+    @classproperty
+    def name(self) -> str:
+        return "disable_pytorch_compile"
+
+    @property
+    def default_value(self) -> Union[str, int, float, bool, Any]:
+        return True
+
+    @property
+    def possible_values(self) -> List[Any]:
+        return [True, False]
+
+    @classproperty
+    def allow_multiple_values(self) -> bool:
+        return False
+
+    @classproperty
+    def required(self) -> bool:
+        return False
+
+
+model_options: List = [ModelChoice, OptimizerChoice, LearningRate,
+                       DropoutRate, Epsilon, LossChoice, DisablePytorchCompile]
