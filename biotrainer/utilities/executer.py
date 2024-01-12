@@ -30,8 +30,6 @@ def _setup_logging(output_dir: str):
                             logging.StreamHandler()]
                         )
     logging.captureWarnings(True)
-    # Suppress info logging from TorchDynamo (torch.compile(model)) with logging.ERROR
-    dynamo.config.log_level = logging.INFO
 
 
 def _write_output_file(out_filename: str, config: dict) -> None:
