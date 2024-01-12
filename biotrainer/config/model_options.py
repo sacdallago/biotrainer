@@ -88,6 +88,29 @@ class LearningRate(ModelOption, ConfigOption):
         return False
 
 
+class DropoutRate(ModelOption, ConfigOption):
+
+    @classproperty
+    def name(self) -> str:
+        return "dropout_rate"
+
+    @property
+    def default_value(self) -> Union[str, int, float, bool, Any]:
+        return 0.25
+
+    @classproperty
+    def allow_multiple_values(self) -> bool:
+        return True
+
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return 0.0 < value < 1.0
+
+    @classproperty
+    def required(self) -> bool:
+        return False
+
+
 class Epsilon(ModelOption, ConfigOption):
 
     @classproperty
