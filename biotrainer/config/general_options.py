@@ -67,6 +67,12 @@ class Device(GeneralOption, ConfigOption):
     def required(self) -> bool:
         return False
 
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        if "cuda:" in str(value):
+            return str(value).split(":")[-1].isdigit()  # cuda:0, cuda:1 ..
+        return value in config_option.possible_values
+
 
 class Interaction(GeneralOption, ConfigOption):
 
