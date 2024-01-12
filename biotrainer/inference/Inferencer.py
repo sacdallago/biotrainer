@@ -30,18 +30,20 @@ class Inferencer:
             # Constant parameters for all split solvers
             protocol: str,
             embedder_name: str,
-            # Optional constant parameters
+            # Optional constant parameters for all split solvers
             class_int_to_string: Optional[Dict[int, str]] = None,
             class_str_to_int: Optional[Dict[str, int]] = None,
             device: Union[None, str, torch.device] = None,
+            disable_pytorch_compile: Optional[bool] = None,
             # Everything else
             **kwargs
     ):
         self.protocol = Protocol[protocol]
-        self.device = get_device(device)
         self.embedder_name = embedder_name
         self.class_int2str = class_int_to_string
         self.class_str2int = class_str_to_int
+        self.device = get_device(device)
+        self.disable_pytorch_compile = True if disable_pytorch_compile is None else disable_pytorch_compile
         self.collate_function = get_collate_function(self.protocol)
 
         self.solvers_and_loaders_by_split = self._create_solvers_and_loaders_by_split(**kwargs)
@@ -125,6 +127,7 @@ class Inferencer:
 
             model = get_model(protocol=self.protocol, model_choice=model_choice,
                               n_classes=n_classes, n_features=n_features,
+                              disable_pytorch_compile=self.disable_pytorch_compile,
                               **split_config
                               )
             loss_function = get_loss(protocol=self.protocol, loss_choice=loss_choice,
