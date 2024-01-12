@@ -1,5 +1,18 @@
 # Biotrainer Changelog
 
+## 12.01.2024 - Version 0.8.1
+### Maintenance
+* Updating dependencies after removing bio_embeddings, notably upgrading torch and adding accelerate
+* Updating examples, documentation, config and test files for inferencer tests to match the new compile mode
+* Replaced the exception with a warning if dropout_rate was set for a model that does not support it (e.g. LogReg) 
+
+### Features
+* Enable pytorch compile mode. The feature exists since torch 2.0 and is now available in biotrainer. It can be
+enabled via 
+```yaml
+disable_pytorch_compile: False
+```
+
 ## 04.01.2024 - Version 0.8.0
 ### Maintenance
 * Removing dependency on *bio_embeddings* entirely. *bio_embeddings* is not really maintained 
