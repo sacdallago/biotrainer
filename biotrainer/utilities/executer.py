@@ -1,5 +1,4 @@
 import logging
-import torch._dynamo as dynamo
 
 from ruamel import yaml
 from pathlib import Path
