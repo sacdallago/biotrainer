@@ -1,5 +1,6 @@
 import torch
 import inspect
+import logging
 
 from typing import Dict, Set, Any
 
@@ -10,6 +11,8 @@ from .LightAttention import LightAttention
 from .model_params import count_parameters
 
 from ..protocols import Protocol
+
+logger = logging.getLogger(__name__)
 
 __MODELS = {
     Protocol.residue_to_class: {
@@ -42,7 +45,7 @@ def get_model(protocol: Protocol, model_choice: str, n_classes: int, n_features:
         raise NotImplementedError
     else:
         if "dropout_rate" in kwargs.keys() and "dropout_rate" not in inspect.signature(model_class).parameters:
-            raise NotImplementedError(f"dropout_rate not implemented for model_choice {model_choice}")
+            logger.warning(f"dropout_rate not implemented for model_choice {model_choice}")
 
         model = model_class(n_classes=n_classes, n_features=n_features, **kwargs)
         return torch.compile(model, disable=True)  # Disabled - compile() does not seem to be fully production-ready
