@@ -1,18 +1,22 @@
 auto_resume: false
 batch_size: 128
-biotrainer_version: 0.5.0
+biotrainer_version: 0.8.1
 cross_validation_config:
   choose_by: loss
   method: hold_out
-device: cuda
-elapsed_time_total: 2.69968143099959
+device: cpu
+disable_pytorch_compile: true
+dropout_rate: 0.25
+elapsed_time_total: 0.48554954300016107
 embedder_name: one_hot_encoding
 embeddings_file: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_value/output/sequence_to_value/one_hot_encoding/embeddings/reduced_embeddings_file.h5
+  /home/sfranz/PycharmProjects/biotrainerFork/examples/sequence_to_value/output/sequence_to_value/one_hot_encoding/reduced_embeddings_file_one_hot_encoding.h5
 epsilon: 0.001
+ignore_file_inconsistencies: false
 learning_rate: 0.001
+limited_sample_size: -1
 log_dir: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_value/output/FNN/one_hot_encoding
+  /home/sfranz/PycharmProjects/biotrainerFork/examples/sequence_to_value/output/FNN/one_hot_encoding
 loss_choice: mean_squared_error
 model_choice: FNN
 n_classes: 1
@@ -20,41 +24,41 @@ n_features: 21
 n_testing_ids: 2
 num_epochs: 200
 optimizer_choice: adam
-output_dir: /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_value/output
+output_dir: /home/sfranz/PycharmProjects/biotrainerFork/examples/sequence_to_value/output
 patience: 10
 protocol: sequence_to_value
 sanity_check: true
 save_split_ids: false
 seed: 42
 sequence_file: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_value/sequences.fasta
+  /home/sfranz/PycharmProjects/biotrainerFork/examples/sequence_to_value/sequences.fasta
 shuffle: true
 split_results:
   hold_out:
-    elapsed_time: 1.723036016000151
-    end_time: 2023-06-28 10:59:31.955876
+    elapsed_time: 0.4815930800004935
+    end_time: 2024-01-12 12:13:48.374001
     n_free_parameters: 737
     n_training_ids: 1
     n_validation_ids: 1
     split_hyper_params: {}
-    start_time: 2023-06-28 10:59:30.232837
+    start_time: 2024-01-12 12:13:47.892405
     training_iteration_result_best_epoch:
-      epoch: 13
+      epoch: 126
       training:
-        loss: 1400.1734619140625
-        mse: 1400.1734619140625
-        rmse: 37.41889190673828
+        loss: 1349.1024169921875
+        mse: 1349.1024169921875
+        rmse: 36.73012924194336
         spearmans-corr-coeff: 0.0
       validation:
-        loss: 1774.8096923828125
-        mse: 1774.8096923828125
-        rmse: 42.12849044799805
+        loss: 1722.64453125
+        mse: 1722.64453125
+        rmse: 41.50475311279297
         spearmans-corr-coeff: 0.0
 test_iterations_results:
   metrics:
-    loss: 1598.2464599609375
-    mse: 1598.2464599609375
-    rmse: 39.97807312011719
+    loss: 1553.663818359375
+    mse: 1553.663818359375
+    rmse: 39.416542053222656
     spearmans-corr-coeff: 0.9999959468841553
   test_baselines:
     mean_only:
@@ -62,3 +66,4 @@ test_iterations_results:
       rmse: 21.483354568481445
       spearmans-corr-coeff: 0.0
 use_class_weights: false
+use_half_precision: false

@@ -1,6 +1,6 @@
 auto_resume: false
 batch_size: 128
-biotrainer_version: 0.6.0
+biotrainer_version: 0.8.1
 class_int_to_string:
   0: Glob
   1: GlobSP
@@ -15,14 +15,18 @@ cross_validation_config:
   choose_by: loss
   method: hold_out
 device: cuda
-elapsed_time_total: 2.901951871000165
+disable_pytorch_compile: false
+dropout_rate: 0.25
+elapsed_time_total: 4.138574053999946
 embedder_name: one_hot_encoding
 embeddings_file: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_class/output/sequence_to_class/one_hot_encoding/embeddings/reduced_embeddings_file.h5
+  /home/sfranz/PycharmProjects/biotrainerFork/examples/sequence_to_class/output/sequence_to_class/one_hot_encoding/reduced_embeddings_file_one_hot_encoding_half.h5
 epsilon: 0.001
+ignore_file_inconsistencies: false
 learning_rate: 0.001
+limited_sample_size: -1
 log_dir: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_class/output/FNN/one_hot_encoding
+  /home/sfranz/PycharmProjects/biotrainerFork/examples/sequence_to_class/output/FNN/one_hot_encoding
 loss_choice: cross_entropy_loss
 model_choice: FNN
 n_classes: 4
@@ -30,26 +34,26 @@ n_features: 21
 n_testing_ids: 2
 num_epochs: 200
 optimizer_choice: adam
-output_dir: /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_class/output
+output_dir: /home/sfranz/PycharmProjects/biotrainerFork/examples/sequence_to_class/output
 patience: 10
 protocol: sequence_to_class
 sanity_check: true
 save_split_ids: false
 seed: 42
 sequence_file: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_class/sequences.fasta
+  /home/sfranz/PycharmProjects/biotrainerFork/examples/sequence_to_class/sequences.fasta
 shuffle: true
 split_results:
   hold_out:
-    elapsed_time: 1.504339154000263
-    end_time: 2023-06-29 12:38:48.509185
+    elapsed_time: 3.43596211699969
+    end_time: 2024-01-12 12:50:50.606690
     n_free_parameters: 836
     n_training_ids: 1
     n_validation_ids: 1
     split_hyper_params: {}
-    start_time: 2023-06-29 12:38:47.004841
+    start_time: 2024-01-12 12:50:47.170724
     training_iteration_result_best_epoch:
-      epoch: 6
+      epoch: 0
       training:
         '- f1_score class 0': 0.0
         '- f1_score class 1': 0.0
@@ -64,7 +68,7 @@ split_results:
         '- recall class 2': 0.0
         '- recall class 3': 0.0
         accuracy: 0.0
-        loss: 1.4443376064300537
+        loss: 1.5199519395828247
         macro-f1_score: 0.0
         macro-precision: 0.0
         macro-recall: 0.0
@@ -87,7 +91,7 @@ split_results:
         '- recall class 2': 0.0
         '- recall class 3': 0.0
         accuracy: 0.0
-        loss: 1.407588243484497
+        loss: 1.4170552492141724
         macro-f1_score: 0.0
         macro-precision: 0.0
         macro-recall: 0.0
@@ -111,10 +115,10 @@ test_iterations_results:
     '- recall class 2': 0.0
     '- recall class 3': 1.0
     accuracy: 0.5
-    loss: 1.307281255722046
-    macro-f1_score: 0.1666666716337204
-    macro-precision: 0.125
-    macro-recall: 0.25
+    loss: 1.2967262268066406
+    macro-f1_score: 0.3333333432674408
+    macro-precision: 0.25
+    macro-recall: 0.5
     matthews-corr-coeff: 0
     micro-f1_score: 0.5
     micro-precision: 0.5
@@ -122,3 +126,4 @@ test_iterations_results:
     spearmans-corr-coeff: 0.0
   test_baselines: {}
 use_class_weights: true
+use_half_precision: true

@@ -9,4 +9,6 @@ learning_rate: 1e-3
 batch_size: 128
 save_split_ids: False
 use_half_precision: True
+device: cuda
+disable_pytorch_compile: False
 embedder_name: Rostlab/prot_t5_xl_uniref50
