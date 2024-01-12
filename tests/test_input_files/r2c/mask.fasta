@@ -1,6 +1,6 @@
->Seq1 SET=train
+>Seq1
 00000000
->Seq2 SET=val
+>Seq2
 111111
 >Seq3
 01001011100011
