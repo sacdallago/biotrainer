@@ -26,7 +26,7 @@ seed: 1234  # Default: 42
 
 You can also manually select a device for training:
 ```yaml
-device: cpu | cuda  # Default: Uses cuda if cuda is available, otherwise cpu
+device: cpu | cuda | cuda:0 | cuda:1 .. # Default: Uses cuda if cuda is available, otherwise cpu
 ```
 
 The sequence ids associated with the generated or annotated splits can be saved in the output file.
@@ -174,6 +174,12 @@ and the learning rate (any positive float):
 learning_rate: 1e-4  # Default: 1e-3
 ```
 
+Set the dropout rate for dropout layers if desired:
+```yaml
+dropout_rate: 0.5  # Default: 0.25
+```
+*Note that some models, including the implemented logistic regression model, do not support dropout layers.*
+
 Specify the loss:
 ```yaml
 loss_choice: cross_entropy_loss | mean_squared_error
@@ -186,6 +192,13 @@ use_class_weights: True | False  # Default: False
 ```
 Class weights only take the training data into account for calculation. Masked residues, denoted in a mask file,
 are not included in class weight calculation as well.
+
+PyTorch 2.0 introduced [torch compile](https://pytorch.org/docs/stable/generated/torch.compile.html) for faster
+and more efficient training. Since biotrainer v0.8.1, this can be enabled for model training via:
+```yaml
+disable_pytorch_compile: False  # Default: True
+```
+*The behaviour is disabled by default for backwards compatibility and stability.*
 
 ## Training parameters
 
