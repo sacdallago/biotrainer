@@ -1,18 +1,19 @@
 from abc import ABC, abstractmethod
 from typing import List, Type, Union, Tuple, Any
 
-from .config_option import ConfigOption
+from .config_option import ConfigOption, FileOption
 from .cross_validation_options import Method
 from ..protocols import Protocol
 
 
 class ConfigRule(ABC):
     @abstractmethod
-    def apply(self, protocol: Protocol, config: List) -> Tuple[bool, str]:
+    def apply(self, protocol: Protocol, config: List, ignore_file_checks: bool) -> Tuple[bool, str]:
         """
         Applies the config rule to the given protocol and config
         :param protocol: Chosen protocol
         :param config: Provided config
+        :param ignore_file_checks: Ignore rule checks on file options
         :return: Tuple: [0] - True/False indicating if the rule holds for the config
                         [1] - Reason if the rule does not apply for the given config
         """
@@ -28,7 +29,10 @@ class MutualExclusive(ConfigRule):
         self.allowed_values = allowed_values
         self.error_message = "\n" + error_message if error_message != "" else ""
 
-    def apply(self, protocol: Protocol, config: List[ConfigOption]) -> Tuple[bool, str]:
+    def apply(self, protocol: Protocol, config: List[ConfigOption], ignore_file_checks: bool) -> Tuple[bool, str]:
+        if ignore_file_checks and any([option.is_file_option for option in self.exclusive_options]):
+            return True, ""
+
         occurrences = 0
         for config_option in config:
             if config_option.__class__ in self.exclusive_options and config_option.value not in self.allowed_values:
@@ -52,7 +56,10 @@ class ProtocolRequires(ConfigRule):
             self._protocols = protocol
         self._required_options = requires
 
-    def apply(self, protocol: Protocol, config: List) -> Tuple[bool, str]:
+    def apply(self, protocol: Protocol, config: List, ignore_file_checks: bool) -> Tuple[bool, str]:
+        if ignore_file_checks and any([option.is_file_option for option in self._required_options]):
+            return True, ""
+
         if protocol not in self._protocols:
             return True, ""
         else:
@@ -71,7 +78,10 @@ class OptionValueRequires(ConfigRule):
         self._value = value
         self._required_options = requires
 
-    def apply(self, protocol: Protocol, config: List) -> Tuple[bool, str]:
+    def apply(self, protocol: Protocol, config: List, ignore_file_checks: bool) -> Tuple[bool, str]:
+        if ignore_file_checks and any([option.is_file_option for option in self._required_options]):
+            return True, ""
+
         config_class_dict = {config_option.name: config_option.value for config_option in config}
 
         if self._option.name in config_class_dict.keys() and \
@@ -84,13 +94,13 @@ class OptionValueRequires(ConfigRule):
         return True, ""
 
 
-class AllowHyperparameterOptimization:
+class AllowHyperparameterOptimization(ConfigRule):
 
     def __init__(self, option: Any, value: Any):
         self._option = option
         self._value = value
 
-    def apply(self, protocol: Protocol, config: List) -> Tuple[bool, str]:
+    def apply(self, protocol: Protocol, config: List, ignore_file_checks: bool) -> Tuple[bool, str]:
         config_class_dict = {config_option.name: config_option for config_option in config}
         all_list_options = [config_option.is_list_option() for config_option in config_class_dict.values()]
 

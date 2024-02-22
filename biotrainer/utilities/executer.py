@@ -56,7 +56,7 @@ def _write_output_file(out_filename: str, config: dict) -> None:
 def parse_config_file_and_execute_run(config_file_path: str):
     # Verify config via configurator
     configurator = Configurator.from_config_path(config_file_path)
-    config = configurator.get_verified_config()
+    config = configurator.get_verified_config(ignore_file_checks=False)
     config["protocol"] = Protocol[config["protocol"]]
 
     # Create output dir and setup logging
