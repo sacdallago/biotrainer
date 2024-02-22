@@ -8,7 +8,7 @@ from typing import Union, List, Dict, Any, Tuple
 from .model_options import model_options
 from .general_options import general_options
 from .input_options import SequenceFile, LabelsFile, input_options
-from .config_option import ConfigurationException, ConfigOption
+from .config_option import ConfigurationException, ConfigOption, FileOption
 from .training_options import AutoResume, PretrainedModel, training_options
 from .embedding_options import EmbedderName, EmbeddingsFile, embedding_options
 from .config_rules import (MutualExclusive, ProtocolRequires, OptionValueRequires,
@@ -177,19 +177,22 @@ class Configurator:
         return config_map, cv_map
 
     @staticmethod
-    def _verify_config(protocol: Protocol, config_map: Dict[str, ConfigOption]):
+    def _verify_config(protocol: Protocol, config_map: Dict[str, ConfigOption], ignore_file_checks: bool):
         config_objects = list([config_object for config_object in config_map.values()])
 
         # Check rules
         all_rules = protocol_rules + config_option_rules
         for rule in all_rules:
             success, reason = rule.apply(protocol=protocol,
-                                         config=config_objects)
+                                         config=config_objects,
+                                         ignore_file_checks=ignore_file_checks)
             if not success:
                 raise ConfigurationException(reason)
 
         # Check protocol and value
         for config_object in config_objects:
+            if ignore_file_checks and config_object is FileOption:
+                continue
             if protocol not in config_object.allowed_protocols:
                 raise ConfigurationException(f"{config_object.name} not allowed for protocol {protocol}!")
 
@@ -198,7 +201,7 @@ class Configurator:
 
     @staticmethod
     def _verify_cv_config(protocol: Protocol, config_map: Dict[str, ConfigOption],
-                          cv_config: Dict[str, CrossValidationOption]):
+                          cv_config: Dict[str, CrossValidationOption], ignore_file_checks: bool):
         cv_objects = list([cv_object for cv_object in cv_config.values()])
         config_objects = list([config_object for config_object in config_map.values()])
 
@@ -209,11 +212,13 @@ class Configurator:
         # Check rules
         for rule in cross_validation_rules:
             success, reason = rule.apply(protocol=protocol,
-                                         config=cv_objects)
+                                         config=cv_objects,
+                                         ignore_file_checks=ignore_file_checks)
             if not success:
                 raise ConfigurationException(reason)
         for rule in optimization_rules:
-            success, reason = rule.apply(protocol, config=cv_objects + config_objects)
+            success, reason = rule.apply(protocol, config=cv_objects + config_objects,
+                                         ignore_file_checks=ignore_file_checks)
 
             if not success:
                 raise ConfigurationException(reason)
@@ -231,11 +236,12 @@ class Configurator:
                 raise ConfigurationException(
                     f"{cv_object.value} not valid for cross validation option {cv_object.name}!")
 
-    def get_verified_config(self) -> Dict[str, Any]:
+    def get_verified_config(self, ignore_file_checks: bool = False) -> Dict[str, Any]:
         config_map, cv_map = self._get_config_maps(protocol=self.protocol, config_dict=self._config_dict,
                                                    config_file_path=self._config_file_path)
-        self._verify_config(protocol=self.protocol, config_map=config_map)
-        self._verify_cv_config(protocol=self.protocol, config_map=config_map, cv_config=cv_map)
+        self._verify_config(protocol=self.protocol, config_map=config_map, ignore_file_checks=ignore_file_checks)
+        self._verify_cv_config(protocol=self.protocol, config_map=config_map, cv_config=cv_map,
+                               ignore_file_checks=ignore_file_checks)
         result = {}
         for config_object in config_map.values():
             result[config_object.name] = config_object.value

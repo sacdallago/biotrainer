@@ -63,6 +63,10 @@ class ConfigOption(ABC):
         return ("range" in str(self.value) or type(self.value) is list or
                 (type(self.value) is str and "[" in self.value and "]" in self.value))
 
+    @classproperty
+    def is_file_option(self) -> bool:
+        return self.category == "file_option" or self.category == "input_option"
+
     def check_value(self) -> bool:
         # Check for valid list option (range, list, list comprehension)
         if self.is_list_option():
