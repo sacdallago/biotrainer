@@ -7,7 +7,7 @@ import numpy as np
 
 from tqdm import tqdm
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from .embedder_interfaces import EmbedderInterface
 
@@ -33,6 +33,14 @@ class EmbeddingService:
         self._use_half_precision = use_half_precision
 
     def compute_embeddings(self, sequence_file: str, output_dir: Path, protocol: Protocol) -> str:
+        """
+        Compute embeddings with the provided embedder from file.
+
+        :param sequence_file: Path to the sequence file
+        :param output_dir: Output directory to store the computed embeddings
+        :param protocol: Protocol for the embeddings. Determines if the embeddings should be reduced to per-protein
+        :return: Path to the generated output embeddings file
+        """
         # Create protocol path to embeddings
         embeddings_file_path = output_dir / protocol.name
         if not os.path.isdir(embeddings_file_path):
@@ -71,6 +79,23 @@ class EmbeddingService:
                 idx += 1
 
         return str(embeddings_file_path)
+
+    def compute_embeddings_from_list(self, protein_sequences: List[str], protocol: Protocol) -> List:
+        """
+        Compute embeddings with the provided embedder directly from a list of sequences.
+
+        :param protein_sequences: List of protein sequences as string
+        :param protocol: Protocol for the embeddings. Determines if the embeddings should be reduced to per-protein
+        :return: List of computed embeddings
+        """
+        use_reduced_embeddings = _REQUIRES_REDUCED_EMBEDDINGS[protocol]
+
+        embeddings = list(
+            tqdm(self._embedder.embed_many(protein_sequences), total=len(protein_sequences)))
+
+        if use_reduced_embeddings:
+            embeddings = [self._embedder.reduce_per_protein(embedding) for embedding in embeddings]
+        return embeddings
 
     @staticmethod
     def load_embeddings(embeddings_file_path: str) -> Dict[str, Any]:
