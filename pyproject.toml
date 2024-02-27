@@ -33,7 +33,7 @@ repository = "https://github.com/sacdallago/biotrainer"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
 
-accelerate = "^0.26.1"
+accelerate = "^0.27.2"
 biopython = ">=1.83,<2.0"
 matplotlib = ">=3.7.2,<4.0.0"
 h5py = ">=3.8.0,<4.0.0"
@@ -46,7 +46,7 @@ sentencepiece = "^0.1.99"
 scipy = ">=1.11.2,<2.0.0"
 scikit-learn = "^1.3.0"
 tensorboard = "^2.14.1" # Latest version 2.15.1 conflicts with latest version of protobuf
-torch = "2.1.2"
+torch = "2.2.1"
 tqdm = ">=4.66.1,<5.0.0"
 transformers = "^4.33.1"
 torchmetrics = "^1.3.0"
