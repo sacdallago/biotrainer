@@ -1,5 +1,15 @@
 # Biotrainer Changelog
 
+## 27.02.2024 - Version 0.8.2
+### Maintenance
+* Updating dependencies
+
+### Features
+* Adding option to ignore verification of files in `configurator.py`. This makes it possible to verify a biotrainer
+configuration independently of the provided files.
+* Adding new compute_embeddings_from_list function to embedding_service.py. This allows to compute embeddings directly 
+from sequence strings.
+
 ## 12.01.2024 - Version 0.8.1
 ### Maintenance
 * Updating dependencies after removing bio_embeddings, notably upgrading torch and adding accelerate
