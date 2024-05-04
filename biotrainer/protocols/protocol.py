@@ -33,5 +33,9 @@ class Protocol(Enum):
     def per_residue_protocols() -> List[Protocol]:
         return [Protocol.residue_to_class]
 
+    @staticmethod
+    def from_string(string: str) -> Protocol:
+        return {p.name: p for p in Protocol.all()}[string]
+
     def __str__(self):
         return self.name
