@@ -7,7 +7,7 @@ import numpy as np
 
 from tqdm import tqdm
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from .embedder_interfaces import EmbedderInterface
 
@@ -32,31 +32,42 @@ class EmbeddingService:
         self._embedder = embedder
         self._use_half_precision = use_half_precision
 
-    def compute_embeddings(self, sequence_file: str, output_dir: Path, protocol: Protocol) -> str:
+    def compute_embeddings(self, sequence_file: str, output_dir: Path, protocol: Protocol,
+                           force_output_dir: Optional[bool] = False,
+                           force_recomputing: Optional[bool] = False) -> str:
         """
         Compute embeddings with the provided embedder from file.
 
         :param sequence_file: Path to the sequence file
         :param output_dir: Output directory to store the computed embeddings
         :param protocol: Protocol for the embeddings. Determines if the embeddings should be reduced to per-protein
+        :param force_output_dir: If True, the given output directory is directly used to store the embeddings file,
+            without any path enhancing
+        :param force_recomputing: If True, the embedding file is re-recomputed, even if it already exists
         :return: Path to the generated output embeddings file
         """
-        # Create protocol path to embeddings
-        embeddings_file_path = output_dir / protocol.name
-        if not os.path.isdir(embeddings_file_path):
-            os.mkdir(embeddings_file_path)
-
         use_reduced_embeddings = _REQUIRES_REDUCED_EMBEDDINGS[protocol]
-
         embedder_name = self._embedder.name.split("/")[-1]
-        embeddings_file_path /= embedder_name
-        if not os.path.isdir(embeddings_file_path):
-            os.mkdir(embeddings_file_path)
+
+        if force_output_dir:
+            embeddings_file_path = output_dir
+        else:
+            # Create protocol path to embeddings
+            embeddings_file_path = output_dir / protocol.name
+            if not os.path.isdir(embeddings_file_path):
+                os.mkdir(embeddings_file_path)
+
+            # Add embedder name subdirectory
+            embeddings_file_path /= embedder_name
+            if not os.path.isdir(embeddings_file_path):
+                os.mkdir(embeddings_file_path)
+
+        # Append file name to output path
         embeddings_file_path /= (("reduced_" if use_reduced_embeddings else "")
                                  + f"embeddings_file_{embedder_name}{'_half' if self._use_half_precision else ''}.h5")
 
         # Avoid re-computation if file already exists
-        if embeddings_file_path.is_file():
+        if not force_recomputing and embeddings_file_path.is_file():
             return str(embeddings_file_path)
 
         logger.info(f"Computing embeddings to: {str(embeddings_file_path)}")
