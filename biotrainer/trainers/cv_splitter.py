@@ -55,21 +55,21 @@ class CrossValidationSplitter:
         return [Split("hold_out", train_dataset, val_dataset)]
 
     @staticmethod
-    def _continuous_values_to_bins(ys: List) -> List:
+    def _continuous_values_to_bins(ys: List, number_bins: Optional[int] = 10) -> List:
         """
         Calculate bins for continuous target values.
         Assigns to each data_point in ys the maximum of its associated bin.
         Enables stratified k-fold cross validation for x_to_value protocols.
             params:
                 ys: continuous targets
+                number_bins: number of bins to create
             returns: List of bins (len == len of ys)
         """
         ys_np = np.array(ys)
         maximum = np.max(ys_np)
         minimum = np.min(ys_np)
 
-        number_of_bin_classes = 10
-        bin_size = abs(maximum - minimum) / float(number_of_bin_classes)
+        bin_size = abs(maximum - minimum) / float(number_bins)
 
         bins = []
         bin_dict = {}  # For logging
