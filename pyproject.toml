@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "biotrainer"
-version = "0.8.2"
+version = "0.8.3"
 description = "Biotrainers for embeddings"
 authors = [
     "Christian Dallago <christian.dallago@tum.de>",
