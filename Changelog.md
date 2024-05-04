@@ -1,5 +1,19 @@
 # Biotrainer Changelog
 
+## 04.05.2024 - Version 0.8.3
+### Maintenance
+* Updating dependencies
+
+### Features
+* Adding mps device for macOS. Use by setting the following configuration option: `device: mps`.
+*Note that MPS is still under development, use it at your responsibility.*
+* Adding flags to the `compute_embedding` method of `EmbeddingService`
+
+1. `force_output_dir`: Do not change the given output directory within the method
+2. `force_recomputing`: Always re-compute the embeddings, even if an existing file is found
+
+These changes are made to make the embedders module of biotrainer easier usable outside the biotrainer pipeline itself.
+
 ## 27.02.2024 - Version 0.8.2
 ### Maintenance
 * Updating dependencies
