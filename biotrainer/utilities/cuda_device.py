@@ -9,15 +9,21 @@ def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
     if isinstance(device, torch.device):
         if device.type == "cuda" and torch.cuda.is_available():
             return device
+        elif device.type == "mps" and torch.backends.mps.is_available():
+            return device
         else:
             return torch.device("cpu")
-    elif device:
+    elif device is str:
         if "cuda" in device and torch.cuda.is_available():
+            return torch.device(device)
+        elif "mps" in device and torch.backends.mps.is_available():
             return torch.device(device)
         else:
             return torch.device("cpu")
     elif torch.cuda.is_available():
         return torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        return torch.device("mps")
     else:
         return torch.device("cpu")
 

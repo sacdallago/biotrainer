@@ -57,7 +57,7 @@ class Device(GeneralOption, ConfigOption):
 
     @property
     def possible_values(self) -> List[Any]:
-        return ["cpu", "cuda"]
+        return ["cpu", "cuda", "mps"]
 
     @classproperty
     def allowed_protocols(self) -> List[Protocol]:
