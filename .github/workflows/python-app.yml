@@ -32,3 +32,6 @@ jobs:
       run: |
         cd tests
         poetry run pytest --disable-warnings
+    - name: Run pip-audit dependency check
+      run: |
+        poetry run pip-audit
