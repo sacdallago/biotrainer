@@ -1,5 +1,10 @@
 # Biotrainer Changelog
 
+## 04.06.2024 - Version 0.8.4
+### Maintenance
+* Updating dependencies
+* Adding pip-audit dependency check to CI pipeline
+
 ## 04.05.2024 - Version 0.8.3
 ### Maintenance
 * Updating dependencies
