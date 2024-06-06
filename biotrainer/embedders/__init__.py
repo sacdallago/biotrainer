@@ -2,8 +2,8 @@ import torch
 import logging
 
 from pathlib import Path
-from typing import Union, Optional, List
-from transformers import AutoTokenizer, T5Tokenizer, T5EncoderModel
+from typing import Union, Optional, List, Tuple
+from transformers import AutoTokenizer, T5Tokenizer, T5EncoderModel, EsmTokenizer, EsmModel
 from importlib.util import spec_from_file_location, module_from_spec
 
 from .custom_embedder import CustomEmbedder
@@ -18,7 +18,6 @@ __PREDEFINED_EMBEDDERS = {
     "one_hot_encoding": OneHotEncodingEmbedder
 }
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -32,6 +31,21 @@ def get_embedding_service(embeddings_file_path: Union[str, None], embedder_name:
     embedder: EmbedderInterface = _get_embedder(embedder_name=embedder_name, use_half_precision=use_half_precision,
                                                 device=device)
     return EmbeddingService(embedder=embedder, use_half_precision=use_half_precision)
+
+
+def _determine_tokenizer_and_model(embedder_name: str) -> Tuple:
+    """
+    Simple method to guess the model architecture from the embedder name for huggingface transformers
+
+    @param embedder_name: Name of huggingface transformer
+    @return: Tuple of tokenizer and model class
+    """
+    if "t5" in embedder_name.lower():
+        return T5Tokenizer, T5EncoderModel
+    elif "esm" in embedder_name.lower():
+        return EsmTokenizer, EsmModel
+    # Use T5 as default
+    return T5Tokenizer, T5EncoderModel
 
 
 def _get_embedder(embedder_name: str, use_half_precision: bool,
@@ -51,23 +65,25 @@ def _get_embedder(embedder_name: str, use_half_precision: bool,
         raise Exception(f"use_half_precision mode is not compatible with embedding "
                         f"on the CPU. (See: https://github.com/huggingface/transformers/issues/11546)")
     torch_dtype = torch.float16 if use_half_precision else torch.float32
-    auto_tokenizer = False
+
+    tokenizer_class, model_class = _determine_tokenizer_and_model(embedder_name)
+    logger.info(f"Loading embedder model {embedder_name}..")
     try:
-        tokenizer = T5Tokenizer.from_pretrained(embedder_name, torch_dtype=torch_dtype)
-        model = T5EncoderModel.from_pretrained(embedder_name, torch_dtype=torch_dtype)
+        tokenizer = tokenizer_class.from_pretrained(embedder_name, torch_dtype=torch_dtype)
+        model = model_class.from_pretrained(embedder_name, torch_dtype=torch_dtype)
     except OSError as os_error:
         raise Exception(f"{embedder_name} could not be found!") from os_error
     except Exception:
         try:
             tokenizer = AutoTokenizer.from_pretrained(embedder_name, torch_dtype=torch_dtype)
             model = T5EncoderModel.from_pretrained(embedder_name, torch_dtype=torch_dtype)
-            auto_tokenizer = True
         except Exception as e:
-            raise Exception(f"Loading {embedder_name} automatically and as T5Tokenizer failed! Please provide "
-                            f"a custom_embedder script for your use-case.") from e
+            raise Exception(f"Loading {embedder_name} automatically and as {tokenizer_class.__class__.__name__} failed!"
+                            f" Please provide a custom_embedder script for your use-case.") from e
 
     logger.info(f"Using huggingface transformer embedder: {embedder_name} "
-                f"- Tokenizer: {'Auto' if auto_tokenizer else 'T5Tokenizer'} "
+                f"- Model: {model.__class__.__name__} "
+                f"- Tokenizer: {tokenizer.__class__.__name__} "
                 f"- Half-Precision: {str(use_half_precision)}")
     return HuggingfaceTransformerEmbedder(name=embedder_name, model=model, tokenizer=tokenizer,
                                           use_half_precision=use_half_precision, device=device)
