@@ -1,6 +1,7 @@
 # Inspired by bio_embeddings embed module (https://github.com/sacdallago/bio_embeddings/tree/develop/bio_embeddings/embed)
 
 import torch
+import numpy as np
 import regex as re
 
 from typing import List, Generator, Any, Union
@@ -55,6 +56,9 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
         embeddings = embeddings[0].cpu().numpy()
         for seq_num in range(len(embeddings)):
-            # slice off last position (special token)
-            embedding = embeddings[seq_num][:-1]
+            # slice off special tokens
+            input_id = tokenized_sequences[seq_num].cpu().numpy()
+            special_tokens_mask = self._tokenizer.get_special_tokens_mask(input_id, already_has_special_tokens=True)
+            embedding = np.delete(embeddings[seq_num],
+                                  [index for index, mask in enumerate(special_tokens_mask) if mask != 0], axis=0)
             yield embedding
