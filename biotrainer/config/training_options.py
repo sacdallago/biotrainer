@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import List, Type, Any, Union
+from typing import List, Any, Union
 
 from .config_option import ConfigOption, FileOption, classproperty
 

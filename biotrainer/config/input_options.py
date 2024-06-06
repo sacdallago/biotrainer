@@ -1,6 +1,5 @@
 from abc import ABC
-from pathlib import Path
-from typing import List, Type, Any, Union
+from typing import List, Any, Union
 
 from .config_option import FileOption, classproperty
 from ..protocols import Protocol
