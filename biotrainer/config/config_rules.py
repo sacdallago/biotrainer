@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import List, Type, Union, Tuple, Any
+from typing import List, Union, Tuple, Any
 
-from .config_option import ConfigOption, FileOption
-from .cross_validation_options import Method
+from .config_option import ConfigOption
 from ..protocols import Protocol
 
 
@@ -21,6 +20,9 @@ class ConfigRule(ABC):
 
 
 class MutualExclusive(ConfigRule):
+    """
+    ConfigRule to declare that two or more config options are mutually exclusive.
+    """
 
     def __init__(self, exclusive: List, allowed_values: List[str] = None, error_message: str = ""):
         if allowed_values is None:
@@ -48,6 +50,9 @@ class MutualExclusive(ConfigRule):
 
 
 class ProtocolRequires(ConfigRule):
+    """
+    ConfigRule to declare that a protocol requires certain options (for example file input)
+    """
 
     def __init__(self, protocol: Union[Protocol, List[Protocol]], requires: List):
         if type(protocol) == Protocol:
@@ -72,6 +77,9 @@ class ProtocolRequires(ConfigRule):
 
 
 class OptionValueRequires(ConfigRule):
+    """
+    ConfigRule to declare that a certain value of an option requires one or more other options in order to be valid
+    """
 
     def __init__(self, option: Any, value: Any, requires: List):
         self._option = option
@@ -95,6 +103,9 @@ class OptionValueRequires(ConfigRule):
 
 
 class AllowHyperparameterOptimization(ConfigRule):
+    """
+    ConfigRule to state which config options allow hyperparameter optimization
+    """
 
     def __init__(self, option: Any, value: Any):
         self._option = option

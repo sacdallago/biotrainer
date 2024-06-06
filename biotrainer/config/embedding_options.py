@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import List, Any, Union
 
 from .config_option import FileOption, classproperty, ConfigOption
-
 from ..embedders import get_predefined_embedder_names
 
 

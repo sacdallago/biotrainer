@@ -1,22 +1,21 @@
 import os
-
-from ruamel import yaml
 from pathlib import Path
-from ruamel.yaml import YAMLError
 from typing import Union, List, Dict, Any, Tuple
 
-from .model_options import model_options
-from .general_options import general_options
-from .input_options import SequenceFile, LabelsFile, input_options
+from ruamel import yaml
+from ruamel.yaml import YAMLError
+
 from .config_option import ConfigurationException, ConfigOption, FileOption
-from .training_options import AutoResume, PretrainedModel, training_options
-from .embedding_options import EmbedderName, EmbeddingsFile, embedding_options
 from .config_rules import (MutualExclusive, ProtocolRequires, OptionValueRequires,
                            AllowHyperparameterOptimization)
 from .cross_validation_options import (cross_validation_options, CROSS_VALIDATION_CONFIG_KEY, Method, ChooseBy,
                                        CrossValidationOption, K, Nested, NestedK, SearchMethod, NMaxEvaluationsRandom,
                                        P)
-
+from .embedding_options import EmbedderName, EmbeddingsFile, embedding_options
+from .general_options import general_options
+from .input_options import SequenceFile, LabelsFile, input_options
+from .model_options import model_options
+from .training_options import AutoResume, PretrainedModel, training_options
 from ..protocols import Protocol
 
 protocol_rules = [
@@ -54,6 +53,9 @@ cross_validation_dict: Dict[str, ConfigOption] = {option.name: option for option
 
 
 class Configurator:
+    """
+    Class to read, validate and transform the input yaml configuration.
+    """
 
     def __init__(self, config_dict: Dict, config_file_path: Path = None):
         if not config_file_path:
@@ -72,7 +74,15 @@ class Configurator:
                    config_file_path=Path(os.path.dirname(os.path.abspath(config_path))))
 
     @staticmethod
-    def get_option_dicts_by_protocol(protocol: Protocol, include_cross_validation_options: bool = False):
+    def get_option_dicts_by_protocol(protocol: Protocol,
+                                     include_cross_validation_options: bool = False) -> List[Dict[str, Any]]:
+        """
+        Returns all possible configuration options as dicts for the given protocol.
+
+        :param protocol: Protocol to get all options for
+        :param include_cross_validation_options: If cross validation options should be included (same for all protocols)
+        :return: List of all config options as dicts
+        """
         result = []
         all_config_options_dict = all_options_dict | cross_validation_dict \
             if include_cross_validation_options else all_options_dict
@@ -237,6 +247,13 @@ class Configurator:
                     f"{cv_object.value} not valid for cross validation option {cv_object.name}!")
 
     def get_verified_config(self, ignore_file_checks: bool = False) -> Dict[str, Any]:
+        """
+        Reads the yaml config, performs value transformations (such as downloading files) and verifies the config's
+        correctness.
+
+        :param ignore_file_checks: If True, files are not checked for correctness.
+        :return: Dictionary with config option names as keys and their respective (transformed) values
+        """
         config_map, cv_map = self._get_config_maps(protocol=self.protocol, config_dict=self._config_dict,
                                                    config_file_path=self._config_file_path)
         self._verify_config(protocol=self.protocol, config_map=config_map, ignore_file_checks=ignore_file_checks)

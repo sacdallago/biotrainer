@@ -1,12 +1,11 @@
 from abc import ABC
-from typing import List, Type, Any, Union
+from typing import List, Any, Union
 
 from .config_option import ConfigOption, classproperty
-from ..protocols import Protocol
-
-from ..models import get_available_models_dict
 from ..losses import get_available_losses_dict
+from ..models import get_available_models_dict
 from ..optimizers import get_available_optimizers_dict
+from ..protocols import Protocol
 
 
 class ModelOption(ConfigOption, ABC):

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import os
 import logging
+import os
 import shutil
-
+from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import List, Union, Any, Dict
 from urllib import request
 from urllib.parse import urlparse
-from abc import ABC, abstractmethod
-from typing import List, Union, Any
 
 from ..protocols import Protocol
 
@@ -60,6 +59,11 @@ class ConfigOption(ABC):
         return False
 
     def is_list_option(self) -> bool:
+        """
+        For hyperparameter optimization, some values can be provided as a list format.
+
+        :return: True if option is provided as a list type for hyperparameter optimization, else False
+        """
         return ("range" in str(self.value) or type(self.value) is list or
                 (type(self.value) is str and "[" in self.value and "]" in self.value))
 
@@ -96,7 +100,7 @@ class ConfigOption(ABC):
     def transform_value_if_necessary(self, config_file_path: Path = None):
         pass
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return {"name": str(self.name),
                 "category": str(self.category),
                 "required": str(self.required),

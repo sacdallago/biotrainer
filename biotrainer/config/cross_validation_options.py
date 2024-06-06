@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Type, Union, Any, Final
+from typing import List, Union, Any, Final
 
 from .config_option import ConfigOption, classproperty
 
