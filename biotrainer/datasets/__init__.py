@@ -1,7 +1,7 @@
 from typing import List
 
 from .collate_functions import pad_sequence_embeddings, pad_residue_embeddings, pad_residues_embeddings
-from .EmbeddingsDataset import ResidueEmbeddingsClassificationDataset, SequenceEmbeddingsClassificationDataset, \
+from .embeddings_dataset import ResidueEmbeddingsClassificationDataset, SequenceEmbeddingsClassificationDataset, \
     SequenceEmbeddingsRegressionDataset
 
 from ..protocols import Protocol

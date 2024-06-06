@@ -3,7 +3,7 @@ import torch
 from typing import Dict, Union, Optional
 from torchmetrics import SpearmanCorrCoef, MeanSquaredError
 
-from .Solver import Solver
+from .solver import Solver
 
 
 class SequenceRegressionSolver(Solver):

@@ -5,8 +5,8 @@ from torch.utils.data import DataLoader
 from contextlib import nullcontext as _nullcontext
 from typing import Dict, Union, Optional, Callable, List
 
-from .Solver import Solver
-from .ClassificationSolver import ClassificationSolver
+from .solver import Solver
+from .classification_solver import ClassificationSolver
 from .solver_utils import get_mean_and_confidence_range
 
 from ..utilities import MASK_AND_LABELS_PAD_VALUE

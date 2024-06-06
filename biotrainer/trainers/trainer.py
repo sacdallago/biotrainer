@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from typing import Optional, Dict, Any, Union, List
 
-from .TargetManager import TargetManager
+from .target_manager import TargetManager
 from .cv_splitter import CrossValidationSplitter
 from .hp_manager import HyperParameterManager
 from .target_manager_utils import revert_mappings
