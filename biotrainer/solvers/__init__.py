@@ -1,10 +1,10 @@
 from typing import Optional
-from .Solver import Solver
+from .solver import Solver
 from .solver_utils import get_mean_and_confidence_range
-from .ResidueClassificationSolver import ResidueClassificationSolver
-from .ResiduesClassificationSolver import ResiduesClassificationSolver
-from .SequenceClassificationSolver import SequenceClassificationSolver
-from .SequenceRegressionSolver import SequenceRegressionSolver
+from .residue_classification_solver import ResidueClassificationSolver
+from .residues_classification_solver import ResiduesClassificationSolver
+from .sequence_classification_solver import SequenceClassificationSolver
+from .sequence_regression_solver import SequenceRegressionSolver
 
 from ..protocols import Protocol
 

@@ -1,7 +1,7 @@
 import torch
 
-from .Solver import Solver
-from .ClassificationSolver import ClassificationSolver
+from .solver import Solver
+from .classification_solver import ClassificationSolver
 
 
 class SequenceClassificationSolver(ClassificationSolver, Solver):

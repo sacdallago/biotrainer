@@ -4,10 +4,10 @@ import logging
 
 from typing import Dict, Set, Any, Optional
 
-from .CNN import CNN
-from .LogReg import LogReg
-from .FNN import FNN, DeeperFNN
-from .LightAttention import LightAttention
+from .cnn import CNN
+from .log_reg import LogReg
+from .fnn import FNN, DeeperFNN
+from .light_attention import LightAttention
 from .model_params import count_parameters
 
 from ..protocols import Protocol

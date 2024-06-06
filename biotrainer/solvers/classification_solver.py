@@ -3,7 +3,7 @@ import torch
 from typing import Dict, Union, Optional
 from torchmetrics import Accuracy, Precision, Recall, F1Score, SpearmanCorrCoef, MatthewsCorrCoef
 
-from .Solver import Solver
+from .solver import Solver
 
 
 class ClassificationSolver(Solver):
