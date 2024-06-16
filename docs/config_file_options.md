@@ -8,7 +8,7 @@ and explains, which protocol needs which input files and which options are manda
 
 Choose a **protocol** that handles, how your provided data is interpreted:
 ```yaml
-protocol: residue_to_class | residues_to_class | sequence_to_class | sequence_to_value
+protocol: residue_to_class | residues_to_class | residues_to_value | sequence_to_class | sequence_to_value
 ```
 
 To use interactions for your sequences, you need to indicate how embeddings of interacting sequences should be
@@ -77,8 +77,8 @@ For the **residue_to_class** protocol, a separate labels file also has to be pro
 labels_file: path/to/labels.fasta
 ```
 
-The **residue_to_class** and **residues_to_class** protocols also support a mask file, if some residues should be masked
-during training:
+The **residue_to_class** and **residues_to_class/_to_value** protocols also support a mask file, 
+if some residues should be masked during training:
 ```yaml
 mask_file: path/to/mask.fasta
 ```
@@ -142,28 +142,9 @@ There are multiple options available to specify the model you want to train.
 
 At first, choose the model architecture to be used:
 ```yaml
-model_choice: FNN | CNN | LogReg | LightAttention  # Default: CNN
+model_choice: FNN | CNN | LogReg | LightAttention  # Default: FNN or LightAttention, depending on chosen protocol
 ```
-<details><summary>The available models depend on your chosen protocol.</summary>
-<code>
-'residue_to_class': {
-    CNN,
-    FNN,
-    LogReg
-},
-'residues_to_class': {
-    LightAttention 
-}
-'sequence_to_class': {
-    FNN,
-    LogReg
-},
-'sequence_to_value': {
-    FNN,
-    LogReg
-}
-</code>
-</details>
+The available models depend on your chosen protocol, see [the models-module](../biotrainer/models/__init__.py).
 
 Specify an optimizer:
 ```yaml
