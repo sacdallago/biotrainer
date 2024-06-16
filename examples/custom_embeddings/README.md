@@ -15,7 +15,7 @@ All used files for the examples can be found in *example_files*.
 
 Make sure you have a poetry environment installed with the *jupyter* extra:
 ```bash
-poetry install --extras "jupyter"
+poetry add jupyter
 ```
 
 ## Examples
