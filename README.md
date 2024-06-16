@@ -24,8 +24,9 @@ C=number of classes (e.g. 13)
 
 - residue_to_class --> Predict a class C for each residue encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxLxC
 - residues_to_class --> Predict a class C for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxC
+- residues_to_value --> Predict a value V for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output Bx1
 - sequence_to_class --> Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output BxC
-- sequence_to_value --> Predict a value V for each sequence encoded in a fixed dimension D. Input BxD --> output BxV
+- sequence_to_value --> Predict a value V for each sequence encoded in a fixed dimension D. Input BxD --> output Bx1
 ```
 
 ### Input file standardization

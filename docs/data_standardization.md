@@ -172,6 +172,22 @@ sequences.fasta
 SEQWENCE
 ```
 
+### residues_to_value
+```text
+Predict a value V for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output Bx1
+```
+
+You have an input protein sequence and want to predict a property for the whole sequence 
+(e.g. the meltdown temperature of the protein), but you want to use *per-residue embeddings* for the task.
+
+**Required file: FASTA file containing sequences and labels**
+
+sequences.fasta
+```fasta
+>Seq1 TARGET=42.09 SET=train
+SEQWENCE
+```
+
 ### sequence_to_class
 ```text
 Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output Bx1
