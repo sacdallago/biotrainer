@@ -20,6 +20,8 @@ protocol_to_input = {
                                 'loss_choice': "cross_entropy_loss"},
     'residues_to_class': {'sequence_file': "test_input_files/s2c/sequences.fasta",
                           'loss_choice': "cross_entropy_loss"},
+    'residues_to_value': {'sequence_file': "test_input_files/s2v/sequences.fasta",
+                          'loss_choice': "mean_squared_error"},
     'sequence_to_class': {'sequence_file': "test_input_files/s2c/sequences.fasta",
                           'loss_choice': "cross_entropy_loss"},
     'sequence_to_class-interactionmultiply': {'sequence_file': "test_input_files/ppi/interactions.fasta",

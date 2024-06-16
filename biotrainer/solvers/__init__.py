@@ -1,16 +1,18 @@
 from typing import Optional
 from .solver import Solver
 from .solver_utils import get_mean_and_confidence_range
+from .residues_regression_solver import ResiduesRegressionSolver
+from .sequence_regression_solver import SequenceRegressionSolver
 from .residue_classification_solver import ResidueClassificationSolver
 from .residues_classification_solver import ResiduesClassificationSolver
 from .sequence_classification_solver import SequenceClassificationSolver
-from .sequence_regression_solver import SequenceRegressionSolver
 
 from ..protocols import Protocol
 
 __SOLVERS = {
     Protocol.residue_to_class: ResidueClassificationSolver,
     Protocol.residues_to_class: ResiduesClassificationSolver,
+    Protocol.residues_to_value: ResiduesRegressionSolver,
     Protocol.sequence_to_class: SequenceClassificationSolver,
     Protocol.sequence_to_value: SequenceRegressionSolver,
 }

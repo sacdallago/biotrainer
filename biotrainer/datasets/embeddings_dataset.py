@@ -25,6 +25,14 @@ class ResidueEmbeddingsClassificationDataset(__EmbeddingsDataset):
     pass
 
 
+class ResidueEmbeddingsRegressionDataset(__EmbeddingsDataset):
+    def __getitem__(self, index: int) -> Tuple[str, torch.FloatTensor, torch.LongTensor]:
+        seq_id = self.ids[index]
+        x = self.inputs[index].float()
+        y = self.targets[index].float()
+        return seq_id, x, y
+
+
 class SequenceEmbeddingsClassificationDataset(__EmbeddingsDataset):
     pass
 
