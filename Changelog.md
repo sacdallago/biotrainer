@@ -1,5 +1,25 @@
 # Biotrainer Changelog
 
+## 09.06.2024 - Version 0.9.0
+### Maintenance
+* Adding more extensive code documentation
+* Optimizing imports
+* Applying consistent file naming
+* Updating dependencies. Note that `jupyter` was removed as a direct optional dependency. 
+You can always add it via `poetry add jupyter`.
+* Adding simple differentiation between t5 and esm tokenizer and models in `embedders` module
+
+### Features
+* Adding new `residues_to_value` protocol.
+Similar to the residues_to_class protocol, 
+this protocol predicts a value for each sequence, using per-residue embeddings. It might, in some situations, outperform
+the sequence_to_value protocol.
+
+### Bug fixes
+* For `huggingface_transformer_embedder.py`, all special tokens are now always deleted from the final embedding
+(e.g. first/last for esm1b, last for t5)
+
+
 ## 04.06.2024 - Version 0.8.4
 ### Maintenance
 * Updating dependencies
