@@ -87,17 +87,15 @@ as described in the [configuration options](docs/config_file_options.md#embeddin
 
 1. Make sure you have [poetry](https://python-poetry.org/) installed: 
 ```bash
-curl -sSL https://install.python-poetry.org/ | python3 - --version 1.4.2
+curl -sSL https://install.python-poetry.org/ | python3 -
 ```
 
 2. Install dependencies and biotrainer via `poetry`:
 ```bash
 # In the base directory:
 poetry install
-# Optional: Add jupyter to use notebooks
-poetry install --extras "jupyter"
-# You can also install all extras at once
-poetry install --all-extras
+# Adding jupyter notebook (if needed):
+poetry add jupyter
 ```
 
 ## Running
