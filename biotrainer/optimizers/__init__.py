@@ -10,6 +10,9 @@ __OPTIMIZERS = {
     Protocol.residues_to_class: {
         'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
     },
+    Protocol.residues_to_value: {
+        'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
+    },
     Protocol.sequence_to_class: {
         'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True)
     },

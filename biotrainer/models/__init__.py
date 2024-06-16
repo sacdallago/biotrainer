@@ -24,6 +24,9 @@ __MODELS = {
     Protocol.residues_to_class: {
         'LightAttention': LightAttention,
     },
+    Protocol.residues_to_value: {
+        'LightAttention': LightAttention,
+    },
     Protocol.sequence_to_class: {
         'FNN': FNN,
         'DeeperFNN': DeeperFNN,

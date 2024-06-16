@@ -19,6 +19,7 @@ from ..utilities import read_FASTA
 _REQUIRES_REDUCED_EMBEDDINGS = {
     Protocol.residue_to_class: False,
     Protocol.residues_to_class: False,
+    Protocol.residues_to_value: False,
     Protocol.sequence_to_class: True,
     Protocol.sequence_to_value: True
 }
