@@ -14,7 +14,6 @@ import regex as re
 from typing import List, Generator, Optional, Iterable, Any, Union
 from numpy import ndarray
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -48,7 +47,7 @@ class EmbedderInterface(abc.ABC):
             yield self._embed_single(sequence)
 
     def embed_many(
-        self, sequences: Iterable[str], batch_size: Optional[int] = None
+            self, sequences: Iterable[str], batch_size: Optional[int] = None
     ) -> Generator[ndarray, None, None]:
         """
         Yields embedding for one sequence at a time.
@@ -99,7 +98,7 @@ class EmbedderWithFallback(EmbedderInterface, abc.ABC):
 
     @abc.abstractmethod
     def _embed_batch_implementation(
-        self, batch: List[str], model: Any
+            self, batch: List[str], model: Any
     ) -> Generator[ndarray, None, None]:
         ...
 
@@ -131,27 +130,28 @@ class EmbedderWithFallback(EmbedderInterface, abc.ABC):
             return
 
         try:
-            yield from self._embed_batch_implementation(batch, self._model)
+            yield from self._embed_batch_implementation(batch, self._model.to(self._device))
         except RuntimeError as e:
             if len(batch) == 1:
-                logger.error(
+                logger.warning(
                     f"RuntimeError for sequence with {len(batch[0])} residues: {e}. "
                     f"This most likely means that you don't have enough GPU RAM to embed a protein this long. "
                     f"Embedding on the CPU instead, which is very slow"
                 )
                 yield from self._embed_batch_implementation(batch, self._get_fallback_model())
             else:
-                logger.error(
+                logger.warning(
                     f"Error processing batch of {len(batch)} sequences: {e}. "
                     f"You might want to consider adjusting the `batch_size` parameter. "
                     f"Will try to embed each sequence in the set individually on the GPU."
                 )
                 for sequence in batch:
                     try:
-                        yield from self._embed_batch_implementation([sequence], self._model)
+                        yield from self._embed_batch_implementation([sequence], self._model.to(self._device))
                     except RuntimeError as e:
-                        logger.error(
+                        logger.warning(
                             f"RuntimeError for sequence with {len(sequence)} residues: {e}. "
-                            f"This most likely means that you don't have enough GPU RAM to embed a protein this long."
+                            f"This most likely means that you don't have enough GPU RAM to embed a protein this long. "
+                            f"Embedding on the CPU instead, which is very slow"
                         )
                         yield from self._embed_batch_implementation([sequence], self._get_fallback_model())
