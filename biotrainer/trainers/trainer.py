@@ -182,6 +182,9 @@ class Trainer:
             logger.info(f"Number of classes: {self._output_vars['n_classes']}")
             # Compute class weights to pass as bias to model if option is set
             class_weights = target_manager.compute_class_weights()
+            if class_weights is not None:
+                self._output_vars['computed_class_weights'] = {class_index: class_value.item() for
+                                                               class_index, class_value in enumerate(class_weights)}
 
         return class_weights
 
@@ -306,6 +309,7 @@ class Trainer:
         val_loader = self._create_dataloader(dataset=val_dataset, hyper_params=hyper_params)
 
         # MODEL, LOSS, OPTIMIZER
+
         model, loss_function, optimizer = self._create_model_loss_optimizer(
             class_weights=self._class_weights if hyper_params["use_class_weights"] else None,
             **hyper_params)
