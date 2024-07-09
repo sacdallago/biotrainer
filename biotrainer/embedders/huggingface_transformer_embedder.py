@@ -44,9 +44,8 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
     def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[ndarray, None, None]:
         ids = self._tokenizer.batch_encode_plus(batch, add_special_tokens=True, padding="longest")
 
-        tokenized_sequences = torch.tensor(ids["input_ids"]).to(self._device)
-        attention_mask = torch.tensor(ids["attention_mask"]).to(self._device)
-        model.to(self._device)
+        tokenized_sequences = torch.tensor(ids["input_ids"]).to(self._model.device)
+        attention_mask = torch.tensor(ids["attention_mask"]).to(self._model.device)
 
         with torch.no_grad():
             embeddings = model(
