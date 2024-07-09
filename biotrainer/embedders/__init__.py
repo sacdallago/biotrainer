@@ -85,6 +85,7 @@ def _get_embedder(embedder_name: str, use_half_precision: bool,
                 f"- Model: {model.__class__.__name__} "
                 f"- Tokenizer: {tokenizer.__class__.__name__} "
                 f"- Half-Precision: {str(use_half_precision)}")
+    model.to(device)
     return HuggingfaceTransformerEmbedder(name=embedder_name, model=model, tokenizer=tokenizer,
                                           use_half_precision=use_half_precision, device=device)
 
