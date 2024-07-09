@@ -13,7 +13,7 @@ def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
             return device
         else:
             return torch.device("cpu")
-    elif device is str:
+    elif isinstance(device, str):
         if "cuda" in device and torch.cuda.is_available():
             return torch.device(device)
         elif "mps" in device and torch.backends.mps.is_available():
