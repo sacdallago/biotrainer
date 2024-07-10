@@ -20,7 +20,7 @@ from ..optimizers import get_optimizer
 from ..trainers import revert_mappings
 from ..datasets import get_dataset, get_collate_function
 from ..solvers import get_solver, get_mean_and_confidence_range
-from ..utilities import get_device, seed_all, DatasetSample, MASK_AND_LABELS_PAD_VALUE
+from ..utilities import get_device, seed_all, DatasetSample, MASK_AND_LABELS_PAD_VALUE, __version__
 
 
 class Inferencer:
@@ -110,6 +110,10 @@ class Inferencer:
                     output_vars["log_dir"] = new_log_dir_path
 
         output_vars["allow_torch_pt_loading"] = allow_torch_pt_loading
+
+        if output_vars["biotrainer_version"] != __version__:
+            print("WARNING: The loaded model was trained on a different biotrainer version than currently running.\n"
+                  "This may lead to unexpected behaviour if another torch version was used for training.")
         return cls(**output_vars), output_vars
 
     def _create_solvers_and_loaders_by_split(self, **kwargs) -> Dict[str, Tuple[Any, Any]]:
