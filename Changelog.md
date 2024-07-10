@@ -1,5 +1,25 @@
 # Biotrainer Changelog
 
+
+## 10.07.2024 - Version 0.9.1
+### Maintenance
+* Fixing error in type checking for device
+* Updating dependencies
+* Updating inference examples
+* Adding hint for version mismatch in inferencer
+* Adding class weights to `out.yml` if they are calculated
+
+### Features
+* Improving fallback mechanism of embedder models. Now, cpu mode is exited once there is enough 
+RAM again for shorter sequences
+* Changing model storage format from `.pt` to `.safetensors`. 
+Safetensors is safer for model sharing. Legacy `.pt` format is still supported, and can be converted via 
+```python
+from biotrainer.inference import Inferencer
+inferencer, out_file = Inferencer.create_from_out_file(out_file_path="out.yml", allow_torch_pt_loading=True)
+inferencer.convert_all_checkpoints_to_safetensors()
+```
+
 ## 09.06.2024 - Version 0.9.0
 ### Maintenance
 * Adding more extensive code documentation
