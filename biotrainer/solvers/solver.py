@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 from torch.utils.data import DataLoader
 from torchmetrics import SpearmanCorrCoef
 from contextlib import nullcontext as _nullcontext
+from safetensors.torch import load_file, save_file
 from typing import Callable, Optional, Union, Dict, List, Any
 
 from .solver_utils import get_mean_and_confidence_range
@@ -29,7 +30,8 @@ class Solver(ABC):
                  # Used by classification subclasses
                  num_classes: Optional[int] = 0):
 
-        self.checkpoint_name = f"{name}_checkpoint.pt"
+        self.checkpoint_type = "safetensors"
+        self.checkpoint_name = f"{name}_checkpoint.{self.checkpoint_type}"
         self.network = network
         self.optimizer = optimizer
         self.loss_function = loss_function
@@ -61,7 +63,7 @@ class Solver(ABC):
 
         # Make an initial save of the model if trained from scratch
         if self.start_epoch == 0:
-            self._save_checkpoint(0)
+            self.save_checkpoint(0)
 
         for epoch in range(self.start_epoch, self.number_of_epochs):
 
@@ -246,15 +248,28 @@ class Solver(ABC):
                     f"Training new model from scratch!")
         return train_wrapper(self)
 
-    def load_checkpoint(self, checkpoint_path: str = None, resume_training: bool = False):
+    def load_checkpoint(self, checkpoint_path: Path = None, resume_training: bool = False,
+                        allow_torch_pt_loading: bool = True):
         if checkpoint_path:
-            state = torch.load(checkpoint_path, map_location=torch.device(self.device))
+            checkpoint_file = checkpoint_path
+            self.checkpoint_type = checkpoint_path.suffix
         elif self.log_dir:
-            state = torch.load(str(Path(self.log_dir) / self.checkpoint_name),
-                               map_location=torch.device(self.device))
+            checkpoint_file = Path(self.log_dir) / self.checkpoint_name
         else:
-            state = torch.load(str(Path(self._tempdir.name) / self.checkpoint_name),
-                               map_location=torch.device(self.device))
+            checkpoint_file = Path(self._tempdir.name) / self.checkpoint_name
+
+        if checkpoint_file.suffix == '.safetensors':
+            # Load safetensors checkpoint
+            state_dict = load_file(str(checkpoint_file))
+            state = {
+                'state_dict': state_dict,
+                'epoch': state_dict.pop('epoch').item()
+            }
+        else:
+            # Load PyTorch checkpoint
+            if not allow_torch_pt_loading:
+                raise Exception("Cannot load pt checkpoint because torch_pt_loading is not allowed!")
+            state = torch.load(str(checkpoint_file), map_location=torch.device(self.device))
 
         try:
             self.network.load_state_dict(state['state_dict'])
@@ -265,6 +280,7 @@ class Solver(ABC):
                                     f"been trained for maximum number_of_epochs ({self.number_of_epochs})!")
             else:
                 self.start_epoch = state['epoch']
+            self.network = self.network.to(self.device)
             logger.info(f"Loaded model from epoch: {state['epoch']}")
         except RuntimeError as e:
             raise Exception(f"Defined model architecture does not seem to match pretrained model!") from e
@@ -275,17 +291,35 @@ class Solver(ABC):
         else:
             return self._best_epoch
 
-    def _save_checkpoint(self, epoch: int):
+    def save_checkpoint(self, epoch: int):
+        # Prepare the state dictionary
         state = {
-            'epoch': epoch,
-            'state_dict': self.network.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
+            'epoch': torch.tensor(epoch),
+            **self.network.state_dict(),
         }
 
+        # Flatten optimizer state
+        optimizer_state = self.optimizer.state_dict()
+        for k, v in optimizer_state.items():
+            if isinstance(v, dict):
+                for inner_k, inner_v in v.items():
+                    if isinstance(inner_v, torch.Tensor):
+                        state[f'optimizer.{k}.{inner_k}'] = inner_v.contiguous()
+            elif isinstance(v, torch.Tensor):
+                state[f'optimizer.{k}'] = v.contiguous()
+
+        # Ensure all tensors are contiguous
+        state = {k: v.contiguous() if isinstance(v, torch.Tensor) else v for k, v in state.items()}
+
         if self.log_dir:
-            torch.save(state, str(Path(self.log_dir) / self.checkpoint_name))
+            save_path = Path(self.log_dir) / self.checkpoint_name
         else:
-            torch.save(state, str(Path(self._tempdir.name) / self.checkpoint_name))
+            save_path = Path(self._tempdir.name) / self.checkpoint_name
+
+        save_file(state, str(save_path))
+        # Log checkpoint path on start of training
+        if epoch == 0:
+            logger.info(f"Checkpoint(s) will be stored at {save_path}")
 
     def _early_stop(self, current_loss: float, epoch: int) -> bool:
         if current_loss < (self._min_loss - self.epsilon):
@@ -293,7 +327,7 @@ class Solver(ABC):
             self._stop_count = self.patience
             self._best_epoch = epoch
             # Save best model (overwrite if necessary)
-            self._save_checkpoint(epoch)
+            self.save_checkpoint(epoch)
             return False
         else:
             if self._stop_count == 0:
