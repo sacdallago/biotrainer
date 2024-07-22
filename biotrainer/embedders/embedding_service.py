@@ -1,4 +1,5 @@
 import os
+import gc
 import time
 import h5py
 import torch
@@ -7,12 +8,13 @@ import numpy as np
 
 from tqdm import tqdm
 from pathlib import Path
+from numpy import ndarray
 from typing import Dict, Any, List, Optional
 
 from .embedder_interfaces import EmbedderInterface
 
 from ..protocols import Protocol
-from ..utilities import read_FASTA
+from ..utilities import read_FASTA, SAVE_AFTER_N_EMBEDDINGS
 
 # Defines if reduced embeddings should be used.
 # Reduced means that the per-residue embeddings are reduced to a per-sequence embedding
@@ -76,21 +78,52 @@ class EmbeddingService:
         protein_sequences = {seq.id: str(seq.seq) for seq in sorted(read_FASTA(sequence_file),
                                                                     key=lambda seq: len(seq.seq),
                                                                     reverse=True)}
+        sequence_ids = list(protein_sequences.keys())
+        embeddings = {}
+        idx: int = 0
+        last_save_id: int = 0
+        for embedding in tqdm(self._embedder.embed_many(protein_sequences.values()),
+                              total=len(protein_sequences.values())):
+            embeddings[sequence_ids[idx]] = embedding
+            idx += 1
+            if len(embeddings) > SAVE_AFTER_N_EMBEDDINGS:
+                if use_reduced_embeddings:
+                    embeddings = self._reduce_embeddings(embeddings, self._embedder)
+                last_save_id = self._save_embeddings(save_id=last_save_id, embeddings=embeddings,
+                                                     embeddings_file_path=embeddings_file_path)
 
-        embeddings = list(
-            tqdm(self._embedder.embed_many(protein_sequences.values()), total=len(protein_sequences.values())))
+                # Manually clear to ensure that embeddings are deleted from RAM
+                del embeddings
+                embeddings = {}
 
-        if use_reduced_embeddings:
-            embeddings = [self._embedder.reduce_per_protein(embedding) for embedding in embeddings]
+        # Save remaining embeddings
+        if len(embeddings) > 0:
+            if use_reduced_embeddings:
+                embeddings = self._reduce_embeddings(embeddings, self._embedder)
+            _ = self._save_embeddings(save_id=last_save_id, embeddings=embeddings,
+                                      embeddings_file_path=embeddings_file_path)
 
-        with h5py.File(embeddings_file_path, "w") as embeddings_file:
-            idx = 0
-            for seq_id, embedding in zip(protein_sequences.keys(), embeddings):
+        # Delete embeddings and embedding model from memory now, because they will no longer be needed
+        del embeddings
+        del self._embedder
+        gc.collect()
+
+        return str(embeddings_file_path)
+
+    @staticmethod
+    def _reduce_embeddings(embeddings: Dict[str, ndarray], embedder) -> Dict[str, ndarray]:
+        return {seq_id: embedder.reduce_per_protein(embedding) for seq_id, embedding in
+                embeddings.items()}
+
+    @staticmethod
+    def _save_embeddings(save_id: int, embeddings: Dict[str, ndarray], embeddings_file_path: Path) -> int:
+        with h5py.File(embeddings_file_path, "a") as embeddings_file:
+            idx = save_id
+            for seq_id, embedding in embeddings.items():
                 embeddings_file.create_dataset(str(idx), data=embedding, compression="gzip", chunks=True)
                 embeddings_file[str(idx)].attrs["original_id"] = seq_id  # Follows biotrainer & bio_embeddings standard
                 idx += 1
-
-        return str(embeddings_file_path)
+            return idx
 
     def compute_embeddings_from_list(self, protein_sequences: List[str], protocol: Protocol) -> List:
         """
