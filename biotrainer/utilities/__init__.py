@@ -3,7 +3,7 @@ from .version import __version__
 from .cuda_device import get_device, is_device_cpu
 from .data_classes import Split, SplitResult, DatasetSample
 from .constants import SEQUENCE_PAD_VALUE, MASK_AND_LABELS_PAD_VALUE, INTERACTION_INDICATOR, \
-    METRICS_WITHOUT_REVERSED_SORTING
+    METRICS_WITHOUT_REVERSED_SORTING, SAVE_AFTER_N_EMBEDDINGS
 from .fasta import read_FASTA, get_attributes_from_seqrecords, \
     get_attributes_from_seqrecords_for_protein_interactions, get_split_lists
 
@@ -19,6 +19,7 @@ __all__ = [
     'MASK_AND_LABELS_PAD_VALUE',
     'INTERACTION_INDICATOR',
     'METRICS_WITHOUT_REVERSED_SORTING',
+    'SAVE_AFTER_N_EMBEDDINGS',
     'Split',
     'SplitResult',
     'DatasetSample',
