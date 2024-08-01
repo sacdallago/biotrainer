@@ -1,13 +1,16 @@
 # Inspired by bio_embeddings embed module (https://github.com/sacdallago/bio_embeddings/tree/develop/bio_embeddings/embed)
 
 import torch
+import logging
 import numpy as np
-import regex as re
 
-from typing import List, Generator, Any, Union
+from typing import List, Generator, Any, Union, Tuple
 from numpy import ndarray
 
 from .embedder_interfaces import EmbedderWithFallback
+from .preprocessing_strategies import preprocess_sequences_with_whitespaces, preprocess_sequences_without_whitespaces
+
+logger = logging.getLogger(__name__)
 
 
 class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
@@ -18,6 +21,37 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         self._tokenizer = tokenizer
         self._use_half_precision = use_half_precision
         self._device = device
+        self._preprocessing_strategy = self._find_preprocessing_strategy()
+
+    def _find_preprocessing_strategy(self):
+        dummy_sequence = ["ACDEFGHIKLMNPQRSTVWY"]  # All 20 standard amino acids
+        unknown_tokens = ["<unk>", "[UNK]", "UNK"]
+        strategies = [preprocess_sequences_without_whitespaces, preprocess_sequences_with_whitespaces]
+
+        for strategy in strategies:
+            preprocessed = strategy(dummy_sequence)
+            tokenized, _ = self._tokenize(preprocessed)
+            input_ids = tokenized[0].cpu().numpy()
+
+            # Get the actual tokens
+            tokens = self._tokenizer.convert_ids_to_tokens(input_ids)
+
+            # Unknown tokens should not have been added
+            if not any(unk in tokens for unk in unknown_tokens):
+                # Check if the number of non-special tokens matches the original sequence length as a sanity check
+                special_tokens_mask = self._tokenizer.get_special_tokens_mask(input_ids,
+                                                                              already_has_special_tokens=True)
+                non_special_tokens = [token for token, mask in zip(tokens, special_tokens_mask) if mask == 0]
+
+                if len(non_special_tokens) == len(dummy_sequence[0]):
+                    logger.info(f"Chosen sequence pre-processing strategy: {strategy.__name__}")
+                    return strategy
+                else:
+                    logger.debug(
+                        f"Token count mismatch. Expected {len(dummy_sequence[0])}, got {len(non_special_tokens)}")
+
+        logger.warning("Could not determine correct sequence pre-processing strategy, defaulting to no whitespace.")
+        return preprocess_sequences_without_whitespaces
 
     def _get_fallback_model(self):
         """ Returns the CPU model """
@@ -33,19 +67,29 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         [embedding] = self._embed_batch([sequence])
         return embedding
 
-    @staticmethod
-    def _preprocess_sequences(sequences: List[str]) -> List[str]:
-        # Remove rare amino acids
-        sequences_cleaned = [re.sub(r"[UZOB]", "X", sequence) for sequence in sequences]
-        # Transformers need spaces between the amino acids
-        sequences_with_spaces = [" ".join(list(sequence)) for sequence in sequences_cleaned]
-        return sequences_with_spaces
-
-    def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[ndarray, None, None]:
-        ids = self._tokenizer.batch_encode_plus(batch, add_special_tokens=True, padding="longest")
+    def _tokenize(self, batch: List[str]) -> Tuple[torch.tensor, torch.tensor]:
+        ids = self._tokenizer.batch_encode_plus(batch, add_special_tokens=True,
+                                                is_split_into_words=False,
+                                                padding="longest")
 
         tokenized_sequences = torch.tensor(ids["input_ids"]).to(self._model.device)
         attention_mask = torch.tensor(ids["attention_mask"]).to(self._model.device)
+        return tokenized_sequences, attention_mask
+
+    def _remove_special_tokens(self, embedding: ndarray, input_id: ndarray) -> ndarray:
+        """
+        Remove special tokens from the embedding.
+
+        :param embedding: The per-residue embedding for a single sequence
+        :param input_id: The input ids for the sequence
+        :return: The embedding with special token indices removed
+        """
+        special_tokens_mask = self._tokenizer.get_special_tokens_mask(input_id, already_has_special_tokens=True)
+        indices_to_remove = [index for index, mask in enumerate(special_tokens_mask) if mask != 0]
+        return np.delete(embedding, indices_to_remove, axis=0)
+
+    def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[ndarray, None, None]:
+        tokenized_sequences, attention_mask = self._tokenize(batch)
 
         with torch.no_grad():
             embeddings = model(
@@ -55,9 +99,6 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
         embeddings = embeddings[0].cpu().numpy()
         for seq_num in range(len(embeddings)):
-            # slice off special tokens
             input_id = tokenized_sequences[seq_num].cpu().numpy()
-            special_tokens_mask = self._tokenizer.get_special_tokens_mask(input_id, already_has_special_tokens=True)
-            embedding = np.delete(embeddings[seq_num],
-                                  [index for index, mask in enumerate(special_tokens_mask) if mask != 0], axis=0)
+            embedding = self._remove_special_tokens(embeddings[seq_num], input_id)
             yield embedding
