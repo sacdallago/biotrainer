@@ -9,10 +9,12 @@ Original Authors:
 import abc
 import torch
 import logging
-import regex as re
 
-from typing import List, Generator, Optional, Iterable, Any, Union
 from numpy import ndarray
+from typing import List, Generator, Optional, Iterable, Any, Union, Callable
+
+from .preprocessing_strategies import preprocess_sequences_without_whitespaces
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ logger = logging.getLogger(__name__)
 class EmbedderInterface(abc.ABC):
     name: str
     _device: Union[None, str, torch.device]
+    _preprocessing_strategy: Callable = lambda self, sequences: preprocess_sequences_without_whitespaces(sequences)
 
     @abc.abstractmethod
     def _embed_single(self, sequence: str) -> ndarray:
@@ -32,11 +35,8 @@ class EmbedderInterface(abc.ABC):
 
         raise NotImplementedError
 
-    @staticmethod
-    def _preprocess_sequences(sequences: Iterable[str]) -> List[str]:
-        # Remove rare amino acids
-        sequences_cleaned = [re.sub(r"[UZOB]", "X", sequence) for sequence in sequences]
-        return sequences_cleaned
+    def _preprocess_sequences(self, sequences: Iterable[str]) -> List[str]:
+        return self._preprocessing_strategy(sequences)
 
     def _embed_batch(self, batch: List[str]) -> Generator[ndarray, None, None]:
         """Computes the embeddings from all sequences in the batch

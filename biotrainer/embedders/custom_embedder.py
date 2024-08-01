@@ -35,10 +35,6 @@ class CustomEmbedder(EmbedderInterface):
         """
         raise NotImplementedError
 
-    @staticmethod
-    def _preprocess_sequences(sequences: Iterable[str]) -> List[str]:
-        raise NotImplementedError
-
     def _embed_batch(self, batch: List[str]) -> Generator[ndarray, None, None]:
         raise NotImplementedError
 
