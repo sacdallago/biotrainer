@@ -2,6 +2,7 @@ import unittest
 
 from biotrainer.inference import Inferencer
 from biotrainer.embedders import OneHotEncodingEmbedder
+from biotrainer.protocols import Protocol
 
 
 class InferencerTests(unittest.TestCase):
@@ -17,12 +18,18 @@ class InferencerTests(unittest.TestCase):
     _test_classes_rs2c = ["Glob", "GlobSP", "TM", "TMSP"]
     _test_classes_s2c = ["Glob", "GlobSP", "TM", "TMSP"]
     _test_targets_s2v = [1, -1.212, 0.0]
+    _test_targets_rs2v = [5, -1.212, 0.0]
 
     def setUp(self) -> None:
         self.inferencer_r2c, _ = Inferencer.create_from_out_file("test_input_files/test_models/r2c/out.yml")
         self.inferencer_rs2c, _ = Inferencer.create_from_out_file("test_input_files/test_models/rs2c/out.yml")
         self.inferencer_s2c, _ = Inferencer.create_from_out_file("test_input_files/test_models/s2c/out.yml")
         self.inferencer_s2v, _ = Inferencer.create_from_out_file("test_input_files/test_models/s2v/out.yml")
+        self.inferencer_rs2v, _ = Inferencer.create_from_out_file("test_input_files/test_models/rs2v/out.yml")
+
+        self.inferencer_list = [self.inferencer_r2c, self.inferencer_rs2c, self.inferencer_s2c, self.inferencer_s2v,
+                                self.inferencer_rs2v]
+
         self.per_residue_embeddings, self.per_sequence_embeddings = self._embed()
 
     def _embed(self):
@@ -49,6 +56,7 @@ class InferencerTests(unittest.TestCase):
         rs2c_dict = self.inferencer_rs2c.from_embeddings(self.per_residue_embeddings)
         s2c_dict = self.inferencer_s2c.from_embeddings(self.per_sequence_embeddings)
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings)
+        rs2v_dict = self.inferencer_rs2v.from_embeddings(self.per_residue_embeddings)
 
         self.assertTrue("metrics" in r2c_dict.keys() and "metrics" in s2c_dict.keys() and "metrics" in s2v_dict.keys(),
                         "Missing metrics key!")
@@ -66,6 +74,8 @@ class InferencerTests(unittest.TestCase):
                         "Inferencer predicted a non-existing class (s2c)!")
         self.assertTrue(all([type(value) is float for value in s2v_dict["mapped_predictions"].values()]),
                         "Type of all sequence to value predictions is not float!")
+        self.assertTrue(all([type(value) is float for value in rs2v_dict["mapped_predictions"].values()]),
+                        "Type of all residues to value predictions is not float!")
 
     def test_from_embeddings_with_targets(self):
         error_tolerance = 0.01
@@ -73,15 +83,18 @@ class InferencerTests(unittest.TestCase):
         rs2c_dict = self.inferencer_rs2c.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2c)
         s2c_dict = self.inferencer_s2c.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2c)
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2v)
+        rs2v_dict = self.inferencer_rs2v.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2v)
 
         self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 2.0631120204925537, delta=error_tolerance,
                                msg="Loss not as expected for r2c!")
-        self.assertAlmostEqual(rs2c_dict["metrics"]["loss"], 1.564794898033142, delta=error_tolerance,
+        self.assertAlmostEqual(rs2c_dict["metrics"]["loss"], 1.5979398488998413, delta=error_tolerance,
                                msg="Loss not as expected for rs2c!")
         self.assertAlmostEqual(s2c_dict["metrics"]["loss"], 1.3706077337265015, delta=error_tolerance,
                                msg="Loss not as expected for s2c!")
         self.assertAlmostEqual(s2v_dict["metrics"]["loss"], 1.2870734930038452, delta=error_tolerance,
                                msg="Loss not as expected for s2v!")
+        self.assertAlmostEqual(rs2v_dict["metrics"]["loss"], 44.712528228759766, delta=error_tolerance,
+                               msg="Loss not as expected for rs2v!")
 
     def test_from_embeddings_with_bootstrapping(self):
         """
@@ -132,6 +145,17 @@ class InferencerTests(unittest.TestCase):
             self.assertAlmostEqual(s2v_dict["metrics"][metric], s2v_dict_bootstrapping[metric]["mean"],
                                    delta=s2v_dict_bootstrapping[metric]["error"] * error_tolerance_factor)
 
+        # residues_to_value
+        rs2v_dict_bootstrapping = self.inferencer_rs2v.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
+                                                                                          self._test_targets_rs2v,
+                                                                                          iterations=10,
+                                                                                          sample_size=2,
+                                                                                          seed=42)
+        rs2v_dict = self.inferencer_rs2v.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2v)
+        for metric in rs2v_dict_bootstrapping.keys():
+            self.assertAlmostEqual(rs2v_dict["metrics"][metric], rs2v_dict_bootstrapping[metric]["mean"],
+                                   delta=rs2v_dict_bootstrapping[metric]["error"] * error_tolerance_factor)
+
         # Check that a sample size and iteration of 1 work
         _ = self.inferencer_r2c.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
                                                                    self._test_targets_r2c,
@@ -167,6 +191,10 @@ class InferencerTests(unittest.TestCase):
                                                                                 n_forward_passes=10,
                                                                                 confidence_level=0.05,
                                                                                 seed=42)
+        rs2v_dict = self.inferencer_rs2v.from_embeddings_with_monte_carlo_dropout(self.per_residue_embeddings,
+                                                                                  n_forward_passes=10,
+                                                                                  confidence_level=0.05,
+                                                                                  seed=42)
         self.assertTrue(all([len(r2c_dict[seq]) == len(self._test_sequences[idx])
                              for idx, seq in enumerate(r2c_dict.keys())]), msg="Missing predictions for r2c!")
         self.assertTrue("mcd_mean" in list(rs2c_dict.values())[0].keys(), "Missing mcd_mean value for rs2c!")
@@ -176,3 +204,6 @@ class InferencerTests(unittest.TestCase):
                         "Missing mcd_upper_bound value for s2c!")
         self.assertTrue(all([type(s2v_dict[key]["prediction"]) is float for key in s2v_dict.keys()]),
                         msg="Regression prediction is not float!")
+        self.assertTrue(all([type(rs2v_dict[key]["prediction"]) is float for key in rs2v_dict.keys()]),
+                        msg="Regression prediction is not float!")
+
