@@ -3,7 +3,9 @@ from __future__ import annotations
 import os
 
 import torch
+import onnx
 import tempfile
+import onnxruntime
 import numpy as np
 
 from ruamel import yaml
@@ -121,7 +123,7 @@ class Inferencer:
         splits = kwargs["split_results"].keys()
         log_dir = kwargs["log_dir"]
         split_checkpoints = {file.split("_checkpoint.")[0]: file for file in os.listdir(log_dir) if
-                             Path(log_dir / file).is_file()}
+                             (Path(log_dir) / Path(file)).is_file()}
         for split in splits:
             # Ignore average or best result
             if "average" in split or "best" in split:
@@ -138,7 +140,7 @@ class Inferencer:
             optimizer_choice = split_config.pop("optimizer_choice")
             learning_rate = split_config.pop("learning_rate")
             log_dir = split_config.pop("log_dir")
-            checkpoint_path = Path(log_dir / split_checkpoints[split])
+            checkpoint_path = Path(log_dir) / Path(split_checkpoints[split])
 
             model = get_model(protocol=self.protocol, model_choice=model_choice,
                               n_classes=n_classes, n_features=n_features,
@@ -232,6 +234,22 @@ class Inferencer:
             if "pt" in solver.checkpoint_type:
                 solver.save_checkpoint(solver.start_epoch)
 
+    def convert_to_onnx(self, embedding_dimension: int, output_dir: Optional[str] = None) -> List[str]:
+        dummy_input = self.protocol.get_dummy_input(embedding_dimension).to(self.device)
+        result_file_paths = []
+        for split_name, (solver, _) in self.solvers_and_loaders_by_split.items():
+            # Use eval mode during export to avoid batch size problems
+            solver.network.eval()
+
+            output_dir = output_dir if output_dir is not None else solver.log_dir
+            export_options = torch.onnx.ExportOptions(dynamic_shapes=True)
+            onnx_program = torch.onnx.dynamo_export(solver.network, dummy_input,
+                                                    export_options=export_options)
+            onnx_file_name = f"{output_dir}/{split_name}.onnx"
+            onnx_program.save(onnx_file_name)
+            result_file_paths.append(onnx_file_name)
+        return result_file_paths
+
     def from_embeddings(self, embeddings: Union[Iterable, Dict], targets: Optional[List] = None,
                         split_name: str = "hold_out",
                         include_probabilities: bool = False) -> Dict[str, Union[Dict, str, int, float]]:
@@ -259,6 +277,8 @@ class Inferencer:
         # For class predictions, revert from int (model output) to str (class name)
         inference_dict["mapped_predictions"] = revert_mappings(protocol=self.protocol, test_predictions=predictions,
                                                                class_int2str=self.class_int2str)
+        inference_dict["mapped_probabilities"] = {k: v.cpu().tolist() if v is torch.tensor else v for k, v in
+                                                  inference_dict["mapped_probabilities"].items()}
 
         if not include_probabilities:
             return {k: v for k, v in inference_dict.items() if k != "mapped_probabilities"}
@@ -392,3 +412,27 @@ class Inferencer:
                                                                      class_int2str=self.class_int2str).values())[0]
 
         return predictions
+
+    @staticmethod
+    def from_onnx_with_embeddings(model_path: str, embeddings: Union[Iterable, Dict],
+                                  protocol: Optional[Protocol] = None):
+        if isinstance(embeddings, Dict):
+            embeddings_dict = embeddings
+        else:
+            embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
+
+        onnx_model = onnx.load(model_path)
+        onnx.checker.check_model(onnx_model)
+
+        ep_list = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+        ort_session = onnxruntime.InferenceSession(model_path, providers=ep_list)
+
+        result_dict = {}
+        for seq_id, embedding in embeddings_dict.items():
+            input_feed = {ort_session.get_inputs()[0].name: np.expand_dims(embedding, axis=0)}
+            ort_outs = ort_session.run(None, input_feed=input_feed)
+            if protocol is not None and protocol in Protocol.classification_protocols():
+                result_dict[seq_id] = torch.softmax(torch.tensor(ort_outs[0][0]), dim=0).tolist()
+            else:
+                result_dict[seq_id] = ort_outs[0][0].tolist()[0]
+        return result_dict
