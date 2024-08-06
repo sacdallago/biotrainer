@@ -1,4 +1,8 @@
+import tempfile
 import unittest
+import numpy as np
+
+from typing import Dict, Union, List
 
 from biotrainer.inference import Inferencer
 from biotrainer.embedders import OneHotEncodingEmbedder
@@ -207,3 +211,69 @@ class InferencerTests(unittest.TestCase):
         self.assertTrue(all([type(rs2v_dict[key]["prediction"]) is float for key in rs2v_dict.keys()]),
                         msg="Regression prediction is not float!")
 
+    @staticmethod
+    def _compare_predictions(onnx_results: Dict[str, Union[float, List, List[List]]],
+                             inferencer_results: Dict[str, Union[float, List, List[List]]]) -> List[str]:
+        """
+        Compare ONNX and Inferencer predictions, handling both per-sequence and per-residue cases for classification
+        and regression.
+
+        :param onnx_results: Dictionary of ONNX predictions
+        :param inferencer_results: Dictionary of Inferencer predictions
+        :return: List of error messages, empty if no errors
+        """
+        # TODO The error tolerance is very large at the moment because of padding-related differences in the last
+        # TODO positions of per-residue embeddings predictions
+        error_tolerance = 0.2
+
+        error_messages = []
+        for key in onnx_results.keys():
+            onnx_pred = np.array(onnx_results[key])
+            inf_pred = np.array(inferencer_results[key])
+
+            if onnx_pred.shape != inf_pred.shape:
+                error_messages.append(
+                    f"Shape mismatch for key {key}: ONNX {onnx_pred.shape} vs Inferencer {inf_pred.shape}")
+                continue
+
+            diff = np.abs(onnx_pred - inf_pred)
+            max_diff = np.max(diff)
+
+            if max_diff > error_tolerance:
+                error_location = np.unravel_index(np.argmax(diff), diff.shape)
+                error_messages.append(
+                    f"Prediction mismatch for key {key} at index {error_location}: "
+                    f"ONNX {onnx_pred[error_location]:.6f} vs Inferencer {inf_pred[error_location]:.6f}, "
+                    f"difference {max_diff:.6f}"
+                )
+
+        return error_messages
+
+    def test_onnx_conversion(self):
+        embedding_dimension_one_hot = 21
+
+        for inferencer in self.inferencer_list:
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                # Convert
+                converted_file_paths = inferencer.convert_to_onnx(embedding_dimension_one_hot, tmp_dir_name)
+                self.assertTrue(len(converted_file_paths) == 1)
+
+                # Load converted model and make predictions
+                model_path = converted_file_paths[0]
+                embeddings = self.per_sequence_embeddings \
+                    if inferencer.protocol in Protocol.using_per_sequence_embeddings() else self.per_residue_embeddings
+
+                onnx_result_dict = Inferencer.from_onnx_with_embeddings(model_path=model_path,
+                                                                        embeddings=embeddings,
+                                                                        protocol=inferencer.protocol)
+
+                # Compare to inferencer predictions
+                inferencer_result_dict = inferencer.from_embeddings(embeddings=embeddings,
+                                                                    include_probabilities=True)
+                inferencer_result_dict_prob = inferencer_result_dict["mapped_probabilities"]
+
+                prediction_errors = self._compare_predictions(onnx_results=onnx_result_dict,
+                                                              inferencer_results=inferencer_result_dict_prob)
+                if len(prediction_errors) > 0:
+                    print(prediction_errors)
+                self.assertTrue(len(prediction_errors) == 0)
