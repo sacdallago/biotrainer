@@ -25,7 +25,7 @@ class LightAttention(nn.Module):
             nn.Linear(2 * n_features, 32),
             nn.Dropout(dropout_rate),
             nn.ReLU(),
-            nn.BatchNorm1d(32)
+            nn.LayerNorm(32)
         )
 
         self.output = nn.Linear(32, n_classes)
