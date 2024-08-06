@@ -16,16 +16,6 @@ from .embedder_interfaces import EmbedderInterface
 from ..protocols import Protocol
 from ..utilities import read_FASTA, SAVE_AFTER_N_EMBEDDINGS
 
-# Defines if reduced embeddings should be used.
-# Reduced means that the per-residue embeddings are reduced to a per-sequence embedding
-_REQUIRES_REDUCED_EMBEDDINGS = {
-    Protocol.residue_to_class: False,
-    Protocol.residues_to_class: False,
-    Protocol.residues_to_value: False,
-    Protocol.sequence_to_class: True,
-    Protocol.sequence_to_value: True
-}
-
 logger = logging.getLogger(__name__)
 
 
@@ -49,7 +39,7 @@ class EmbeddingService:
         :param force_recomputing: If True, the embedding file is re-recomputed, even if it already exists
         :return: Path to the generated output embeddings file
         """
-        use_reduced_embeddings = _REQUIRES_REDUCED_EMBEDDINGS[protocol]
+        use_reduced_embeddings = protocol in Protocol.using_per_sequence_embeddings()
         embedder_name = self._embedder.name.split("/")[-1]
 
         if force_output_dir:
@@ -133,7 +123,7 @@ class EmbeddingService:
         :param protocol: Protocol for the embeddings. Determines if the embeddings should be reduced to per-protein
         :return: List of computed embeddings
         """
-        use_reduced_embeddings = _REQUIRES_REDUCED_EMBEDDINGS[protocol]
+        use_reduced_embeddings = protocol in Protocol.using_per_sequence_embeddings()
 
         embeddings = list(
             tqdm(self._embedder.embed_many(protein_sequences), total=len(protein_sequences)))
