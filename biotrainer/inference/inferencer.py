@@ -226,7 +226,7 @@ class Inferencer:
         dataloader = loader(dataset)
         return solver, dataloader
 
-    def convert_all_checkpoints_to_safetensors(self):
+    def convert_all_checkpoints_to_safetensors(self) -> None:
         """
         Converts all checkpoint files for the splits from .pt to .safetensors, if not already stored as .safetensors
         """
@@ -235,6 +235,15 @@ class Inferencer:
                 solver.save_checkpoint(solver.start_epoch)
 
     def convert_to_onnx(self, embedding_dimension: int, output_dir: Optional[str] = None) -> List[str]:
+        """
+        Converts the model to ONNX format for the given embedding dimension.
+
+        :param embedding_dimension: The dimension of the input embeddings.
+        :param output_dir: The directory to save the ONNX files. If not provided, the ONNX files will be saved in the
+            solver's log directory. Defaults to None.
+
+        :return: A list of file paths where the ONNX files are saved.
+        """
         dummy_input = self.protocol.get_dummy_input(embedding_dimension).to(self.device)
         result_file_paths = []
         for split_name, (solver, _) in self.solvers_and_loaders_by_split.items():
