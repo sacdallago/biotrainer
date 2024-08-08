@@ -52,6 +52,9 @@ tqdm = "^4.66.4"
 transformers = "^4.41.2"
 torchmetrics = "^1.3.2"
 safetensors = "^0.4.3"
+onnx = "^1.16.2"
+onnxscript = "^0.1.0.dev20240806"
+onnxruntime = "^1.18.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "8.2.2"

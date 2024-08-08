@@ -27,14 +27,27 @@ def pad_residue_embeddings(
 
     # Each element in "batch" is a tuple [(ID, embedding, target)]
 
-    # Sort the batch in the descending order
-    sorted_batch = sorted(batch, key=lambda x: x[1].shape[1], reverse=True)
+    # Handle empty batch
+    if not batch:
+        return [], torch.tensor([]), torch.tensor([]), torch.LongTensor([])
+
+    # Sort the batch in descending order of sequence length
+    # Handle potential dimension issues
+    try:
+        sorted_batch = sorted(batch, key=lambda x: x[1].shape[1], reverse=True)
+    except IndexError:
+        # If x[1] is 1D, or if there's only one item, don't sort
+        sorted_batch = batch
 
     # Sequence ids:
     seq_ids = [x[0] for x in sorted_batch]
 
     # Get each residue-embedding and pad it
     sequences = [x[1] for x in sorted_batch]
+
+    # Ensure all sequences are at least 2D
+    sequences = [s if s.dim() > 1 else s.unsqueeze(0) for s in sequences]
+
     padded_sequences = pad_sequence(sequences, batch_first=batch_first, padding_value=SEQUENCE_PAD_VALUE)
 
     # Also need to store the length of each sequence
@@ -45,7 +58,6 @@ def pad_residue_embeddings(
     padded_labels = pad_sequence([x[2] for x in sorted_batch],
                                  batch_first=batch_first, padding_value=MASK_AND_LABELS_PAD_VALUE)
 
-    # Permute the embeddings to fit the LA architecture
     return seq_ids, padded_sequences, padded_labels, lengths
 
 
@@ -61,14 +73,27 @@ def pad_residues_embeddings(
 
     # Each element in "batch" is a tuple [(ID, embedding, target)]
 
-    # Sort the batch in the descending order
-    sorted_batch = sorted(batch, key=lambda x: x[1].shape[1], reverse=True)
+    # Handle empty batch
+    if not batch:
+        return [], torch.tensor([]), torch.tensor([]), torch.LongTensor([])
+
+    # Sort the batch in descending order of sequence length
+    # Handle potential dimension issues
+    try:
+        sorted_batch = sorted(batch, key=lambda x: x[1].shape[1], reverse=True)
+    except IndexError:
+        # If x[1] is 1D, or if there's only one item, don't sort
+        sorted_batch = batch
 
     # Sequence ids:
     seq_ids = [x[0] for x in sorted_batch]
 
     # Get each residue-embedding and pad it
     sequences = [x[1] for x in sorted_batch]
+
+    # Ensure all sequences are at least 2D
+    sequences = [s if s.dim() > 1 else s.unsqueeze(0) for s in sequences]
+
     padded_sequences = pad_sequence(sequences, batch_first=batch_first, padding_value=SEQUENCE_PAD_VALUE)
 
     # Also need to store the length of each sequence
