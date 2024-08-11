@@ -1,6 +1,7 @@
 import os
 import gc
 import time
+import psutil
 import h5py
 import torch
 import logging
@@ -70,22 +71,52 @@ class EmbeddingService:
                                                                     reverse=True)}
         sequence_ids = list(protein_sequences.keys())
         embeddings = {}
-        idx: int = 0
-        last_save_id: int = 0
-        for embedding in tqdm(self._embedder.embed_many(protein_sequences.values()),
-                              total=len(protein_sequences.values())):
+        idx = 0
+        last_save_id = 0
+        embeddings_on_ram = 0
+        
+        start_time = time.time()
+        
+        embedding_iter = self._embedder.embed_many(protein_sequences.values())
+        total_sequences = len(protein_sequences.values())
+        first_embedding = next(embedding_iter, None)
+        
+        if first_embedding is None:
+            return str(embeddings_file_path)  # No sequences to process.
+
+        embeddings[sequence_ids[idx]] = first_embedding
+        idx += 1
+        
+        max_embedding_fit = int(0.8 * (psutil.virtual_memory().available / (len(first_embedding)*4)))
+        logger.info(f"First {max_embedding_fit=}")
+        
+        for embedding in tqdm(embedding_iter, initial=1, total=total_sequences):
             embeddings[sequence_ids[idx]] = embedding
             idx += 1
-            if len(embeddings) > SAVE_AFTER_N_EMBEDDINGS:
+            embeddings_on_ram += 1
+            
+            if embeddings_on_ram % max_embedding_fit == 0 or idx == total_sequences:
                 if use_reduced_embeddings:
                     embeddings = self._reduce_embeddings(embeddings, self._embedder)
                 last_save_id = self._save_embeddings(save_id=last_save_id, embeddings=embeddings,
-                                                     embeddings_file_path=embeddings_file_path)
-
-                # Manually clear to ensure that embeddings are deleted from RAM
+                                                    embeddings_file_path=embeddings_file_path)
+                logger.info(f"Saving until index {idx}")
                 del embeddings
                 embeddings = {}
+                
+                if idx < total_sequences:
+                    next_embedding = next(embedding_iter, None)
+                    if next_embedding is None:
+                        break  # No more embeddings to process.
+                    embeddings[sequence_ids[idx]] = next_embedding
+                    max_embedding_fit = int(0.8 * (psutil.virtual_memory().available / (len(next_embedding)*4)))
+                    embeddings_on_ram = 0
+                    idx += 1
+                    logger.info(f"New {max_embedding_fit=}")
 
+        end_time = time.time()
+        logger.info(f"Total time to load and embeddings: {end_time - start_time:.2f} seconds")
+        
         # Save remaining embeddings
         if len(embeddings) > 0:
             if use_reduced_embeddings:
@@ -100,6 +131,7 @@ class EmbeddingService:
 
         return str(embeddings_file_path)
 
+    
     @staticmethod
     def _reduce_embeddings(embeddings: Dict[str, ndarray], embedder) -> Dict[str, ndarray]:
         return {seq_id: embedder.reduce_per_protein(embedding) for seq_id, embedding in
