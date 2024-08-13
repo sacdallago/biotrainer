@@ -1,4 +1,5 @@
 import torch.nn as nn
+import biotrainer.utilities as utils
 
 
 # Convolutional neural network (two convolutional layers)
@@ -11,12 +12,10 @@ class CNN(nn.Module):
     ):
         super(CNN, self).__init__()
 
-        self.classifier = nn.Sequential(
-            nn.Conv2d(n_features, bottleneck_dim, kernel_size=(7, 1), padding=(3, 0)),  # 7x32
-            nn.ReLU(),
-            nn.Dropout(dropout_rate),
-            nn.Conv2d(bottleneck_dim, n_classes, kernel_size=(7, 1), padding=(3, 0))
-        )
+        self.conv1 = nn.Conv2d(n_features, bottleneck_dim, kernel_size=(7, 1), padding=(3, 0))
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(dropout_rate)
+        self.conv2 = nn.Conv2d(bottleneck_dim, n_classes, kernel_size=(7, 1), padding=(3, 0))
 
     def forward(self, x):
         """
@@ -25,7 +24,25 @@ class CNN(nn.Module):
             F = number of features (1024 for embeddings)
             N = number of classes (9 for conservation)
         """
-        x = x.permute(0, 2, 1).unsqueeze(dim=-1)  # IN: X = (B x L x F); OUT: (B x F x L, 1)
-        Yhat = self.classifier(x)  # OUT: Yhat_consurf = (B x N x L x 1)
-        Yhat = Yhat.squeeze(dim=-1)  # IN: (B x N x L x 1); OUT: ( B x L x N )
-        return Yhat
+
+        # Calculate mask
+        mask = (x.sum(dim=-1) != utils.SEQUENCE_PAD_VALUE).unsqueeze(1).unsqueeze(3)  # Shape: (B, 1, L, 1)
+
+        x = x.permute(0, 2, 1).unsqueeze(3)  # Shape: (B, F, L, 1)
+
+        # First convolution
+        x = self.conv1(x)
+        x = self.relu(x)
+        x = x * mask  # Apply mask
+
+        # Dropout
+        x = self.dropout(x)
+
+        # Second convolution
+        x = self.conv2(x)
+        x = x * mask  # Apply mask
+
+        # Remove the last dimension and permute back
+        x = x.squeeze(3).permute(0, 1, 2)  # Shape: (B, L, N)
+
+        return x
