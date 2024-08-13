@@ -13,6 +13,3 @@ INTERACTION_INDICATOR: Final[str] = "&"  # seq_id1&seq_id2, e.g. SEQ1&SEQ2
 # Usually, a higher metric means a better model (accuracy: 0.9 > 0.8, precision: 0.5 > 0.1 ..)
 # For some metrics, however, the opposite is true (loss: 0.1 > 0.2, rmse: 20.05 > 40.05)
 METRICS_WITHOUT_REVERSED_SORTING: Final[List[str]] = ["loss", "mse", "rmse"]
-
-# Embeddings
-SAVE_AFTER_N_EMBEDDINGS: Final[int] = 100
