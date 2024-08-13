@@ -212,38 +212,38 @@ class InferencerTests(unittest.TestCase):
                         msg="Regression prediction is not float!")
 
     @staticmethod
-    def _compare_predictions(onnx_results: Dict[str, Union[float, List, List[List]]],
-                             inferencer_results: Dict[str, Union[float, List, List[List]]]) -> List[str]:
+    def _compare_predictions(preds: Dict[str, Union[float, List, List[List]]],
+                             other_preds: Dict[str, Union[float, List, List[List]]]) -> List[str]:
         """
-        Compare ONNX and Inferencer predictions, handling both per-sequence and per-residue cases for classification
+        Compare two predictions, handling both per-sequence and per-residue cases for classification
         and regression.
 
-        :param onnx_results: Dictionary of ONNX predictions
-        :param inferencer_results: Dictionary of Inferencer predictions
+        :param preds: Dictionary of predictions
+        :param other_preds: Dictionary of other predictions to compare
         :return: List of error messages, empty if no errors
         """
         # TODO The error tolerance is very large at the moment because of padding-related differences in the last
         # TODO positions of per-residue embeddings predictions
-        error_tolerance = 0.2
+        error_tolerance = 0.01
 
         error_messages = []
-        for key in onnx_results.keys():
-            onnx_pred = np.array(onnx_results[key])
-            inf_pred = np.array(inferencer_results[key])
+        for key in preds.keys():
+            pred = np.array(preds[key])
+            pred_other = np.array(other_preds[key])
 
-            if onnx_pred.shape != inf_pred.shape:
+            if pred.shape != pred_other.shape:
                 error_messages.append(
-                    f"Shape mismatch for key {key}: ONNX {onnx_pred.shape} vs Inferencer {inf_pred.shape}")
+                    f"Shape mismatch for key {key}: Predictions {pred.shape} vs other predictions {pred_other.shape}")
                 continue
 
-            diff = np.abs(onnx_pred - inf_pred)
+            diff = np.abs(pred - pred_other)
             max_diff = np.max(diff)
 
             if max_diff > error_tolerance:
                 error_location = np.unravel_index(np.argmax(diff), diff.shape)
                 error_messages.append(
                     f"Prediction mismatch for key {key} at index {error_location}: "
-                    f"ONNX {onnx_pred[error_location]:.6f} vs Inferencer {inf_pred[error_location]:.6f}, "
+                    f"Predictions {pred[error_location]:.6f} vs other predictions {pred_other[error_location]:.6f}, "
                     f"difference {max_diff:.6f}"
                 )
 
@@ -272,8 +272,27 @@ class InferencerTests(unittest.TestCase):
                                                                     include_probabilities=True)
                 inferencer_result_dict_prob = inferencer_result_dict["mapped_probabilities"]
 
-                prediction_errors = self._compare_predictions(onnx_results=onnx_result_dict,
-                                                              inferencer_results=inferencer_result_dict_prob)
+                prediction_errors = self._compare_predictions(preds=onnx_result_dict,
+                                                              other_preds=inferencer_result_dict_prob)
                 if len(prediction_errors) > 0:
                     print(prediction_errors)
                 self.assertTrue(len(prediction_errors) == 0)
+
+    def test_single_vs_batch_prediction(self):
+        for inferencer in self.inferencer_list:
+            embeddings = self.per_sequence_embeddings \
+                if inferencer.protocol in Protocol.using_per_sequence_embeddings() else self.per_residue_embeddings
+
+            pred_dict_batch = inferencer.from_embeddings(embeddings=embeddings, include_probabilities=True)
+
+            pred_dict_single = {}
+            for seq_id, emb in embeddings.items():
+                pred_dict_single[seq_id] = inferencer.from_embeddings({seq_id: emb},
+                                                                      include_probabilities=True)[
+                    "mapped_probabilities"][seq_id]
+
+            # Single predictions and batch predictions should not significantly differ
+            prediction_errors = self._compare_predictions(pred_dict_batch["mapped_probabilities"], pred_dict_single)
+            if len(prediction_errors) > 0:
+                print(prediction_errors)
+            self.assertTrue(len(prediction_errors) == 0)
