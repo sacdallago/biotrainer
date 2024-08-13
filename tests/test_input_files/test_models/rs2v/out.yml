@@ -7,7 +7,7 @@ cross_validation_config:
 device: cpu
 disable_pytorch_compile: true
 dropout_rate: 0.25
-elapsed_time_total: 4.180051486000593
+elapsed_time_total: 3.1990181139990455
 embedder_name: one_hot_encoding
 embeddings_file: 
   /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_value/output/residues_to_value/one_hot_encoding/embeddings_file_one_hot_encoding.h5
@@ -35,30 +35,30 @@ sequence_file:
 shuffle: true
 split_results:
   hold_out:
-    elapsed_time: 2.0880083949996333
-    end_time: 2024-08-06 16:10:35.592964
+    elapsed_time: 1.108388095999544
+    end_time: 2024-08-13 15:21:09.858389
     n_free_parameters: 9453
     n_training_ids: 2
     n_validation_ids: 2
     split_hyper_params: {}
-    start_time: 2024-08-06 16:10:33.504950
+    start_time: 2024-08-13 15:21:08.749997
     training_iteration_result_best_epoch:
       epoch: 138
       training:
-        loss: 837.5162353515625
-        mse: 837.5162353515625
-        rmse: 28.93987274169922
+        loss: 828.9908447265625
+        mse: 828.9908447265625
+        rmse: 28.79220199584961
         spearmans-corr-coeff: 0.9999959468841553
       validation:
-        loss: 1230.183349609375
-        mse: 1230.183349609375
-        rmse: 35.073970794677734
+        loss: 1221.713134765625
+        mse: 1221.713134765625
+        rmse: 34.9530143737793
         spearmans-corr-coeff: -0.9999959468841553
 test_iterations_results:
   metrics:
-    loss: 1146.6844482421875
-    mse: 1146.6844482421875
-    rmse: 33.862728118896484
+    loss: 1138.50439453125
+    mse: 1138.50439453125
+    rmse: 33.741729736328125
     spearmans-corr-coeff: 0.9999959468841553
   test_baselines:
     mean_only:

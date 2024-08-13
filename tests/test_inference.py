@@ -89,15 +89,15 @@ class InferencerTests(unittest.TestCase):
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2v)
         rs2v_dict = self.inferencer_rs2v.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2v)
 
-        self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 2.0631120204925537, delta=error_tolerance,
+        self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 2.0788166522979736, delta=error_tolerance,
                                msg="Loss not as expected for r2c!")
-        self.assertAlmostEqual(rs2c_dict["metrics"]["loss"], 1.5979398488998413, delta=error_tolerance,
+        self.assertAlmostEqual(rs2c_dict["metrics"]["loss"], 1.5685200691223145, delta=error_tolerance,
                                msg="Loss not as expected for rs2c!")
         self.assertAlmostEqual(s2c_dict["metrics"]["loss"], 1.3706077337265015, delta=error_tolerance,
                                msg="Loss not as expected for s2c!")
         self.assertAlmostEqual(s2v_dict["metrics"]["loss"], 1.2870734930038452, delta=error_tolerance,
                                msg="Loss not as expected for s2v!")
-        self.assertAlmostEqual(rs2v_dict["metrics"]["loss"], 44.712528228759766, delta=error_tolerance,
+        self.assertAlmostEqual(rs2v_dict["metrics"]["loss"], 46.71943283081055, delta=error_tolerance,
                                msg="Loss not as expected for rs2v!")
 
     def test_from_embeddings_with_bootstrapping(self):
