@@ -22,7 +22,7 @@ cross_validation_config:
 device: cuda
 disable_pytorch_compile: false
 dropout_rate: 0.25
-elapsed_time_total: 7.452941018000274
+elapsed_time_total: 9.451460125001176
 embedder_name: one_hot_encoding
 embeddings_file: 
   /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_class/output/residues_to_class/one_hot_encoding/embeddings_file_one_hot_encoding.h5
@@ -50,13 +50,13 @@ sequence_file:
 shuffle: true
 split_results:
   hold_out:
-    elapsed_time: 6.430972342997848
-    end_time: 2024-08-06 16:12:34.238677
+    elapsed_time: 8.443275948000519
+    end_time: 2024-08-13 15:23:25.190857
     n_free_parameters: 9552
     n_training_ids: 2
     n_validation_ids: 2
     split_hyper_params: {}
-    start_time: 2024-08-06 16:12:27.807697
+    start_time: 2024-08-13 15:23:16.747577
     training_iteration_result_best_epoch:
       epoch: 5
       training:
@@ -73,7 +73,7 @@ split_results:
         '- recall class 2': 0.0
         '- recall class 3': 0.0
         accuracy: 0.5
-        loss: 1.4382752180099487
+        loss: 1.4739301204681396
         macro-f1_score: 0.3333333432674408
         macro-precision: 0.3333333432674408
         macro-recall: 0.3333333432674408
@@ -96,7 +96,7 @@ split_results:
         '- recall class 2': 0.0
         '- recall class 3': 0.0
         accuracy: 0.5
-        loss: 1.1856491565704346
+        loss: 1.2354445457458496
         macro-f1_score: 0.3333333432674408
         macro-precision: 0.3333333432674408
         macro-recall: 0.3333333432674408
@@ -110,25 +110,25 @@ test_iterations_results:
     '- f1_score class 0': 0.0
     '- f1_score class 1': 0.0
     '- f1_score class 2': 0.0
-    '- f1_score class 3': 1.0
+    '- f1_score class 3': 0.6666666865348816
     '- precission class 0': 0.0
     '- precission class 1': 0.0
     '- precission class 2': 0.0
-    '- precission class 3': 1.0
+    '- precission class 3': 0.5
     '- recall class 0': 0.0
     '- recall class 1': 0.0
     '- recall class 2': 0.0
     '- recall class 3': 1.0
     accuracy: 0.5
-    loss: 1.2688488960266113
+    loss: 1.245380163192749
     macro-f1_score: 0.3333333432674408
-    macro-precision: 0.3333333432674408
-    macro-recall: 0.3333333432674408
-    matthews-corr-coeff: 0.5
+    macro-precision: 0.25
+    macro-recall: 0.5
+    matthews-corr-coeff: 0
     micro-f1_score: 0.5
     micro-precision: 0.5
     micro-recall: 0.5
-    spearmans-corr-coeff: 0.9999959468841553
+    spearmans-corr-coeff: 0.0
   test_baselines: {}
 use_class_weights: false
 use_half_precision: false
