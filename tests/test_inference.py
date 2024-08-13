@@ -24,6 +24,9 @@ class InferencerTests(unittest.TestCase):
     _test_targets_s2v = [1, -1.212, 0.0]
     _test_targets_rs2v = [5, -1.212, 0.0]
 
+    error_tolerance = 0.01
+    error_tolerance_factor = 1.96
+
     def setUp(self) -> None:
         self.inferencer_r2c, _ = Inferencer.create_from_out_file("test_input_files/test_models/r2c/out.yml")
         self.inferencer_rs2c, _ = Inferencer.create_from_out_file("test_input_files/test_models/rs2c/out.yml")
@@ -82,29 +85,27 @@ class InferencerTests(unittest.TestCase):
                         "Type of all residues to value predictions is not float!")
 
     def test_from_embeddings_with_targets(self):
-        error_tolerance = 0.01
         r2c_dict = self.inferencer_r2c.from_embeddings(self.per_residue_embeddings, self._test_targets_r2c)
         rs2c_dict = self.inferencer_rs2c.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2c)
         s2c_dict = self.inferencer_s2c.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2c)
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2v)
         rs2v_dict = self.inferencer_rs2v.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2v)
 
-        self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 2.0788166522979736, delta=error_tolerance,
+        self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 2.0788166522979736, delta=self.error_tolerance,
                                msg="Loss not as expected for r2c!")
-        self.assertAlmostEqual(rs2c_dict["metrics"]["loss"], 1.5685200691223145, delta=error_tolerance,
+        self.assertAlmostEqual(rs2c_dict["metrics"]["loss"], 1.5685200691223145, delta=self.error_tolerance,
                                msg="Loss not as expected for rs2c!")
-        self.assertAlmostEqual(s2c_dict["metrics"]["loss"], 1.3706077337265015, delta=error_tolerance,
+        self.assertAlmostEqual(s2c_dict["metrics"]["loss"], 1.3706077337265015, delta=self.error_tolerance,
                                msg="Loss not as expected for s2c!")
-        self.assertAlmostEqual(s2v_dict["metrics"]["loss"], 1.2870734930038452, delta=error_tolerance,
+        self.assertAlmostEqual(s2v_dict["metrics"]["loss"], 1.2870734930038452, delta=self.error_tolerance,
                                msg="Loss not as expected for s2v!")
-        self.assertAlmostEqual(rs2v_dict["metrics"]["loss"], 46.71943283081055, delta=error_tolerance,
+        self.assertAlmostEqual(rs2v_dict["metrics"]["loss"], 46.71943283081055, delta=self.error_tolerance,
                                msg="Loss not as expected for rs2v!")
 
     def test_from_embeddings_with_bootstrapping(self):
         """
         Checks that metrics calculated with and without bootstrapping are within about the same range
         """
-        error_tolerance_factor = 1.96
         # residue_to_class
         r2c_dict_bootstrapping = self.inferencer_r2c.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
                                                                                         self._test_targets_r2c,
@@ -114,7 +115,7 @@ class InferencerTests(unittest.TestCase):
         r2c_dict = self.inferencer_r2c.from_embeddings(self.per_residue_embeddings, self._test_targets_r2c)
         for metric in r2c_dict_bootstrapping.keys():
             self.assertAlmostEqual(r2c_dict["metrics"][metric], r2c_dict_bootstrapping[metric]["mean"],
-                                   delta=r2c_dict_bootstrapping[metric]["error"] * error_tolerance_factor)
+                                   delta=r2c_dict_bootstrapping[metric]["error"] * self.error_tolerance_factor)
 
         # residues_to_class
         rs2c_dict_bootstrapping = self.inferencer_rs2c.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
@@ -125,7 +126,7 @@ class InferencerTests(unittest.TestCase):
         rs2c_dict = self.inferencer_rs2c.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2c)
         for metric in rs2c_dict_bootstrapping.keys():
             self.assertAlmostEqual(rs2c_dict["metrics"][metric], rs2c_dict_bootstrapping[metric]["mean"],
-                                   delta=rs2c_dict_bootstrapping[metric]["error"] * error_tolerance_factor)
+                                   delta=rs2c_dict_bootstrapping[metric]["error"] * self.error_tolerance_factor)
 
         # sequence_to_class
         s2c_dict_bootstrapping = self.inferencer_s2c.from_embeddings_with_bootstrapping(self.per_sequence_embeddings,
@@ -136,7 +137,7 @@ class InferencerTests(unittest.TestCase):
         s2c_dict = self.inferencer_s2c.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2c)
         for metric in s2c_dict_bootstrapping.keys():
             self.assertAlmostEqual(s2c_dict["metrics"][metric], s2c_dict_bootstrapping[metric]["mean"],
-                                   delta=s2c_dict_bootstrapping[metric]["error"] * error_tolerance_factor)
+                                   delta=s2c_dict_bootstrapping[metric]["error"] * self.error_tolerance_factor)
 
         # sequence_to_value
         s2v_dict_bootstrapping = self.inferencer_s2v.from_embeddings_with_bootstrapping(self.per_sequence_embeddings,
@@ -147,7 +148,7 @@ class InferencerTests(unittest.TestCase):
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2v)
         for metric in s2v_dict_bootstrapping.keys():
             self.assertAlmostEqual(s2v_dict["metrics"][metric], s2v_dict_bootstrapping[metric]["mean"],
-                                   delta=s2v_dict_bootstrapping[metric]["error"] * error_tolerance_factor)
+                                   delta=s2v_dict_bootstrapping[metric]["error"] * self.error_tolerance_factor)
 
         # residues_to_value
         rs2v_dict_bootstrapping = self.inferencer_rs2v.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
@@ -158,7 +159,7 @@ class InferencerTests(unittest.TestCase):
         rs2v_dict = self.inferencer_rs2v.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2v)
         for metric in rs2v_dict_bootstrapping.keys():
             self.assertAlmostEqual(rs2v_dict["metrics"][metric], rs2v_dict_bootstrapping[metric]["mean"],
-                                   delta=rs2v_dict_bootstrapping[metric]["error"] * error_tolerance_factor)
+                                   delta=rs2v_dict_bootstrapping[metric]["error"] * self.error_tolerance_factor)
 
         # Check that a sample size and iteration of 1 work
         _ = self.inferencer_r2c.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
@@ -211,8 +212,7 @@ class InferencerTests(unittest.TestCase):
         self.assertTrue(all([type(rs2v_dict[key]["prediction"]) is float for key in rs2v_dict.keys()]),
                         msg="Regression prediction is not float!")
 
-    @staticmethod
-    def _compare_predictions(preds: Dict[str, Union[float, List, List[List]]],
+    def _compare_predictions(self, preds: Dict[str, Union[float, List, List[List]]],
                              other_preds: Dict[str, Union[float, List, List[List]]]) -> List[str]:
         """
         Compare two predictions, handling both per-sequence and per-residue cases for classification
@@ -222,10 +222,6 @@ class InferencerTests(unittest.TestCase):
         :param other_preds: Dictionary of other predictions to compare
         :return: List of error messages, empty if no errors
         """
-        # TODO The error tolerance is very large at the moment because of padding-related differences in the last
-        # TODO positions of per-residue embeddings predictions
-        error_tolerance = 0.01
-
         error_messages = []
         for key in preds.keys():
             pred = np.array(preds[key])
@@ -239,7 +235,7 @@ class InferencerTests(unittest.TestCase):
             diff = np.abs(pred - pred_other)
             max_diff = np.max(diff)
 
-            if max_diff > error_tolerance:
+            if max_diff > self.error_tolerance:
                 error_location = np.unravel_index(np.argmax(diff), diff.shape)
                 error_messages.append(
                     f"Prediction mismatch for key {key} at index {error_location}: "
