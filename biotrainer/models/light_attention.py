@@ -39,17 +39,20 @@ class LightAttention(nn.Module):
             classification: [batch_size,output_dim] tensor with logits
         """
 
-        # Calculate mask (== where all residues are 0)
+        # Calculate mask (== where all residues are utils.SEQUENCE_PAD_VALUE)
         mask = x.sum(dim=-1) != utils.SEQUENCE_PAD_VALUE
 
         x = x.permute(0, 2, 1)
         o = self.feature_convolution(x)  # [batch_size, embeddings_dim, sequence_length]
         o = self.dropout(o)  # [batch_size, embeddings_dim, sequence_length]
+        o = o * mask.unsqueeze(1)
+
         attention = self.attention_convolution(x)  # [batch_size, embeddings_dim, sequence_length]
 
-        # mask out the padding to which we do not want to pay any attention (we have the padding because the sequences have different lenghts).
-        # This padding is added by the dataloader when using the padded_permuted_collate function in utils/general.py
-        attention = attention.masked_fill(mask[:, None, :] == False, -1e9)
+        # mask out the padding to which we do not want to pay any attention
+        # (we have the padding because the sequences have different lenghts).
+        # This padding is added by the dataloader when using the pad_residues_embeddings collate function
+        attention = attention.masked_fill(mask[:, None, :] == False, -float('inf'))
 
         # code used for extracting embeddings for UMAP visualizations
         # extraction =  torch.sum(x * self.softmax(attention), dim=-1)
