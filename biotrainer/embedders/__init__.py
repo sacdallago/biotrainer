@@ -35,15 +35,23 @@ def get_embedding_service(embeddings_file_path: Union[str, None], embedder_name:
 
 def _determine_tokenizer_and_model(embedder_name: str) -> Tuple:
     """
-    Simple method to guess the model architecture from the embedder name for huggingface transformers
+    Method to find the model and tokenizer architecture from the embedder name for huggingface transformers.
+    AutoTokenizer does not work for all models, such that the next best option is to use the embedder name.
 
     @param embedder_name: Name of huggingface transformer
     @return: Tuple of tokenizer and model class
     """
-    if "t5" in embedder_name.lower():
+    try:
+        auto_tok = AutoTokenizer.from_pretrained(embedder_name)
+        embedder_class = auto_tok.__class__.__name__
+    except Exception:
+        embedder_class = embedder_name
+
+    if "t5" in embedder_class.lower():
         return T5Tokenizer, T5EncoderModel
-    elif "esm" in embedder_name.lower():
+    elif "esm" in embedder_class.lower():
         return EsmTokenizer, EsmModel
+
     # Use T5 as default
     return T5Tokenizer, T5EncoderModel
 
