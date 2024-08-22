@@ -1,0 +1,8 @@
+>Seq1 TARGET=Glob SET=train
+MdEvVpQpLrVyQdYaKvKa
+>Seq2 TARGET=GlobSP SET=val
+VpQpLrVyQdYaKvYa
+>Seq3 TARGET=TM SET=test
+MdEvVpLrVyQdYaKvMa
+>Seq4 TARGET=TMSP SET=test
+MdEvQpLrVyQdYaKvEv
