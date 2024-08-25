@@ -76,14 +76,13 @@ class EmbeddingService:
                                                                     key=lambda seq: len(seq.seq),
                                                                     reverse=True)}
 
-        embeddings_file_path = self.embedding_service(protein_sequences, embeddings_file_path, use_reduced_embeddings)
+        embeddings_file_path = self._do_embeddings_computation(protein_sequences, embeddings_file_path, use_reduced_embeddings)
         
-        del self._embedder
         gc.collect()
 
         return str(embeddings_file_path)
     
-    def embedding_service(self, protein_sequences: Dict[str, str], embeddings_file_path: Path,
+    def _do_embeddings_computation(self, protein_sequences: Dict[str, str], embeddings_file_path: Path,
                           use_reduced_embeddings: bool) -> str:
         """
         Performs the embedding service for the given protein sequences.
@@ -100,70 +99,48 @@ class EmbeddingService:
         embeddings = {}
         idx: int = 0
         last_save_id: int = 0
-        embeddings_on_ram: int = 0
         start_time = time.time()
         
         embedding_iter = self._embedder.embed_many(protein_sequences.values())
         total_sequences = len(protein_sequences.values())
         
-        # Get the first embedding
-        embeddings[sequence_ids[idx]] = next(embedding_iter, None)
+        # Load the first sequence and calculate the initial max_embedding_fit
+        embeddings[sequence_ids[0]] = next(embedding_iter, None)
+        max_embedding_fit = self._max_embedding_fit(embeddings[sequence_ids[0]])
         
-        if embeddings[sequence_ids[idx]] is None:
+        if embeddings[sequence_ids[0]] is None:
             logger.info(f"No embeddings found.")
             return str(embeddings_file_path)
         
         logger.info(f"Embedding dimension: {embeddings[sequence_ids[idx]].shape[-1]}")
-        logger.info("Checking for ultra-long reads...")
+        logger.info("If your dataset contains long reads, it may take more time to process the first few sequences.")
         
-        # For ultra-long reads
-        with tqdm(total=total_sequences, initial=idx, desc="Processing Sequences") as pbar:
-            while True:
-                max_embedding_fit = self._max_embedding_fit(embeddings[sequence_ids[idx]])
-                logger.info(f"New {max_embedding_fit=}")
-                embeddings_on_ram += 1 
-                
-                # if ultra-long, save it without loading any more
-                if max_embedding_fit <= 3:
-                    logger.info("Ultra-long read found, saving it...")
-                    last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, idx, last_save_id,
-                                                                embeddings_file_path, use_reduced_embeddings)
-                    embeddings_on_ram = 0
-                    idx += 1
-                    pbar.update(1)
-                    if idx == len(sequence_ids):
-                        logger.info("Processing all the reads are done.")
-                        break
+        with tqdm(total=total_sequences, initial=1, desc="Processing Sequences") as pbar:
+            for idx in range(1, total_sequences):
+                if max_embedding_fit <= 3 or len(embeddings) % max_embedding_fit == 0 or idx == total_sequences - 1:
+                    last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, last_save_id, 
+                                                                               embeddings_file_path, use_reduced_embeddings)
+                    logger.debug(f"New {max_embedding_fit=}")
+                    
                     embeddings[sequence_ids[idx]] = next(embedding_iter, None)
+                    pbar.update(1)
+                    
+                    # Calculate the new max_embedding_fit for the next batch
+                    max_embedding_fit = self._max_embedding_fit(embeddings[sequence_ids[idx]])
+                    
                 else:
-                    logger.info(f"{idx} ultra-long reads found and processed.")
-                    break
-                
-
-        # If we have reads left process the normal ones
-        if idx != len(sequence_ids):
-            logger.info(f"Processing normal reads...")
-            with tqdm(total=total_sequences, initial=idx, desc="Processing Sequences") as pbar:
-                while True:
-                    idx += 1
-                    pbar.update(1)
-                    if idx == len(sequence_ids):
-                        logger.info("Processing normal reads done.")
-                        break
                     embeddings[sequence_ids[idx]] = next(embedding_iter, None)
-                    embeddings_on_ram += 1
+                    pbar.update(1)
                     
-                    if embeddings_on_ram % max_embedding_fit == 0 or idx == total_sequences:
-                        max_embedding_fit = self._max_embedding_fit(embeddings[sequence_ids[idx]])
-                        last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, idx, last_save_id,
-                                                                    embeddings_file_path, use_reduced_embeddings)
-                        logger.info(f"New {max_embedding_fit=}")
-                        embeddings_on_ram = 0
-                    
+                    if embeddings[sequence_ids[idx]] is None:
+                        logger.debug(f"len(sequence_ids) > len(embedding_iter) or found a None value in the embedding_iter")
+                        del embeddings[sequence_ids[idx]]
+                        return str(embeddings_file_path)
+                      
         # Save remaining embeddings
         if len(embeddings) > 0:
-            last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, idx, last_save_id,
-                                                            embeddings_file_path, use_reduced_embeddings)
+            last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, last_save_id, 
+                                                                       embeddings_file_path, use_reduced_embeddings)
 
         end_time = time.time()
         logger.info(f"Time elapsed for saving embeddings: {end_time - start_time:.2f}[s]")
@@ -188,7 +165,7 @@ class EmbeddingService:
         max_embedding_fit = 1 if max_embedding_fit == 0 else max_embedding_fit
         return max_embedding_fit
     
-    def _save_and_reset_embeddings(self, embeddings: Dict[str, ndarray], idx: int, last_save_id: int,
+    def _save_and_reset_embeddings(self, embeddings: Dict[str, ndarray], last_save_id: int,
                                    embeddings_file_path: Path, use_reduced_embeddings: bool) -> Tuple[int, Dict[str, ndarray]]:
         """
         Save the embeddings and reset the dictionary.
@@ -198,7 +175,6 @@ class EmbeddingService:
             last_save_id (int): The last save ID used for tracking saved embeddings.
             embeddings_file_path (Path): The path where embeddings are saved.
             use_reduced_embeddings (bool): Flag to determine if embeddings should be reduced.
-            idx (int): Current index, used for logging purposes.
 
         Returns:
             out (Tuple[int, Dict[str, ndarray]]): Updated last_save_id and an empty embeddings dictionary.
@@ -207,7 +183,6 @@ class EmbeddingService:
             embeddings = self._reduce_embeddings(embeddings, self._embedder)
         last_save_id = self._save_embeddings(save_id=last_save_id, embeddings=embeddings,
                                             embeddings_file_path=embeddings_file_path)
-        logger.info(f"Saving until index {idx}")
         del embeddings
         return last_save_id, {}
 
