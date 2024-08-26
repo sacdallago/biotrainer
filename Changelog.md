@@ -1,5 +1,17 @@
 # Biotrainer Changelog
 
+## 26.08.2024 - Version 0.9.2
+### Features
+* Improving memory management of embedding calculation by @SebieF in https://github.com/sacdallago/biotrainer/pull/96
+* Use a strategy for sequence preprocessing by @SebieF in https://github.com/sacdallago/biotrainer/pull/99
+* Adding ONNX support by @SebieF in https://github.com/sacdallago/biotrainer/pull/101
+* Adding saprot embedder example by @SebieF in https://github.com/sacdallago/biotrainer/pull/106
+
+### Maintenance
+* **BREAKING** Improving masking mechanisms in CNN and LightAttention models by @SebieF in https://github.com/sacdallago/biotrainer/pull/102
+* Improving embedder model and tokenizer class recognition by @SebieF in https://github.com/sacdallago/biotrainer/pull/105
+* Optimize Memory Handling in Embedding Computations and Refactor EmbeddingService by @heispv in https://github.com/sacdallago/biotrainer/pull/103
+* Updating dependencies
 
 ## 10.07.2024 - Version 0.9.1
 ### Maintenance
