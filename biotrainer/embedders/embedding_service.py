@@ -77,8 +77,6 @@ class EmbeddingService:
                                                                     reverse=True)}
 
         embeddings_file_path = self._do_embeddings_computation(protein_sequences, embeddings_file_path, use_reduced_embeddings)
-        
-        gc.collect()
 
         return str(embeddings_file_path)
     
@@ -104,18 +102,23 @@ class EmbeddingService:
         embedding_iter = self._embedder.embed_many(protein_sequences.values())
         total_sequences = len(protein_sequences.values())
         
-        # Load the first sequence and calculate the initial max_embedding_fit
-        embeddings[sequence_ids[0]] = next(embedding_iter, None)
-        max_embedding_fit = self._max_embedding_fit(embeddings[sequence_ids[0]])
-        
-        if embeddings[sequence_ids[0]] is None:
-            logger.info(f"No embeddings found.")
-            return str(embeddings_file_path)
-        
-        logger.info(f"Embedding dimension: {embeddings[sequence_ids[idx]].shape[-1]}")
         logger.info("If your dataset contains long reads, it may take more time to process the first few sequences.")
         
-        with tqdm(total=total_sequences, initial=1, desc="Processing Sequences") as pbar:
+        with tqdm(total=total_sequences, desc="Computing Embeddings") as pbar:
+            
+            # Load the first sequence and calculate the initial max_embedding_fit
+            embeddings[sequence_ids[0]] = next(embedding_iter, None)
+            pbar.update(1)
+            
+            max_embedding_fit = self._max_embedding_fit(embeddings[sequence_ids[0]])
+            
+            if embeddings[sequence_ids[0]] is None:
+                logger.info(f"No embeddings found.")
+                return str(embeddings_file_path)
+            
+            embedding_dimension = embeddings[sequence_ids[0]].shape[-1]
+            
+            # Load other sequences
             for idx in range(1, total_sequences):
                 if max_embedding_fit <= 3 or len(embeddings) % max_embedding_fit == 0 or idx == total_sequences - 1:
                     last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, last_save_id, 
@@ -136,6 +139,8 @@ class EmbeddingService:
                         logger.debug(f"len(sequence_ids) > len(embedding_iter) or found a None value in the embedding_iter")
                         del embeddings[sequence_ids[idx]]
                         return str(embeddings_file_path)
+        
+        logger.info(f"Embedding dimension: {embedding_dimension}")
                       
         # Save remaining embeddings
         if len(embeddings) > 0:
@@ -146,6 +151,7 @@ class EmbeddingService:
         logger.info(f"Time elapsed for saving embeddings: {end_time - start_time:.2f}[s]")
         
         del embeddings
+        del self._embedder
         gc.collect()
 
         return str(embeddings_file_path)
@@ -155,11 +161,24 @@ class EmbeddingService:
         """
         Calculates the maximum number of embeddings that can fit in available memory.
 
+        This function estimates the maximum number of embeddings that can be stored in 
+        the available system memory without exceeding it. The calculation includes a 
+        safety factor to prevent exhausting memory.
+
         Parameters:
-            embedding (ndarray): An embedding array.
+            embedding (ndarray): An embedding array, representing the data structure 
+                                 whose memory footprint is being considered.
 
         Returns:
             int: The maximum number of embeddings that can fit in memory.
+
+        Notes:
+            - The number 18 was determined experimentally as a factor correlating the 
+              embedding size to the memory usage, indicating that each unit of 
+              embedding size corresponds to approximately 18 bytes of memory.
+            - The multiplier 0.75 is a safety margin to ensure that the memory usage 
+              stays within 75% of the available system memory, reducing the risk of 
+              running out of RAM during operations.
         """
         max_embedding_fit = int(0.75 * (psutil.virtual_memory().available / (embedding.size*18)))
         max_embedding_fit = 1 if max_embedding_fit == 0 else max_embedding_fit
