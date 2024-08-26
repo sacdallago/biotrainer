@@ -37,9 +37,19 @@ class TestEmbeddingService(unittest.TestCase):
     def _setup_fasta_parameters(self):
         self.num_reads = 100
         if os.environ.get('CI') == 'true':
+            logger.debug("CI environment detected. Generating ultra-long sequences to test memory limits and extreme edge cases.")
+            logger.debug(
+                "Sequence generation may take considerable time due to large memory allocation: "
+                f"{psutil.virtual_memory().available / (1024 ** 3):.2f} GB available."
+            )
+            logger.debug(
+                "The calculations for embeddings of these ultra-long sequences are also computationally intensive, "
+                "which contributes to the overall long duration of the test."
+            )
             # Use the original calculation in CI environment
             self.long_length = int((0.75 * psutil.virtual_memory().available) / (18 * 21))
         else:
+            logger.debug("Local environment detected. Using shorter sequence length for faster testing.")
             # Use a fixed value for local development
             self.long_length = 50000
         self.other_length = 250
