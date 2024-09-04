@@ -134,6 +134,12 @@ docker run --rm \
 
 Output can be found afterward in the directory of the provided configuration file.
 
+## Troubleshooting
+
+If you are experiencing any problems during installation or running, 
+please check the [Troubleshooting Guide](docs/troubleshooting.md) first.
+
+If your problem is not covered there, please [create an issue](https://github.com/sacdallago/biotrainer/issues/new).
 
 ## Citation
 
