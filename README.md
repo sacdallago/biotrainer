@@ -96,7 +96,13 @@ curl -sSL https://install.python-poetry.org/ | python3 -
 poetry install
 # Adding jupyter notebook (if needed):
 poetry add jupyter
+
+# [WINDOWS] Explicitly install torch libraries suited for your hardware:
+# Select hardware and get install command here: https://pytorch.org/get-started/locally/
+# Then run for example:
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
+**Please make sure to use the same torch version as provided in `pyproject.toml` for model reproducibility!**
 
 ## Running
 
