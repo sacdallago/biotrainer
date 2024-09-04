@@ -117,7 +117,7 @@ IDE to directly execute run-biotrainer.py with the provided virtual environment)
 # residue_to_class
 poetry run python3 run-biotrainer.py examples/residue_to_class/config.yml
 # sequence_to_class
-poetry run python3 biotrainer.py examples/sequence_to_class/config.yml
+poetry run python3 run-biotrainer.py examples/sequence_to_class/config.yml
 ```
 
 ### Docker
