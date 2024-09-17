@@ -22,6 +22,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         self._use_half_precision = use_half_precision
         self._device = device
         self._preprocessing_strategy = self._find_preprocessing_strategy()
+        self._set_model_precision()
 
     def _find_preprocessing_strategy(self):
         dummy_sequence = ["ACDEFGHIKLMNPQRSTVWY"]  # All 20 standard amino acids
@@ -52,6 +53,26 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
         logger.warning("Could not determine correct sequence pre-processing strategy, defaulting to no whitespace.")
         return preprocess_sequences_without_whitespaces
+
+    def _get_custom_indices_to_remove(self) -> List[int]:
+        """
+        Some embedders add specific tokens to the sequence, that cannot be identified via
+        tokenizer.get_special_tokens_mask. If that is the case, they must be declared here manually.
+
+        :return: List with indices that must be removed after the embedding was computed
+        """
+        if self.name == "Rostlab/ProstT5":
+            return [0]
+        return []
+
+    def _set_model_precision(self):
+        if self._use_half_precision and self._device == "cpu":
+            # This is caught earlier, but we check it here again for safety
+            raise NotImplementedError("Cannot use half_precision mode together with cpu!")
+        if self._use_half_precision:
+            self._model = self._model.half()
+        else:
+            self._model = self._model.full()
 
     def _get_fallback_model(self):
         """ Returns the CPU model """
