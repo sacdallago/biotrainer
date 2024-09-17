@@ -33,7 +33,7 @@ repository = "https://github.com/sacdallago/biotrainer"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
 
-accelerate = "^0.33.0"
+accelerate = "^0.34.2"
 biopython = ">=1.83,<2.0"
 matplotlib = ">=3.7.2,<4.0.0"
 h5py = ">=3.8.0,<4.0.0"
@@ -47,17 +47,18 @@ sentencepiece = "^0.2.0"
 scipy = ">=1.13.1,<2.0.0" # Latest version 1.14.1 requires python >= 3.10
 scikit-learn = "^1.5.1"
 tensorboard = "^2.17.1"
-torch = "2.4.0"
+torch = "2.4.1"
 tqdm = "^4.66.5"
 transformers = "^4.44.2"
-torchmetrics = "^1.4.1"
+torchmetrics = "^1.4.2"
 safetensors = "^0.4.4"
 onnx = "^1.16.2"
 onnxscript = "^0.1.0.dev20240806"
 onnxruntime = "^1.19.0"
+pandas = "^2.2.2"
 
 [tool.poetry.dev-dependencies]
-pytest = "8.3.2"
+pytest = "^8.3.3"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
