@@ -92,7 +92,7 @@ been deprecated as package for embeddings calculation. Instead, *biotrainer* now
 directly via [huggingface transformers](https://huggingface.co/docs/transformers/index).
 The following embedders have been successfully tested with *biotrainer*:
 ```yaml
-embedder_name: Rostlab/prot_t5_xl_uniref50 | ElnaggarLab/ankh-large | Rostlab/prot_t5_xl_bfd
+embedder_name: Rostlab/prot_t5_xl_uniref50 | ElnaggarLab/ankh-large | Rostlab/prot_t5_xl_bfd | Rostlab/ProstT5 | Takagi-san/SaProt_650M_AF2
 ```
 
 Transformer embedders provide the ability to use half-precision (float16) mode:
