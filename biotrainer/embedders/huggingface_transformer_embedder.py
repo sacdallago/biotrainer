@@ -8,7 +8,8 @@ from typing import List, Generator, Any, Union, Tuple
 from numpy import ndarray
 
 from .embedder_interfaces import EmbedderWithFallback
-from .preprocessing_strategies import preprocess_sequences_with_whitespaces, preprocess_sequences_without_whitespaces
+from .preprocessing_strategies import preprocess_sequences_with_whitespaces, preprocess_sequences_without_whitespaces, \
+    preprocess_sequences_for_prostt5
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,17 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         self._use_half_precision = use_half_precision
         self._device = device
         self._preprocessing_strategy = self._find_preprocessing_strategy()
+        self._custom_indices_to_remove = self._get_custom_indices_to_remove()
         self._set_model_precision()
 
     def _find_preprocessing_strategy(self):
+        # Handle special ProstT5 case
+        if self.name == "Rostlab/ProstT5":
+            strategy = preprocess_sequences_for_prostt5
+            logger.info(f"Chosen sequence pre-processing strategy: {strategy.__name__}")
+            return strategy
+
+        # Other models
         dummy_sequence = ["ACDEFGHIKLMNPQRSTVWY"]  # All 20 standard amino acids
         unknown_tokens = ["<unk>", "[UNK]", "UNK"]
         strategies = [preprocess_sequences_without_whitespaces, preprocess_sequences_with_whitespaces]
@@ -107,6 +116,8 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         """
         special_tokens_mask = self._tokenizer.get_special_tokens_mask(input_id, already_has_special_tokens=True)
         indices_to_remove = [index for index, mask in enumerate(special_tokens_mask) if mask != 0]
+        indices_to_remove += self._custom_indices_to_remove
+        indices_to_remove = list(set(indices_to_remove))
         return np.delete(embedding, indices_to_remove, axis=0)
 
     def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[ndarray, None, None]:
