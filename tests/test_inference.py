@@ -251,7 +251,7 @@ class InferencerTests(unittest.TestCase):
         for inferencer in self.inferencer_list:
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 # Convert
-                converted_file_paths = inferencer.convert_to_onnx(embedding_dimension_one_hot, tmp_dir_name)
+                converted_file_paths = inferencer.convert_to_onnx(tmp_dir_name)
                 self.assertTrue(len(converted_file_paths) == 1)
 
                 # Load converted model and make predictions
