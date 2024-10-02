@@ -227,8 +227,8 @@ class Solver(ABC):
             # K_fold and leave_p_out: Checkpoint is already there, now check if it has been trained completely
             # Sort by name and by last split number (differs from alphabetical order because str(9) > str(10))
             available_checkpoints_sorted = sorted(available_checkpoints,
-                                                  key=lambda ch_pt: (ch_pt.split("_checkpoint.pt")[0].split("-")[0:-1],
-                                                                     int(ch_pt.split("_checkpoint.pt")[0].split("-")[-1]
+                                                  key=lambda ch_pt: (ch_pt.split("_checkpoint.")[0].split("-")[0:-1],
+                                                                     int(ch_pt.split("_checkpoint.")[0].split("-")[-1]
                                                                          )
                                                                      )
                                                   )
