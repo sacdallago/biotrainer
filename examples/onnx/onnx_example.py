@@ -8,7 +8,7 @@ def onnx_save():
     out_file_path_res = '../residue_to_class/output/out.yml'
 
     inferencer, out_file = Inferencer.create_from_out_file(out_file_path=out_file_path_res, allow_torch_pt_loading=True)
-    converted_checkpoint_paths = inferencer.convert_to_onnx(embedding_dimension=21)
+    converted_checkpoint_paths = inferencer.convert_to_onnx()
     return converted_checkpoint_paths
 
 

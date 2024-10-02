@@ -32,6 +32,7 @@ class Inferencer:
             # Constant parameters for all split solvers
             protocol: str,
             embedder_name: str,
+            n_features: int,
             # Optional constant parameters for all split solvers
             class_int_to_string: Optional[Dict[int, str]] = None,
             class_str_to_int: Optional[Dict[str, int]] = None,
@@ -43,6 +44,7 @@ class Inferencer:
     ):
         self.protocol = Protocol[protocol]
         self.embedder_name = embedder_name
+        self.embedding_dimension = n_features
         self.class_int2str = class_int_to_string
         self.class_str2int = class_str_to_int
         self.device = get_device(device)
@@ -135,7 +137,6 @@ class Inferencer:
             # Positional arguments
             model_choice = split_config.pop("model_choice")
             n_classes = split_config.pop("n_classes")
-            n_features = split_config.pop("n_features")
             loss_choice = split_config.pop("loss_choice")
             optimizer_choice = split_config.pop("optimizer_choice")
             learning_rate = split_config.pop("learning_rate")
@@ -143,7 +144,7 @@ class Inferencer:
             checkpoint_path = Path(log_dir) / Path(split_checkpoints[split])
 
             model = get_model(protocol=self.protocol, model_choice=model_choice,
-                              n_classes=n_classes, n_features=n_features,
+                              n_classes=n_classes, n_features=self.embedding_dimension,
                               disable_pytorch_compile=self.disable_pytorch_compile,
                               **split_config
                               )
@@ -234,17 +235,16 @@ class Inferencer:
             if "pt" in solver.checkpoint_type:
                 solver.save_checkpoint(solver.start_epoch)
 
-    def convert_to_onnx(self, embedding_dimension: int, output_dir: Optional[str] = None) -> List[str]:
+    def convert_to_onnx(self, output_dir: Optional[str] = None) -> List[str]:
         """
         Converts the model to ONNX format for the given embedding dimension.
 
-        :param embedding_dimension: The dimension of the input embeddings.
         :param output_dir: The directory to save the ONNX files. If not provided, the ONNX files will be saved in the
             solver's log directory. Defaults to None.
 
         :return: A list of file paths where the ONNX files are saved.
         """
-        dummy_input = self.protocol.get_dummy_input(embedding_dimension).to(self.device)
+        dummy_input = self.protocol.get_dummy_input(self.embedding_dimension).to(self.device)
         result_file_paths = []
         for split_name, (solver, _) in self.solvers_and_loaders_by_split.items():
             # Use eval mode during export to avoid batch size problems
