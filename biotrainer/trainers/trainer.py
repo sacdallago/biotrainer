@@ -137,6 +137,9 @@ class Trainer:
                                            mode="warn")
             sanity_checker.check_test_results()
 
+        # SAVE BEST SPLIT AS ONNX
+        best_split.solver.save_as_onnx(embedding_dimension=embeddings_dimension)
+
         # CONVERT PROTOCOL CLASS TO STRING
         self._output_vars["protocol"] = self._output_vars["protocol"].name
         return self._output_vars
