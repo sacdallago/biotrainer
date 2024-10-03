@@ -94,9 +94,9 @@ class Trainer:
         del id2emb  # No longer required and should not be used later in the routine
 
         # LOG COMMON VALUES FOR ALL k-fold SPLITS:
-        embeddings_length = train_dataset[0].embedding.shape[-1]  # Last position in shape is always embedding length
-        logger.info(f"Number of features: {embeddings_length}")
-        self._output_vars['n_features'] = embeddings_length
+        embeddings_dimension = train_dataset[0].embedding.shape[-1]  # Last position in shape is always embedding dim
+        logger.info(f"Number of features: {embeddings_dimension}")
+        self._output_vars['n_features'] = embeddings_dimension
         self._output_vars['n_testing_ids'] = len(test_dataset)
         self._output_vars['n_classes'] = target_manager.number_of_outputs
 
