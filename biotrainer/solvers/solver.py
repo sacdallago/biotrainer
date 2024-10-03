@@ -22,7 +22,7 @@ class Solver(ABC):
 
     def __init__(self,
                  # Necessary
-                 name, network, optimizer, loss_function,
+                 name, protocol, network, optimizer, loss_function,
                  # Optional with defaults
                  log_writer: Optional = None, log_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
@@ -32,6 +32,7 @@ class Solver(ABC):
 
         self.checkpoint_type = "safetensors"
         self.checkpoint_name = f"{name}_checkpoint.{self.checkpoint_type}"
+        self.protocol = protocol
         self.network = network
         self.optimizer = optimizer
         self.loss_function = loss_function
@@ -320,6 +321,23 @@ class Solver(ABC):
         # Log checkpoint path on start of training
         if epoch == 0:
             logger.info(f"Checkpoint(s) will be stored at {save_path}")
+
+    def save_as_onnx(self, embedding_dimension: int, output_dir: Optional[str] = None) -> str:
+        output_dir = output_dir if output_dir is not None else self.log_dir
+
+        dummy_input = self.protocol.get_dummy_input(embedding_dimension).to(self.device)
+
+        # Use eval mode during export to avoid batch size problems
+        self.network.eval()
+
+        # Export
+        export_options = torch.onnx.ExportOptions(dynamic_shapes=True)
+        onnx_program = torch.onnx.dynamo_export(self.network, dummy_input,
+                                                export_options=export_options)
+        onnx_file_name = f"{output_dir}/{self.checkpoint_name.split('.')[0]}.onnx"
+        onnx_program.save(onnx_file_name)
+
+        return onnx_file_name
 
     def _early_stop(self, current_loss: float, epoch: int) -> bool:
         if current_loss < (self._min_loss - self.epsilon):

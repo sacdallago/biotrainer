@@ -244,19 +244,10 @@ class Inferencer:
 
         :return: A list of file paths where the ONNX files are saved.
         """
-        dummy_input = self.protocol.get_dummy_input(self.embedding_dimension).to(self.device)
         result_file_paths = []
         for split_name, (solver, _) in self.solvers_and_loaders_by_split.items():
-            # Use eval mode during export to avoid batch size problems
-            solver.network.eval()
-
-            output_dir = output_dir if output_dir is not None else solver.log_dir
-            export_options = torch.onnx.ExportOptions(dynamic_shapes=True)
-            onnx_program = torch.onnx.dynamo_export(solver.network, dummy_input,
-                                                    export_options=export_options)
-            onnx_file_name = f"{output_dir}/{split_name}.onnx"
-            onnx_program.save(onnx_file_name)
-            result_file_paths.append(onnx_file_name)
+            onnx_save_path = solver.save_as_onnx(embedding_dimension=self.embedding_dimension, output_dir=output_dir)
+            result_file_paths.append(onnx_save_path)
         return result_file_paths
 
     def from_embeddings(self, embeddings: Union[Iterable, Dict], targets: Optional[List] = None,

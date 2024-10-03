@@ -31,7 +31,7 @@ def get_solver(protocol: Protocol, name: str,
         raise NotImplementedError
     else:
         return solver(
-            name=name,
+            name=name, protocol=protocol,
             network=network, optimizer=optimizer, loss_function=loss_function,
             device=device, number_of_epochs=number_of_epochs,
             patience=patience, epsilon=epsilon, log_writer=log_writer,
