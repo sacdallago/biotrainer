@@ -67,7 +67,7 @@ class Trainer:
         self._seed = seed
         self._device = device
         self._auto_resume = auto_resume
-        self._pretrained_model = pretrained_model
+        self._pretrained_model = Path(pretrained_model) if pretrained_model is not None else None
         self._save_split_ids = save_split_ids
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
         self._interaction = interaction
