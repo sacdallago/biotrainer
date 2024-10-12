@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Union, Tuple, Any
+from typing import List, Union, Tuple, Any, Dict, Type
 
 from .config_option import ConfigOption
 from ..protocols import Protocol
@@ -45,6 +45,35 @@ class MutualExclusive(ConfigRule):
                                            if exclusive_option != config_option.__class__]
                 return False, f"{config_option.name} is mutual exclusive with {other_exclusive_options}." \
                               f"{self.error_message}"
+
+        return True, ""
+
+
+class MutualExclusiveValues(ConfigRule):
+    """
+    ConfigRule to declare that two or more config options are mutually exclusive.
+    """
+
+    def __init__(self, exclusive: Dict[Type[ConfigOption], Any], error_message: str = ""):
+        self.exclusive_options = exclusive
+        self.error_message = "\n" + error_message if error_message != "" else ""
+
+    def apply(self, protocol: Protocol, config: List[ConfigOption], ignore_file_checks: bool) -> Tuple[bool, str]:
+        if ignore_file_checks and any([option.is_file_option for option in self.exclusive_options]):
+            return True, ""
+
+        occurrences = 0
+        for config_option in config:
+            if (config_option.__class__ in self.exclusive_options.keys()
+                    and config_option.value == self.exclusive_options[config_option.__class__]):
+                occurrences += 1
+
+            if occurrences > 1:
+                other_exclusive_options = {option_class.name: option_value for option_class, option_value in
+                                           self.exclusive_options.items()
+                                           if option_class != config_option.__class__}
+                return False, (f"{config_option.name}: {config_option.value} is mutual exclusive "
+                               f"with {other_exclusive_options}. {self.error_message}")
 
         return True, ""
 
