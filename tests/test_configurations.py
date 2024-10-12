@@ -43,6 +43,12 @@ configurations = {
         "embeddings_file": "placeholder.h5",
         "embedder_name": "one_hot_encoding"
     },
+    "mutual_exclusive_device_half_precision": {
+        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "protocol": "sequence_to_class",
+        "device": "cpu",
+        "use_half_precision": True
+    },
     "local_custom_embedder": {
         "sequence_file": "test_input_files/r2c/sequences.fasta",
         "protocol": "sequence_to_class",
@@ -175,6 +181,12 @@ class ConfigurationVerificationTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ConfigurationException, expected_regex="mutual exclusive",
                                     msg="Config with embeddings file and embedder name does not throw an error"):
+            configurator.get_verified_config()
+
+    def test_mutual_exclusive_cpu_half_precision(self):
+        configurator = Configurator.from_config_dict(configurations["mutual_exclusive_device_half_precision"])
+        with self.assertRaises(ConfigurationException,
+                               msg="Config with prohibited config combination does not throw an error!"):
             configurator.get_verified_config()
 
     def test_local_custom_embedder(self):

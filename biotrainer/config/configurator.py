@@ -6,13 +6,13 @@ from ruamel import yaml
 from ruamel.yaml import YAMLError
 
 from .config_option import ConfigurationException, ConfigOption, FileOption
-from .config_rules import (MutualExclusive, ProtocolRequires, OptionValueRequires,
+from .config_rules import (MutualExclusive, MutualExclusiveValues, ProtocolRequires, OptionValueRequires,
                            AllowHyperparameterOptimization)
 from .cross_validation_options import (cross_validation_options, CROSS_VALIDATION_CONFIG_KEY, Method, ChooseBy,
                                        CrossValidationOption, K, Nested, NestedK, SearchMethod, NMaxEvaluationsRandom,
                                        P)
-from .embedding_options import EmbedderName, EmbeddingsFile, embedding_options
-from .general_options import general_options
+from .embedding_options import EmbedderName, EmbeddingsFile, embedding_options, UseHalfPrecision
+from .general_options import general_options, Device
 from .input_options import SequenceFile, LabelsFile, input_options
 from .model_options import model_options
 from .training_options import AutoResume, PretrainedModel, training_options
@@ -32,6 +32,9 @@ config_option_rules = [
                     allowed_values=["custom_embeddings"],
                     error_message="Please provide either an embedder_name to calculate embeddings from scratch or \n"
                                   "an embeddings_file to use pre-computed embeddings."),
+    MutualExclusiveValues(exclusive={UseHalfPrecision: True, Device: "cpu"},
+                          error_message="use_half_precision mode is not compatible with embedding "
+                                        f"on the CPU. (See: https://github.com/huggingface/transformers/issues/11546)")
 ]
 
 optimization_rules = [
