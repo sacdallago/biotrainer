@@ -1,5 +1,15 @@
 # Biotrainer Changelog
 
+## 14.10.2024 - Version 0.9.3
+### Features
+* Adding support for ProstT5 embedder by @SebieF in https://github.com/sacdallago/biotrainer/pull/110
+
+### Maintenance
+* Adding troubleshooting guide by @SebieF in https://github.com/sacdallago/biotrainer/pull/109
+
+### Bug fixes
+* Adding improved onnx saving and inferencer fixes by @SebieF in https://github.com/sacdallago/biotrainer/pull/112
+
 ## 26.08.2024 - Version 0.9.2
 ### Features
 * Improving memory management of embedding calculation by @SebieF in https://github.com/sacdallago/biotrainer/pull/96
