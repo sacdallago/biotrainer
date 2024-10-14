@@ -13,13 +13,13 @@ files = [
 
 [[package]]
 name = "accelerate"
-version = "0.34.2"
+version = "1.0.1"
 description = "Accelerate"
 optional = false
 python-versions = ">=3.8.0"
 files = [
-    {file = "accelerate-0.34.2-py3-none-any.whl", hash = "sha256:d69159e2c4e4a473d14443b27d2d732929254e826b3ab4813b3785b5ac616c7c"},
-    {file = "accelerate-0.34.2.tar.gz", hash = "sha256:98c1ebe1f5a45c0a3af02dc60b5bb8b7d58d60c3326a326a06ce6d956b18ca5b"},
+    {file = "accelerate-1.0.1-py3-none-any.whl", hash = "sha256:c6aa0c7b8a797cb150471e90e3ca36ac41f5d4b40512cdd6f058b8bf25589467"},
+    {file = "accelerate-1.0.1.tar.gz", hash = "sha256:e8f95fc2db14915dc0a9182edfcf3068e5ddb2fa310b583717ad44e5c442399c"},
 ]
 
 [package.dependencies]
@@ -33,8 +33,8 @@ torch = ">=1.10.0"
 
 [package.extras]
 deepspeed = ["deepspeed"]
-dev = ["bitsandbytes", "black (>=23.1,<24.0)", "datasets", "diffusers", "evaluate", "hf-doc-builder (>=0.3.0)", "parameterized", "pytest (>=7.2.0,<=8.0.0)", "pytest-subtests", "pytest-xdist", "rich", "ruff (>=0.2.1,<0.3.0)", "scikit-learn", "scipy", "timm", "torchdata (>=0.8.0)", "torchpippy (>=0.2.0)", "tqdm", "transformers"]
-quality = ["black (>=23.1,<24.0)", "hf-doc-builder (>=0.3.0)", "ruff (>=0.2.1,<0.3.0)"]
+dev = ["bitsandbytes", "black (>=23.1,<24.0)", "datasets", "diffusers", "evaluate", "hf-doc-builder (>=0.3.0)", "parameterized", "pytest (>=7.2.0,<=8.0.0)", "pytest-subtests", "pytest-xdist", "rich", "ruff (>=0.6.4,<0.7.0)", "scikit-learn", "scipy", "timm", "torchdata (>=0.8.0)", "torchpippy (>=0.2.0)", "tqdm", "transformers"]
+quality = ["black (>=23.1,<24.0)", "hf-doc-builder (>=0.3.0)", "ruff (>=0.6.4,<0.7.0)"]
 rich = ["rich"]
 sagemaker = ["sagemaker"]
 test-dev = ["bitsandbytes", "datasets", "diffusers", "evaluate", "scikit-learn", "scipy", "timm", "torchdata (>=0.8.0)", "torchpippy (>=0.2.0)", "tqdm", "transformers"]
@@ -89,6 +89,31 @@ files = [
     {file = "boolean.py-4.0-py3-none-any.whl", hash = "sha256:2876f2051d7d6394a531d82dc6eb407faa0b01a0a0b3083817ccd7323b8d96bd"},
     {file = "boolean.py-4.0.tar.gz", hash = "sha256:17b9a181630e43dde1851d42bef546d616d5d9b4480357514597e78b203d06e4"},
 ]
+
+[[package]]
+name = "build"
+version = "1.2.2.post1"
+description = "A simple, correct Python build frontend"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "build-1.2.2.post1-py3-none-any.whl", hash = "sha256:1d61c0887fa860c01971625baae8bdd338e517b836a2f70dd1f7aa3a6b2fc5b5"},
+    {file = "build-1.2.2.post1.tar.gz", hash = "sha256:b36993e92ca9375a219c99e606a122ff365a760a2d4bba0caa09bd5278b608b7"},
+]
+
+[package.dependencies]
+colorama = {version = "*", markers = "os_name == \"nt\""}
+importlib-metadata = {version = ">=4.6", markers = "python_full_version < \"3.10.2\""}
+packaging = ">=19.1"
+pyproject_hooks = "*"
+tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
+
+[package.extras]
+docs = ["furo (>=2023.08.17)", "sphinx (>=7.0,<8.0)", "sphinx-argparse-cli (>=1.5)", "sphinx-autodoc-typehints (>=1.10)", "sphinx-issues (>=3.0.0)"]
+test = ["build[uv,virtualenv]", "filelock (>=3)", "pytest (>=6.2.4)", "pytest-cov (>=2.12)", "pytest-mock (>=2)", "pytest-rerunfailures (>=9.1)", "pytest-xdist (>=1.34)", "setuptools (>=42.0.0)", "setuptools (>=56.0.0)", "setuptools (>=56.0.0)", "setuptools (>=67.8.0)", "wheel (>=0.36.0)"]
+typing = ["build[uv]", "importlib-metadata (>=5.1)", "mypy (>=1.9.0,<1.10.0)", "tomli", "typing-extensions (>=3.7.4.3)"]
+uv = ["uv (>=0.1.18)"]
+virtualenv = ["virtualenv (>=20.0.35)"]
 
 [[package]]
 name = "cachecontrol"
@@ -1200,9 +1225,9 @@ files = [
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.23.3", markers = "python_version >= \"3.11\""},
     {version = ">=1.21.2", markers = "python_version >= \"3.10\" and python_version < \"3.11\""},
     {version = ">=1.21", markers = "python_version < \"3.10\""},
+    {version = ">=1.23.3", markers = "python_version >= \"3.11\""},
 ]
 
 [package.extras]
@@ -1688,8 +1713,8 @@ files = [
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
     {version = ">=1.22.4", markers = "python_version < \"3.11\""},
+    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -2009,6 +2034,17 @@ files = [
 
 [package.extras]
 diagrams = ["jinja2", "railroad-diagrams"]
+
+[[package]]
+name = "pyproject-hooks"
+version = "1.2.0"
+description = "Wrappers to call pyproject.toml-based build backend hooks."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pyproject_hooks-1.2.0-py3-none-any.whl", hash = "sha256:9e5c6bfa8dcc30091c74b0cf803c81fdd29d94f01992a7707bc97babb1141913"},
+    {file = "pyproject_hooks-1.2.0.tar.gz", hash = "sha256:1e859bd5c40fae9448642dd871adf459e5e2084186e8d2c2a79a824c970da1f8"},
+]
 
 [[package]]
 name = "pyreadline3"
@@ -3174,4 +3210,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "cbe39b83a3b5bc7a78cc1185a453ab7ad632a59bc4b02c82f0fd4699511944d0"
+content-hash = "e1f4fedb50146aa63019e3bb2b2cd35ff54d38b7dd08931f445704991435be65"
