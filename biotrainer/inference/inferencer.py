@@ -193,16 +193,20 @@ class Inferencer:
             return sequence
 
     def _convert_target_dict(self, target_dict: Dict[str, str]):
-        if self.protocol in Protocol.per_residue_protocols():
-            max_prediction_length = len(max(target_dict.values(), key=len))
-            return {seq_id: torch.tensor(self._pad_target(self._convert_class_str2int(prediction),
-                                                          length_to_pad=max_prediction_length),
-                                         device=self.device)
-                    for seq_id, prediction in target_dict.items()}
-        else:
-            return {seq_id: torch.tensor(self._convert_class_str2int(prediction),
-                                         device=self.device)
-                    for seq_id, prediction in target_dict.items()}
+        if self.protocol in Protocol.classification_protocols():
+            if self.protocol in Protocol.per_residue_protocols():
+                max_prediction_length = len(max(target_dict.values(), key=len))
+                return {seq_id: torch.tensor(self._pad_target(self._convert_class_str2int(prediction),
+                                                              length_to_pad=max_prediction_length),
+                                             device=self.device)
+                        for seq_id, prediction in target_dict.items()}
+            else:
+                return {seq_id: torch.tensor(self._convert_class_str2int(prediction),
+                                             device=self.device)
+                        for seq_id, prediction in target_dict.items()}
+        return {seq_id: torch.tensor(prediction,
+                                     device=self.device)
+                for seq_id, prediction in target_dict.items()}
 
     def _load_solver_and_dataloader(self, embeddings: Union[Iterable, Dict],
                                     split_name, targets: Optional[List] = None):
@@ -214,14 +218,13 @@ class Inferencer:
         else:
             embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
 
-        converted_targets = None
-        if targets:
-            converted_targets = [self._convert_class_str2int(target) for target in targets]
+        if targets and self.protocol in Protocol.classification_protocols():
+            targets = [self._convert_class_str2int(target) for target in targets]
 
         solver, loader = self.solvers_and_loaders_by_split[split_name]
         dataset = get_dataset(self.protocol, samples=[
             DatasetSample(seq_id, torch.tensor(np.array(embedding)),
-                          torch.empty(1) if not targets else torch.tensor(np.array(converted_targets[idx])))
+                          torch.empty(1) if not targets else torch.tensor(np.array(targets[idx])))
             for idx, (seq_id, embedding) in enumerate(embeddings_dict.items())
         ])
         dataloader = loader(dataset)
