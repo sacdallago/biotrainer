@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 import numpy as np
+import torch._dynamo
 
 from typing import Dict, Union, List
 
@@ -28,6 +29,9 @@ class InferencerTests(unittest.TestCase):
     error_tolerance_factor = 1.96
 
     def setUp(self) -> None:
+        # Needed for cross-platform compatibility of Windows and Linux models
+        torch._dynamo.config.suppress_errors = True
+
         self.inferencer_r2c, _ = Inferencer.create_from_out_file("test_input_files/test_models/r2c/out.yml")
         self.inferencer_rs2c, _ = Inferencer.create_from_out_file("test_input_files/test_models/rs2c/out.yml")
         self.inferencer_s2c, _ = Inferencer.create_from_out_file("test_input_files/test_models/s2c/out.yml")
@@ -38,6 +42,11 @@ class InferencerTests(unittest.TestCase):
                                 self.inferencer_rs2v]
 
         self.per_residue_embeddings, self.per_sequence_embeddings = self._embed()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        # Undo error suppressing in dynamo
+        torch._dynamo.config.suppress_errors = False
 
     def _embed(self):
         embedder = OneHotEncodingEmbedder()
