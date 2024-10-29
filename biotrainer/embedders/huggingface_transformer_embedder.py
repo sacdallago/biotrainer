@@ -79,9 +79,10 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
             # This is caught earlier, but we check it here again for safety
             raise NotImplementedError("Cannot use half_precision mode together with cpu!")
         if self._use_half_precision:
-            self._model = self._model.half()
-        else:
-            self._model = self._model.full()
+            try:
+                self._model = self._model.half()
+            except AttributeError:
+                raise NotImplementedError(f"Given model {self.name} does not support half_precision mode!")
 
     def _get_fallback_model(self):
         """ Returns the CPU model """
