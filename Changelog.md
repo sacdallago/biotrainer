@@ -1,5 +1,13 @@
 # Biotrainer Changelog
 
+## 29.10.2024 - Version 0.9.4
+### Bug fixes
+* Hotfix for incorrect precision mode setting by @SebieF in https://github.com/sacdallago/biotrainer/pull/116
+
+### Maintenance
+* Updating dependencies: **removing python3.9 support**
+* Updating CI workflow to be compatible with Windows
+
 ## 14.10.2024 - Version 0.9.3
 ### Features
 * Adding support for ProstT5 embedder by @SebieF in https://github.com/sacdallago/biotrainer/pull/110
