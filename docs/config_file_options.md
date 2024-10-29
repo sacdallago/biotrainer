@@ -200,7 +200,8 @@ float):
 ```yaml
 epsilon: 1e-3  # Default: 0.001 
 ```
-<details><summary>Early stop mechanism explanation:</summary>
+<details>
+<summary>Early stop mechanism explanation:</summary>
 If the current loss is smaller than the previous minimum loss minus the epsilon threshold, a stop count is reset to 
 the patience value indicated above. 
 Otherwise, if it is already 0, early stop is triggered and the best previous model loaded.
@@ -225,6 +226,7 @@ Expressed in code:
                 self._stop_count = self._stop_count - 1
                 return False
 </code>
+
 </details>
 
 It is also possible to change the batch size (any positive integer):
