@@ -10,7 +10,7 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 from numpy import ndarray
-from typing import Dict, Tuple, Any, List, Optional
+from typing import Dict, Tuple, Any, Optional, List, Union
 
 from .embedder_interfaces import EmbedderInterface
 
@@ -29,23 +29,58 @@ class EmbeddingService:
         self._embedder = embedder
         self._use_half_precision = use_half_precision
 
-    def compute_embeddings(self, sequence_file: str, output_dir: Path, protocol: Protocol,
-                           force_output_dir: Optional[bool] = False,
-                           force_recomputing: Optional[bool] = False) -> str:
+    def compute_embeddings(self,
+                           input_data: Union[str, Path, Dict[str, str]],
+                           output_dir: Path,
+                           protocol: Protocol,
+                           force_output_dir: bool = False,
+                           force_recomputing: bool = False) -> str:
         """
-        Compute embeddings with the provided embedder from a sequence file.
+        Compute embeddings with the provided embedder from a sequence file or a dictionary of sequences.
 
         Parameters:
-            sequence_file (str): Path to the sequence file.
+            input_data (Union[str, Dict[str, str]]): Path to the sequence file or a dictionary of protein sequences.
             output_dir (Path): Output directory to store the computed embeddings.
             protocol (Protocol): Protocol for the embeddings. Determines if the embeddings should be reduced to per-protein.
-            force_output_dir (bool, optional): If True, the given output directory is directly used to store the embeddings file,
-                without any path enhancement. Defaults to False.
-            force_recomputing (bool, optional): If True, the embedding file is re-computed, even if it already exists. Defaults to False.
+            force_output_dir (bool): If True, the given output directory is directly used to store the embeddings file.
+            force_recomputing (bool): If True, the embedding file is re-computed, even if it already exists.
 
         Returns:
             str: Path to the generated output embeddings file.
         """
+        use_reduced_embeddings = protocol in Protocol.using_per_sequence_embeddings()
+        embeddings_file_path = self._get_embeddings_file_path(output_dir, protocol, force_output_dir)
+
+        # Avoid re-computation if file already exists
+        if not force_recomputing and embeddings_file_path.is_file():
+            logger.info(f"Using existing embeddings file at {embeddings_file_path}")
+            return str(embeddings_file_path)
+
+        logger.info(f"Computing embeddings to: {str(embeddings_file_path)}")
+
+        # Process input data
+        if isinstance(input_data, str):
+            protein_sequences = {seq.id: str(seq.seq) for seq in read_FASTA(input_data)}
+        elif isinstance(input_data, Path):
+            protein_sequences = {seq.id: str(seq.seq) for seq in read_FASTA(str(input_data))}
+        elif isinstance(input_data, dict):
+            protein_sequences = input_data
+        else:
+            raise ValueError("input_data must be either a file path or a dictionary of sequences")
+
+        # Sort sequences by length in descending order
+        protein_sequences = dict(sorted(protein_sequences.items(),
+                                        key=lambda item: len(item[1]),
+                                        reverse=True))
+
+        embeddings_file_path = self._do_embeddings_computation(protein_sequences,
+                                                               embeddings_file_path,
+                                                               use_reduced_embeddings)
+
+        return str(embeddings_file_path)
+
+    def _get_embeddings_file_path(self, output_dir: Path, protocol: Protocol,
+                                  force_output_dir: Optional[bool] = False) -> Path:
         use_reduced_embeddings = protocol in Protocol.using_per_sequence_embeddings()
         embedder_name = self._embedder.name.split("/")[-1]
 
@@ -65,23 +100,10 @@ class EmbeddingService:
         # Append file name to output path
         embeddings_file_path /= (("reduced_" if use_reduced_embeddings else "")
                                  + f"embeddings_file_{embedder_name}{'_half' if self._use_half_precision else ''}.h5")
+        return embeddings_file_path
 
-        # Avoid re-computation if file already exists
-        if not force_recomputing and embeddings_file_path.is_file():
-            return str(embeddings_file_path)
-
-        logger.info(f"Computing embeddings to: {str(embeddings_file_path)}")
-
-        protein_sequences = {seq.id: str(seq.seq) for seq in sorted(read_FASTA(sequence_file),
-                                                                    key=lambda seq: len(seq.seq),
-                                                                    reverse=True)}
-
-        embeddings_file_path = self._do_embeddings_computation(protein_sequences, embeddings_file_path, use_reduced_embeddings)
-
-        return str(embeddings_file_path)
-    
     def _do_embeddings_computation(self, protein_sequences: Dict[str, str], embeddings_file_path: Path,
-                          use_reduced_embeddings: bool) -> str:
+                                   use_reduced_embeddings: bool) -> str:
         """
         Performs the embedding service for the given protein sequences.
 
@@ -98,58 +120,60 @@ class EmbeddingService:
         idx: int = 0
         last_save_id: int = 0
         start_time = time.time()
-        
+
         embedding_iter = self._embedder.embed_many(protein_sequences.values())
         total_sequences = len(protein_sequences.values())
-        
+
         logger.info("If your dataset contains long reads, it may take more time to process the first few sequences.")
-        
+
         with tqdm(total=total_sequences, desc="Computing Embeddings") as pbar:
-            
+
             # Load the first sequence and calculate the initial max_embedding_fit
             embeddings[sequence_ids[0]] = next(embedding_iter, None)
             pbar.update(1)
-            
+
             max_embedding_fit = self._max_embedding_fit(embeddings[sequence_ids[0]])
-            
+
             if embeddings[sequence_ids[0]] is None:
                 logger.info(f"No embeddings found.")
                 return str(embeddings_file_path)
-            
+
             embedding_dimension = embeddings[sequence_ids[0]].shape[-1]
-            
+
             # Load other sequences
             for idx in range(1, total_sequences):
                 if max_embedding_fit <= 3 or len(embeddings) % max_embedding_fit == 0 or idx == total_sequences - 1:
-                    last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, last_save_id, 
-                                                                               embeddings_file_path, use_reduced_embeddings)
+                    last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, last_save_id,
+                                                                               embeddings_file_path,
+                                                                               use_reduced_embeddings)
                     logger.debug(f"New {max_embedding_fit=}")
-                    
+
                     embeddings[sequence_ids[idx]] = next(embedding_iter, None)
                     pbar.update(1)
-                    
+
                     # Calculate the new max_embedding_fit for the next batch
                     max_embedding_fit = self._max_embedding_fit(embeddings[sequence_ids[idx]])
-                    
+
                 else:
                     embeddings[sequence_ids[idx]] = next(embedding_iter, None)
                     pbar.update(1)
-                    
+
                     if embeddings[sequence_ids[idx]] is None:
-                        logger.debug(f"len(sequence_ids) > len(embedding_iter) or found a None value in the embedding_iter")
+                        logger.debug(
+                            f"len(sequence_ids) > len(embedding_iter) or found a None value in the embedding_iter")
                         del embeddings[sequence_ids[idx]]
                         return str(embeddings_file_path)
-        
+
         logger.info(f"Embedding dimension: {embedding_dimension}")
-                      
+
         # Save remaining embeddings
         if len(embeddings) > 0:
-            last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, last_save_id, 
+            last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, last_save_id,
                                                                        embeddings_file_path, use_reduced_embeddings)
 
         end_time = time.time()
         logger.info(f"Time elapsed for saving embeddings: {end_time - start_time:.2f}[s]")
-        
+
         del embeddings
         del self._embedder
         gc.collect()
@@ -180,12 +204,13 @@ class EmbeddingService:
               stays within 75% of the available system memory, reducing the risk of 
               running out of RAM during operations.
         """
-        max_embedding_fit = int(0.75 * (psutil.virtual_memory().available / (embedding.size*18)))
+        max_embedding_fit = int(0.75 * (psutil.virtual_memory().available / (embedding.size * 18)))
         max_embedding_fit = 1 if max_embedding_fit == 0 else max_embedding_fit
         return max_embedding_fit
-    
+
     def _save_and_reset_embeddings(self, embeddings: Dict[str, ndarray], last_save_id: int,
-                                   embeddings_file_path: Path, use_reduced_embeddings: bool) -> Tuple[int, Dict[str, ndarray]]:
+                                   embeddings_file_path: Path, use_reduced_embeddings: bool) -> Tuple[
+        int, Dict[str, ndarray]]:
         """
         Save the embeddings and reset the dictionary.
 
@@ -201,11 +226,10 @@ class EmbeddingService:
         if use_reduced_embeddings:
             embeddings = self._reduce_embeddings(embeddings, self._embedder)
         last_save_id = self._save_embeddings(save_id=last_save_id, embeddings=embeddings,
-                                            embeddings_file_path=embeddings_file_path)
+                                             embeddings_file_path=embeddings_file_path)
         del embeddings
         return last_save_id, {}
 
-    
     @staticmethod
     def _reduce_embeddings(embeddings: Dict[str, ndarray], embedder) -> Dict[str, ndarray]:
         """
