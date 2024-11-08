@@ -162,7 +162,7 @@ class Trainer:
                                                                     device=self._device)
         if not embeddings_file or not Path(embeddings_file).is_file():
             embeddings_file = embedding_service.compute_embeddings(
-                sequence_file=self._sequence_file,
+                input_data=self._sequence_file,
                 protocol=self._protocol, output_dir=self._output_dir
             )
             # Add to out config
