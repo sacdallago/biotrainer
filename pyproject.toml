@@ -52,10 +52,11 @@ tqdm = "^4.66.6"
 transformers = "^4.46.0"
 torchmetrics = "^1.5.1"
 safetensors = "^0.4.4"
-onnx = "1.16.1"
+onnx = "^1.17.0"
 onnxscript = "^0.1.0.dev20240806"
 onnxruntime = "^1.19.0"
 pandas = "^2.2.3"
+werkzeug = "^3.0.6"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.3"
