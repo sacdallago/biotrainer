@@ -1,10 +1,17 @@
 from abc import ABC
-from typing import List, Any, Union
+from typing import List, Any, Union, Type
 
 from .config_option import ConfigOption, FileOption, classproperty
 
 
 class TrainingOption(ConfigOption, ABC):
+    """
+    Abstract base class for training-related configuration options.
+
+    Extends `ConfigOption` to provide a specialized framework for training options
+    within a protocol. This class serves as a foundation for specific training options
+    by setting common attributes and behaviors.
+    """
 
     @classproperty
     def category(self) -> str:
@@ -12,6 +19,12 @@ class TrainingOption(ConfigOption, ABC):
 
 
 class NumberEpochs(TrainingOption, ConfigOption):
+    """
+    Configuration option for specifying the number of training epochs.
+
+    This option allows users to define one or more epochs for training the model.
+    It ensures that the provided number of epochs is a positive integer.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -27,7 +40,7 @@ class NumberEpochs(TrainingOption, ConfigOption):
 
     @staticmethod
     def _is_value_valid(config_option: ConfigOption, value) -> bool:
-        return value > 0
+        return isinstance(value, int) and value > 0
 
     @classproperty
     def required(self) -> bool:
@@ -35,6 +48,12 @@ class NumberEpochs(TrainingOption, ConfigOption):
 
 
 class BatchSize(TrainingOption, ConfigOption):
+    """
+    Configuration option for specifying the batch size.
+
+    This option allows users to define one or more batch sizes for training the model.
+    It ensures that the provided batch size is a positive integer.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -50,7 +69,7 @@ class BatchSize(TrainingOption, ConfigOption):
 
     @staticmethod
     def _is_value_valid(config_option: ConfigOption, value) -> bool:
-        return value > 0
+        return isinstance(value, int) and value > 0
 
     @classproperty
     def required(self) -> bool:
@@ -58,6 +77,12 @@ class BatchSize(TrainingOption, ConfigOption):
 
 
 class Patience(TrainingOption, ConfigOption):
+    """
+    Configuration option for specifying patience in early stopping.
+
+    This option allows users to define one or more patience values for early stopping during training.
+    It ensures that the provided patience values are positive integers.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -73,7 +98,7 @@ class Patience(TrainingOption, ConfigOption):
 
     @staticmethod
     def _is_value_valid(config_option: ConfigOption, value) -> bool:
-        return value > 0
+        return isinstance(value, int) and value > 0
 
     @classproperty
     def required(self) -> bool:
@@ -81,6 +106,12 @@ class Patience(TrainingOption, ConfigOption):
 
 
 class Shuffle(TrainingOption, ConfigOption):
+    """
+    Configuration option for enabling or disabling data shuffling.
+
+    This option allows users to choose whether to shuffle the training data before each epoch.
+    It ensures that the provided value is either True or False.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -104,6 +135,13 @@ class Shuffle(TrainingOption, ConfigOption):
 
 
 class UseClassWeights(TrainingOption, ConfigOption):
+    """
+    Configuration option for enabling or disabling the use of class weights.
+
+    This option allows users to choose whether to apply class weights during training,
+    which can be useful for handling imbalanced datasets. It ensures that the provided
+    value is either True or False.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -127,6 +165,13 @@ class UseClassWeights(TrainingOption, ConfigOption):
 
 
 class AutoResume(TrainingOption, ConfigOption):
+    """
+    Configuration option for enabling or disabling auto-resuming of training.
+
+    This option allows users to choose whether to automatically resume training from
+    the last checkpoint in case of interruptions. It ensures that the provided value
+    is either True or False.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -150,6 +195,12 @@ class AutoResume(TrainingOption, ConfigOption):
 
 
 class PretrainedModel(TrainingOption, FileOption):
+    """
+    Configuration option for specifying a pretrained model.
+
+    This option allows users to provide a pretrained model file, typically in PyTorch (.pt) format,
+    to initialize the model weights before training. It supports downloading from URLs if permitted.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -177,6 +228,13 @@ class PretrainedModel(TrainingOption, FileOption):
 
 
 class LimitedSampleSize(TrainingOption, ConfigOption):
+    """
+    Configuration option for limiting the sample size during training.
+
+    This option allows users to define a maximum number of samples to be used for training.
+    A value of -1 indicates no limit. It ensures that the provided sample size is either positive
+    or set to the default value.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -192,12 +250,21 @@ class LimitedSampleSize(TrainingOption, ConfigOption):
 
     @staticmethod
     def _is_value_valid(config_option: ConfigOption, value) -> bool:
-        return value > 0 or value == config_option.default_value
+        return (isinstance(value, int) and value > 0) or value == config_option.default_value
 
     @classproperty
     def required(self) -> bool:
         return False
 
 
-training_options: List = [NumberEpochs, BatchSize, Patience, Shuffle,
-                          UseClassWeights, AutoResume, PretrainedModel, LimitedSampleSize]
+# List of all training-related configuration options
+training_options: List[Type[TrainingOption]] = [
+    NumberEpochs,
+    BatchSize,
+    Patience,
+    Shuffle,
+    UseClassWeights,
+    AutoResume,
+    PretrainedModel,
+    LimitedSampleSize
+]
