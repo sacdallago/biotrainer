@@ -1,10 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import List, Union, Any, Final
+from typing import List, Union, Any, Final, Type
 
 from .config_option import ConfigOption, classproperty
 
 
 class CrossValidationOption(ConfigOption, ABC):
+    """
+    Abstract base class for cross-validation configuration options.
+
+    Extends `ConfigOption` to provide a framework for defining cross-validation
+    specific options, including supported methods and whether multiple values
+    are allowed.
+    """
 
     @classproperty
     def category(self) -> str:
@@ -13,6 +20,12 @@ class CrossValidationOption(ConfigOption, ABC):
     @classproperty
     @abstractmethod
     def cv_methods(self) -> List[str]:
+        """
+        List of cross-validation methods that the option is applicable to.
+
+        Returns:
+            List[str]: A list of supported cross-validation method names.
+        """
         return []
 
     @classproperty
@@ -21,6 +34,12 @@ class CrossValidationOption(ConfigOption, ABC):
 
 
 class Method(CrossValidationOption):
+    """
+    Configuration option for selecting the cross-validation method.
+
+    This option allows users to specify the method of cross-validation to be used.
+    It is a required option and supports predefined methods.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -43,6 +62,12 @@ class Method(CrossValidationOption):
 
 
 class K(CrossValidationOption):
+    """
+    Configuration option for specifying the number of folds in k-fold cross-validation.
+
+    This option is applicable only to the "k_fold" cross-validation method and allows
+    users to define the number of folds. It ensures that the value provided is valid.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -61,6 +86,11 @@ class K(CrossValidationOption):
 
 
 class Stratified(CrossValidationOption):
+    """
+    Configuration option to enable stratified k-fold cross-validation.
+
+    When enabled, this option ensures that each fold maintains the percentage of samples for each class.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -83,6 +113,11 @@ class Stratified(CrossValidationOption):
 
 
 class Repeat(CrossValidationOption):
+    """
+    Configuration option for specifying the number of repetitions in cross-validation.
+
+    This option allows users to repeat the cross-validation process multiple times to obtain more robust estimates.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -105,6 +140,11 @@ class Repeat(CrossValidationOption):
 
 
 class Nested(CrossValidationOption):
+    """
+    Configuration option to enable nested cross-validation.
+
+    Nested cross-validation is used to provide an unbiased evaluation of a model's performance.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -127,6 +167,11 @@ class Nested(CrossValidationOption):
 
 
 class NestedK(CrossValidationOption):
+    """
+    Configuration option for specifying the number of folds in nested k-fold cross-validation.
+
+    This option is applicable only when nested cross-validation is enabled and the method is "k_fold".
+    """
 
     @classproperty
     def name(self) -> str:
@@ -145,6 +190,11 @@ class NestedK(CrossValidationOption):
 
 
 class SearchMethod(CrossValidationOption):
+    """
+    Configuration option for selecting the hyperparameter search method.
+
+    This option allows users to choose between different hyperparameter optimization techniques.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -163,6 +213,11 @@ class SearchMethod(CrossValidationOption):
 
 
 class NMaxEvaluationsRandom(CrossValidationOption):
+    """
+    Configuration option for specifying the maximum number of evaluations in random search.
+
+    This option limits the number of hyperparameter combinations to evaluate during random search.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -181,6 +236,11 @@ class NMaxEvaluationsRandom(CrossValidationOption):
 
 
 class ChooseBy(CrossValidationOption):
+    """
+    Configuration option for selecting the metric to choose the best model.
+
+    This option allows users to specify which evaluation metric to use when selecting the best model.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -203,6 +263,11 @@ class ChooseBy(CrossValidationOption):
 
 
 class P(CrossValidationOption):
+    """
+    Configuration option for specifying the 'p' parameter in leave-p-out cross-validation.
+
+    This option defines the number of samples to leave out in each iteration of leave-p-out cross-validation.
+    """
 
     @classproperty
     def name(self) -> str:
@@ -224,6 +289,19 @@ class P(CrossValidationOption):
         return value >= 1
 
 
+# Constant key used to reference the cross-validation configuration.
 CROSS_VALIDATION_CONFIG_KEY: Final[str] = "cross_validation_config"
-cross_validation_options: List = [Method, K, Stratified, Repeat, Nested, NestedK,
-                                  SearchMethod, NMaxEvaluationsRandom, ChooseBy, P]
+
+# List of all cross-validation configuration option classes.
+cross_validation_options: List[Type[CrossValidationOption]] = [
+    Method,
+    K,
+    Stratified,
+    Repeat,
+    Nested,
+    NestedK,
+    SearchMethod,
+    NMaxEvaluationsRandom,
+    ChooseBy,
+    P
+]
