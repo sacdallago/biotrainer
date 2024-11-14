@@ -212,7 +212,7 @@ class PretrainedModel(TrainingOption, FileOption):
 
     @classproperty
     def allowed_formats(self) -> List[str]:
-        return [".pt"]
+        return [".safetensors"]
 
     @classproperty
     def allow_multiple_values(self) -> bool:
