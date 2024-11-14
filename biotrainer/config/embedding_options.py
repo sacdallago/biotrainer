@@ -91,7 +91,7 @@ class UseHalfPrecision(EmbeddingOption, ConfigOption):
 
     This option allows users to enable or disable half-precision computations, which can
     lead to performance improvements and reduced memory usage at the potential cost of
-    numerical precision.
+    numerical precision. Only applicable for embedding on the GPU.
     """
 
     @classproperty

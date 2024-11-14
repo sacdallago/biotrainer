@@ -113,7 +113,7 @@ class Interaction(GeneralOption, ConfigOption):
 
     This option allows users to select the method of interaction, either by multiplying
     or concatenating embeddings. It is an optional setting with a default value of an empty string,
-    indicating no specific interaction method is set.
+    indicating no specific interaction method is set. Enabling it will interpret the given sequence file as an interaction dataset.
     """
 
     @classproperty

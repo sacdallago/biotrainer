@@ -198,7 +198,7 @@ class PretrainedModel(TrainingOption, FileOption):
     """
     Configuration option for specifying a pretrained model.
 
-    This option allows users to provide a pretrained model file, typically in PyTorch (.pt) format,
+    This option allows users to provide a pretrained model file, typically in Safetensors (.safetensors) format,
     to initialize the model weights before training. It supports downloading from URLs if permitted.
     """
 
