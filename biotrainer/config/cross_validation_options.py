@@ -143,7 +143,7 @@ class Nested(CrossValidationOption):
     """
     Configuration option to enable nested cross-validation.
 
-    Nested cross-validation is used to provide an unbiased evaluation of a model's performance.
+    Nested cross-validation is used to provide a performance estimate for the model.
     """
 
     @classproperty
