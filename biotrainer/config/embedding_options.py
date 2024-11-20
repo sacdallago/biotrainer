@@ -4,6 +4,7 @@ from typing import List, Any, Union, Type
 
 from .config_option import FileOption, classproperty, ConfigOption
 from ..embedders import get_predefined_embedder_names
+from ..protocols import Protocol
 
 
 class EmbeddingOption(ConfigOption, ABC):
@@ -144,5 +145,59 @@ class EmbeddingsFile(EmbeddingOption, FileOption):
         return True
 
 
-# List of all embedding-related configuration options
-embedding_options: List[Type[EmbeddingOption]] = [EmbedderName, UseHalfPrecision, EmbeddingsFile]
+class DimensionReduction(EmbeddingOption, ConfigOption):
+
+    @classproperty
+    def name(self) -> str:
+        return "dimension_reduction_method"
+
+    @property
+    def default_value(self) -> Union[str, int, float, bool, Any]:
+        return ""
+
+    @classproperty
+    def allow_multiple_values(self) -> bool:
+        return False
+
+    @property
+    def possible_values(self) -> List[Any]:
+        return ["umap", "tsne"]
+
+    @classproperty
+    def allowed_protocols(self) -> List[Protocol]:
+        return [Protocol.sequence_to_class, Protocol.sequence_to_value]
+
+    @classproperty
+    def required(self) -> bool:
+        return False
+
+
+class ReducedDimension(EmbeddingOption, ConfigOption):
+
+    @classproperty
+    def name(self) -> str:
+        return "reduced_dimension"
+
+    @property
+    def default_value(self) -> Union[str, int, float, bool, Any]:
+        return ""
+
+    @classproperty
+    def allow_multiple_values(self) -> bool:
+        return False
+
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        return type(value)==int and value > 0
+
+    @classproperty
+    def allowed_protocols(self) -> List[Protocol]:
+        return [Protocol.sequence_to_class, Protocol.sequence_to_value]
+
+    @classproperty
+    def required(self) -> bool:
+        return False
+
+
+embedding_options: List[Type[EmbeddingOption]] = [EmbedderName, UseHalfPrecision, EmbeddingsFile,
+DimensionReduction, ReducedDimension]
