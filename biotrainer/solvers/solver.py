@@ -331,7 +331,7 @@ class Solver(ABC):
         self.network.eval()
 
         # Export
-        export_options = torch.onnx.ExportOptions(dynamic_shapes=True)
+        export_options = torch.onnx.ExportOptions(dynamic_shapes=True, op_level_debug=False)
         onnx_program = torch.onnx.dynamo_export(self.network, dummy_input,
                                                 export_options=export_options)
         onnx_file_name = f"{output_dir}/{self.checkpoint_name.split('.')[0]}.onnx"

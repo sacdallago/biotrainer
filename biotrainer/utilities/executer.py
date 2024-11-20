@@ -1,3 +1,4 @@
+import torch
 import logging
 
 from ruamel import yaml
@@ -29,6 +30,10 @@ def _setup_logging(output_dir: str):
                             logging.StreamHandler()]
                         )
     logging.captureWarnings(True)
+    # Only log errors for onnx and dynamo
+    torch._logging.set_logs(dynamo=logging.ERROR, onnx=logging.ERROR, onnx_diagnostics=False)
+    for logger_name in ["torch.onnx", "torch._dynamo", "onnxscript"]:
+        logging.getLogger(logger_name).setLevel(logging.ERROR)
 
 
 def _write_output_file(out_filename: str, config: dict) -> None:
