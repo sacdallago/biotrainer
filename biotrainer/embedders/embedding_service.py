@@ -11,6 +11,8 @@ from tqdm import tqdm
 from pathlib import Path
 from numpy import ndarray
 from typing import Dict, Tuple, Any, List, Optional
+from sklearn.manifold import TSNE
+from umap import UMAP
 
 from .embedder_interfaces import EmbedderInterface
 
@@ -185,7 +187,8 @@ class EmbeddingService:
         return max_embedding_fit
     
     def _save_and_reset_embeddings(self, embeddings: Dict[str, ndarray], last_save_id: int,
-                                   embeddings_file_path: Path, use_reduced_embeddings: bool) -> Tuple[int, Dict[str, ndarray]]:
+                                   embeddings_file_path: Path, use_reduced_embeddings: bool
+                                   ) -> Tuple[int, Dict[str, ndarray]]:
         """
         Save the embeddings and reset the dictionary.
 
@@ -206,6 +209,42 @@ class EmbeddingService:
         return last_save_id, {}
 
     
+    @staticmethod
+    def reduce_embeddings_dimension(
+        embeddings: Dict[str, Any],
+        dimension_reduction_method: str,
+        reduced_dimension: int) -> Dict[str, Any]:
+        """
+        Reduces the dimension of per-residue embeddings or per-protein embeddings
+
+        Parameters:
+            embeddings (Dict[str, ndarray]): Dictionary of embeddings.
+            embedder: The embedder used for reducing embeddings.
+
+        Returns:
+            out (Dict[str, ndarray]): Dictionary of reduced embeddings.
+        """
+        sorted_keys = sorted(list(embeddings.keys()))
+        all_embeddings = torch.stack([embeddings[k] for k in sorted_keys], dim=0)
+        max_dim_dict = {
+            "umap": all_embeddings.shape[0]-2,
+            "tsne": all_embeddings.shape[0]-1
+            }
+        reduced_dimension = min([
+            reduced_dimension,
+            max_dim_dict[dimension_reduction_method],
+            all_embeddings.shape[1]])
+        dimension_reduction_method_dict = {
+            "umap": UMAP(n_components=reduced_dimension),
+            "tsne": TSNE(
+                n_components=reduced_dimension,
+                perplexity=min(30, reduced_dimension))
+            }
+        embeddings_reduced_dimensions = dimension_reduction_method_dict[
+            dimension_reduction_method].fit_transform(all_embeddings)
+        return {sorted_keys[i]:torch.tensor(embeddings_reduced_dimensions[i]) for i in range(len(sorted_keys))}
+
+
     @staticmethod
     def _reduce_embeddings(embeddings: Dict[str, ndarray], embedder) -> Dict[str, ndarray]:
         """

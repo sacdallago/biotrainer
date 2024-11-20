@@ -11,7 +11,7 @@ from .config_rules import (MutualExclusive, MutualExclusiveValues, ProtocolRequi
 from .cross_validation_options import (cross_validation_options, CROSS_VALIDATION_CONFIG_KEY, Method, ChooseBy,
                                        CrossValidationOption, K, Nested, NestedK, SearchMethod, NMaxEvaluationsRandom,
                                        P)
-from .embedding_options import EmbedderName, EmbeddingsFile, embedding_options, UseHalfPrecision
+from .embedding_options import EmbedderName, EmbeddingsFile, embedding_options, UseHalfPrecision, DimensionReduction, ReducedDimension
 from .general_options import general_options, Device
 from .input_options import SequenceFile, LabelsFile, input_options
 from .model_options import model_options

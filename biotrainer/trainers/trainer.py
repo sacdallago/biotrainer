@@ -51,6 +51,8 @@ class Trainer:
                  cross_validation_config: Dict[str, Any] = None,
                  interaction: Optional[str] = None,
                  sanity_check: bool = True,
+                 dimension_reduction_method: Optional[str] = None,
+                 reduced_dimension: Optional[int] = None,
                  # Ignore rest
                  **kwargs
                  ):
@@ -76,6 +78,8 @@ class Trainer:
         self._cross_validation_splitter = CrossValidationSplitter(self._protocol, self._cross_validation_config)
         self._hp_manager = hp_manager
         self._sanity_check = sanity_check
+        self._dimension_reduction_method = dimension_reduction_method
+        self._reduced_dimension = reduced_dimension
 
     def training_and_evaluation_routine(self):
         # SETUP
@@ -173,6 +177,14 @@ class Trainer:
 
         # Mapping from id to embeddings
         id2emb = embedding_service.load_embeddings(embeddings_file_path=embeddings_file)
+        if (self._dimension_reduction_method and 
+            self._reduced_dimension and
+            len(id2emb)>=3 and
+            list(id2emb.values())[0].shape[0]>=3):
+            id2emb = embedding_service.reduce_embeddings_dimension(
+                embeddings=id2emb,
+                dimension_reduction_method=self._dimension_reduction_method,
+                reduced_dimension=self._reduced_dimension)
 
         return id2emb
 
