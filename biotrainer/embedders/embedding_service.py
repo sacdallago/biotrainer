@@ -7,12 +7,12 @@ import torch
 import logging
 import numpy as np
 
+from umap import UMAP
 from tqdm import tqdm
 from pathlib import Path
 from numpy import ndarray
-from typing import Dict, Tuple, Any, List, Union
 from sklearn.manifold import TSNE
-from umap import UMAP
+from typing import Dict, Tuple, Any, List, Union, Optional
 
 from .embedder_interfaces import EmbedderInterface
 

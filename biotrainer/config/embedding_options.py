@@ -188,7 +188,7 @@ class ReducedDimension(EmbeddingOption, ConfigOption):
 
     @staticmethod
     def _is_value_valid(config_option: ConfigOption, value) -> bool:
-        return type(value)==int and value > 0
+        return type(value) == int and value > 0
 
     @classproperty
     def allowed_protocols(self) -> List[Protocol]:
@@ -199,5 +199,5 @@ class ReducedDimension(EmbeddingOption, ConfigOption):
         return False
 
 
-embedding_options: List[Type[EmbeddingOption]] = [EmbedderName, UseHalfPrecision, EmbeddingsFile,
-DimensionReduction, ReducedDimension]
+embedding_options: List[Type[EmbeddingOption]] = [EmbedderName, UseHalfPrecision, EmbeddingsFile, DimensionReduction,
+                                                  ReducedDimension]
