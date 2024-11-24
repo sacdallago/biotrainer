@@ -145,7 +145,7 @@ class EmbeddingsFile(EmbeddingOption, FileOption):
         return True
 
 
-class DimensionReduction(EmbeddingOption, ConfigOption):
+class DimensionReductionMethod(EmbeddingOption, ConfigOption):
 
     @classproperty
     def name(self) -> str:
@@ -165,18 +165,18 @@ class DimensionReduction(EmbeddingOption, ConfigOption):
 
     @classproperty
     def allowed_protocols(self) -> List[Protocol]:
-        return [Protocol.sequence_to_class, Protocol.sequence_to_value]
+        return Protocol.using_per_sequence_embeddings()
 
     @classproperty
     def required(self) -> bool:
         return False
 
 
-class ReducedDimension(EmbeddingOption, ConfigOption):
+class NReducedComponents(EmbeddingOption, ConfigOption):
 
     @classproperty
     def name(self) -> str:
-        return "reduced_dimension"
+        return "n_reduced_components"
 
     @property
     def default_value(self) -> Union[str, int, float, bool, Any]:
@@ -192,7 +192,7 @@ class ReducedDimension(EmbeddingOption, ConfigOption):
 
     @classproperty
     def allowed_protocols(self) -> List[Protocol]:
-        return [Protocol.sequence_to_class, Protocol.sequence_to_value]
+        return Protocol.using_per_sequence_embeddings()
 
     @classproperty
     def required(self) -> bool:
@@ -200,4 +200,4 @@ class ReducedDimension(EmbeddingOption, ConfigOption):
 
 
 embedding_options: List[Type[EmbeddingOption]] = [EmbedderName, UseHalfPrecision, EmbeddingsFile,
-DimensionReduction, ReducedDimension]
+                                                  DimensionReductionMethod, NReducedComponents]

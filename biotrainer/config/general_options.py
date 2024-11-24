@@ -134,7 +134,7 @@ class Interaction(GeneralOption, ConfigOption):
 
     @classproperty
     def allowed_protocols(self) -> List[Protocol]:
-        return [Protocol.sequence_to_class, Protocol.sequence_to_value]
+        return Protocol.using_per_sequence_embeddings()
 
     @classproperty
     def required(self) -> bool:
