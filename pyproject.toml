@@ -56,7 +56,6 @@ onnx = "1.16.1"
 onnxscript = "^0.1.0.dev20240806"
 onnxruntime = "^1.19.0"
 pandas = "^2.2.3"
-jupyter = "^1.1.1"
 umap-learn = "^0.5.7"
 
 [tool.poetry.dev-dependencies]
