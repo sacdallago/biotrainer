@@ -1,11 +1,12 @@
 import os
 from pathlib import Path
 from typing import Union, List, Dict, Any, Tuple
+from datasets import load_dataset, concatenate_datasets
 
 from ruamel import yaml
 from ruamel.yaml import YAMLError
 
-from .config_option import ConfigurationException, ConfigOption, FileOption
+from .config_option import ConfigurationException, ConfigOption, FileOption, logger
 from .config_rules import (
     MutualExclusive,
     MutualExclusiveValues,
@@ -30,7 +31,12 @@ from .general_options import general_options, Device
 from .input_options import SequenceFile, LabelsFile, input_options
 from .model_options import model_options
 from .training_options import AutoResume, PretrainedModel, training_options
+from .hf_dataset_options import (
+    hf_dataset_options,
+    HF_DATASET_CONFIG_KEY,
+)
 from ..protocols import Protocol
+from ..utilities import hf_to_fasta
 
 # Define protocol-specific rules
 protocol_rules = [
@@ -80,11 +86,18 @@ cross_validation_rules = [
 # Combine all configuration options into dictionaries for easy access
 all_options_dict: Dict[str, ConfigOption] = {
     option.name: option
-    for option in general_options + input_options + model_options + training_options + embedding_options
+    for option in (
+        general_options + input_options + hf_dataset_options +
+        model_options + training_options + embedding_options
+    )
 }
 
 cross_validation_dict: Dict[str, ConfigOption] = {
     option.name: option for option in cross_validation_options
+}
+
+hf_dataset_dict: Dict[str, ConfigOption] = {
+    option.name: option for option in hf_dataset_options
 }
 
 
@@ -265,13 +278,51 @@ class Configurator:
         return cv_map
 
     @staticmethod
+    def _get_hf_dataset_map(
+            protocol: Protocol,
+            hf_dict: Dict[str, Any]
+    ) -> Dict[str, ConfigOption]:
+        """
+        Create a mapping of HuggingFace dataset options based on the provided configuration.
+
+        Args:
+            protocol (Protocol): The selected protocol.
+            hf_dict (Dict[str, Any]): The hf_dataset configuration dictionary.
+
+        Returns:
+            Dict[str, ConfigOption]: A dictionary mapping hf_dataset option names to their instances.
+
+        Raises:
+            ConfigurationException: If an unknown hf_dataset option is encountered or required options are missing.
+        """
+        hf_map = {}
+        required_fields = [opt.name for opt in hf_dataset_options if opt.required]
+
+        for field in required_fields:
+            if field not in hf_dict:
+                raise ConfigurationException(f"hf_dataset requires the '{field}' field to be set.")
+
+        # Initialize each hf_dataset option
+        for hf_name, hf_value in hf_dict.items():
+            try:
+                hf_option_class = hf_dataset_dict[hf_name]
+                hf_option: ConfigOption = hf_option_class(protocol=protocol, value=hf_value)
+                hf_map[hf_name] = hf_option
+            except KeyError:
+                raise ConfigurationException(f"Unknown hf_dataset option: {hf_name}!")
+            except ConfigurationException as e:
+                raise ConfigurationException(f"Invalid value for hf_dataset option '{hf_name}': {e}")
+
+        return hf_map
+
+    @staticmethod
     def _get_config_maps(
         protocol: Protocol,
         config_dict: Dict[str, Any],
         config_file_path: Path = None,
-    ) -> Tuple[Dict[str, ConfigOption], Dict[str, ConfigOption]]:
+    ) -> Tuple[Dict[str, ConfigOption], Dict[str, ConfigOption], Dict[str, ConfigOption]]:
         """
-        Generate configuration and cross-validation maps based on the protocol and configuration dictionary.
+        Generate configuration, cross-validation, and hf_dataset maps based on the protocol and configuration dictionary.
 
         Args:
             protocol (Protocol): The selected protocol.
@@ -279,19 +330,25 @@ class Configurator:
             config_file_path (Path, optional): Path to the configuration file directory. Defaults to None.
 
         Returns:
-            Tuple[Dict[str, ConfigOption], Dict[str, ConfigOption]]:
+            Tuple[Dict[str, ConfigOption], Dict[str, ConfigOption], Dict[str, ConfigOption]]:
                 - config_map: Mapping of configuration option names to their instances.
                 - cv_map: Mapping of cross-validation option names to their instances.
+                - hf_map: Mapping of hf_dataset option names to their instances.
         """
         config_map = {}
         cv_map = {}
+        hf_map = {}
         contains_cross_validation_config = False
+
         for config_name in config_dict.keys():
             try:
                 if config_name == CROSS_VALIDATION_CONFIG_KEY:
                     cv_map = Configurator._get_cross_validation_map(protocol=protocol,
                                                                     cv_dict=config_dict[config_name])
                     contains_cross_validation_config = True
+                elif config_name == HF_DATASET_CONFIG_KEY:
+                    hf_map = Configurator._get_hf_dataset_map(protocol=protocol,
+                                                              hf_dict=config_dict[config_name])
                 else:
                     value = config_dict[config_name]
                     if value == "":  # Ignore empty values
@@ -301,6 +358,7 @@ class Configurator:
                     config_map[config_name] = config_object
             except KeyError:
                 raise ConfigurationException(f"Unknown configuration option: {config_name}!")
+
         # Add default values for missing configuration options
         all_options_for_protocol: List[ConfigOption] = [
             option for option in all_options_dict.values() if protocol in option.allowed_protocols
@@ -317,7 +375,226 @@ class Configurator:
             cv_map[Method.name] = Method(protocol=protocol)
             cv_map[ChooseBy.name] = ChooseBy(protocol=protocol)
 
-        return config_map, cv_map
+        return config_map, cv_map, hf_map
+
+    @staticmethod
+    def _hf_log_overwrite_warnings(
+            protocol: Protocol,
+            config_map: Dict[str, ConfigOption]
+    ):
+        """
+        Logs existing sequence and label files based on the protocol.
+
+        Args:
+            protocol (Protocol): The selected protocol.
+            config_map (Dict[str, ConfigOption]): Mapping of configuration option names to their instances.
+        """
+        if protocol in Protocol.per_sequence_protocols():
+            sequence_file_option = config_map.get("sequence_file")
+            if sequence_file_option and os.path.exists(sequence_file_option.value):
+                logger.info("sequence_file already exists. Overwriting it.")
+
+        if protocol in Protocol.per_residue_protocols():
+            sequence_file_option = config_map.get("sequence_file")
+            labels_file_option = config_map.get("labels_file")
+
+            if sequence_file_option and os.path.exists(sequence_file_option.value):
+                logger.info("sequence_file already exists. Overwriting it.")
+            if labels_file_option and os.path.exists(labels_file_option.value):
+                logger.info("labels_file already exists. Overwriting it.")
+
+    def _load_and_split_dataset(self, hf_map: Dict[str, ConfigOption]) -> Tuple[List[str], List[Any], List[str]]:
+        """
+        Loads the HuggingFace dataset and splits it into sequences, targets, and set_values.
+
+        Args:
+            hf_map (Dict[str, ConfigOption]): Mapping of hf_dataset option names to their instances.
+
+        Returns:
+            Tuple[List[str], List[Any], List[str]]: Sequences, targets, and corresponding set values.
+
+        Raises:
+            ConfigurationException: If required columns are missing or dataset loading fails.
+        """
+        path = hf_map["path"].value
+        sequence_column = hf_map["sequence_column"].value
+        target_column = hf_map["target_column"].value
+
+        logger.info(f"Loading HuggingFace dataset from path: {path}")
+        dataset = load_dataset(path)
+
+        # Collect all available splits
+        available_splits = list(dataset.keys())
+        if not available_splits:
+            raise ConfigurationException(f"No splits found in the dataset at path '{path}'.")
+
+        sequences = []
+        targets = []
+        set_values = []
+
+        if len(available_splits) > 1:
+            logger.info(f"Multiple splits found: {available_splits}. Processing each split separately.")
+            for split_name in available_splits:
+                split_dataset = dataset[split_name]
+                if split_dataset is None:
+                    logger.warning(f"Split '{split_name}' is None. Skipping.")
+                    continue
+
+                # Verify that the required columns exist
+                self._verify_columns(split_dataset, sequence_column, target_column)
+
+                # Determine SET value based on split name
+                set_name = self._determine_set_name(split_name)
+
+                split_sequences = split_dataset[sequence_column]
+                split_targets = split_dataset[target_column]
+
+                sequences.extend(split_sequences)
+                targets.extend(split_targets)
+                set_values.extend([set_name] * len(split_sequences))
+        else:
+            logger.info("Single split found. Performing a train/val/test split.")
+            single_split = available_splits[0]
+            combined_dataset = dataset[single_split]
+
+            # Verify that the required columns exist
+            self._verify_columns(combined_dataset, sequence_column, target_column)
+
+            # Extract the sequence and target columns
+            all_sequences = combined_dataset[sequence_column]
+            all_targets = combined_dataset[target_column]
+
+            # Perform the split: 70% train, 15% val, 15% test
+            train_seq, temp_seq, train_tgt, temp_tgt = train_test_split(
+                all_sequences, all_targets, test_size=0.30, random_state=42, shuffle=True
+            )
+            val_seq, test_seq, val_tgt, test_tgt = train_test_split(
+                temp_seq, temp_tgt, test_size=0.50, random_state=42, shuffle=True
+            )
+
+            # Assign SET values
+            sequences.extend(train_seq)
+            targets.extend(train_tgt)
+            set_values.extend(["TRAIN"] * len(train_seq))
+
+            sequences.extend(val_seq)
+            targets.extend(val_tgt)
+            set_values.extend(["VAL"] * len(val_seq))
+
+            sequences.extend(test_seq)
+            targets.extend(test_tgt)
+            set_values.extend(["TEST"] * len(test_seq))
+
+        return sequences, targets, set_values
+
+    @staticmethod
+    def _determine_set_name(split_name: str) -> str:
+        """
+        Determines the set name (TRAIN, VAL, TEST) based on the split name.
+
+        Args:
+            split_name (str): The name of the split.
+
+        Returns:
+            str: The correct set name.
+
+        Logs a warning and assigns 'TRAIN' if the split name is unrecognized.
+        """
+        lower_split = split_name.lower()
+        if lower_split.startswith("train"):
+            return "TRAIN"
+        elif lower_split.startswith("val"):
+            return "VAL"
+        elif lower_split.startswith("test"):
+            return "TEST"
+        else:
+            logger.warning(f"Unrecognized split name '{split_name}'. Assigning to 'TRAIN'.")
+            return "TEST"
+
+    @staticmethod
+    def _verify_columns(
+            dataset,
+            sequence_column: str,
+            target_column: str
+    ):
+        """
+        Verifies that the required columns exist in the dataset.
+
+        Args:
+            dataset: The dataset to verify.
+            sequence_column (str): The name of the sequence column.
+            target_column (str): The name of the target column.
+
+        Raises:
+            ConfigurationException: If any required column is missing.
+        """
+        if sequence_column not in dataset.column_names:
+            raise ConfigurationException(f"Sequence column '{sequence_column}' not found in the dataset.")
+        if target_column not in dataset.column_names:
+            raise ConfigurationException(f"Target column '{target_column}' not found in the dataset.")
+
+    @staticmethod
+    def _process_and_save_fasta(
+            protocol: Protocol,
+            sequences: List[str],
+            targets: List[Any],
+            set_values: List[str],
+            config_map: Dict[str, ConfigOption]
+    ):
+        """
+        Processes the sequences and targets and saves them into FASTA files.
+
+        Args:
+            protocol (Protocol): The selected protocol.
+            sequences (List[str]): List of sequences.
+            targets (List[Any]): List of target values.
+            set_values (List[str]): List of set values corresponding to each sequence.
+            config_map (Dict[str, ConfigOption]): Mapping of configuration option names to their instances.
+        """
+        if protocol in Protocol.per_sequence_protocols():
+            hf_to_fasta(
+                sequences=sequences,
+                targets=targets,
+                set_values=set_values,
+                sequences_file_name=config_map["sequence_file"].value
+            )
+        elif protocol in Protocol.per_residue_protocols():
+            hf_to_fasta(
+                sequences=sequences,
+                targets=targets,
+                set_values=set_values,
+                sequences_file_name=config_map["sequence_file"].value,
+                targets_file_name = config_map["labels_file"].value
+            )
+
+    def _create_hf_files(
+            self,
+            protocol: Protocol,
+            config_map: Dict[str, ConfigOption],
+            hf_map: Dict[str, ConfigOption],
+    ):
+        """
+        Create sequence and target files based on the hf_dataset configuration. If they exist, they will be overwritten.
+        Then, downloads and processes the HuggingFace dataset.
+
+        Args:
+            protocol (Protocol): The selected protocol.
+            config_map (Dict[str, ConfigOption]): Mapping of configuration option names to their instances.
+            hf_map (Dict[str, ConfigOption]): Mapping of hf_dataset option names to their instances.
+
+        Raises:
+            ConfigurationException: If there is an issue creating the required files or processing the dataset.
+        """
+        # Prepare and log existing output files
+        self._hf_log_overwrite_warnings(protocol, config_map)
+
+        # Load and split the dataset
+        sequences, targets, set_values = self._load_and_split_dataset(hf_map)
+
+        # Process and save to FASTA files
+        self._process_and_save_fasta(protocol, sequences, targets, set_values, config_map)
+
+        logger.info("HuggingFace dataset downloaded and processed successfully.")
 
     @staticmethod
     def _verify_config(
@@ -432,16 +709,25 @@ class Configurator:
         Raises:
             ConfigurationException: If any validation rule is violated or if required options are missing.
         """
-        config_map, cv_map = self._get_config_maps(
+        config_map, cv_map, hf_map = self._get_config_maps(
             protocol=self.protocol,
             config_dict=self._config_dict,
             config_file_path=self._config_file_path,
         )
+
+        if hf_map:
+            self._create_hf_files(
+                protocol=self.protocol,
+                config_map=config_map,
+                hf_map=hf_map,
+            )
+
         self._verify_config(
             protocol=self.protocol,
             config_map=config_map,
             ignore_file_checks=ignore_file_checks
         )
+
         self._verify_cv_config(
             protocol=self.protocol,
             config_map=config_map,
@@ -454,5 +740,8 @@ class Configurator:
         result[CROSS_VALIDATION_CONFIG_KEY] = {}
         for cv_object in cv_map.values():
             result[CROSS_VALIDATION_CONFIG_KEY][cv_object.name] = cv_object.value
+        result[HF_DATASET_CONFIG_KEY] = {}
+        for hf_object in hf_map.values():
+            result[HF_DATASET_CONFIG_KEY][hf_object.name] = hf_object.value
 
         return result
