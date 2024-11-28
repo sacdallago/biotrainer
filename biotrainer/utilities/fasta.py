@@ -2,7 +2,7 @@ import re
 import logging
 
 from Bio import SeqIO
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any, Optional
 from Bio.SeqRecord import SeqRecord
 
 from ..utilities import INTERACTION_INDICATOR
@@ -127,3 +127,54 @@ def read_FASTA(path: str) -> List[SeqRecord]:
         raise  # Already says "No such file or directory"
     except Exception as e:
         raise ValueError(f"Could not parse '{path}'. Are you sure this is a valid fasta file?") from e
+
+
+def hf_to_fasta(
+    sequences: List[str],
+    targets: List[Any],
+    set_values: List[str],
+    sequences_file_name: str,
+    targets_file_name: Optional[str] = None
+) -> None:
+    """
+    Converts sequences and targets from a HuggingFace dataset into FASTA file(s).
+
+    Args:
+        sequences (List[str]): A list of protein sequences.
+        targets (List[Any]): A list of target values.
+        set_values (List[str]): A list of SET values corresponding to each sequence.
+        sequences_file_name (str): Path and filename for the output sequence FASTA file.
+        targets_file_name (Optional[str], optional): Path and filename for the output target FASTA file.
+            Defaults to None.
+
+    Raises:
+        ValueError: If the lengths of sequences, targets, and set_values do not match.
+        IOError: If there is an issue writing to the output files.
+    """
+    if not (len(sequences) == len(targets) == len(set_values)):
+        raise ValueError("The number of sequences, targets, and set_values must be the same.")
+
+    try:
+        if targets_file_name is None:
+            # Single FASTA file mode
+            with open(sequences_file_name, 'w') as seq_file:
+                for idx, (seq, target, set_val) in enumerate(zip(sequences, targets, set_values), start=1):
+                    seq_id = f"Seq{idx}"
+                    header = f">{seq_id} SET={set_val} TARGET={target}"
+                    seq_file.write(f"{header}\n{seq}\n")
+        else:
+            # Separate FASTA files mode
+            with open(sequences_file_name, 'w') as seq_file, open(targets_file_name, 'w') as tgt_file:
+                for idx, (seq, target, set_val) in enumerate(zip(sequences, targets, set_values), start=1):
+                    seq_id = f"Seq{idx}"
+
+                    # Write to sequence FASTA file
+                    seq_header = f">{seq_id} SET={set_val}"
+                    seq_file.write(f"{seq_header}\n{seq}\n")
+
+                    # Write to target FASTA file
+                    tgt_header = f">{seq_id} SET={set_val}"
+                    tgt_file.write(f"{tgt_header}\n{target}\n")
+
+    except IOError as e:
+        raise IOError(f"Error writing to FASTA file(s): {e}")
