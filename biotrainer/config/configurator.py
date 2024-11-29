@@ -419,9 +419,14 @@ class Configurator:
         path = hf_map["path"].value
         sequence_column = hf_map["sequence_column"].value
         target_column = hf_map["target_column"].value
+        subset_name = hf_map["subset"].value if "subset" in hf_map else None
 
         logger.info(f"Loading HuggingFace dataset from path: {path}")
-        dataset = load_dataset(path)
+
+        if not subset_name:
+            dataset = load_dataset(path)
+        else:
+            dataset = load_dataset(path, subset_name)
 
         # Collect all available splits
         available_splits = list(dataset.keys())
