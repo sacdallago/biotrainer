@@ -54,7 +54,7 @@ class HFSubsetName(HFDatasetOption):
 
     @classproperty
     def name(self) -> str:
-        return "subset_name"
+        return "subset"
 
     @classproperty
     def allow_multiple_values(self) -> bool:
