@@ -568,10 +568,10 @@ class Configurator:
             )
 
     def _create_hf_files(
-            self,
-            protocol: Protocol,
-            config_map: Dict[str, ConfigOption],
-            hf_map: Dict[str, ConfigOption],
+        self,
+        protocol: Protocol,
+        config_map: Dict[str, ConfigOption],
+        hf_map: Dict[str, ConfigOption],
     ):
         """
         Create sequence and target files based on the hf_dataset configuration. If they exist, they will be overwritten.
@@ -585,6 +585,17 @@ class Configurator:
         Raises:
             ConfigurationException: If there is an issue creating the required files or processing the dataset.
         """
+        # Resolve file paths relative to config file directory
+        config_dir = self._config_file_path
+
+        sequence_file = config_dir / Path(config_map["sequence_file"].value)
+        config_map["sequence_file"].value = str(sequence_file)
+
+        # If protocol requires labels_file, resolve its path
+        if protocol in Protocol.per_residue_protocols():
+            labels_file = config_dir / Path(config_map["labels_file"].value)
+            config_map["labels_file"].value = str(labels_file)
+
         # Prepare and log existing output files
         self._hf_log_overwrite_warnings(protocol, config_map)
 
