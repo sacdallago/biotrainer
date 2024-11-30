@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import Union, List, Dict, Any, Tuple
 from datasets import load_dataset, concatenate_datasets
+from sklearn.model_selection import train_test_split
 
 from ruamel import yaml
 from ruamel.yaml import YAMLError
@@ -229,13 +230,17 @@ class Configurator:
         Raises:
             ConfigurationException: If the protocol is not specified or invalid.
         """
+        protocol = config_dict.get("protocol")
+        if protocol is None:
+            raise ConfigurationException(
+                "No protocol specified in config file!"
+            )
         try:
-            protocol = config_dict["protocol"]
             return Protocol[protocol]
         except KeyError:
-            raise ConfigurationException("No protocol specified in config file!")
-        except KeyError as e:
-            raise ConfigurationException(f"Invalid protocol specified: {config_dict.get('protocol')})") from e
+            raise ConfigurationException(
+                f"Invalid protocol specified: {protocol}"
+            )
 
     @staticmethod
     def _get_cross_validation_map(
@@ -266,10 +271,14 @@ class Configurator:
                 cv_object.transform_value_if_necessary()
                 cv_map[cv_name] = cv_object
             except KeyError:
-                raise ConfigurationException(f"Unknown cross-validation option: {cv_name}!")
+                raise ConfigurationException(
+                    f"Unknown cross-validation option: {cv_name}!"
+                )
 
         if method == "":
-            raise ConfigurationException("Required option method is missing from cross_validation_config!")
+            raise ConfigurationException(
+                "Required option method is missing from cross_validation_config!"
+            )
         else:
             # Add default value for choose_by if not present
             if ChooseBy.name not in cv_dict.keys():
@@ -300,7 +309,9 @@ class Configurator:
 
         for field in required_fields:
             if field not in hf_dict:
-                raise ConfigurationException(f"hf_dataset requires the '{field}' field to be set.")
+                raise ConfigurationException(
+                    f"hf_dataset requires the '{field}' field to be set."
+                )
 
         # Initialize each hf_dataset option
         for hf_name, hf_value in hf_dict.items():
@@ -309,9 +320,13 @@ class Configurator:
                 hf_option: ConfigOption = hf_option_class(protocol=protocol, value=hf_value)
                 hf_map[hf_name] = hf_option
             except KeyError:
-                raise ConfigurationException(f"Unknown hf_dataset option: {hf_name}!")
+                raise ConfigurationException(
+                    f"Unknown hf_dataset option: {hf_name}!"
+                )
             except ConfigurationException as e:
-                raise ConfigurationException(f"Invalid value for hf_dataset option '{hf_name}': {e}")
+                raise ConfigurationException(
+                    f"Invalid value for hf_dataset option '{hf_name}': {e}"
+                )
 
         return hf_map
 
@@ -357,7 +372,9 @@ class Configurator:
                     config_object.transform_value_if_necessary(config_file_path)
                     config_map[config_name] = config_object
             except KeyError:
-                raise ConfigurationException(f"Unknown configuration option: {config_name}!")
+                raise ConfigurationException(
+                    f"Unknown configuration option: {config_name}!"
+                )
 
         # Add default values for missing configuration options
         all_options_for_protocol: List[ConfigOption] = [
@@ -424,21 +441,36 @@ class Configurator:
         logger.info(f"Loading HuggingFace dataset from path: {path}")
 
         if not subset_name:
-            dataset = load_dataset(path)
+            try:
+                dataset = load_dataset(path)
+            except ValueError as e:
+                raise ConfigurationException(
+                    "You should specify the 'subset' option in the config file.\n"
+                    f"Error: {e}"
+                )
         else:
-            dataset = load_dataset(path, subset_name)
+            try:
+                dataset = load_dataset(path, subset_name)
+            except ValueError as e:
+                raise ConfigurationException(
+                    "You should select a 'subset' from the Available list.\n"
+                    "If the Available 'subset' is 'default', you can remove the 'subset' option from the config file.\n"
+                    f"Error: {e}"
+                )
 
         # Collect all available splits
         available_splits = list(dataset.keys())
         if not available_splits:
-            raise ConfigurationException(f"No splits found in the dataset at path '{path}'.")
+            raise ConfigurationException(
+                f"No splits found in the dataset at path '{path}'."
+            )
 
         sequences = []
         targets = []
         set_values = []
 
-        if len(available_splits) > 1:
-            logger.info(f"Multiple splits found: {available_splits}. Processing each split separately.")
+        if len(available_splits) == 3:
+            logger.info(f"Three splits found: {available_splits}. Processing each split separately.")
             for split_name in available_splits:
                 split_dataset = dataset[split_name]
                 if split_dataset is None:
@@ -457,21 +489,33 @@ class Configurator:
                 sequences.extend(split_sequences)
                 targets.extend(split_targets)
                 set_values.extend([set_name] * len(split_sequences))
+
         else:
-            logger.info("Single split found. Performing a train/val/test split.")
-            single_split = available_splits[0]
-            combined_dataset = dataset[single_split]
+            # If there are not exactly 3 splits, merge all available splits into one
+            logger.info(f"Merging {len(available_splits)} splits and performing a train/val/test split.")
 
-            # Verify that the required columns exist
-            self._verify_columns(combined_dataset, sequence_column, target_column)
+            combined_sequences = []
+            combined_targets = []
 
-            # Extract the sequence and target columns
-            all_sequences = combined_dataset[sequence_column]
-            all_targets = combined_dataset[target_column]
+            # Loop through all available splits and merge them
+            for split_name in available_splits:
+                split_dataset = dataset[split_name]
+                if split_dataset is None:
+                    logger.warning(f"Split '{split_name}' is None. Skipping.")
+                    continue
+
+                # Verify that the required columns exist for each split
+                self._verify_columns(split_dataset, sequence_column, target_column)
+
+                split_sequences = split_dataset[sequence_column]
+                split_targets = split_dataset[target_column]
+
+                combined_sequences.extend(split_sequences)
+                combined_targets.extend(split_targets)
 
             # Perform the split: 70% train, 15% val, 15% test
             train_seq, temp_seq, train_tgt, temp_tgt = train_test_split(
-                all_sequences, all_targets, test_size=0.30, random_state=42, shuffle=True
+                combined_sequences, combined_targets, test_size=0.30, random_state=42, shuffle=True
             )
             val_seq, test_seq, val_tgt, test_tgt = train_test_split(
                 temp_seq, temp_tgt, test_size=0.50, random_state=42, shuffle=True
@@ -534,9 +578,13 @@ class Configurator:
             ConfigurationException: If any required column is missing.
         """
         if sequence_column not in dataset.column_names:
-            raise ConfigurationException(f"Sequence column '{sequence_column}' not found in the dataset.")
+            raise ConfigurationException(
+                f"Sequence column '{sequence_column}' not found in the dataset."
+            )
         if target_column not in dataset.column_names:
-            raise ConfigurationException(f"Target column '{target_column}' not found in the dataset.")
+            raise ConfigurationException(
+                f"Target column '{target_column}' not found in the dataset."
+            )
 
     @staticmethod
     def _process_and_save_fasta(
