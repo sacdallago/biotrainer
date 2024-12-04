@@ -1,7 +1,9 @@
 import unittest
+import tempfile
 
 from pathlib import Path
 from copy import deepcopy
+from datasets import load_dataset, concatenate_datasets
 
 from biotrainer.config import Configurator, ConfigurationException
 
@@ -102,6 +104,43 @@ configurations = {
         "cross_validation_config": {
             "method": "leave_p_out",
             "p": 5,
+        }
+    },
+    "hf_valid_for_sequences": {
+        "protocol": "sequence_to_class",
+        "hf_dataset": {
+            "path": "heispv/protein_data_test",
+            "subset": "split_1",
+            "sequence_column": "protein_sequence",
+            "target_column": "protein_class"
+        }
+    },
+    "hf_valid_for_residues": {
+        "protocol": "residue_to_class",
+        "hf_dataset": {
+            "path": "heispv/protein_data_test",
+            "subset": "split_3",
+            "sequence_column": "protein_sequence",
+            "target_column": "secondary_structure"
+        }
+    },
+    "hf_no_subset_required": {
+        "protocol": "residue_to_class",
+        "hf_dataset": {
+            "path": "heispv/protein_data_test_2",
+            "subset": "random_subset_name",
+            "sequence_column": "protein_sequence",
+            "target_column": "secondary_structure"
+        }
+    },
+    "hf_mutual_exclusive_sequence_file_name": {
+        "sequence_file": "sequence_file",
+        "protocol": "residue_to_class",
+        "hf_dataset": {
+            "path": "heispv/protein_data_test_2",
+            "subset": "random_subset_name",
+            "sequence_column": "protein_sequence",
+            "target_column": "secondary_structure"
         }
     }
 }
@@ -274,3 +313,218 @@ class ConfigurationVerificationTests(unittest.TestCase):
         with self.assertRaises(ConfigurationException,
                                msg="Config with multiple values for leave_p_out cv does not throw an exception!"):
             configurator.from_config_dict(config_dict).get_verified_config()
+
+    def test_hf_valid_3_split(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            self.assertTrue(
+                configurator.get_verified_config(),
+                "Valid hf_dataset configuration for sequences failed."
+            )
+
+    def test_hf_invalid_1_split(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+            config_dict["hf_dataset"]["subset"] = "split_2"
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "Expected 3 splits",
+                str(context.exception),
+                "Valid hf_dataset configuration for one split failed."
+            )
+
+    def test_hf_valid_residues_protocol(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_residues"])
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            self.assertTrue(
+                configurator.get_verified_config(),
+                "Valid hf_dataset configuration for residues failed."
+            )
+
+    def test_hf_missing_sequence_column_name(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+            del config_dict["hf_dataset"]["sequence_column"]
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "sequence_column",
+                str(context.exception),
+                "Exception does not mention the missing sequence_column."
+            )
+
+    def test_hf_missing_labels_column_name(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+            del config_dict["hf_dataset"]["target_column"]
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "target_column",
+                str(context.exception),
+                "Exception does not mention the missing target_column."
+            )
+
+    def test_hf_invalid_sequence_column_name(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+            config_dict["hf_dataset"]["sequence_column"] = "random_invalid_name"
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "not found in the dataset",
+                str(context.exception),
+                "Exception does not mention the wrong sequence_column."
+            )
+
+
+    def test_hf_invalid_target_column_name(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+            config_dict["hf_dataset"]["target_column"] = "random_invalid_name"
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "not found in the dataset",
+                str(context.exception),
+                "Exception does not mention the wrong target_column."
+            )
+
+    def test_hf_invalid_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+            config_dict["hf_dataset"]["path"] = "random_invalid_name"
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "doesn't exist on the Hub or cannot be accessed",
+                str(context.exception),
+                "Exception does not raise an exception for invalid path."
+            )
+
+    def test_hf_invalid_subset(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+            config_dict["hf_dataset"]["subset"] = "random_invalid_name"
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "not found",
+                str(context.exception),
+                "Exception does not raise an exception for invalid subset."
+            )
+
+    def test_hf_requires_subset(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+            del config_dict["hf_dataset"]["subset"]
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "dataset requires",
+                str(context.exception),
+                "Exception does not raise an exception for missing subset."
+            )
+
+    def test_hf_not_requires_subset(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_no_subset_required"])
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            print(configurator._config_dict)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "Available: ['default']",
+                str(context.exception),
+                "Exception does not raise an exception for missing subset."
+            )
+
+    def test_hf_mutual_exclusive_sequence_file_name(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+            config_dict["sequence_file"] = "random_invalid_name"
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "mutual exclusive",
+                str(context.exception),
+                "Exception does not raise an exception for mutual exclusive sequence file name."
+            )
+
+    def test_hf_mutual_exclusive_labels_file_name(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+            config_dict["labels_file"] = "random_invalid_name"
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "mutual exclusive",
+                str(context.exception),
+                "Exception does not raise an exception for mutual exclusive labels file name."
+            )
+
+    def test_hf_mutual_exclusive_mask_file_name(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["hf_valid_for_sequences"])
+            config_dict["mask_file"] = "random_invalid_name"
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            self.assertIn(
+                "mutual exclusive",
+                str(context.exception),
+                "Exception does not raise an exception for mutual exclusive mask file name."
+            )
