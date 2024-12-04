@@ -1,5 +1,3 @@
-sequence_file: sequences.fasta
-labels_file: labels.fasta
 protocol: residue_to_class
 hf_dataset:
   path: heispv/protein_data_test
