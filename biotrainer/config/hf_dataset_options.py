@@ -36,10 +36,6 @@ class HFPath(HFDatasetOption):
         return True
 
     def check_value(self) -> bool:
-        """
-        Optionally, implement validation to check if the dataset exists on HuggingFace.
-        For simplicity, we'll assume the user provides a correct path.
-        """
         if not isinstance(self.value, str) or "/" not in self.value:
             raise ConfigurationException(
                 f"Invalid HuggingFace dataset path: {self.value}. It should be in the format 'username/dataset_name'."
@@ -82,6 +78,11 @@ class HFSequenceColumn(HFDatasetOption):
     def required(self) -> bool:
         return True
 
+    def check_value(self) -> bool:
+        if not isinstance(self.value, str) or not self.value.strip():
+            raise ConfigurationException("sequence_column must be a non-empty string.")
+        return True
+
 
 class HFTargetColumn(HFDatasetOption):
     """
@@ -101,11 +102,30 @@ class HFTargetColumn(HFDatasetOption):
         return True
 
     def check_value(self) -> bool:
-        """
-        Ensure that the target_column is a non-empty string.
-        """
         if not isinstance(self.value, str) or not self.value.strip():
             raise ConfigurationException("target_column must be a non-empty string.")
+        return True
+
+class HFMaskColumn(HFDatasetOption):
+    """
+    Configuration option for specifying the mask column in the dataset.
+    """
+
+    @classproperty
+    def name(self) -> str:
+        return "mask_column"
+
+    @classproperty
+    def allow_multiple_values(self) -> bool:
+        return False
+
+    @classproperty
+    def required(self) -> bool:
+        return False
+
+    def check_value(self) -> bool:
+        if not isinstance(self.value, str) or not self.value.strip():
+            raise ConfigurationException("mask_column must be a non-empty string.")
         return True
 
 # Constant key for hf_dataset configuration
@@ -113,8 +133,10 @@ HF_DATASET_CONFIG_KEY: str = "hf_dataset"
 
 # Add hf_dataset options to a separate dictionary
 hf_dataset_options: List[Type[HFDatasetOption]] = [
+    HFDatasetOption,
     HFPath,
     HFSubsetName,
     HFSequenceColumn,
-    HFTargetColumn
+    HFTargetColumn,
+    HFMaskColumn
 ]
