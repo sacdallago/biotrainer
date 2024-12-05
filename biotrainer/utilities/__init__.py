@@ -10,20 +10,19 @@ from .constants import (
 )
 from .fasta import (
     read_FASTA,
-    hf_to_fasta,
-    load_and_split_hf_dataset,
     get_attributes_from_seqrecords,
     get_attributes_from_seqrecords_for_protein_interactions,
     get_split_lists
 )
+
+from .hf_dataset_to_fasta import process_hf_dataset_to_fasta
 
 __all__ = [
     'seed_all',
     'get_device',
     'is_device_cpu',
     'read_FASTA',
-    'hf_to_fasta',
-    'load_and_split_hf_dataset',
+    'process_hf_dataset_to_fasta',
     'get_attributes_from_seqrecords',
     'get_attributes_from_seqrecords_for_protein_interactions',
     'get_split_lists',
