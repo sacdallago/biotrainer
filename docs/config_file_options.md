@@ -136,6 +136,15 @@ The file will be downloaded and stored in the path of your config file with pref
 **Note that *embedder_name* and *embeddings_file* are mutually exclusive. In case you provide your own embeddings,
 the experiment directory will be called *custom_embeddings*.**
 
+To perform dimensionality reduction on the embeddings, specify the dimension reduction method to be used:
+```yaml
+dimension_reduction_method: umap | tsne # Default: None
+```
+and the number of dimensions to reduce the embeddings to (any positive integer):
+```yaml
+n_reduced_components: 5 # Default: None
+```
+
 ## Model parameters
 
 There are multiple options available to specify the model you want to train.

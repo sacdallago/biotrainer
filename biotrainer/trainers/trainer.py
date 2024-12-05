@@ -195,13 +195,13 @@ class Trainer:
             if (self._dimension_reduction_method and
                 self._n_reduced_components):
                 if len(embeddings)<3:
-                    logger.info("Dimensionality reduction cannot be performed as \
+                    raise Exception(f"Dimensionality reduction cannot be performed as \
                                 the number of samples is less than 3")
                 if list(embeddings.values())[0].shape[0]<3:
-                    logger.info("Dimensionality reduction cannot be performed as \
+                    raise Exception(f"Dimensionality reduction cannot be performed as \
                                 the original embedding dimension is less than 3")
                 if not self._protocol.using_per_sequence_embeddings():
-                    logger.info("Dimensionality reduction cannot be performed as \
+                    raise Exception(f"Dimensionality reduction cannot be performed as \
                                 the embeddings are not per-protein embeddings")
             return False
 
