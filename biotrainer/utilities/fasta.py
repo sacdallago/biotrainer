@@ -2,7 +2,7 @@ import re
 import logging
 
 from Bio import SeqIO
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union, Any, Optional
 from Bio.SeqRecord import SeqRecord
 
 from ..utilities import INTERACTION_INDICATOR

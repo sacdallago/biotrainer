@@ -1,0 +1,15 @@
+protocol: residue_to_class
+hf_dataset:
+  path: heispv/protein_data_test
+  subset: split_3
+  sequence_column: protein_sequence
+  target_column: secondary_structure
+model_choice: FNN
+optimizer_choice: adam
+loss_choice: cross_entropy_loss
+num_epochs: 200
+use_class_weights: False
+learning_rate: 1e-3
+batch_size: 128
+device: cpu
+embedder_name: one_hot_encoding

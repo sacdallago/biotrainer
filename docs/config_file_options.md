@@ -373,3 +373,45 @@ limited_sample_size: 100  # Default: -1, must be > 0 to be applied
 ```
 Note that this value is applied only to the train dataset and embedding calculation is currently
 done for all sequences!
+
+## HF Dataset Integration
+
+This configuration enables the use of datasets hosted on the HuggingFace repository. By specifying the `hf_dataset` option, **there is no need to have `sequence_file`, `labels_file`, and `mask_file` on your local machine**. Instead:
+
+- A new folder will be created as `hf_db` where your config file exists, and new `sequence_file`, `labels_file`, and `mask_file` will be created based on your config needs.
+
+### General options
+
+For HuggingFace integration, the `hf_dataset` option is used:
+```yaml
+hf_dataset:
+  path: huggingface_user_name/repository_name  # Required
+  subset: subset_name  # Optional
+  sequence_column: sequences_column_name  # Required
+  target_column: targets_column_name  # Required
+  mask_column: mask_column_name  # Optional
+```
+
+### HF Dataset Configuration Options
+
+The `hf_dataset` section of the configuration includes the following options:
+
+- **`path` (required):** The repository path to the desired dataset in the HuggingFace hub (e.g., `huggingface_user_name/repository_name`).
+- **`subset` (optional):** Specifies the subset of the dataset to download. 
+  - If no subsets exist, you should remove this option or set it to `default`.
+  - If the subset name is incorrect, an error will display the available subsets.
+- **`sequence_column` (required):** The column in the dataset that contains the sequences.
+- **`target_column` (required):** The column in the dataset that contains the targets.
+- **`mask_column` (optional):** The column in the dataset that contains the masks.
+
+### Handling Dataset Splits
+
+Datasets in the HuggingFace repository may include predefined splits (e.g., `train`, `validation`, `test`). The tool handles splits as follows:
+
+1. **If three predefined splits exist** (e.g., `train`, `validation`, `test`):
+   - The splits are directly used as **TRAIN/VAL/TEST**.
+   - Note that their names should start with `train`, `val`, `test`.
+2. **Otherwise**:
+   - A `ConfigurationException` will be raised.
+
+You can find an example [here](../examples/hf_dataset).
