@@ -336,7 +336,7 @@ class ConfigurationVerificationTests(unittest.TestCase):
                 configurator.get_verified_config()
 
             self.assertIn(
-                "Expected 3 splits",
+                "Expected 3 subsets",
                 str(context.exception),
                 "Valid hf_dataset configuration for one split failed."
             )
