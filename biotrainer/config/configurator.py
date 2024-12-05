@@ -43,7 +43,7 @@ from .hf_dataset_options import (
     HFTargetColumn,
 )
 from ..protocols import Protocol
-from ..utilities import load_and_split_hf_dataset, hf_to_fasta
+from ..utilities import process_hf_dataset_to_fasta
 
 # Define protocol-specific rules
 local_file_protocol_rules = [
@@ -489,7 +489,6 @@ class Configurator:
             else:
                 raise ConfigurationException(f"Unknown configuration option: {option_name}")
 
-
     @staticmethod
     def _create_hf_files(
         protocol: Protocol,
@@ -497,44 +496,22 @@ class Configurator:
         hf_map: Dict[str, ConfigOption]
     ) -> None:
         """
-        Creates sequences and if needed labels and masks FASTA files based on the HuggingFace
-        dataset configuration and protocol requirements.
-        If the files already exist, they will be overwritten. Subsequently, this method downloads
-        and processes the HuggingFace dataset according to the selected protocol.
+        Creates sequences and, if needed, labels and masks FASTA files based on the HuggingFace
+        dataset configuration and protocol requirements. This method downloads and processes the
+        HuggingFace dataset according to the selected protocol.
 
         Args:
             protocol (Protocol): The selected protocol determining how the dataset should be processed.
             config_map (Dict[str, ConfigOption]): A mapping of configuration option names to their respective ConfigOption instances.
             hf_map (Dict[str, ConfigOption]): A mapping of HuggingFace dataset option names to their respective ConfigOption instances.
+
         Raises:
             ConfigurationException: If there is an issue during the creation of the required files or processing the dataset.
-                - This can occur if `load_and_split_hf_dataset` fails or if `hf_to_fasta` encounters an error.
-
         """
         try:
-            sequences, targets, masks, set_values = load_and_split_hf_dataset(hf_map)
+            process_hf_dataset_to_fasta(protocol, config_map, hf_map)
         except Exception as e:
-            raise ConfigurationException(e)
-
-        if protocol in Protocol.per_sequence_protocols():
-            hf_to_fasta(
-                sequences=sequences,
-                targets=targets,
-                set_values=set_values,
-                sequences_file_name=config_map["sequence_file"].value
-            )
-        elif protocol in Protocol.per_residue_protocols():
-            hf_to_fasta(
-                sequences=sequences,
-                targets=targets,
-                masks=masks,
-                set_values=set_values,
-                sequences_file_name=config_map["sequence_file"].value,
-                labels_file_name=config_map["labels_file"].value,
-                masks_file_name=config_map["mask_file"].value if "mask_file" in config_map else None
-            )
-
-        logger.info("HuggingFace dataset downloaded and processed successfully.")
+            raise ConfigurationException(f"Error in _create_hf_files: {e}")
 
     @staticmethod
     def _check_rules(
