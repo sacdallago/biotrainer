@@ -51,6 +51,8 @@ class Trainer:
                  cross_validation_config: Dict[str, Any] = None,
                  interaction: Optional[str] = None,
                  sanity_check: bool = True,
+                 dimension_reduction_method: Optional[str] = None,
+                 n_reduced_components: Optional[int] = None,
                  # Ignore rest
                  **kwargs
                  ):
@@ -76,6 +78,8 @@ class Trainer:
         self._cross_validation_splitter = CrossValidationSplitter(self._protocol, self._cross_validation_config)
         self._hp_manager = hp_manager
         self._sanity_check = sanity_check
+        self._dimension_reduction_method = dimension_reduction_method
+        self._n_reduced_components = n_reduced_components
 
     def training_and_evaluation_routine(self):
         # SETUP
@@ -173,8 +177,35 @@ class Trainer:
 
         # Mapping from id to embeddings
         id2emb = embedding_service.load_embeddings(embeddings_file_path=embeddings_file)
-
+        if self._is_dimension_reduction_possible(id2emb):
+            id2emb = embedding_service.embeddings_dimensionality_reduction(
+                embeddings=id2emb,
+                dimension_reduction_method=self._dimension_reduction_method,
+                n_reduced_components=self._n_reduced_components)
         return id2emb
+
+    def _is_dimension_reduction_possible(self, embeddings: Dict[str, Any]) -> bool:
+        if (self._protocol.using_per_sequence_embeddings() and
+            self._dimension_reduction_method and 
+            self._n_reduced_components and
+            len(embeddings)>=3 and
+            list(embeddings.values())[0].shape[0]>=3):
+            return True
+        else:
+            if (self._dimension_reduction_method and
+                self._n_reduced_components):
+                if len(embeddings)<3:
+                    raise Exception(f"Dimensionality reduction cannot be performed as \
+                                the number of samples is less than 3")
+                if list(embeddings.values())[0].shape[0]<3:
+                    raise Exception(f"Dimensionality reduction cannot be performed as \
+                                the original embedding dimension is less than 3")
+                if not self._protocol.using_per_sequence_embeddings():
+                    raise Exception(f"Dimensionality reduction cannot be performed as \
+                                the embeddings are not per-protein embeddings")
+            return False
+
+
 
     def _get_class_weights(self, target_manager: TargetManager) -> Union[None, torch.FloatTensor]:
         # Get x_to_class specific logs and weights
