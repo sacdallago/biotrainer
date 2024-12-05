@@ -27,4 +27,8 @@ Run the example with:
 poetry run biotrainer examples/hf_dataset/config.yml
 ```
 
-This setup allows seamless integration of HuggingFace datasets without local files, handling splits automatically for training, validation, and testing.
+**Notes**
+- When using the `hf_dataset` option, remove the `sequence_file`, `labels_file`, and `mask_file` entries from the config.
+- Ensure that the `sequence_column`, `target_column`, and `mask_column` names match the structure of the dataset in the HuggingFace repository.
+
+By following this configuration, you can seamlessly integrate HuggingFace datasets into your tool without requiring local sequence and label files. This setup also ensures proper handling of dataset splits for robust training, validation, and testing workflows.
