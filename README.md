@@ -27,6 +27,13 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 ```
 **Please make sure to use the same torch version as provided in `pyproject.toml` for model reproducibility!**
 
+## Frontend + Documentation
+
+If you want to use *biotrainer* with a nice GUI frontend, please check out *biocentral*: 
+* [biocentral App](https://biocentral.cloud/app) 
+* [biocentral Repository](https://github.com/biocentral/biocentral)
+* [biotrainer Rendered Documentation](https://biocentral.cloud/docs/biotrainer/config_file_options)
+
 ## Training
 
 ```bash
