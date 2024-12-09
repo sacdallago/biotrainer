@@ -21,9 +21,9 @@ We are using poetry for this tutorial, please install it if you haven't already:
 curl -sSL https://install.python-poetry.org/ | python3 - --version 1.4.2
 ```
 
-Make sure that you have *biotrainer* [installed](../README.md#installation) with *extra* `bio-embeddings`:
+Now make sure that you have *biotrainer* [installed](../README.md#installation):
 ```bash
-poetry install --extras "bio-embeddings"
+poetry install
 ```
 
 ## Downloading the dataset
@@ -100,4 +100,3 @@ and use its embeddings for training. Check out the associated
 [examples](../examples/custom_embeddings) to learn how to do that.
 If you have any feedback, please do not hesitate to get in touch, 
 e.g. by creating an [issue](https://github.com/sacdallago/biotrainer/issues).
-
