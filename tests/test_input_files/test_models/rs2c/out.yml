@@ -64,10 +64,10 @@ split_results:
         '- f1_score class 1': 1.0
         '- f1_score class 2': 0.0
         '- f1_score class 3': 0.0
-        '- precission class 0': 0.0
-        '- precission class 1': 1.0
-        '- precission class 2': 0.0
-        '- precission class 3': 0.0
+        '- precision class 0': 0.0
+        '- precision class 1': 1.0
+        '- precision class 2': 0.0
+        '- precision class 3': 0.0
         '- recall class 0': 0.0
         '- recall class 1': 1.0
         '- recall class 2': 0.0
@@ -87,10 +87,10 @@ split_results:
         '- f1_score class 1': 1.0
         '- f1_score class 2': 0.0
         '- f1_score class 3': 0.0
-        '- precission class 0': 0.0
-        '- precission class 1': 1.0
-        '- precission class 2': 0.0
-        '- precission class 3': 0.0
+        '- precision class 0': 0.0
+        '- precision class 1': 1.0
+        '- precision class 2': 0.0
+        '- precision class 3': 0.0
         '- recall class 0': 0.0
         '- recall class 1': 1.0
         '- recall class 2': 0.0
@@ -111,10 +111,10 @@ test_iterations_results:
     '- f1_score class 1': 0.0
     '- f1_score class 2': 0.0
     '- f1_score class 3': 0.6666666865348816
-    '- precission class 0': 0.0
-    '- precission class 1': 0.0
-    '- precission class 2': 0.0
-    '- precission class 3': 0.5
+    '- precision class 0': 0.0
+    '- precision class 1': 0.0
+    '- precision class 2': 0.0
+    '- precision class 3': 0.5
     '- recall class 0': 0.0
     '- recall class 1': 0.0
     '- recall class 2': 0.0
