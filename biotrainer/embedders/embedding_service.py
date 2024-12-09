@@ -1,18 +1,18 @@
 import os
 import gc
 import time
-import psutil
 import h5py
 import torch
+import psutil
 import logging
 import numpy as np
 
+from umap import UMAP
 from tqdm import tqdm
 from pathlib import Path
 from numpy import ndarray
-from typing import Dict, Tuple, Any, List, Union
 from sklearn.manifold import TSNE
-from umap import UMAP
+from typing import Dict, Tuple, Any, List, Union, Optional
 
 from .embedder_interfaces import EmbedderInterface
 
@@ -232,12 +232,11 @@ class EmbeddingService:
         del embeddings
         return last_save_id, {}
 
-
     @staticmethod
     def embeddings_dimensionality_reduction(
-        embeddings: Dict[str, Any],
-        dimension_reduction_method: str,
-        n_reduced_components: int) -> Dict[str, Any]:
+            embeddings: Dict[str, Any],
+            dimension_reduction_method: str,
+            n_reduced_components: int) -> Dict[str, Any]:
         """Reduces the dimension of per-protein embeddings using one of the
         dimensionality reduction methods
 
@@ -250,13 +249,13 @@ class EmbeddingService:
 
         Returns:
             Dict[str, Any]: Dictionary of embeddings with reduced dimensions.
-        """        
+        """
         sorted_keys = sorted(list(embeddings.keys()))
         all_embeddings = torch.stack([embeddings[k] for k in sorted_keys], dim=0)
         max_dim_dict = {
-            "umap": all_embeddings.shape[0]-2,
-            "tsne": all_embeddings.shape[0]-1
-            }
+            "umap": all_embeddings.shape[0] - 2,
+            "tsne": all_embeddings.shape[0] - 1
+        }
         n_reduced_components = min([
             n_reduced_components,
             max_dim_dict[dimension_reduction_method],
@@ -266,13 +265,12 @@ class EmbeddingService:
             "tsne": TSNE(
                 n_components=n_reduced_components,
                 perplexity=min(30, n_reduced_components))
-            }
+        }
         logger.info(f"Starting embeddings dimensionality reduction via method {dimension_reduction_method}")
         embeddings_reduced_dimensions = dimension_reduction_method_dict[
             dimension_reduction_method].fit_transform(all_embeddings)
         logger.info(f"Finished embeddings dimensionality reduction!")
-        return {sorted_keys[i]:torch.tensor(embeddings_reduced_dimensions[i]) for i in range(len(sorted_keys))}
-
+        return {sorted_keys[i]: torch.tensor(embeddings_reduced_dimensions[i]) for i in range(len(sorted_keys))}
 
     @staticmethod
     def _reduce_embeddings(embeddings: Dict[str, ndarray], embedder) -> Dict[str, ndarray]:
