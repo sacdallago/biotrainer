@@ -42,7 +42,7 @@ class ClassificationSolver(Solver):
         # Multi-class prediction
         if self.num_classes > 2:
             precision_per_class = _compute_metric(self.precision_per_class)
-            precisions = {'- precission class {}'.format(i): precision_per_class[i].item() for i in
+            precisions = {'- precision class {}'.format(i): precision_per_class[i].item() for i in
                           range(self.num_classes)}
             metrics_dict['macro-precision'] = _compute_metric(self.macro_precision).item()
             metrics_dict['micro-precision'] = _compute_metric(self.micro_precision).item()
