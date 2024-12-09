@@ -528,3 +528,72 @@ class ConfigurationVerificationTests(unittest.TestCase):
                 str(context.exception),
                 "Exception does not raise an exception for mutual exclusive mask file name."
             )
+
+    def test_dimension_reduction_methods(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["minimal"])
+            # Existing method works
+            config_dict["dimension_reduction_method"] = "umap"
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+
+            self.assertTrue(
+                configurator.get_verified_config(),
+                "Valid dimension_reduction_method: umap failed!"
+            )
+
+            # Non-existing method does not work
+            config_dict["dimension_reduction_method"] = "nonexistingmethod"
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+    def test_dimension_reduction_components(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["minimal"])
+            # Positive integer works
+            config_dict["dimension_reduction_method"] = "umap"
+            config_dict["n_reduced_components"] = 23
+
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+
+            self.assertTrue(
+                configurator.get_verified_config(),
+                "Valid n_reduced_components: 5 failed"
+            )
+
+            # Zero does not work
+            config_dict["n_reduced_components"] = 0
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            # Negative integer does not work
+            config_dict["n_reduced_components"] = -50
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            # Double value does not work
+            config_dict["n_reduced_components"] = 5.5
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
+
+            # Negative double value does not work
+            config_dict["n_reduced_components"] = -10.25
+            configurator = Configurator.from_config_dict(config_dict)
+            configurator._config_file_path = Path(tmpdir)
+
+            with self.assertRaises(ConfigurationException) as context:
+                configurator.get_verified_config()
