@@ -1,5 +1,21 @@
 # Biotrainer Changelog
 
+## 09.12.2024 - Version 0.9.5
+
+### Features
+* Added integration for huggingface datasets by @heispv in https://github.com/sacdallago/biotrainer/pull/124
+* Added per-sequence dimension reduction methods by @nadyadevani3112 in https://github.com/sacdallago/biotrainer/pull/123
+* Improving one_hot_encoding embedder with numpy functions 
+
+### Maintenance
+* Fixing "precis<s>s</s>ion" typo in `clasification_solver.py`
+* Updating dependencies
+* Improving documentation of the config module by @heispv in https://github.com/sacdallago/biotrainer/pull/121
+* Improving `compute_embeddings` function to handle `Dict`, `str` and `Path` as `input_data`
+* Reducing log level of onnx and dynamo to ERROR to decrease logging output
+* Fixing first_steps documentation
+* Adding links to biocentral app, repository and biotrainer documentation
+
 ## 29.10.2024 - Version 0.9.4
 ### Bug fixes
 * Hotfix for incorrect precision mode setting by @SebieF in https://github.com/sacdallago/biotrainer/pull/116
