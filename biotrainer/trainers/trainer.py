@@ -142,7 +142,10 @@ class Trainer:
             sanity_checker.check_test_results()
 
         # SAVE BEST SPLIT AS ONNX
-        best_split.solver.save_as_onnx(embedding_dimension=embeddings_dimension)
+        try:
+            best_split.solver.save_as_onnx(embedding_dimension=embeddings_dimension)
+        except Exception as e:
+            logger.error("Could not save model as ONNX!")
 
         # CONVERT PROTOCOL CLASS TO STRING
         self._output_vars["protocol"] = self._output_vars["protocol"].name
