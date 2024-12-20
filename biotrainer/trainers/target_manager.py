@@ -212,11 +212,11 @@ class TargetManager:
 
     @staticmethod
     def _validate_embeddings_shapes(id2emb: Dict[str, Any]):
-        first_embedding_shape = list(id2emb.values())[0].shape[-1]  # Last position in shape is always embedding length
-        all_embeddings_have_same_dimension = all([embedding.shape[-1] == first_embedding_shape
-                                                  for embedding in id2emb.values()])
+        shapes = set([val.shape[-1] for val in id2emb.values()])
+        all_embeddings_have_same_dimension = len(shapes) == 1
         if not all_embeddings_have_same_dimension:
-            raise Exception(f"Embeddings dimensions differ between sequences, but all must be equal!")
+            raise Exception(f"Embeddings dimensions differ between sequences, but all must be equal!\n"
+                            f"Found: {shapes}")
 
     def get_datasets_by_annotations(self, id2emb: Dict[str, Any]) -> \
             Tuple[List[DatasetSample], List[DatasetSample], List[DatasetSample]]:
