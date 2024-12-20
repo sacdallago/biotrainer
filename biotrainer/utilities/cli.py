@@ -1,10 +1,17 @@
 import argparse
+from pathlib import Path
+from typing import Union, Dict, Any
 
 from .executer import parse_config_file_and_execute_run
 
 
-def headless_main(config_file_path: str):
-    parse_config_file_and_execute_run(config_file_path=config_file_path)
+def headless_main(config: Union[str, Path, Dict[str, Any]]):
+    """
+    Entry point for usage in scripts
+
+    @param config: Biotrainer configuration file path or config dict
+    """
+    parse_config_file_and_execute_run(config)
 
 
 def main(args=None):
