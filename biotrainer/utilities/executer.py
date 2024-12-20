@@ -4,6 +4,7 @@ import logging
 from ruamel import yaml
 from pathlib import Path
 from copy import deepcopy
+from typing import Union, Dict, Any
 from ruamel.yaml.comments import CommentedBase
 
 from .cuda_device import get_device
@@ -58,9 +59,18 @@ def _write_output_file(out_filename: str, config: dict) -> None:
         )
 
 
-def parse_config_file_and_execute_run(config_file_path: str):
+def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]]):
     # Verify config via configurator
-    configurator = Configurator.from_config_path(config_file_path)
+    configurator = None
+    if isinstance(config, str):
+        configurator = Configurator.from_config_path(config)
+    elif isinstance(config, Path):
+        configurator = Configurator.from_config_path(str(config))
+    elif isinstance(config, dict):
+        configurator = Configurator.from_config_dict(config)
+
+    assert configurator is not None, f"Config could not be read, incorrect type: {type(config)}"
+
     config = configurator.get_verified_config(ignore_file_checks=False)
     config["protocol"] = Protocol[config["protocol"]]
 
