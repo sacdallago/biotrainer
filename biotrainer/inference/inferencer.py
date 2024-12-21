@@ -19,10 +19,9 @@ from ..losses import get_loss
 from ..models import get_model
 from ..protocols import Protocol
 from ..optimizers import get_optimizer
-from ..trainers import revert_mappings
 from ..datasets import get_dataset, get_collate_function
 from ..solvers import get_solver, get_mean_and_confidence_range
-from ..utilities import get_device, seed_all, DatasetSample, MASK_AND_LABELS_PAD_VALUE, __version__
+from ..utilities import get_device, seed_all, DatasetSample, MASK_AND_LABELS_PAD_VALUE, revert_mappings, __version__
 
 
 class Inferencer:

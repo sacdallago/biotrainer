@@ -1,5 +1,6 @@
 from .seeder import seed_all
 from .version import __version__
+from .revert_mappings import revert_mappings
 from .cuda_device import get_device, is_device_cpu
 from .data_classes import Split, SplitResult, DatasetSample
 from .constants import (
@@ -33,5 +34,6 @@ __all__ = [
     'Split',
     'SplitResult',
     'DatasetSample',
+    'revert_mappings',
     '__version__'
 ]
