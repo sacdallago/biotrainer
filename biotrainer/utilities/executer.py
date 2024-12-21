@@ -59,7 +59,7 @@ def _write_output_file(out_filename: str, config: dict) -> None:
         )
 
 
-def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]]):
+def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]]) -> Dict[str, Any]:
     # Verify config via configurator
     configurator = None
     if isinstance(config, str):
@@ -106,10 +106,11 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]]):
                       output_vars=output_vars,
                       **config
                       )
-    out_config = trainer.training_and_evaluation_routine()
+    output_result = trainer.training_and_evaluation_routine()
 
     # Save output_variables in out.yml
     _write_output_file(
-        str(Path(out_config['output_dir']) / "out.yml"),
-        out_config
+        str(Path(output_result['output_dir']) / "out.yml"),
+        output_result
     )
+    return output_result
