@@ -26,7 +26,7 @@ def test_cross_validation(cv_config: dict):
             tmp_config_file.write(yaml.dump(base_config))
 
         try:
-            biotrainer_headless_main(config_file_path=str(Path(tmp_config_path).absolute()))
+            biotrainer_headless_main(str(Path(tmp_config_path).absolute()))
             assert os.path.exists(f"{tmp_dir_name}/output/out.yml"), "No output file generated, run failed!"
         except ConfigurationException:
             assert False, "A ConfigurationException was thrown although it shouldn't have."
