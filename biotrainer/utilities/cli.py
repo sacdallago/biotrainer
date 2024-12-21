@@ -5,13 +5,13 @@ from typing import Union, Dict, Any
 from .executer import parse_config_file_and_execute_run
 
 
-def headless_main(config: Union[str, Path, Dict[str, Any]]):
+def headless_main(config: Union[str, Path, Dict[str, Any]]) -> Dict[str, Any]:
     """
     Entry point for usage in scripts
 
     @param config: Biotrainer configuration file path or config dict
     """
-    parse_config_file_and_execute_run(config)
+    return parse_config_file_and_execute_run(config)
 
 
 def main(args=None):
