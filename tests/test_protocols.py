@@ -1,8 +1,10 @@
 import os
-import yaml
 import tempfile
 
+from ruamel import yaml
 from pathlib import Path
+from typing import Any, Dict
+
 from biotrainer.config import ConfigurationException
 from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
 
@@ -36,10 +38,10 @@ protocol_to_input = {
 }
 
 
-def setup_config(protocol: str, model_choice: str, embedder_name: str, tmp_config_path: str):
+def setup_config(protocol: str, model_choice: str, embedder_name: str, tmp_config_dir: str) -> Dict[str, Any]:
     template_config_file_path = "test_config.yml"
     with open(template_config_file_path, "r") as config_file:
-        config: dict = yaml.safe_load(config_file)
+        config: dict = yaml.load(config_file, Loader=yaml.Loader)
         sequence_path_absolute = str(Path(protocol_to_input[protocol]["sequence_file"]).absolute())
         config["sequence_file"] = sequence_path_absolute
         if "labels_file" in protocol_to_input[protocol]:
@@ -54,22 +56,22 @@ def setup_config(protocol: str, model_choice: str, embedder_name: str, tmp_confi
         config["protocol"] = actual_protocol
         config["model_choice"] = model_choice
         config["embedder_name"] = embedder_name
-    with open(tmp_config_path, "w") as tmp_config_file:
-        yaml.safe_dump(config, tmp_config_file, default_flow_style=False, sort_keys=False)
+        config["output_dir"] = tmp_config_dir
+        return config
 
 
 def test_protocol_config(protocol: str, model: str, embedder_name: str, should_fail: bool):
     print("TESTING CONFIG: " + protocol + " - " + model +
           " - " + embedder_name + " - Passed when failed: " + str(should_fail))
     with tempfile.TemporaryDirectory() as tmp_dir_name:
-        tmp_config_path = tmp_dir_name + "/tmp_config_file.yml"
-        setup_config(protocol=protocol,
-                     model_choice=model,
-                     embedder_name=embedder_name,
-                     tmp_config_path=tmp_config_path)
+        config = setup_config(protocol=protocol,
+                              model_choice=model,
+                              embedder_name=embedder_name,
+                              tmp_config_dir=tmp_dir_name)
         try:
-            biotrainer_headless_main(config_file_path=os.path.abspath(tmp_config_path))
-            assert os.path.exists(f"{tmp_dir_name}/output/out.yml"), "No output file generated, run failed!"
+            result = biotrainer_headless_main(config)
+            assert "test_iterations_results" in result, "Result does not contain test set metrics!"
+            assert os.path.exists(f"{tmp_dir_name}/out.yml"), "No output file generated, run failed!"
         except ConfigurationException:
             assert should_fail, "A ConfigurationException was thrown although it shouldn't have."
         except Exception as e:
