@@ -10,18 +10,20 @@ from torch.utils.tensorboard import SummaryWriter
 from typing import Optional, Dict, Any, Union, List
 
 from .target_manager import TargetManager
-from .cv_splitter import CrossValidationSplitter
 from .hp_manager import HyperParameterManager
-from .target_manager_utils import revert_mappings
+from .cv_splitter import CrossValidationSplitter
+
+from ..losses import get_loss
+from ..protocols import Protocol
+from ..inference import Inferencer
+from ..optimizers import get_optimizer
+from ..validations import SanityChecker
+from ..solvers import get_solver, Solver
+from ..models import count_parameters, get_model
 from ..datasets import get_collate_function, get_dataset
 from ..embedders import EmbeddingService, get_embedding_service
-from ..losses import get_loss
-from ..models import count_parameters, get_model
-from ..optimizers import get_optimizer
-from ..protocols import Protocol
-from ..solvers import get_solver, Solver
-from ..utilities import seed_all, Split, SplitResult, DatasetSample, METRICS_WITHOUT_REVERSED_SORTING, __version__
-from ..validations import SanityChecker
+from ..utilities import seed_all, Split, SplitResult, DatasetSample, METRICS_WITHOUT_REVERSED_SORTING, __version__, \
+    revert_mappings
 
 logger = logging.getLogger(__name__)
 
