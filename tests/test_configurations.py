@@ -554,54 +554,33 @@ class ConfigurationVerificationTests(unittest.TestCase):
     def test_dimension_reduction_components(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             config_dict = deepcopy(configurations["minimal"])
-            # Positive integer works
             config_dict["dimension_reduction_method"] = "umap"
-            config_dict["n_reduced_components"] = 23
+            # Positive integers are valid
+            valid_values = [22, 1, 44, 123, 99, 1000]
+            for valid_value in valid_values:
+                config_dict["n_reduced_components"] = valid_value
 
-            configurator = Configurator.from_config_dict(config_dict)
-            configurator._config_file_path = Path(tmpdir)
+                configurator = Configurator.from_config_dict(config_dict)
+                configurator._config_file_path = Path(tmpdir)
+                self.assertTrue(
+                    configurator.get_verified_config(),
+                    f"Valid n_reduced_components: {valid_value} failed"
+                )
 
-            self.assertTrue(
-                configurator.get_verified_config(),
-                "Valid n_reduced_components: 5 failed"
-            )
+            # Other values are not valid
+            invalid_values = [0, -50, 5.5, -10.25, 33.999, 44.000]
+            for invalid_value in invalid_values:
+                config_dict["n_reduced_components"] = invalid_value
+                configurator = Configurator.from_config_dict(config_dict)
+                configurator._config_file_path = Path(tmpdir)
 
-            # Zero does not work
-            config_dict["n_reduced_components"] = 0
-            configurator = Configurator.from_config_dict(config_dict)
-            configurator._config_file_path = Path(tmpdir)
-
-            with self.assertRaises(ConfigurationException) as context:
-                configurator.get_verified_config()
-
-            # Negative integer does not work
-            config_dict["n_reduced_components"] = -50
-            configurator = Configurator.from_config_dict(config_dict)
-            configurator._config_file_path = Path(tmpdir)
-
-            with self.assertRaises(ConfigurationException) as context:
-                configurator.get_verified_config()
-
-            # Double value does not work
-            config_dict["n_reduced_components"] = 5.5
-            configurator = Configurator.from_config_dict(config_dict)
-            configurator._config_file_path = Path(tmpdir)
-
-            with self.assertRaises(ConfigurationException) as context:
-                configurator.get_verified_config()
-
-            # Negative double value does not work
-            config_dict["n_reduced_components"] = -10.25
-            configurator = Configurator.from_config_dict(config_dict)
-            configurator._config_file_path = Path(tmpdir)
-
-            with self.assertRaises(ConfigurationException) as context:
-                configurator.get_verified_config()
+                with self.assertRaises(ConfigurationException) as context:
+                    configurator.get_verified_config()
 
     def test_bootstrapping_iterations(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             config_dict = deepcopy(configurations["minimal"])
-            # Positive integers are valid
+            # Positive integers and zero are valid
             valid_values = [0, 1, 44, 123]
             for valid_value in valid_values:
                 config_dict["bootstrapping_iterations"] = valid_value
