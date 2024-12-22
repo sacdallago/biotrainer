@@ -50,7 +50,15 @@ A concrete output directory can be specified:
 output_dir: path/to/output_dir  # Default: path/to/config/output
 ```
 
-Biotrainer automatically performs sanity checks on your test results. The checks are handled by the 
+After evaluating the test set, *biotrainer* automatically does a bootstrapping evaluation (default iterations: 30)
+on the test set. This provides a mean and error confidence interval (`confidence_level = 0.05`) for each test set 
+metric. The samples are drawn from the full test set with replacement. 
+You can define a different number of iterations in the config file, or disable it by setting the parameter to 0:
+```yaml
+bootstrapping_iterations: 55  # Default: 30, Disable: 0
+```
+
+*Biotrainer* automatically performs sanity checks on your test results. The checks are handled by the 
 `validations` module. For example, a warning will be logged if the model predicts only one unique value for every
 entry in the test set. The module also automatically calculates baselines (e.g. predicting only `1` or `0` for all 
 entries in the test set) with the respective metrics for suitable protocols. All baselines are also stored in the
