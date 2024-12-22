@@ -597,3 +597,30 @@ class ConfigurationVerificationTests(unittest.TestCase):
 
             with self.assertRaises(ConfigurationException) as context:
                 configurator.get_verified_config()
+
+    def test_bootstrapping_iterations(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_dict = deepcopy(configurations["minimal"])
+            # Positive integers are valid
+            valid_values = [0, 1, 44, 123]
+            for valid_value in valid_values:
+                config_dict["bootstrapping_iterations"] = valid_value
+
+                configurator = Configurator.from_config_dict(config_dict)
+                configurator._config_file_path = Path(tmpdir)
+                self.assertTrue(
+                    configurator.get_verified_config(),
+                    f"Valid bootstrapping_iterations: {valid_value} failed"
+                )
+
+            # Other values are not valid
+            invalid_values = [-1, 5.5, -2.1, 0.1, 1.00000]
+            for invalid_value in invalid_values:
+                config_dict["bootstrapping_iterations"] = invalid_value
+                configurator = Configurator.from_config_dict(config_dict)
+                configurator._config_file_path = Path(tmpdir)
+
+                with self.assertRaises(ConfigurationException) as context:
+                    configurator.get_verified_config()
+
+
