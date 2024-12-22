@@ -55,6 +55,7 @@ class Trainer:
                  sanity_check: bool = True,
                  dimension_reduction_method: Optional[str] = None,
                  n_reduced_components: Optional[int] = None,
+                 bootstrapping_iterations: int = 30,
                  # Ignore rest
                  **kwargs
                  ):
@@ -82,6 +83,7 @@ class Trainer:
         self._sanity_check = sanity_check
         self._dimension_reduction_method = dimension_reduction_method
         self._n_reduced_components = n_reduced_components
+        self._bootstrapping_iterations = bootstrapping_iterations
 
     def training_and_evaluation_routine(self):
         # SETUP
@@ -132,7 +134,12 @@ class Trainer:
         # TESTING
         test_dataset_embeddings = self._create_embeddings_dataset(test_dataset, mode="test")
         test_loader = self._create_dataloader(dataset=test_dataset_embeddings, hyper_params=best_split.hyper_params)
-        self._do_and_log_evaluation(best_split.solver, test_loader, target_manager)
+        test_results = self._do_and_log_evaluation(best_split.solver, test_loader, target_manager)
+
+        # BOOTSTRAPPING
+        if self._bootstrapping_iterations > 0:
+            self._do_and_log_bootstrapping_evaluation(solver=best_split.solver, test_results=test_results,
+                                                      test_loader=test_loader)
 
         # SANITY CHECKER
         if self._sanity_check:
@@ -151,6 +158,8 @@ class Trainer:
 
         # CONVERT PROTOCOL CLASS TO STRING
         self._output_vars["protocol"] = self._output_vars["protocol"].name
+
+        logger.info(f"Extensive output information can be found at {self._output_vars['output_dir']}/out.yml")
         return self._output_vars
 
     def _setup(self):
@@ -191,26 +200,24 @@ class Trainer:
 
     def _is_dimension_reduction_possible(self, embeddings: Dict[str, Any]) -> bool:
         if (self._protocol.using_per_sequence_embeddings() and
-            self._dimension_reduction_method and 
-            self._n_reduced_components and
-            len(embeddings)>=3 and
-            list(embeddings.values())[0].shape[0]>=3):
+                self._dimension_reduction_method and
+                self._n_reduced_components and
+                len(embeddings) >= 3 and
+                list(embeddings.values())[0].shape[0] >= 3):
             return True
         else:
             if (self._dimension_reduction_method and
-                self._n_reduced_components):
-                if len(embeddings)<3:
+                    self._n_reduced_components):
+                if len(embeddings) < 3:
                     raise Exception(f"Dimensionality reduction cannot be performed as \
                                 the number of samples is less than 3")
-                if list(embeddings.values())[0].shape[0]<3:
+                if list(embeddings.values())[0].shape[0] < 3:
                     raise Exception(f"Dimensionality reduction cannot be performed as \
                                 the original embedding dimension is less than 3")
                 if not self._protocol.using_per_sequence_embeddings():
                     raise Exception(f"Dimensionality reduction cannot be performed as \
                                 the embeddings are not per-protein embeddings")
             return False
-
-
 
     def _get_class_weights(self, target_manager: TargetManager) -> Union[None, torch.FloatTensor]:
         # Get x_to_class specific logs and weights
@@ -466,13 +473,52 @@ class Trainer:
         test_results = solver.inference(test_loader, calculate_test_metrics=True)
 
         if self._save_split_ids:
-            test_results['mapped_predictions'] = revert_mappings(protocol=self._protocol,
-                                                                 test_predictions=test_results['mapped_predictions'],
-                                                                 class_int2str=target_manager.class_int2str)
+            test_results['test_set_predictions'] = revert_mappings(protocol=self._protocol,
+                                                                   test_predictions=test_results['mapped_predictions'],
+                                                                   class_int2str=target_manager.class_int2str)
             self._output_vars['test_iterations_results'] = {k: v for k, v in test_results.items()
                                                             if k != "mapped_probabilities"}
         else:
             self._output_vars['test_iterations_results'] = {'metrics': test_results['metrics']}
 
         logger.info(f"Test set metrics: {test_results['metrics']}")
-        logger.info(f"Extensive output information can be found at {self._output_vars['output_dir']}/out.yml")
+        return test_results
+
+    def _do_and_log_bootstrapping_evaluation(self, solver, test_results, test_loader):
+        logger.info('Running bootstrapping evaluation on the best model')
+        try:
+            max_prediction_length = len(max(test_results["mapped_predictions"].values(), key=len))
+        except TypeError:
+            max_prediction_length = 1
+            # TODO Avoid copy constructor for torch.tensor for non-per-residue tasks
+
+        all_predictions_dict = {
+            idx: Inferencer._pad_tensor(protocol=self._protocol,
+                                        target=pred,
+                                        length_to_pad=max_prediction_length,
+                                        device=self._device) for
+            idx, pred in
+            test_results["mapped_predictions"].items()}
+        target_dict = {
+            idx: Inferencer._pad_tensor(protocol=self._protocol,
+                                        target=target,
+                                        length_to_pad=max_prediction_length,
+                                        device=self._device)
+            for idx, target in
+            zip(test_loader.dataset.ids, test_loader.dataset.targets)}
+        seq_ids = list(target_dict.keys())
+
+        sample_size = len(seq_ids)
+        confidence_level = 0.05
+        bootstrapping_results = Inferencer._do_bootstrapping(iterations=self._bootstrapping_iterations,
+                                                             sample_size=sample_size,
+                                                             confidence_level=confidence_level,
+                                                             seq_ids=seq_ids,
+                                                             all_predictions_dict=all_predictions_dict,
+                                                             all_targets_dict=target_dict,
+                                                             solver=solver)
+        bootstrapping_dict = {"results": bootstrapping_results, "iterations": self._bootstrapping_iterations,
+                              "sample_size": sample_size, "confidence_level": confidence_level}
+        self._output_vars['test_iterations_results'].update({"bootstrapping": bootstrapping_results})
+
+        logger.info(f'Bootstrapping results: {bootstrapping_dict}')
