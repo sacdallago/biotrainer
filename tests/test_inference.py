@@ -60,11 +60,15 @@ class InferencerTests(unittest.TestCase):
     def test_padding(self):
         max_seq_length = len(max(self._test_targets_r2c, key=len))
         for target in self._test_targets_r2c:
-            self.assertTrue(len(self.inferencer_r2c._pad_target(self.inferencer_r2c._convert_class_str2int(target),
-                                                                max_seq_length)) == max_seq_length,
+            self.assertTrue(len(self.inferencer_r2c._pad_tensor(protocol=self.inferencer_r2c.protocol,
+                                                                target=self.inferencer_r2c._convert_class_str2int(
+                                                                    target),
+                                                                length_to_pad=max_seq_length,
+                                                                device="cpu")) == max_seq_length,
                             "Padding did not enlarge target sequence to correct size!")
         for target in self._test_targets_s2v:
-            self.assertTrue(self.inferencer_s2v._pad_target(target, max_seq_length) == target,
+            self.assertTrue(self.inferencer_s2v._pad_tensor(protocol=self.inferencer_s2v.protocol, target=target,
+                                                            length_to_pad=max_seq_length, device="cpu") == target,
                             "Padding changed a non-list value!")
 
     def test_from_embeddings(self):
