@@ -311,6 +311,36 @@ class OutputDirectory(GeneralOption, ConfigOption):
         return isinstance(value, (str, Path))
 
 
+class BootstrappingIterations(GeneralOption, ConfigOption):
+    """
+    Configuration option to set the number of bootstrap iterations for the best model on the test set.
+
+    This option allows users to specify the number of bootstrap iterations for a model on the test set.
+    It is an optional setting with a default value of 30. Using a value of 0 disables bootstrapping.
+    """
+
+    @classproperty
+    def name(self) -> str:
+        return "bootstrapping_iterations"
+
+    @property
+    def default_value(self) -> Union[str, int, float, bool, Any]:
+        return 30
+
+    @classproperty
+    def allow_multiple_values(self) -> bool:
+        return False
+
+    @staticmethod
+    def _is_value_valid(config_option: ConfigOption, value) -> bool:
+        # For range see: https://pytorch.org/docs/stable/generated/torch.manual_seed.html#torch.manual_seed
+        return isinstance(value, int) and value >= 0
+
+    @classproperty
+    def required(self) -> bool:
+        return False
+
+
 # List of all general configuration options
 general_options: List[Type[ConfigOption]] = [
     ProtocolOption,
@@ -320,5 +350,6 @@ general_options: List[Type[ConfigOption]] = [
     SaveSplitIds,
     SanityCheck,
     IgnoreFileInconsistencies,
-    OutputDirectory
+    OutputDirectory,
+    BootstrappingIterations
 ]

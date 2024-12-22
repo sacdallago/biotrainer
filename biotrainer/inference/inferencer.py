@@ -179,25 +179,26 @@ class Inferencer:
         else:
             return to_convert
 
-    def _pad_target(self, sequence: Union[List, Any], length_to_pad: int):
-        if self.protocol in Protocol.per_residue_protocols():
-            if type(sequence) is not list:
-                return sequence
-
-            if len(sequence) < length_to_pad:
-                return sequence + [MASK_AND_LABELS_PAD_VALUE] * (length_to_pad - len(sequence))
+    @staticmethod
+    def _pad_tensor(protocol: Protocol, target: Union[Any, torch.Tensor], length_to_pad: int, device):
+        target_tensor = torch.as_tensor(target, device=device)
+        if protocol in Protocol.per_residue_protocols():
+            if target_tensor.shape[0] < length_to_pad:
+                padding_size = length_to_pad - target_tensor.shape[0]
+                padding = torch.full((padding_size,), MASK_AND_LABELS_PAD_VALUE, dtype=target_tensor.dtype,
+                                     device=device)
+                return torch.cat([target_tensor, padding])
             else:
-                return sequence
+                return target_tensor
         else:
-            return sequence
+            return target_tensor
 
     def _convert_target_dict(self, target_dict: Dict[str, str]):
         if self.protocol in Protocol.classification_protocols():
             if self.protocol in Protocol.per_residue_protocols():
                 max_prediction_length = len(max(target_dict.values(), key=len))
-                return {seq_id: torch.tensor(self._pad_target(self._convert_class_str2int(prediction),
-                                                              length_to_pad=max_prediction_length),
-                                             device=self.device)
+                return {seq_id: self._pad_tensor(protocol=self.protocol, target=self._convert_class_str2int(prediction),
+                                                 length_to_pad=max_prediction_length, device=self.device)
                         for seq_id, prediction in target_dict.items()}
             else:
                 return {seq_id: torch.tensor(self._convert_class_str2int(prediction),
@@ -300,9 +301,9 @@ class Inferencer:
         :param targets: Iterable that contains the targets to calculate metrics
         :param split_name: Name of the split to use for prediction. Default is "hold_out".
         :param iterations: Number of iterations to perform bootstrapping
-        :param sample_size: Sample size to use for bootstrapping. -1 defaults to all embeddings
-                            It is possible, but not recommended to use a sample size larger than the number of
-                            embeddings, because this might render the variance estimate unreliable.
+        :param sample_size: Sample size to use for bootstrapping. -1 defaults to all embeddings which is recommended.
+                            It is possible, but not recommended to use a sample size larger or smaller
+                            than the number of embeddings, because this might render the variance estimate unreliable.
                             See: https://math.mit.edu/~dav/05.dir/class24-prep-a.pdf (6.2)
         :param confidence_level: Confidence level for result error intervals (0.05 => 95% percentile)
         :param seed: Seed to use for the bootstrapping algorithm
@@ -324,18 +325,43 @@ class Inferencer:
             embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
 
         seq_ids = list(embeddings_dict.keys())
-        if sample_size == -1:
-            sample_size = len(seq_ids)
 
         all_predictions = self.from_embeddings(embeddings_dict, targets)["mapped_predictions"]
+        all_predictions_dict = self._convert_target_dict(all_predictions)
 
-        all_predictions_dict = {seq_id: prediction for seq_id, prediction in all_predictions.items()}
-        all_predictions_dict = self._convert_target_dict(all_predictions_dict)
         all_targets_dict = {seq_id: targets[idx] for idx, seq_id in enumerate(seq_ids)}
         all_targets_dict = self._convert_target_dict(all_targets_dict)
 
         solver, _ = self.solvers_and_loaders_by_split[split_name]
 
+        return self._do_bootstrapping(iterations=iterations, sample_size=sample_size, confidence_level=confidence_level,
+                                      seq_ids=seq_ids, all_predictions_dict=all_predictions_dict,
+                                      all_targets_dict=all_targets_dict, solver=solver)
+
+    @staticmethod
+    def _do_bootstrapping(iterations: int,
+                          sample_size: int,
+                          confidence_level: float,
+                          seq_ids: List[str],
+                          all_predictions_dict: Dict,
+                          all_targets_dict: Dict,
+                          solver):
+        """
+
+        :param iterations: Number of iterations to perform bootstrapping
+        :param sample_size: Sample size to use for bootstrapping. -1 defaults to all embeddings which is recommended.
+                            It is possible, but not recommended to use a sample size larger or smaller
+                            than the number of embeddings, because this might render the variance estimate unreliable.
+                            See: https://math.mit.edu/~dav/05.dir/class24-prep-a.pdf (6.2)
+        :param confidence_level: Confidence level for result error intervals (0.05 => 95% percentile)
+        :param seq_ids:
+        :param all_predictions_dict:
+        :param all_targets_dict:
+        :param solver:
+        :return:
+        """
+        if sample_size == -1:
+            sample_size = len(seq_ids)
         # Bootstrapping: Resample over keys to keep track of associated targets
         iteration_results = []
 
