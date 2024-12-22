@@ -3,7 +3,6 @@ import tempfile
 
 from pathlib import Path
 from copy import deepcopy
-from datasets import load_dataset, concatenate_datasets
 
 from biotrainer.config import Configurator, ConfigurationException
 
