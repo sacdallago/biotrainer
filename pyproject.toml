@@ -27,8 +27,8 @@ classifiers = [
 biotrainer = 'biotrainer.utilities.cli:main'
 
 [tool.poetry.urls]
-issues = "https://github.com/sacdallago/biotrainer/issues"
-repository = "https://github.com/sacdallago/biotrainer"
+Issues = "https://github.com/sacdallago/biotrainer/issues"
+Repository = "https://github.com/sacdallago/biotrainer"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
