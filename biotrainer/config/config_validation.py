@@ -126,8 +126,13 @@ def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_d
         cv_config = config_dict["cross_validation_config"]
         if cv_config["method"] == "k_fold" and "k" not in cv_config:
             raise ConfigurationException("Cross validation method k_fold needs k to be set!")
+        if cv_config["method"] == "k_fold" and "p" in cv_config:
+            raise ConfigurationException("Cross validation method k_fold does not allow p to be set!")
+
         if cv_config["method"] == "leave_p_out" and "p" not in cv_config:
             raise ConfigurationException("Cross validation method leave_p_out needs p to be set!")
+        if cv_config["method"] == "leave_p_out" and "k" in cv_config:
+            raise ConfigurationException("Cross validation method leave_p_out does not allow k to be set!")
 
         any_list_options_in_config_dict = any([is_list_option(value) for value in config_dict.values()])
         if "nested" in cv_config:
