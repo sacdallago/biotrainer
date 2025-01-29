@@ -10,13 +10,13 @@ from ..protocols import Protocol
 class ConfigOption:
     name: str
     required: bool
+    description: str
+    category: str
     is_file_option: bool = False
     allow_hyperparameter_optimization: bool = False
     type: Optional[Type] = None
     default: Optional[Any] = None
     constraints: Optional[ConfigConstraints] = None
-    # TODO description
-    # TODO category
 
 
 @dataclass
