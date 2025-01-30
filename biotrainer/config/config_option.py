@@ -15,7 +15,6 @@ class ConfigOption:
     category: str
     is_file_option: bool = False
     allow_hyperparameter_optimization: bool = False
-    type: Optional[Type] = None
     default: Optional[Any] = None
     constraints: Optional[ConfigConstraints] = None
 
@@ -27,13 +26,13 @@ class ConfigOption:
             "category": self.category,
             "is_file_option": self.is_file_option,
             "allow_hyperparameter_optimization": self.allow_hyperparameter_optimization,
-            "type": str(self.type),
             "default": self.default,
             "constraints": self.constraints.to_dict() if self.constraints else {},
         }
 
 @dataclass
 class ConfigConstraints:
+    type: Optional[Type] = None
     allowed_values: Optional[List[Any]] = None
     allowed_formats: Optional[List[str]] = None
     allowed_protocols: Optional[List[Protocol]] = field(default_factory=lambda: Protocol.all())
@@ -45,6 +44,7 @@ class ConfigConstraints:
 
     def to_dict(self):
         return {
+            "type": str(self.type),
             "allowed_values": self.allowed_values,
             "allowed_formats": self.allowed_formats,
             "allowed_protocols": [protocol.name for protocol in self.allowed_protocols],
