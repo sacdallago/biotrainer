@@ -42,14 +42,14 @@ def validate_config_options(protocol: Protocol,
         if (not allow_downloads or ".py" in str(value)) and is_url(str(value)):
             raise ConfigurationException(f"Downloading files is disabled!")
 
-        # Type checking
-        if option.type and option.name in config_dict:
-            if not isinstance(value, option.type) and not value_is_list_option:
-                raise ConfigurationException(f"{full_option_name} must be of type {option.type}")
-
         # Constraint validation
         if option.constraints:
             constraints = option.constraints
+
+            # Type checking
+            if constraints.type and option.name in config_dict:
+                if not isinstance(value, constraints.type) and not value_is_list_option:
+                    raise ConfigurationException(f"{full_option_name} must be of type {constraints.type}")
 
             # Allowed values
             if constraints.allowed_values and value not in constraints.allowed_values and not value_is_list_option:
