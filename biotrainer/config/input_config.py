@@ -1,10 +1,12 @@
-from .config_option import ConfigOption, ConfigConstraints
+from typing import Tuple, List
+
+from .config_option import ConfigOption, ConfigConstraints, ConfigKey
 
 from ..protocols import Protocol
 
-def input_config(protocol: Protocol):
+def input_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
     input_category = "input_files"
-    return "", [
+    return ConfigKey.ROOT, [
         ConfigOption(
             name="sequence_file",
             type=str,

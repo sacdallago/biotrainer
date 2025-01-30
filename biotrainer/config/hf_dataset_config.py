@@ -1,11 +1,13 @@
-from .config_option import ConfigOption, ConfigConstraints
+from typing import Tuple, List
+
+from .config_option import ConfigOption, ConfigConstraints, ConfigKey
 
 from ..protocols import Protocol
 
 
-def hf_dataset_config(protocol: Protocol):
+def hf_dataset_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
     hf_dataset_category = "hf_dataset"
-    return "hf_dataset", [
+    return ConfigKey.HF_DATASET, [
         ConfigOption(
             name="path",
             type=str,
