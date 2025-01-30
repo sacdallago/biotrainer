@@ -1,10 +1,12 @@
-from .config_option import ConfigOption, ConfigConstraints
+from typing import Tuple, List
+
+from .config_option import ConfigOption, ConfigConstraints, ConfigKey
 
 from ..protocols import Protocol
 
-def training_config(protocol: Protocol):
+def training_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
     training_category = "training"
-    return "", [
+    return ConfigKey.ROOT, [
         ConfigOption(
             name="num_epochs",
             type=int,

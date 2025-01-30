@@ -1,12 +1,14 @@
-from .config_option import ConfigOption, ConfigConstraints
+from typing import List, Tuple
+
+from .config_option import ConfigOption, ConfigConstraints, ConfigKey
 
 from ..protocols import Protocol
 from ..embedders import get_predefined_embedder_names
 
 
-def embedding_config(protocol: Protocol):
+def embedding_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
     embedding_category = "embedding"
-    return "", [
+    return ConfigKey.ROOT, [
         ConfigOption(
             name="embedder_name",
             type=str,

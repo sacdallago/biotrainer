@@ -1,16 +1,16 @@
 import torch
 
-from typing import Union
 from pathlib import Path
+from typing import Union, List, Tuple
 
-from .config_option import ConfigOption, ConfigConstraints
+from .config_option import ConfigOption, ConfigConstraints, ConfigKey
 
 from ..protocols import Protocol
 
 
-def general_config(protocol: Protocol):
+def general_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
     general_category = "general"
-    return "", [
+    return ConfigKey.ROOT, [
         ConfigOption(name="device",
                      type=str,
                      description="Select the device on which computations will be performed.",

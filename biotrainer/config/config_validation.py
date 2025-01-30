@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional
 
-from .config_option import ConfigOption
 from .config_utils import is_url, is_list_option
+from .config_option import ConfigOption, ConfigKey
 from .config_exception import ConfigurationException
 
 from ..protocols import Protocol
@@ -12,7 +12,7 @@ def validate_config_options(protocol: Protocol,
                             ignore_file_checks: bool,
                             config_options: Dict[str, ConfigOption],
                             config_dict: Dict[str, Any],
-                            config_key: Optional[str] = ""
+                            config_key: ConfigKey = ConfigKey.ROOT
                             ) -> Dict[str, Any]:
     """
     Validate the configuration dictionary against defined options
@@ -22,7 +22,7 @@ def validate_config_options(protocol: Protocol,
         if option.is_file_option and ignore_file_checks:
             continue
 
-        full_option_name = f"{config_key}:{option.name}" if config_key != "" else option.name
+        full_option_name = f"{config_key.name}:{option.name}" if config_key != ConfigKey.ROOT else option.name
         # Check if required option is present
         if option.name not in config_dict:
             if option.required:

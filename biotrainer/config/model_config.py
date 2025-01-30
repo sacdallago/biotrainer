@@ -1,4 +1,6 @@
-from .config_option import ConfigOption, ConfigConstraints
+from typing import Tuple, List
+
+from .config_option import ConfigOption, ConfigConstraints, ConfigKey
 
 from ..protocols import Protocol
 from ..losses import get_available_losses_dict
@@ -6,9 +8,9 @@ from ..models import get_available_models_dict
 from ..optimizers import get_available_optimizers_dict
 
 
-def model_config(protocol: Protocol):
+def model_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
     model_category = "model"
-    return "", [
+    return ConfigKey.ROOT, [
         ConfigOption(
             name="model_choice",
             type=str,
