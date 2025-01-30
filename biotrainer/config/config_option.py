@@ -27,7 +27,7 @@ class ConfigOption:
             "category": self.category,
             "is_file_option": self.is_file_option,
             "allow_hyperparameter_optimization": self.allow_hyperparameter_optimization,
-            "type": self.type,
+            "type": str(self.type),
             "default": self.default,
             "constraints": self.constraints.to_dict() if self.constraints else {},
         }
