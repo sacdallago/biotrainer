@@ -1,15 +1,17 @@
-from typing import Dict, Any
+from typing import Dict, Any, Tuple, List
 
-from .config_option import ConfigOption, ConfigConstraints
+from .config_option import ConfigOption, ConfigConstraints, ConfigKey
 
 from ..protocols import Protocol
+
 
 def get_default_cross_validation_config() -> Dict[str, Any]:
     return {"cross_validation_config": {"method": "hold_out"}}
 
-def cross_validation_config(protocol: Protocol):
+
+def cross_validation_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
     cv_category = "cross_validation"
-    return "cross_validation_config", [  # TODO Keys -> Enum
+    return ConfigKey.CROSS_VALIDATION, [
         ConfigOption(
             name="method",
             type=str,

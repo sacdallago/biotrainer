@@ -5,9 +5,9 @@ from ruamel import yaml
 from pathlib import Path
 from itertools import chain
 from ruamel.yaml import YAMLError
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Tuple
 
-from .config_option import ConfigOption
+from .config_option import ConfigOption, ConfigKey
 from .general_config import general_config
 from .input_config import input_config
 from .model_config import model_config
@@ -88,28 +88,28 @@ class Configurator:
     @staticmethod
     def get_option_dicts_by_protocol(
             protocol: Protocol,
-            include_cross_validation_options: bool = False
+            sub_configs_to_include: List[ConfigKey] = None
     ) -> List[Dict[str, Any]]:
         """
         Returns all possible configuration options as dictionaries for the given protocol.
 
         Args:
             protocol (Protocol): The protocol to get all options for.
-            include_cross_validation_options (bool, optional): If True, includes cross-validation options. Defaults to False.
-
+            sub_configs_to_include (List[ConfigKey]): List of sub-configuration keys to include.
         Returns:
-            List[Dict[str, Any]]: A list of all configuration options as dictionaries.
+            List of config options as dictionaries.
         """
         result = []
-        all_config_options_dict = (
-            all_options_dict | cross_validation_dict
-            if include_cross_validation_options
-            else all_options_dict
-        )
-        for option_class in all_config_options_dict.values():
-            option = option_class(protocol=protocol)
-            if protocol in option.allowed_protocols:
-                result.append(option.to_dict())
+        main_config, sub_configs = Configurator._get_relevant_config_options(protocol=protocol,
+                                                                             config_keys=[str(config_key.value) for
+                                                                                          config_key in
+                                                                                          sub_configs_to_include])
+        all_config_options = {**main_config,
+                              **{k: v for sub_config in sub_configs.values() for k, v in sub_config.items()}}
+        for option in all_config_options.values():
+            if option.constraints and protocol not in option.constraints.allowed_protocols:
+                continue
+            result.append(option.to_dict())
         return result
 
     @staticmethod
@@ -169,18 +169,21 @@ class Configurator:
                 f"Invalid protocol specified: {protocol}"
             )
 
-    def _get_relevant_config_options(self):
+    @staticmethod
+    def _get_relevant_config_options(protocol: Protocol,
+                                     config_keys: List[str]) -> (
+            Tuple)[Dict[str, ConfigOption], Dict[ConfigKey, Dict[str, ConfigOption]]]:
         main_config = {config_option.name: config_option for config_option in chain(
-            general_config(self.protocol)[1],
-            input_config(self.protocol)[1],
-            model_config(self.protocol)[1],
-            training_config(self.protocol)[1],
-            embedding_config(self.protocol)[1],
+            general_config(protocol)[1],
+            input_config(protocol)[1],
+            model_config(protocol)[1],
+            training_config(protocol)[1],
+            embedding_config(protocol)[1],
         )}
         sub_configs = {config_key: {config_option.name: config_option for config_option in config_options} for
                        config_key, config_options in
-                       [hf_dataset_config(self.protocol), cross_validation_config(self.protocol)]
-                       if config_key in self._config_dict}
+                       [hf_dataset_config(protocol), cross_validation_config(protocol)]
+                       if config_key.value in config_keys}
 
         return main_config, sub_configs
 
@@ -198,7 +201,7 @@ class Configurator:
         Raises:
             ConfigurationException: If any validation rule is violated or if required options are missing.
         """
-        if "cross_validation_config" not in self._config_dict:
+        if ConfigKey.CROSS_VALIDATION.value not in self._config_dict:
             self._config_dict.update(get_default_cross_validation_config())
 
         if not validate_config_rules(protocol=self.protocol,
@@ -207,13 +210,17 @@ class Configurator:
             return {}
 
         verified_config = {}
-        main_config, sub_configs = self._get_relevant_config_options()
+        main_config, sub_configs = self._get_relevant_config_options(protocol=self.protocol,
+                                                                     config_keys=[config_key.value for config_key in
+                                                                                  ConfigKey.all_subconfig_keys()
+                                                                                  if config_key.value in
+                                                                                  self._config_dict])
         verified_main_config = validate_config_options(protocol=self.protocol,
                                                        allow_downloads=self.allow_downloads,
                                                        ignore_file_checks=ignore_file_checks,
                                                        config_options=main_config,
                                                        config_dict=self._config_dict,
-                                                       config_key="")
+                                                       config_key=ConfigKey.ROOT)
         verified_config.update(verified_main_config)
 
         for config_key, config_options in sub_configs.items():
@@ -221,18 +228,32 @@ class Configurator:
                                                           allow_downloads=self.allow_downloads,
                                                           ignore_file_checks=ignore_file_checks,
                                                           config_options=config_options,
-                                                          config_dict=self._config_dict[config_key],
+                                                          config_dict=self._config_dict[config_key.value],
                                                           config_key=config_key)
-            verified_config[config_key] = verified_sub_config
+            verified_config[config_key.value] = verified_sub_config
         return verified_config
 
     def postprocess_config(self, verified_config: Dict[str, Any]) -> Dict[str, Any]:
-        main_config, sub_configs = self._get_relevant_config_options()
+        main_config, sub_configs = self._get_relevant_config_options(protocol=self.protocol,
+                                                                     config_keys=[config_key.value for config_key in
+                                                                                  ConfigKey.all_subconfig_keys() if
+                                                                                  config_key.value in verified_config])
         all_config_options = {**main_config,
                               **{k: v for sub_config in sub_configs.values() for k, v in sub_config.items()}}
-        if "hf_dataset" in verified_config:
+
+        # Output dir
+        if "output_dir" in verified_config:
+            output_dir = self._config_file_path / Path(verified_config["output_dir"])
+            output_dir.mkdir(parents=True, exist_ok=True)
+            verified_config["output_dir"] = make_path_absolute_if_necessary(value=verified_config["output_dir"],
+                                                                            config_file_path=self._config_file_path)
+        else:
+            raise ConfigurationException("Verified config is missing output_dir option!")
+        output_dir = Path(verified_config["output_dir"])
+
+        if ConfigKey.HF_DATASET.value in verified_config:
             try:
-                hf_dataset_dir = self._config_file_path / "hf_db"
+                hf_dataset_dir = output_dir / "hf_db"
                 hf_dataset_dir.mkdir(exist_ok=True)
                 sequence_file_path, labels_file_path, mask_file_path = process_hf_dataset_to_fasta(
                     protocol=self.protocol, hf_storage_path=hf_dataset_dir,
