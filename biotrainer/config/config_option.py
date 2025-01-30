@@ -29,7 +29,7 @@ class ConfigOption:
             "allow_hyperparameter_optimization": self.allow_hyperparameter_optimization,
             "type": self.type,
             "default": self.default,
-            "constraints": self.constraints.to_dict(),
+            "constraints": self.constraints.to_dict() if self.constraints else {},
         }
 
 @dataclass
