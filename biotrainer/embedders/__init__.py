@@ -1,5 +1,4 @@
 import torch
-import logging
 
 from pathlib import Path
 from typing import Union, Optional, List, Tuple
@@ -12,13 +11,13 @@ from .embedder_interfaces import EmbedderInterface
 from .one_hot_encoding_embedder import OneHotEncodingEmbedder
 from .huggingface_transformer_embedder import HuggingfaceTransformerEmbedder
 
-from ..utilities import is_device_cpu
+from ..utilities import is_device_cpu, get_logger
 
 __PREDEFINED_EMBEDDERS = {
     "one_hot_encoding": OneHotEncodingEmbedder
 }
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def get_embedding_service(embeddings_file_path: Union[str, None], embedder_name: Union[str, None],

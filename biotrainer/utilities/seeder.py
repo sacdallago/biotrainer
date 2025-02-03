@@ -1,10 +1,10 @@
-import logging
 import torch
 import random
-
 import numpy as np
 
-logger = logging.getLogger(__name__)
+from .logging import get_logger
+
+logger = get_logger(__name__)
 
 
 # https://discuss.pytorch.org/t/reproducibility-with-all-the-bells-and-whistles/81097

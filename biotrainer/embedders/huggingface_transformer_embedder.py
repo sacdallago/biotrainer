@@ -1,7 +1,6 @@
 # Inspired by bio_embeddings embed module (https://github.com/sacdallago/bio_embeddings/tree/develop/bio_embeddings/embed)
 
 import torch
-import logging
 import numpy as np
 
 from typing import List, Generator, Any, Union, Tuple
@@ -11,7 +10,9 @@ from .embedder_interfaces import EmbedderWithFallback
 from .preprocessing_strategies import preprocess_sequences_with_whitespaces, preprocess_sequences_without_whitespaces, \
     preprocess_sequences_for_prostt5
 
-logger = logging.getLogger(__name__)
+from ..utilities import get_logger
+
+logger = get_logger(__name__)
 
 
 class HuggingfaceTransformerEmbedder(EmbedderWithFallback):

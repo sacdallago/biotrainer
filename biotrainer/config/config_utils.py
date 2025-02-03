@@ -1,4 +1,3 @@
-import logging
 import shutil
 
 from pathlib import Path
@@ -7,8 +6,6 @@ from urllib import request
 from urllib.parse import urlparse
 
 from .config_exception import ConfigurationException
-
-logger = logging.getLogger(__name__)
 
 
 def download_file_from_config(option_name: str, url: str, config_file_path: Path):
@@ -24,7 +21,7 @@ def download_file_from_config(option_name: str, url: str, config_file_path: Path
     """
     if is_url(url):
         try:
-            logger.info(f"Trying to download {option_name} from {url}")
+            print(f"Trying to download {option_name} from {url}")
             req = request.Request(url, headers={
                 'User-Agent': "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"
             })
@@ -33,9 +30,9 @@ def download_file_from_config(option_name: str, url: str, config_file_path: Path
             save_path = str(config_file_path / f"downloaded_{file_name}")
             with request.urlopen(req) as response, open(save_path, 'wb') as outfile:
                 if response.status == 200:
-                    logger.info(f"OK - Downloading file {option_name} (size: {response.length / (2 ** 20):.2f} MB)..")
+                    print(f"OK - Downloading file {option_name} (size: {response.length / (2 ** 20):.2f} MB)..")
                 shutil.copyfileobj(response, outfile)
-            logger.info(f"{option_name} successfully downloaded and stored at {save_path}.")
+            print(f"{option_name} successfully downloaded and stored at {save_path}.")
             return save_path
         except Exception as e:
             raise Exception(f"Could not download {option_name} from url {url}") from e
@@ -53,7 +50,12 @@ def make_path_absolute_if_necessary(value: str, config_file_path: Path) -> str:
     absolute_path = (config_file_path / value).absolute()
     if absolute_path.is_file() or absolute_path.is_dir():
         return str(absolute_path)
-    raise ConfigurationException(f"Could not find {absolute_path}.")
+
+    # File path is already absolute and not directly within the config directory
+    absolute_value_path = Path(value).absolute()
+    if absolute_value_path.is_file() or absolute_value_path.is_dir():
+        return str(absolute_value_path)
+    raise ConfigurationException(f"Could not find path for file {value}.")
 
 
 def is_url(value: str) -> bool:

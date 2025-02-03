@@ -1,13 +1,12 @@
-import logging
 import numpy as np
 
 from typing import Any, Dict, List, Optional
 from sklearn.model_selection import KFold, StratifiedKFold, RepeatedStratifiedKFold, RepeatedKFold, LeavePOut
 
-from ..utilities import Split, DatasetSample
 from ..protocols import Protocol
+from ..utilities import Split, DatasetSample, get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CrossValidationSplitter:

@@ -1,21 +1,23 @@
-import unittest
-import logging
-import tempfile
 import os
-import random
 import psutil
+import random
+import logging
+import unittest
+import tempfile
+
 from pathlib import Path
 
-from biotrainer.embedders import OneHotEncodingEmbedder, EmbeddingService
 from biotrainer.protocols import Protocol
+from biotrainer.embedders import OneHotEncodingEmbedder, EmbeddingService
 
 logger = logging.getLogger(__name__)
+
 
 class TestEmbeddingService(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._configure_logging()
-    
+
     @classmethod
     def _configure_logging(cls):
         logging.basicConfig(
@@ -37,7 +39,8 @@ class TestEmbeddingService(unittest.TestCase):
     def _setup_fasta_parameters(self):
         self.num_reads = 100
         if os.environ.get('CI') == 'true':
-            logger.debug("CI environment detected. Generating ultra-long sequences to test memory limits and extreme edge cases.")
+            logger.debug(
+                "CI environment detected. Generating ultra-long sequences to test memory limits and extreme edge cases.")
             logger.debug(
                 "Sequence generation may take considerable time due to large memory allocation: "
                 f"{psutil.virtual_memory().available / (1024 ** 3):.2f} GB available."
@@ -67,7 +70,7 @@ class TestEmbeddingService(unittest.TestCase):
                 logger.info(f"Generating long sequence, it may take a bit of time.")
                 for i in range(1, 3):
                     file.write(f">read_{i}\n{self._generate_sequence(long_length)}\n")
-            
+
             if include_short:
                 for i in range(3, num_reads + 1):
                     file.write(f">read_{i}\n{self._generate_sequence(other_length)}\n")
@@ -77,7 +80,8 @@ class TestEmbeddingService(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             logger.info(f'Starting test: compute_embeddings_{test_name}')
             sequence_path = os.path.join(tmp_dir, f"{test_name}.fasta")
-            self._generate_fasta(num_reads, self.long_length, self.other_length, sequence_path, include_long, include_short)
+            self._generate_fasta(num_reads, self.long_length, self.other_length, sequence_path, include_long,
+                                 include_short)
             result = self._compute_embeddings(sequence_path, tmp_dir, protocol)
             self._verify_result(protocol, result, tmp_dir)
             logger.info(f'Test compute_embeddings_{test_name} completed successfully')
@@ -93,9 +97,11 @@ class TestEmbeddingService(unittest.TestCase):
     def _verify_result(self, protocol, result, tmp_dir):
         self.assertTrue(os.path.exists(result), f"Result file does not exist: {result}")
         if protocol == Protocol.sequence_to_class:
-            expected_path = os.path.join(tmp_dir, "sequence_to_class", "one_hot_encoding", "reduced_embeddings_file_one_hot_encoding.h5")
+            expected_path = os.path.join(tmp_dir, "sequence_to_class", "one_hot_encoding",
+                                         "reduced_embeddings_file_one_hot_encoding.h5")
         elif protocol == Protocol.residue_to_class:
-            expected_path = os.path.join(tmp_dir, "residue_to_class", "one_hot_encoding", "embeddings_file_one_hot_encoding.h5")
+            expected_path = os.path.join(tmp_dir, "residue_to_class", "one_hot_encoding",
+                                         "embeddings_file_one_hot_encoding.h5")
         self.assertEqual(result, expected_path, f"Unexpected result path. Expected {expected_path}, got {result}")
 
     # Test methods
@@ -103,19 +109,20 @@ class TestEmbeddingService(unittest.TestCase):
         self._run_embedding_test("long_sequences", 2, Protocol.sequence_to_class, include_short=False)
 
     def test_short_sequence_to_class(self):
-        self._run_embedding_test("short_sequences", self.num_reads, Protocol.sequence_to_class,include_long=False)
+        self._run_embedding_test("short_sequences", self.num_reads, Protocol.sequence_to_class, include_long=False)
 
     def test_mixed_sequence_to_class(self):
         self._run_embedding_test("mixed_sequences", self.num_reads, Protocol.sequence_to_class)
-        
+
     def test_long_residue_to_class(self):
         self._run_embedding_test("long_sequences", 2, Protocol.residue_to_class, include_short=False)
 
     def test_short_residue_to_class(self):
-        self._run_embedding_test("short_sequences", self.num_reads, Protocol.residue_to_class,include_long=False)
+        self._run_embedding_test("short_sequences", self.num_reads, Protocol.residue_to_class, include_long=False)
 
     def test_mixed_residue_to_class(self):
         self._run_embedding_test("mixed_sequences", self.num_reads, Protocol.residue_to_class)
+
 
 if __name__ == '__main__':
     unittest.main()

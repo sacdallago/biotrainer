@@ -1,11 +1,6 @@
-import logging
-
 from typing import Dict
 
 from ..protocols import Protocol
-
-logger = logging.getLogger(__name__)
-
 
 def revert_mappings(protocol: Protocol, test_predictions: Dict, class_int2str: Dict[int, str]) -> Dict[str, str]:
     # If residue-to-class problem, map the integers back to the class labels (single letters)

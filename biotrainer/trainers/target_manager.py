@@ -1,5 +1,4 @@
 import torch
-import logging
 import itertools
 import numpy as np
 
@@ -9,9 +8,9 @@ from typing import Dict, Any, Tuple, Optional, List
 
 from ..protocols import Protocol
 from ..utilities import get_attributes_from_seqrecords, get_attributes_from_seqrecords_for_protein_interactions, \
-    get_split_lists, MASK_AND_LABELS_PAD_VALUE, read_FASTA, INTERACTION_INDICATOR, DatasetSample
+    get_split_lists, MASK_AND_LABELS_PAD_VALUE, read_FASTA, INTERACTION_INDICATOR, DatasetSample, get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TargetManager:
