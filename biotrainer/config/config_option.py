@@ -44,7 +44,7 @@ class ConfigConstraints:
 
     def to_dict(self):
         return {
-            "type": str(self.type),
+            "type": str(self.type.__name__),
             "allowed_values": self.allowed_values,
             "allowed_formats": self.allowed_formats,
             "allowed_protocols": [protocol.name for protocol in self.allowed_protocols],
