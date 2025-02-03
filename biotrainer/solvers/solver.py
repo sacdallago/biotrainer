@@ -15,7 +15,9 @@ from typing import Callable, Optional, Union, Dict, List, Any
 
 from .solver_utils import get_mean_and_confidence_range
 
-logger = logging.getLogger(__name__)
+from ..utilities import get_logger
+
+logger = get_logger(__name__)
 
 
 class Solver(ABC):

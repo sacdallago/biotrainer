@@ -1,12 +1,12 @@
 import random
-import logging
 import itertools
 
 from typing import Dict, Any, Generator, Union
 
+from ..utilities import get_logger
 from ..config import ConfigurationException
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class HyperParameterManager:

@@ -1,13 +1,13 @@
 import re
-import logging
 
 from Bio import SeqIO
-from typing import Dict, List, Tuple, Union, Any, Optional
+from typing import Dict, List, Tuple
 from Bio.SeqRecord import SeqRecord
 
-from ..utilities import INTERACTION_INDICATOR
+from .logging import get_logger
+from .constants import INTERACTION_INDICATOR
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def get_attributes_from_seqrecords(sequences: List[SeqRecord]) -> Dict[str, Dict[str, str]]:
