@@ -7,30 +7,33 @@ from copy import deepcopy
 from typing import Union, Dict, Any
 from ruamel.yaml.comments import CommentedBase
 
+from .logging import get_logger
 from .cuda_device import get_device
 
 from ..config import Configurator
 from ..protocols import Protocol
 from ..trainers import Trainer, HyperParameterManager
 
-logger = logging.getLogger(__name__)
-
-__PROTOCOLS = {
-    'residue_to_class',
-    'residues_to_class',
-    'sequence_to_class',
-    'sequence_to_value',
-}
-
-
 def _setup_logging(output_dir: str):
-    logging.basicConfig(level=logging.INFO,
-                        format="%(asctime)s %(levelname)s %(message)s",
-                        handlers=[
-                            logging.FileHandler(output_dir + "/logger_out.log"),
-                            logging.StreamHandler()]
-                        )
     logging.captureWarnings(True)
+    biotrainer_logger = logging.getLogger('biotrainer')
+    biotrainer_logger.propagate = False  # Prevent propagation to root logger
+
+    # Set up handlers
+    file_handler = logging.FileHandler(output_dir + "/logger_out.log")
+    stream_handler = logging.StreamHandler()
+
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    file_handler.setFormatter(formatter)
+    stream_handler.setFormatter(formatter)
+
+    biotrainer_logger.setLevel(logging.INFO)
+    file_handler.setLevel(logging.INFO)
+    stream_handler.setLevel(logging.INFO)
+
+    biotrainer_logger.addHandler(file_handler)
+    biotrainer_logger.addHandler(stream_handler)
+
     # Only log errors for onnx and dynamo
     torch._logging.set_logs(dynamo=logging.ERROR, onnx=logging.ERROR, onnx_diagnostics=False)
     for logger_name in ["torch.onnx", "torch._dynamo", "onnxscript"]:
@@ -79,6 +82,7 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]]) 
     if not output_dir.is_dir():
         output_dir.mkdir(parents=True)
     _setup_logging(str(output_dir))
+    logger = get_logger(__name__)
 
     if "pretrained_model" in config.keys():
         logger.info(f"Using pre_trained model: {config['pretrained_model']}")

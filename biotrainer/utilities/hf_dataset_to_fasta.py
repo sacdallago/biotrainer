@@ -1,12 +1,12 @@
-import logging
-
 from pathlib import Path
 from datasets import load_dataset
 from typing import Any, Dict, List, Optional, Tuple
 
+from .logging import get_logger
+
 from ..protocols import Protocol
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def hf_to_fasta(

@@ -1,4 +1,5 @@
 from .seeder import seed_all
+from .logging import get_logger
 from .version import __version__
 from .revert_mappings import revert_mappings
 from .cuda_device import get_device, is_device_cpu
@@ -20,6 +21,7 @@ from .hf_dataset_to_fasta import process_hf_dataset_to_fasta
 
 __all__ = [
     'seed_all',
+    'get_logger',
     'get_device',
     'is_device_cpu',
     'read_FASTA',

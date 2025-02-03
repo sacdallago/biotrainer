@@ -8,15 +8,15 @@ Original Authors:
 
 import abc
 import torch
-import logging
 
 from numpy import ndarray
 from typing import List, Generator, Optional, Iterable, Any, Union, Callable
 
 from .preprocessing_strategies import preprocess_sequences_without_whitespaces
 
+from ..utilities import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class EmbedderInterface(abc.ABC):

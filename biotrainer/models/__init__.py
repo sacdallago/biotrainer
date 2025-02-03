@@ -1,6 +1,5 @@
 import torch
 import inspect
-import logging
 
 from typing import Dict, Set, Any, Optional
 
@@ -11,8 +10,9 @@ from .light_attention import LightAttention
 from .model_params import count_parameters
 
 from ..protocols import Protocol
+from ..utilities import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 __MODELS = {
     Protocol.residue_to_class: {

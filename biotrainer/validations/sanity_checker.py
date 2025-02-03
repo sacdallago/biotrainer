@@ -1,14 +1,13 @@
 import torch
-import logging
 from typing import Dict, List
 
 from scipy.stats import pearsonr
 
 from ..solvers import Solver
 from ..protocols import Protocol
-from ..utilities import DatasetSample, INTERACTION_INDICATOR
+from ..utilities import DatasetSample, INTERACTION_INDICATOR, get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SanityChecker:

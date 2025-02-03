@@ -1,7 +1,6 @@
 import time
 import torch
 import random
-import logging
 import datetime
 
 from pathlib import Path
@@ -23,9 +22,9 @@ from ..models import count_parameters, get_model
 from ..datasets import get_collate_function, get_dataset
 from ..embedders import EmbeddingService, get_embedding_service
 from ..utilities import seed_all, Split, SplitResult, DatasetSample, METRICS_WITHOUT_REVERSED_SORTING, __version__, \
-    revert_mappings
+    revert_mappings, get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class Trainer:

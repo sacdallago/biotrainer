@@ -1,5 +1,4 @@
 import os
-import logging
 
 from ruamel import yaml
 from pathlib import Path
@@ -22,8 +21,6 @@ from .config_utils import download_file_from_config, is_url, make_path_absolute_
 from ..protocols import Protocol
 
 from ..utilities import process_hf_dataset_to_fasta
-
-logger = logging.getLogger(__name__)
 
 
 class Configurator:

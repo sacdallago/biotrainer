@@ -4,7 +4,6 @@ import time
 import h5py
 import torch
 import psutil
-import logging
 import numpy as np
 
 from umap import UMAP
@@ -17,9 +16,9 @@ from typing import Dict, Tuple, Any, List, Union, Optional
 from .embedder_interfaces import EmbedderInterface
 
 from ..protocols import Protocol
-from ..utilities import read_FASTA
+from ..utilities import read_FASTA, get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class EmbeddingService:
