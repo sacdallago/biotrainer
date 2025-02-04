@@ -157,4 +157,7 @@ def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_d
                 raise ConfigurationException(
                     f"Search method random_search needs n_max_evaluations_random to be set!")
 
+        if cv_config["method"] != "hold_out" and "pretrained_model" in config_dict:
+            raise ConfigurationException(f"Using pretrained_model is only possible for hold_out cross validation!")
+
     return True
