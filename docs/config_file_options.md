@@ -371,7 +371,7 @@ results might differ between originally trained checkpoints and resumed training
 If you are using an already pretrained model and want to continue to train it for more epochs, you can use the 
 following option:
 ```yaml
-pretrained_model: path/to/model_checkpoint.pt
+pretrained_model: path/to/model_checkpoint.safetensors
 ```
 **Note that `pretrained_model` only works in combination with `hold_out` cross validation!**
 
