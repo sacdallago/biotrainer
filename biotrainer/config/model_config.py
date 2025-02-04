@@ -61,19 +61,6 @@ def model_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
             )
         ),
         ConfigOption(
-            name="epsilon",
-            description="Define an epsilon value for the optimizer algorithm.",
-            category=model_category,
-            required=False,
-            default=1e-3,
-            allow_hyperparameter_optimization=True,
-            constraints=ConfigConstraints(
-                type=float,
-                gt=0,
-                lt=1
-            )
-        ),
-        ConfigOption(
             name="loss_choice",
             description="Choose an loss function from the available predefined losses.",
             category=model_category,

@@ -41,6 +41,20 @@ def training_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
                 gt=0)
         ),
         ConfigOption(
+            name="epsilon",
+            description="Define an epsilon value that decreases the patience "
+                        "to wait for the loss to become smaller every epoch.",
+            category=training_category,
+            required=False,
+            default=1e-3,
+            allow_hyperparameter_optimization=True,
+            constraints=ConfigConstraints(
+                type=float,
+                gt=0,
+                lt=1
+            )
+        ),
+        ConfigOption(
             name="shuffle",
             description="Define whether to shuffle the training data before each training epoch.",
             category=training_category,
