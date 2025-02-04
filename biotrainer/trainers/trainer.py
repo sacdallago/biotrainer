@@ -16,8 +16,8 @@ from ..losses import get_loss
 from ..protocols import Protocol
 from ..inference import Inferencer
 from ..optimizers import get_optimizer
-from ..validations import SanityChecker
-from ..solvers import get_solver, Solver
+from ..validations import SanityChecker, Bootstrapper
+from ..solvers import get_solver, Solver, get_metrics_calculator
 from ..models import count_parameters, get_model
 from ..datasets import get_collate_function, get_dataset
 from ..embedders import EmbeddingService, get_embedding_service
@@ -135,9 +135,13 @@ class Trainer:
         test_loader = self._create_dataloader(dataset=test_dataset_embeddings, hyper_params=best_split.hyper_params)
         test_results = self._do_and_log_evaluation(best_split.solver, test_loader, target_manager)
 
+        # ADDITIONAL EVALUATION
+        metrics_calculator = get_metrics_calculator(protocol=self._protocol,
+                                                    device=self._device,
+                                                    num_classes=self._output_vars.get('n_classes', 0))
         # BOOTSTRAPPING
         if self._bootstrapping_iterations > 0:
-            self._do_and_log_bootstrapping_evaluation(solver=best_split.solver, test_results=test_results,
+            self._do_and_log_bootstrapping_evaluation(metrics_calculator=metrics_calculator, test_results=test_results,
                                                       test_loader=test_loader)
 
         # SANITY CHECKER
@@ -145,7 +149,8 @@ class Trainer:
             sanity_checker = SanityChecker(output_vars=self._output_vars,
                                            train_val_dataset=train_dataset + val_dataset,
                                            test_dataset=test_dataset,
-                                           solver=best_split.solver,
+                                           test_loader=test_loader,
+                                           metrics_calculator=metrics_calculator,
                                            mode="warn")
             sanity_checker.check_test_results()
 
@@ -483,41 +488,13 @@ class Trainer:
         logger.info(f"Test set metrics: {test_results['metrics']}")
         return test_results
 
-    def _do_and_log_bootstrapping_evaluation(self, solver, test_results, test_loader):
+    def _do_and_log_bootstrapping_evaluation(self, metrics_calculator, test_results, test_loader):
         logger.info('Running bootstrapping evaluation on the best model')
-        try:
-            max_prediction_length = len(max(test_results["mapped_predictions"].values(), key=len))
-        except TypeError:
-            max_prediction_length = 1
-            # TODO Avoid copy constructor for torch.tensor for non-per-residue tasks
-
-        all_predictions_dict = {
-            idx: Inferencer._pad_tensor(protocol=self._protocol,
-                                        target=pred,
-                                        length_to_pad=max_prediction_length,
-                                        device=self._device) for
-            idx, pred in
-            test_results["mapped_predictions"].items()}
-        target_dict = {
-            idx: Inferencer._pad_tensor(protocol=self._protocol,
-                                        target=target,
-                                        length_to_pad=max_prediction_length,
-                                        device=self._device)
-            for idx, target in
-            zip(test_loader.dataset.ids, test_loader.dataset.targets)}
-        seq_ids = list(target_dict.keys())
-
-        sample_size = len(seq_ids)
-        confidence_level = 0.05
-        bootstrapping_results = Inferencer._do_bootstrapping(iterations=self._bootstrapping_iterations,
-                                                             sample_size=sample_size,
-                                                             confidence_level=confidence_level,
-                                                             seq_ids=seq_ids,
-                                                             all_predictions_dict=all_predictions_dict,
-                                                             all_targets_dict=target_dict,
-                                                             solver=solver)
-        bootstrapping_dict = {"results": bootstrapping_results, "iterations": self._bootstrapping_iterations,
-                              "sample_size": sample_size, "confidence_level": confidence_level}
+        bootstrapping_dict = Bootstrapper.bootstrap(protocol=self._protocol, device=self._device,
+                                                    bootstrapping_iterations=self._bootstrapping_iterations,
+                                                    metrics_calculator=metrics_calculator,
+                                                    inference_results=test_results,
+                                                    test_loader=test_loader)
+        bootstrapping_results = bootstrapping_dict["results"]
         self._output_vars['test_iterations_results'].update({"bootstrapping": bootstrapping_results})
-
         logger.info(f'Bootstrapping results: {bootstrapping_dict}')
