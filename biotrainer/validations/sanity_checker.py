@@ -131,6 +131,23 @@ class SanityChecker:
             logger.info(f"Mean-Only Baseline: {mean_only_metrics}")
             return mean_only_metrics
 
+    def _random_model_initialization_baseline(self):
+        model = get_model(**self.output_vars)
+        optimizer = get_optimizer(model_parameters=model.parameters(), **self.output_vars)
+        loss = get_loss(**self.output_vars)
+        solver = get_solver(name="random_init_model", network=model,
+                            optimizer=optimizer, loss_function=loss,
+                            num_classes=self.output_vars['n_classes'], **self.output_vars)
+        random_init_inference = solver.inference(dataloader=self.test_loader, calculate_test_metrics=True)
+        random_init_bootstrapping = Bootstrapper.bootstrap(protocol=self.output_vars['protocol'],
+                                                           device=self.output_vars['device'],
+                                                           bootstrapping_iterations=self.output_vars['bootstrapping_iterations'],
+                                                           metrics_calculator=solver.metrics_calculator,
+                                                           inference_results=random_init_inference,
+                                                           test_loader=self.test_loader)
+        logger.info(f"Random-Model Baseline: {random_init_bootstrapping}")
+        return random_init_bootstrapping
+
     def _bias_interaction_baseline(self):
         """
             Calculates a dataset bias baseline for interactions (see for example
