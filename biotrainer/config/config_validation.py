@@ -83,6 +83,10 @@ def validate_config_options(protocol: Protocol,
                         f"Validation for {full_option_name} failed for given value {value}, "
                         f"reason: {error}")
 
+        # Add to config dict if applicable and verified
+        if option.add_if and not option.add_if(config_dict):
+            continue
+
         validated_config[option.name] = value
     return validated_config
 
@@ -133,6 +137,9 @@ def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_d
             raise ConfigurationException("Cross validation method leave_p_out needs p to be set!")
         if cv_config["method"] == "leave_p_out" and "k" in cv_config:
             raise ConfigurationException("Cross validation method leave_p_out does not allow k to be set!")
+
+        if (cv_config["method"] == "hold_out" or cv_config["method"] == "leave_p_out") and len(cv_config) > 2:
+            raise ConfigurationException("Cross validation config contains unnecessary values!")
 
         any_list_options_in_config_dict = any([is_list_option(value) for value in config_dict.values()])
         if "nested" in cv_config:
