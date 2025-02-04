@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-
 import torch
 import onnx
 import tempfile
@@ -20,7 +19,7 @@ from ..models import get_model
 from ..protocols import Protocol
 from ..optimizers import get_optimizer
 from ..datasets import get_dataset, get_collate_function
-from ..solvers import get_solver, get_mean_and_confidence_range
+from ..solvers import get_solver, get_mean_and_confidence_range, MetricsCalculator
 from ..utilities import get_device, seed_all, DatasetSample, MASK_AND_LABELS_PAD_VALUE, revert_mappings, __version__
 
 
@@ -41,7 +40,7 @@ class Inferencer:
             # Everything else
             **kwargs
     ):
-        self.protocol = Protocol[protocol]
+        self.protocol = Protocol.from_string(protocol)
         self.embedder_name = embedder_name
         self.embedding_dimension = n_features
         self.class_int2str = class_int_to_string
@@ -336,7 +335,7 @@ class Inferencer:
 
         return self._do_bootstrapping(iterations=iterations, sample_size=sample_size, confidence_level=confidence_level,
                                       seq_ids=seq_ids, all_predictions_dict=all_predictions_dict,
-                                      all_targets_dict=all_targets_dict, solver=solver)
+                                      all_targets_dict=all_targets_dict, metrics_calculator=solver.metrics_calculator)
 
     @staticmethod
     def _do_bootstrapping(iterations: int,
@@ -345,7 +344,7 @@ class Inferencer:
                           seq_ids: List[str],
                           all_predictions_dict: Dict,
                           all_targets_dict: Dict,
-                          solver):
+                          metrics_calculator: MetricsCalculator):
         """
 
         :param iterations: Number of iterations to perform bootstrapping
@@ -354,10 +353,10 @@ class Inferencer:
                             than the number of embeddings, because this might render the variance estimate unreliable.
                             See: https://math.mit.edu/~dav/05.dir/class24-prep-a.pdf (6.2)
         :param confidence_level: Confidence level for result error intervals (0.05 => 95% percentile)
-        :param seq_ids:
-        :param all_predictions_dict:
-        :param all_targets_dict:
-        :param solver:
+        :param seq_ids: List of sequence IDs
+        :param all_predictions_dict: Dictionary of all predictions
+        :param all_targets_dict: Dictionary of all targets
+        :param metrics_calculator: Metrics calculator object
         :return:
         """
         if sample_size == -1:
@@ -369,7 +368,7 @@ class Inferencer:
             bootstrapping_sample = resample(seq_ids, replace=True, n_samples=sample_size)
             sampled_predictions = torch.stack([all_predictions_dict[seq_id] for seq_id in bootstrapping_sample])
             sampled_targets = torch.stack([all_targets_dict[seq_id] for seq_id in bootstrapping_sample])
-            iteration_result = solver._compute_metrics(predicted=sampled_predictions,
+            iteration_result = metrics_calculator.compute_metrics(predicted=sampled_predictions,
                                                        labels=sampled_targets)
             iteration_results.append(iteration_result)
 

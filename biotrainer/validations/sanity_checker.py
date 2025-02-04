@@ -2,8 +2,13 @@ import torch
 from typing import Dict, List
 
 from scipy.stats import pearsonr
+from torch.utils.data import DataLoader
 
-from ..solvers import Solver
+from . import Bootstrapper
+from ..losses import get_loss
+from ..models import get_model
+from ..optimizers import get_optimizer
+from ..solvers import Solver, MetricsCalculator, get_solver
 from ..protocols import Protocol
 from ..utilities import DatasetSample, INTERACTION_INDICATOR, get_logger
 
@@ -12,13 +17,16 @@ logger = get_logger(__name__)
 
 class SanityChecker:
     def __init__(self, output_vars: Dict,
-                 train_val_dataset: List[DatasetSample], test_dataset: List[DatasetSample],
-                 solver: Solver,
+                 train_val_dataset: List[DatasetSample],
+                 test_dataset: List[DatasetSample],
+                 test_loader: DataLoader,
+                 metrics_calculator: MetricsCalculator,
                  mode: str = "warn"):
         self.output_vars = output_vars
         self.train_val_dataset = train_val_dataset
         self.test_dataset = test_dataset
-        self.solver = solver
+        self.test_loader = test_loader
+        self.metrics_calculator = metrics_calculator
         self.mode = mode
 
     def _handle_result(self, result: str):
@@ -69,11 +77,14 @@ class SanityChecker:
     def _check_baselines(self):
         self.output_vars["test_iterations_results"]["test_baselines"] = {}
         baseline_dict = self.output_vars["test_iterations_results"]["test_baselines"]
+        baseline_dict["random_model"] = self._random_model_initialization_baseline()
+
         if self.output_vars["protocol"] in Protocol.classification_protocols():
             # Only for binary classification tasks at the moment:
             if self.output_vars['n_classes'] <= 2:
                 baseline_dict["one_only"] = self._one_only_baseline()
                 baseline_dict["zero_only"] = self._zero_only_baseline()
+
                 if "interaction" in self.output_vars:
                     baseline_dict["bias_predictions"] = self._bias_interaction_baseline()
 
@@ -87,9 +98,10 @@ class SanityChecker:
         protocol: Protocol = self.output_vars["protocol"]
         if protocol in Protocol.per_sequence_protocols() and protocol in Protocol.classification_protocols():
             ones = torch.ones(len(self.test_dataset))
-            one_only_metrics = self.solver._compute_metrics(predicted=ones,
-                                                            labels=torch.tensor(
-                                                                [sample.target for sample in self.test_dataset]))
+            one_only_metrics = self.metrics_calculator.compute_metrics(predicted=ones,
+                                                                       labels=torch.tensor(
+                                                                           [sample.target for sample in
+                                                                            self.test_dataset]))
             logger.info(f"One-Only Baseline: {one_only_metrics}")
             return one_only_metrics
 
@@ -100,9 +112,10 @@ class SanityChecker:
         protocol: Protocol = self.output_vars["protocol"]
         if protocol in Protocol.per_sequence_protocols() and protocol in Protocol.classification_protocols():
             zeros = torch.zeros(len(self.test_dataset))
-            zero_only_metrics = self.solver._compute_metrics(predicted=zeros,
-                                                             labels=torch.tensor(
-                                                                 [sample.target for sample in self.test_dataset]))
+            zero_only_metrics = self.metrics_calculator.compute_metrics(predicted=zeros,
+                                                                        labels=torch.tensor(
+                                                                            [sample.target for sample in
+                                                                             self.test_dataset]))
             logger.info(f"Zero-Only Baseline: {zero_only_metrics}")
             return zero_only_metrics
 
@@ -113,8 +126,8 @@ class SanityChecker:
         if self.output_vars["protocol"] in Protocol.regression_protocols():
             test_set_targets = torch.tensor([sample.target for sample in self.test_dataset])
             test_set_means = torch.full((len(test_set_targets),), torch.mean(test_set_targets).item())
-            mean_only_metrics = self.solver._compute_metrics(predicted=test_set_means,
-                                                             labels=test_set_targets)
+            mean_only_metrics = self.metrics_calculator.compute_metrics(predicted=test_set_means,
+                                                                        labels=test_set_targets)
             logger.info(f"Mean-Only Baseline: {mean_only_metrics}")
             return mean_only_metrics
 
@@ -171,8 +184,8 @@ class SanityChecker:
                 test_set_targets.append(test_sample.target)
 
             # 4. Calculate metrics for bias predictions
-            bias_metrics = self.solver._compute_metrics(predicted=torch.tensor(predictions),
-                                                        labels=torch.tensor(test_set_targets))
+            bias_metrics = self.metrics_calculator.compute_metrics(predicted=torch.tensor(predictions),
+                                                                   labels=torch.tensor(test_set_targets))
             logger.info(f"Bias Baseline for interactions: {bias_metrics}")
             logger.info(f"Dataset bias for interactions: {dataset_bias}")
             return {"dataset_bias": {"bias": float(dataset_bias.statistic), "pvalue": float(dataset_bias.pvalue)},
