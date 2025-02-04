@@ -125,6 +125,12 @@ def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_d
             raise ConfigurationException(f"use_half_precision mode is not compatible with embedding on the CPU. "
                                          "(See: https://github.com/huggingface/transformers/issues/11546)")
 
+    # Other required option must be available
+    if "n_reduced_components" in config_dict and not "dimension_reduction_method" in config_dict:
+        raise ConfigurationException(f"n_reduced_components requires dimension_reduction_method to be set!")
+    if protocol in Protocol.using_per_residue_embeddings() and "dimension_reduction_method" in config_dict:
+        raise ConfigurationException(f"dimension_reduction_method is only supported for per-sequence embeddings!")
+
     # Cross Validation
     if "cross_validation_config" in config_dict:
         cv_config = config_dict["cross_validation_config"]
