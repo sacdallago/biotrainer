@@ -1,10 +1,9 @@
 import torch
 
 from .solver import Solver
-from .classification_solver import ClassificationSolver
 
 
-class SequenceClassificationSolver(ClassificationSolver, Solver):
+class SequenceClassificationSolver(Solver):
 
     def _logits_to_probabilities(self, logits: torch.Tensor) -> torch.Tensor:
         return torch.softmax(logits, dim=1)
