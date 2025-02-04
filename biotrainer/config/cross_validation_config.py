@@ -28,6 +28,8 @@ def cross_validation_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigO
             description="Define the number of folds to use for k-fold cross-validation.",
             category=cv_category,
             required=False,
+            default=5,
+            add_if=lambda config: config["method"] == "k_fold",
             constraints=ConfigConstraints(
                 type=int,
                 gte=2,
@@ -40,6 +42,7 @@ def cross_validation_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigO
             category=cv_category,
             required=False,
             default=False,
+            add_if=lambda config: config["method"] == "k_fold",
             constraints=ConfigConstraints(
                 type=bool,
             )
@@ -51,6 +54,7 @@ def cross_validation_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigO
             category=cv_category,
             required=False,
             default=1,
+            add_if=lambda config: config["method"] == "k_fold",
             constraints=ConfigConstraints(
                 type=int,
                 gte=1
@@ -62,6 +66,7 @@ def cross_validation_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigO
             category=cv_category,
             required=False,
             default=False,
+            add_if=lambda config: config["method"] == "k_fold",
             constraints=ConfigConstraints(
                 type=bool,
             )
@@ -100,7 +105,7 @@ def cross_validation_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigO
         ConfigOption(
             name="choose_by",
             description="Specify which evaluation metric to use when selecting the best model "
-                        "during hyperparameter optimization.",
+                        "during cross validation.",
             category=cv_category,
             required=False,
             default="loss",
@@ -115,6 +120,7 @@ def cross_validation_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigO
             category=cv_category,
             required=False,
             default=5,
+            add_if=lambda config: config["method"] == "leave_p_out",
             constraints=ConfigConstraints(
                 type=int,
                 gte=1

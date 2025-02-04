@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, Type, Any, List, Tuple, Callable
+from typing import Optional, Type, Any, List, Tuple, Callable, Dict
 
 from ..protocols import Protocol
 
@@ -15,6 +15,7 @@ class ConfigOption:
     category: str
     is_file_option: bool = False
     allow_hyperparameter_optimization: bool = False
+    add_if: Optional[Callable[[Dict[str, Any]], bool]] = None
     default: Optional[Any] = None
     constraints: Optional[ConfigConstraints] = None
 
