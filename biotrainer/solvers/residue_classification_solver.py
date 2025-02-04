@@ -1,18 +1,14 @@
 import torch
 
-from scipy.stats import norm
 from torch.utils.data import DataLoader
 from contextlib import nullcontext as _nullcontext
 from typing import Dict, Union, Optional, Callable, List
 
 from .solver import Solver
-from .classification_solver import ClassificationSolver
 from .solver_utils import get_mean_and_confidence_range
 
-from ..utilities import MASK_AND_LABELS_PAD_VALUE
 
-
-class ResidueClassificationSolver(ClassificationSolver, Solver):
+class ResidueClassificationSolver(Solver):
     def _transform_network_output(self, network_output: torch.Tensor) -> torch.Tensor:
         network_type = type(self.network).__name__
         if network_type in ["FNN", "DeeperFNN", "LogReg"]:
@@ -81,21 +77,6 @@ class ResidueClassificationSolver(ClassificationSolver, Solver):
             return {
                 'mapped_predictions': mapped_predictions
             }
-
-    def _compute_metrics(
-            self, predicted: Optional[torch.Tensor] = None, labels: Optional[torch.Tensor] = None
-    ) -> Dict[str, Union[int, float]]:
-        if predicted is not None and labels is not None:
-            # This will flatten everything!
-            masks = labels != MASK_AND_LABELS_PAD_VALUE
-            masks = masks.to(self.device)
-
-            masked_predicted = torch.masked_select(predicted, masks)
-            masked_labels = torch.masked_select(labels, masks)
-
-            return super()._compute_metrics(predicted=masked_predicted, labels=masked_labels)
-        else:
-            return super()._compute_metrics(predicted=predicted, labels=labels)
 
     # Gets overwritten to shorten prediction lengths if necessary
     def _training_iteration(

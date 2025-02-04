@@ -2,18 +2,17 @@ import os
 import math
 import torch
 import logging
-import torchmetrics
 
+from abc import ABC
 from sys import platform
 from pathlib import Path
-from abc import ABC, abstractmethod
 from tempfile import TemporaryDirectory
 from torch.utils.data import DataLoader
-from torchmetrics import SpearmanCorrCoef
 from contextlib import nullcontext as _nullcontext
 from safetensors.torch import load_file, save_file
 from typing import Callable, Optional, Union, Dict, List, Any
 
+from .metrics_calculator import MetricsCalculator
 from .solver_utils import get_mean_and_confidence_range
 
 from ..utilities import get_logger
@@ -25,7 +24,7 @@ class Solver(ABC):
 
     def __init__(self,
                  # Necessary
-                 name, protocol, network, optimizer, loss_function,
+                 name, protocol, network, optimizer, loss_function, metrics_calculator: MetricsCalculator,
                  # Optional with defaults
                  log_writer: Optional = None, log_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
@@ -39,6 +38,8 @@ class Solver(ABC):
         self.network = network
         self.optimizer = optimizer
         self.loss_function = loss_function
+        self.metrics_calculator = metrics_calculator
+
         self.log_writer = log_writer
         self.start_epoch = 0
         self.number_of_epochs = number_of_epochs
@@ -81,7 +82,7 @@ class Solver(ABC):
                     context=torch.no_grad, lengths=lengths
                 )
                 validation_iterations.append(iteration_result)
-            validation_epoch_metrics = self._compute_metrics()
+            validation_epoch_metrics = self.metrics_calculator.compute_metrics()
 
             train_iterations = list()
             for i, (_, X, y, lengths) in enumerate(training_dataloader):
@@ -90,7 +91,7 @@ class Solver(ABC):
                     lengths=lengths
                 )
                 train_iterations.append(iteration_result)
-            train_epoch_metrics = self._compute_metrics()
+            train_epoch_metrics = self.metrics_calculator.compute_metrics()
 
             epoch_metrics = {
                 'training': {**Solver._aggregate_iteration_losses(train_iterations), **train_epoch_metrics},
@@ -149,7 +150,9 @@ class Solver(ABC):
 
         metrics = None
         if calculate_test_metrics:
-            metrics = {**Solver._aggregate_iteration_losses(predict_iterations), **self._compute_metrics()}
+            metrics = {**Solver._aggregate_iteration_losses(predict_iterations),
+                       **self.metrics_calculator.compute_metrics()
+                       }
 
         return {
             'metrics': metrics,
@@ -447,7 +450,7 @@ class Solver(ABC):
             probabilities = self._logits_to_probabilities(logits)
             # Discretize predictions if necessary
             prediction = self._probabilities_to_predictions(probabilities)
-            metrics = self._compute_metrics(predicted=prediction, labels=y)
+            metrics = self.metrics_calculator.compute_metrics(predicted=prediction, labels=y)
 
             if do_loss_propagation:
                 # Do a forward pass & update weights
@@ -479,43 +482,3 @@ class Solver(ABC):
             prediction = self._probabilities_to_predictions(probabilities)
             return {"prediction": prediction.tolist(),
                     "probabilities": probabilities.tolist()}
-
-    @staticmethod
-    def _compute_metric(metric: torchmetrics.Metric, predicted: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-        """
-        Utility function to calculate metrics either on a per-epoch or a per-batch basis
-
-        :param metric: torchmetrics object
-        :param predicted: The predicted label/value for each sample
-        :param labels: The actual label for each sample
-
-        :return: metric result calculated via metric object
-        """
-        if predicted is None and labels is None:
-            # Per epoch
-            metric_result = metric.compute()
-            metric.reset()
-            return metric_result
-        else:
-            # Per batch
-            if metric.__class__ == SpearmanCorrCoef:
-                # SCC only accepts float tensors
-                return metric(predicted.cpu().float(), labels.cpu().float())
-            return metric(predicted.cpu(), labels.cpu())
-
-    @abstractmethod
-    def _compute_metrics(
-            self, predicted: Optional[torch.Tensor] = None, labels: Optional[torch.Tensor] = None
-    ) -> Dict[str, Union[int, float]]:
-        """
-        Computes metrics, such as accuracy or RMSE between predicted (from the model) and labels (from the data).
-
-        If both, predicted and labels are None, metrics for the whole epoch are calculated and the metric objects
-        are reset
-
-        :param predicted: The predicted label/value for each sample
-        :param labels: The actual label for each sample
-        :return: A dictionary of metrics specific to the type of problem, e.g. accuracy for class predictions, or
-                 RMSE for regression tasks.
-        """
-        raise NotImplementedError
