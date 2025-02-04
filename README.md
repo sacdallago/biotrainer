@@ -168,8 +168,8 @@ DVCDVVDD
 ### Configuration file
 
 To run *biotrainer*, you need to provide a configuration file in `.yaml` format along with your sequence and label data.
-Here you can find an exemplary file for the *residue_to_class* protocol. All configuration options are listed
-[here](docs/config_file_options.md).
+We provide an [overview about all available options](docs/config_file_options_overview.md) for all protocols, 
+and a more [detailed description](docs/config_file_options.md).
 
 **Example configuration for residue_to_class**:
 
