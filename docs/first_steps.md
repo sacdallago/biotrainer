@@ -16,27 +16,25 @@ Thus, our problem belongs to the [residue_to_class protocol](data_standardizatio
 
 ## Installation of biotrainer
 
-We are using poetry for this tutorial, please install it if you haven't already:
-```bash
-curl -sSL https://install.python-poetry.org/ | python3 - --version 1.4.2
-```
+Make sure you have [poetry](https://python-poetry.org/) installed.
 
-Now make sure that you have *biotrainer* [installed](../README.md#installation):
-```bash
+Now you can [install](../README.md#installation) *biotrainer* via `poetry`:
+```shell
 poetry install
 ```
 
-## Downloading the dataset
+If you do not want to use `poetry`, you can also install *biotrainer* via `pip`:
+```shell
+pip install . # In the root directory of this repository
+```
+
+## The Dataset
 
 Next, we need to download our dataset. The conservation dataset we use is included in the 
 [FLIP repository](https://github.com/J-SNACKKB/FLIP), which contains multiple standardized datasets and benchmarks 
-for relevant protein engineering and prediction tasks. In the repository, select 
-[splits -> conservation](https://github.com/J-SNACKKB/FLIP/tree/main/splits/conservation) 
-and download the *splits.zip* file. 
-Create a new directory in your biotrainer folder and move the files from the zip there.
-Alternatively, you can download the files directly via the links below.
+for relevant protein engineering and prediction tasks.
 
-You should now have access to two files: 
+We are using the following files: 
 1. [sequences.fasta](http://data.bioembeddings.com/public/FLIP/fasta/conservation/sequences.fasta): 
 This file contains the sequence id, e.g. `3p6z-C` and the amino acid sequence.
 By using the sequence id, you can look up your protein at [PDB](https://www.rcsb.org/structure/3P6Z) for example.
@@ -50,15 +48,17 @@ splits have been generated randomly, with a distribution of about 90% train, 5% 
 
 ## Creating the configuration file
 
-Now that we have the dataset files ready, we need to specify a config file in `.yaml` format.
+Next, we need to specify a config file in `.yaml` format. *Biotrainer* supports downloading input files directly
+from within the pipeline, so we can just use the links to the files in the config.
 
-Create and save the following file in the directory you created before:
+Create and save the following file in a new directory:
 ```yaml
-# config.yml
-sequence_file: sequences.fasta
-labels_file: sampled.fasta
+# config.yaml
+sequence_file: http://data.bioembeddings.com/public/FLIP/fasta/conservation/sequences.fasta
+labels_file: http://data.bioembeddings.com/public/FLIP/fasta/conservation/sampled.fasta
 protocol: residue_to_class
 model_choice: CNN
+device: cpu
 optimizer_choice: adam
 learning_rate: 1e-3
 loss_choice: cross_entropy_loss
@@ -73,7 +73,7 @@ embedder_name: one_hot_encoding
 We are using pretty standard parameters to train a CNN. 
 If you do have a GPU available, you might want to increase the num_epochs parameter and see, how the model behaves.
 
-The most interesting parameter is the `embedder_name: one_hot_encoding` one. This means that we automatically convert
+An important parameter is the `embedder_name: one_hot_encoding` one. This means that we automatically convert
 our sequences to one-hot encoded vectors, where the actually present amino acid has value `1`, while all the others
 have value `0`. This is a pretty minimal embedding, but it is sufficient for the purpose of this tutorial. Feel free
 to test other [embedding methods](config_file_options.md#embeddings) as well! Just keep in mind that some of them
@@ -82,8 +82,13 @@ require a lot of memory and GPU power to compute.
 ## Running the training
 
 We are finally able to train our model! Execute the following command, using the directory you created:
+```shell
+biotrainer your-directory/config.yaml
+```
+
+If the `biotrainer` command cannot be found directly, you can also try to run it via `poetry`:
 ```bash
-poetry run python3 run-biotrainer.py your-directory/config.yml
+poetry run python3 run-biotrainer.py your-directory/config.yaml
 ```
 
 After a while, the training should be finished. You can find the best model checkpoint and a summary *out.yaml*
@@ -91,12 +96,11 @@ file in an *output* subdirectory in the folder of your config file.
 
 ## Where to go from here
 
-Congratulations, you finished your first run of *biotrainer*!
+You finished your first run of *biotrainer*, thank you for using our software!
 In our test run, we got an accuracy of about 0.20 on the test set. We are confident that you could improve that
 result by using different model and training parameters or a more sophisticated embedding method!
 
 Of course, you can now start to use *biotrainer* on your own protein data. Or you could employ your own embedder
-and use its embeddings for training. Check out the associated 
-[examples](../examples/custom_embeddings) to learn how to do that.
-If you have any feedback, please do not hesitate to get in touch, 
-e.g. by creating an [issue](https://github.com/sacdallago/biotrainer/issues).
+and use its embeddings for training. You can also find plenty of other examples [here](../examples), including 
+[tutorial notebooks](../examples/tutorials) that show you how to use biotrainer from python code directly.
+If you have any feedback, please do not hesitate to get in touch, e.g. by creating an [issue](https://github.com/sacdallago/biotrainer/issues).
