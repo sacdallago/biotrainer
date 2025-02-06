@@ -28,6 +28,7 @@ class SanityChecker:
         self.test_dataset = test_dataset
         self.test_loader = test_loader
         self.metrics_calculator = metrics_calculator
+        self.bootstrapping_iterations = self.output_vars.get("bootstrapping_iterations", 30)
         self.mode = mode
 
     def _handle_result(self, result: str):
@@ -128,8 +129,7 @@ class SanityChecker:
         test_set_value_predictions = {sample.seq_id: value for sample in self.test_dataset}
         value_only_baseline = Bootstrapper.bootstrap(protocol=self.output_vars['protocol'],
                                                      device=self.output_vars['device'],
-                                                     bootstrapping_iterations=self.output_vars[
-                                                         'bootstrapping_iterations'],
+                                                     bootstrapping_iterations=self.bootstrapping_iterations,
                                                      metrics_calculator=self.metrics_calculator,
                                                      mapped_predictions=test_set_value_predictions,
                                                      test_loader=self.test_loader)
@@ -149,8 +149,7 @@ class SanityChecker:
         random_init_inference = solver.inference(dataloader=self.test_loader, calculate_test_metrics=True)
         random_init_bootstrapping = Bootstrapper.bootstrap(protocol=self.output_vars['protocol'],
                                                            device=self.output_vars['device'],
-                                                           bootstrapping_iterations=self.output_vars[
-                                                               'bootstrapping_iterations'],
+                                                           bootstrapping_iterations=self.bootstrapping_iterations,
                                                            metrics_calculator=solver.metrics_calculator,
                                                            mapped_predictions=random_init_inference[
                                                                "mapped_predictions"],
