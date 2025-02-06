@@ -1,6 +1,7 @@
 auto_resume: false
 batch_size: 128
-biotrainer_version: 0.9.1
+biotrainer_version: 0.9.5
+bootstrapping_iterations: 30
 class_int_to_string:
   0: Glob
   1: GlobSP
@@ -19,19 +20,19 @@ computed_class_weights:
 cross_validation_config:
   choose_by: loss
   method: hold_out
-device: cuda
+device: cpu
 disable_pytorch_compile: false
 dropout_rate: 0.25
-elapsed_time_total: 9.451460125001176
+elapsed_time_total: 2.234251900000345
 embedder_name: one_hot_encoding
 embeddings_file: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_class/output/residues_to_class/one_hot_encoding/embeddings_file_one_hot_encoding.h5
+  C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_class\output\residues_to_class\one_hot_encoding\embeddings_file_one_hot_encoding.h5
 epsilon: 0.001
 ignore_file_inconsistencies: false
 learning_rate: 0.001
 limited_sample_size: -1
 log_dir: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_class/output/LightAttention/one_hot_encoding
+  C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_class\output\LightAttention\one_hot_encoding
 loss_choice: cross_entropy_loss
 model_choice: LightAttention
 n_classes: 4
@@ -39,56 +40,56 @@ n_features: 21
 n_testing_ids: 2
 num_epochs: 200
 optimizer_choice: adam
-output_dir: /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_class/output
+output_dir: C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_class\output
 patience: 10
 protocol: residues_to_class
 sanity_check: true
 save_split_ids: false
 seed: 42
 sequence_file: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_class/sequences.fasta
+  C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_class\sequences.fasta
 shuffle: true
 split_results:
   hold_out:
-    elapsed_time: 8.443275948000519
-    end_time: 2024-08-13 15:23:25.190857
+    elapsed_time: 1.8769689000000653
+    end_time: 2025-02-06 11:47:39.044746
     n_free_parameters: 9552
     n_training_ids: 2
     n_validation_ids: 2
     split_hyper_params: {}
-    start_time: 2024-08-13 15:23:16.747577
+    start_time: 2025-02-06 11:47:37.167856
     training_iteration_result_best_epoch:
-      epoch: 5
+      epoch: 19
       training:
-        '- f1_score class 0': 0.0
+        '- f1_score class 0': 1.0
         '- f1_score class 1': 1.0
         '- f1_score class 2': 0.0
         '- f1_score class 3': 0.0
-        '- precision class 0': 0.0
+        '- precision class 0': 1.0
         '- precision class 1': 1.0
         '- precision class 2': 0.0
         '- precision class 3': 0.0
-        '- recall class 0': 0.0
+        '- recall class 0': 1.0
         '- recall class 1': 1.0
         '- recall class 2': 0.0
         '- recall class 3': 0.0
-        accuracy: 0.5
-        loss: 1.4739301204681396
-        macro-f1_score: 0.3333333432674408
-        macro-precision: 0.3333333432674408
-        macro-recall: 0.3333333432674408
-        matthews-corr-coeff: 0.5
-        micro-f1_score: 0.5
-        micro-precision: 0.5
-        micro-recall: 0.5
-        spearmans-corr-coeff: -0.9999959468841553
+        accuracy: 1.0
+        loss: 0.7366291284561157
+        macro-f1_score: 1.0
+        macro-precision: 1.0
+        macro-recall: 1.0
+        matthews-corr-coeff: 1.0
+        micro-f1_score: 1.0
+        micro-precision: 1.0
+        micro-recall: 1.0
+        spearmans-corr-coeff: 0.9999959468841553
       validation:
         '- f1_score class 0': 0.0
-        '- f1_score class 1': 1.0
+        '- f1_score class 1': 0.6666666865348816
         '- f1_score class 2': 0.0
         '- f1_score class 3': 0.0
         '- precision class 0': 0.0
-        '- precision class 1': 1.0
+        '- precision class 1': 0.5
         '- precision class 2': 0.0
         '- precision class 3': 0.0
         '- recall class 0': 0.0
@@ -96,39 +97,103 @@ split_results:
         '- recall class 2': 0.0
         '- recall class 3': 0.0
         accuracy: 0.5
-        loss: 1.2354445457458496
+        loss: 1.2187561988830566
         macro-f1_score: 0.3333333432674408
-        macro-precision: 0.3333333432674408
-        macro-recall: 0.3333333432674408
-        matthews-corr-coeff: 0.5
+        macro-precision: 0.25
+        macro-recall: 0.5
+        matthews-corr-coeff: 0
         micro-f1_score: 0.5
         micro-precision: 0.5
         micro-recall: 0.5
-        spearmans-corr-coeff: 0.9999959468841553
+        spearmans-corr-coeff: 0.0
 test_iterations_results:
+  bootstrapping:
+    '- f1_score class 0':
+      error: 0.0
+      mean: 0.0
+    '- f1_score class 1':
+      error: 0.0
+      mean: 0.0
+    '- f1_score class 2':
+      error: 0.0
+      mean: 0.0
+    '- f1_score class 3':
+      error: 0.0
+      mean: 0.0
+    '- precision class 0':
+      error: 0.0
+      mean: 0.0
+    '- precision class 1':
+      error: 0.0
+      mean: 0.0
+    '- precision class 2':
+      error: 0.0
+      mean: 0.0
+    '- precision class 3':
+      error: 0.0
+      mean: 0.0
+    '- recall class 0':
+      error: 0.0
+      mean: 0.0
+    '- recall class 1':
+      error: 0.0
+      mean: 0.0
+    '- recall class 2':
+      error: 0.0
+      mean: 0.0
+    '- recall class 3':
+      error: 0.0
+      mean: 0.0
+    accuracy:
+      error: 0.0
+      mean: 0.0
+    macro-f1_score:
+      error: 0.0
+      mean: 0.0
+    macro-precision:
+      error: 0.0
+      mean: 0.0
+    macro-recall:
+      error: 0.0
+      mean: 0.0
+    matthews-corr-coeff:
+      error: 0.493896484375
+      mean: -0.2166748046875
+    micro-f1_score:
+      error: 0.0
+      mean: 0.0
+    micro-precision:
+      error: 0.0
+      mean: 0.0
+    micro-recall:
+      error: 0.0
+      mean: 0.0
+    spearmans-corr-coeff:
+      error: 0.98779296875
+      mean: -0.433349609375
   metrics:
     '- f1_score class 0': 0.0
     '- f1_score class 1': 0.0
     '- f1_score class 2': 0.0
-    '- f1_score class 3': 0.6666666865348816
+    '- f1_score class 3': 0.0
     '- precision class 0': 0.0
     '- precision class 1': 0.0
     '- precision class 2': 0.0
-    '- precision class 3': 0.5
+    '- precision class 3': 0.0
     '- recall class 0': 0.0
     '- recall class 1': 0.0
     '- recall class 2': 0.0
-    '- recall class 3': 1.0
-    accuracy: 0.5
-    loss: 1.245380163192749
-    macro-f1_score: 0.3333333432674408
-    macro-precision: 0.25
-    macro-recall: 0.5
-    matthews-corr-coeff: 0
-    micro-f1_score: 0.5
-    micro-precision: 0.5
-    micro-recall: 0.5
-    spearmans-corr-coeff: 0.0
+    '- recall class 3': 0.0
+    accuracy: 0.0
+    loss: 1.6613099575042725
+    macro-f1_score: 0.0
+    macro-precision: 0.0
+    macro-recall: 0.0
+    matthews-corr-coeff: -0.5
+    micro-f1_score: 0.0
+    micro-precision: 0.0
+    micro-recall: 0.0
+    spearmans-corr-coeff: -0.9999959468841553
   test_baselines: {}
 use_class_weights: false
 use_half_precision: false
