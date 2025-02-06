@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import torch
 
 from abc import ABC, abstractmethod
@@ -12,6 +14,14 @@ class MetricsCalculator(ABC):
     def __init__(self, device, num_classes: int):
         self.device = device
         self.num_classes = num_classes
+
+    def reset(self) -> MetricsCalculator:
+        # Reset all metric attributes that are instances of torchmetrics.Metric
+        for attr_name in dir(self):
+            attr = getattr(self, attr_name)
+            if isinstance(attr, Metric):
+                attr.reset()
+        return self
 
     @abstractmethod
     def compute_metrics(
