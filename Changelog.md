@@ -1,5 +1,27 @@
 # Biotrainer Changelog
 
+## 06.02.2025 - Version 0.9.6
+
+### Features
+
+* Adding a random model baseline (model with randomly initialized weights)
+* Adding bootstrapping to all sanity check baselines
+* Adding a biotrainer intro notebook about creating a model with 
+one_hot_encodings and compare the results to an existing model
+
+### Maintenance
+
+* Disabling the test of very long sequences in test_embeddings_service.py for the CI. 
+This should speed up the CI considerably.
+* Simplifying the config module by removing config options as classes and replacing them with dataclasses-based objects
+* Adding a new [overview](docs/config_file_options_overview.md) about all available config options
+* Improve stability of ONNX conversion, especially on Windows
+* Making bootstrapping results reproducible with a seeded number generator
+* Improve the [first_steps.md](docs/first_steps.md) tutorial
+* Simplifying readme
+* Update dependencies
+
+
 ## 09.12.2024 - Version 0.9.5
 
 ### Features
