@@ -1,22 +1,23 @@
 auto_resume: false
 batch_size: 128
-biotrainer_version: 0.9.1
+biotrainer_version: 0.9.5
+bootstrapping_iterations: 30
 cross_validation_config:
   choose_by: loss
   method: hold_out
 device: cpu
 disable_pytorch_compile: true
 dropout_rate: 0.25
-elapsed_time_total: 3.1990181139990455
+elapsed_time_total: 1.4266811999996207
 embedder_name: one_hot_encoding
 embeddings_file: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_value/output/residues_to_value/one_hot_encoding/embeddings_file_one_hot_encoding.h5
+  C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_value\output\residues_to_value\one_hot_encoding\embeddings_file_one_hot_encoding.h5
 epsilon: 0.001
 ignore_file_inconsistencies: false
 learning_rate: 0.001
 limited_sample_size: -1
 log_dir: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_value/output/LightAttention/one_hot_encoding
+  C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_value\output\LightAttention\one_hot_encoding
 loss_choice: mean_squared_error
 model_choice: LightAttention
 n_classes: 1
@@ -24,24 +25,24 @@ n_features: 21
 n_testing_ids: 2
 num_epochs: 200
 optimizer_choice: adam
-output_dir: /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_value/output
+output_dir: C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_value\output
 patience: 10
 protocol: residues_to_value
 sanity_check: true
 save_split_ids: false
 seed: 42
 sequence_file: 
-  /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_value/sequences.fasta
+  C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_value\sequences.fasta
 shuffle: true
 split_results:
   hold_out:
-    elapsed_time: 1.108388095999544
-    end_time: 2024-08-13 15:21:09.858389
+    elapsed_time: 1.4178616999997757
+    end_time: 2025-02-06 11:44:25.447320
     n_free_parameters: 9453
     n_training_ids: 2
     n_validation_ids: 2
     split_hyper_params: {}
-    start_time: 2024-08-13 15:21:08.749997
+    start_time: 2025-02-06 11:44:24.029764
     training_iteration_result_best_epoch:
       epoch: 138
       training:
@@ -55,6 +56,16 @@ split_results:
         rmse: 34.9530143737793
         spearmans-corr-coeff: -0.9999959468841553
 test_iterations_results:
+  bootstrapping:
+    mse:
+      error: 1675.0
+      mean: 1176.0
+    rmse:
+      error: 32.78125
+      mean: 30.109375
+    spearmans-corr-coeff:
+      error: 0.98779296875
+      mean: 0.433349609375
   metrics:
     loss: 1138.50439453125
     mse: 1138.50439453125
