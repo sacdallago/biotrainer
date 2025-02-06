@@ -1,228 +1,105 @@
 # Biotrainer
 
-*Biotrainer* is an open-source tool to simplify the training process of machine-learning models for biological
-applications. It specializes on models to predict features for **proteins**. *Biotrainer* supports both, **training**
-new models and employing the trained model for **inference**.
-Using *biotrainer* comes as simple as providing your sequence and label data in the
-[correct format](#data-standardization), along with a [configuration file](#example-configuration-file).
+[![License](https://img.shields.io/github/license/sacdallago/biotrainer)](https://github.com/sacdallago/biotrainer/blob/main/LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-biocentral-blue)](https://biocentral.cloud/docs/biotrainer/config_file_options)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/sacdallago/biotrainer)](https://github.com/sacdallago/biotrainer/releases)
+## Overview
+*Biotrainer* is an open-source framework that simplifies machine learning model development for protein analysis. 
+It provides:
+- **Easy-to-use** training and inference pipelines for protein feature prediction
+- **Standardized data formats** for various prediction tasks
+- **Built-in support** for protein language models and embeddings
+- **Flexible configuration** through simple YAML files
 
-## Installation
+## Quick Start
 
-1. Make sure you have [poetry](https://python-poetry.org/) installed.
-
-2. Install dependencies and biotrainer via `poetry`:
-
+### 1. Installation
 ```bash
-# In the base directory:
+# Install using poetry (recommended)
 poetry install
 # Adding jupyter notebook (if needed):
 poetry add jupyter
 
-# [WINDOWS] Explicitly install torch libraries suited for your hardware:
-# Select hardware and get install command here: https://pytorch.org/get-started/locally/
-# Then run for example:
+# For Windows users with CUDA support:
+# Visit https://pytorch.org/get-started/locally/ and follow GPU-specific installation, e.g.:
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
 
-**Please make sure to use the same torch version as provided in `pyproject.toml` for model reproducibility!**
-
-## Tutorials
-
-Please check out our [first steps guide](docs/first_steps.md) on how to use biotrainer, or have a look at one of our
-[interactive tutorials](examples/tutorials).
-
-## Frontend + Documentation
-
-If you want to use *biotrainer* with a nice GUI frontend, please check out *biocentral*:
-
-* [biocentral App](https://biocentral.cloud/app)
-* [biocentral Repository](https://github.com/biocentral/biocentral)
-* [biotrainer Rendered Documentation](https://biocentral.cloud/docs/biotrainer/config_file_options)
-
-## Usage
-
-You can use *biotrainer* for training a model and for inference. All that is required is the input data and a 
-configuration file.
-
-### Training
-
+### 2. Basic Usage
 ```bash
-cd examples/residue_to_class
+# Training
 poetry run biotrainer config.yml
+
+# Inference
+python3
+>>> from biotrainer.inference import Inferencer
+>>> inferencer, out_file = Inferencer.create_from_out_file('output/out.yml')
+>>> predictions = inferencer.from_embeddings(your_embeddings)
 ```
 
-You can also use the provided `run-biotrainer.py` file for development and debugging (you might want to set up your
-IDE to directly execute run-biotrainer.py with the provided virtual environment):
+## Features
 
-```bash
-# residue_to_class
-poetry run python3 run-biotrainer.py examples/residue_to_class/config.yml
-# sequence_to_class
-poetry run python3 run-biotrainer.py examples/sequence_to_class/config.yml
+### Supported Prediction Tasks
+- **Residue-level classification** (residue_to_class)
+- **Sequence-level classification** (sequence_to_class)
+- **Residue-level regression** (residues_to_value)
+- **Sequence-level regression** (sequence_to_value)
+- **Multi-residue classification** (residues_to_class)
+
+### Built-in Capabilities
+- Multiple embedding methods (ProtT5, ESM, etc.)
+- Various neural network architectures
+- Cross-validation and model evaluation
+- Performance metrics and visualization
+- Docker support for reproducible environments
+
+## Documentation
+
+### Tutorials
+- [First Steps Guide](docs/first_steps.md)
+- [Interactive Tutorials](examples/tutorials)
+- [Biocentral Web Interface](https://biocentral.cloud/app)
+
+### Detailed Guides
+- [Data Standards](docs/data_standardization.md)
+- [Configuration Options](docs/config_file_options.md)
+- [Troubleshooting](docs/troubleshooting.md)
+
+## Example Configuration
+```yaml
+protocol: residue_to_class
+sequence_file: sequences.fasta
+labels_file: labels.fasta
+model_choice: CNN
+optimizer_choice: adam
+learning_rate: 1e-3
+loss_choice: cross_entropy_loss
+use_class_weights: True
+num_epochs: 200
+batch_size: 128
+embedder_name: Rostlab/prot_t5_xl_uniref50
 ```
 
-#### Training in Docker
-
+## Docker Support
 ```bash
-# Run with docker image from Github (no local build required)
+# Run using pre-built image
 docker run --gpus all --rm \
     -v "$(pwd)/examples/docker":/mnt \
     -u $(id -u ${USER}):$(id -g ${USER}) \
     ghcr.io/sacdallago/biotrainer:latest /mnt/config.yml
-
-# Build locally (in repository root directory)
-docker build -t biotrainer .
-# Run local docker build
-docker run --rm \
-    -v "$(pwd)/examples/docker":/mnt \
-    -u $(id -u ${USER}):$(id -g ${USER}) \
-    biotrainer:latest /mnt/config.yml
-# Run local build with gpus
-docker run --gpus all --rm \
-    -v "$(pwd)/examples/docker":/mnt \
-    -u $(id -u ${USER}):$(id -g ${USER}) \
-    biotrainer:latest /mnt/config.yml
 ```
 
-*To run the docker container with gpus, you need to have the
-[nvidia container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
-installed*.
+More information on running docker with gpus: 
+[Nvidia container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
 
-Output can be found afterward in the directory of the provided configuration file.
 
-### Inference
-
-After your model is trained, you will find an `out.yml` file in the `output` directory by default. Now you can use
-that to create predictions with your model for new data, the `inferencer` module takes care of loading your checkpoints
-automatically:
-
-```python
-from biotrainer.inference import Inferencer
-from biotrainer.embedders import OneHotEncodingEmbedder
-
-sequences = [
-    "PROVTEIN",
-    "SEQVENCESEQVENCE"
-]
-
-out_file_path = '../residue_to_class/output/out.yml'
-
-inferencer, out_file = Inferencer.create_from_out_file(out_file_path=out_file_path, allow_torch_pt_loading=True)
-
-print(f"For the {out_file['model_choice']}, the metrics on the test set are:")
-for metric in out_file['test_iterations_results']['metrics']:
-    print(f"\t{metric} : {out_file['test_iterations_results']['metrics'][metric]}")
-
-embedder = OneHotEncodingEmbedder()
-embeddings = list(embedder.embed_many(sequences))
-# Note that for per-sequence embeddings, you would have to reduce the embeddings now:
-# embeddings = [[embedder.reduce_per_protein(embedding)] for embedding in embeddings]
-predictions = inferencer.from_embeddings(embeddings, split_name="hold_out")
-for sequence, prediction in zip(sequences, predictions["mapped_predictions"].values()):
-    print(sequence)
-    print(prediction)
-
-# If your checkpoints are stored as .pt, consider converting them to safetensors (supported by biotrainer >=0.9.1)
-inferencer.convert_all_checkpoints_to_safetensors()
-```
-
-See the full example [here](examples/inference/predict.py).
-
-The `inferencer` module also features predicting with `bootstrapping` and `monte carlo dropout`.
-
-### Data standardization
-
-*Biotrainer* provides a lot of data standards, designed to ease the usage of machine learning for biology.
-This standardization process is also expected to improve communication between different scientific disciplines
-and help to keep the overview about the rapidly developing field of protein prediction.
-
-#### Available protocols
-
-The protocol defines, how the input data should be interpreted and which kind of prediction task has to be applied.
-The following protocols are already implemented:
-
-```text
-D=embedding dimension (e.g. 1024)
-B=batch dimension (e.g. 30)
-L=sequence dimension (e.g. 350)
-C=number of classes (e.g. 13)
-
-- residue_to_class --> Predict a class C for each residue encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxLxC
-- residues_to_class --> Predict a class C for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxC
-- residues_to_value --> Predict a value V for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output Bx1
-- sequence_to_class --> Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output BxC
-- sequence_to_value --> Predict a value V for each sequence encoded in a fixed dimension D. Input BxD --> output Bx1
-```
-
-#### Input file standardization
-
-For every protocol, we created a standardization on how the input data must be provided. You can find detailed
-information for each protocol [here](docs/data_standardization.md).
-
-Below, we show an example on how the sequence and label file must look like for the *residue_to_class* protocol:
-
-**sequences.fasta**
-
-```fasta
->Seq1
-SEQWENCE
-```
-
-**labels.fasta**
-
-```fasta
->Seq1 SET=train VALIDATION=False
-DVCDVVDD
-```
-
-### Configuration file
-
-To run *biotrainer*, you need to provide a configuration file in `.yaml` format along with your sequence and label data.
-We provide an [overview about all available options](docs/config_file_options_overview.md) for all protocols, 
-and a more [detailed description](docs/config_file_options.md).
-
-**Example configuration for residue_to_class**:
-
-```yaml
-protocol: residue_to_class
-sequence_file: sequences.fasta # Specify your sequence file
-labels_file: labels.fasta # Specify your label file
-model_choice: CNN # Model architecture 
-optimizer_choice: adam # Model optimizer
-learning_rate: 1e-3 # Optimizer learning rate
-loss_choice: cross_entropy_loss # Loss function 
-use_class_weights: True # Balance class weights by using class sample size in the given dataset
-num_epochs: 200 # Number of maximum epochs
-batch_size: 128 # Batch size
-embedder_name: Rostlab/prot_t5_xl_uniref50 # Embedder to use
-```
-
-### (Bio-)Embeddings
-
-To convert the sequence data to more meaningful input for a model, embeddings generated by
-*protein language models* (pLMs) have become widely applied in the last years.
-Hence, *biotrainer* enables automatic calculation of embeddings on a *per-sequence* and *per-residue* level,
-depending on the protocol.
-Take a look at the [embeddings options](docs/config_file_options.md#embeddings) to find out about all the available
-embedding methods. It is also possible to provide your own embeddings file using your own embedder,
-independent of the provided calculation pipeline. Please refer to the
-[data standardization](docs/data_standardization.md#embeddings) document and the
-[relevant examples](examples/custom_embeddings/) to learn how to do this. Pre-calculated embeddings can be used for
-the training process via the `embeddings_file` parameter,
-as described in the [configuration options](docs/config_file_options.md#embeddings).
-
-## Troubleshooting
-
-If you are experiencing any problems during installation or running,
-please check the [Troubleshooting Guide](docs/troubleshooting.md) first.
-
-If your problem is not covered there, please [create an issue](https://github.com/sacdallago/biotrainer/issues/new).
+## Getting Help
+- Check our [Troubleshooting Guide](docs/troubleshooting.md)
+- [Create an issue](https://github.com/sacdallago/biotrainer/issues/new)
+- Visit [biocentral.cloud](https://biocentral.cloud/docs/biotrainer/config_file_options)
 
 ## Citation
-
-If you are using *biotrainer* for your work, please add a citation:
-
-```text
+```bibtex
 @inproceedings{
 sanchez2022standards,
 title={Standards, tooling and benchmarks to probe representation learning on proteins},
