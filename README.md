@@ -3,6 +3,7 @@
 [![License](https://img.shields.io/github/license/sacdallago/biotrainer)](https://github.com/sacdallago/biotrainer/blob/main/LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-biocentral-blue)](https://biocentral.cloud/docs/biotrainer/config_file_options)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/sacdallago/biotrainer)](https://github.com/sacdallago/biotrainer/releases)
+
 ## Overview
 *Biotrainer* is an open-source framework that simplifies machine learning model development for protein analysis. 
 It provides:
@@ -40,17 +41,18 @@ python3
 ## Features
 
 ### Supported Prediction Tasks
-- **Residue-level classification** (residue_to_class)
-- **Sequence-level classification** (sequence_to_class)
-- **Residue-level regression** (residues_to_value)
-- **Sequence-level regression** (sequence_to_value)
-- **Multi-residue classification** (residues_to_class)
+- **Residue-level classification** (`residue_to_class`)
+- **Residues-level classification** (`residues_to_class`, like sequence_to_class with per-residue embeddings)
+- **Sequence-level classification** (`sequence_to_class`)
+- **Residues-level regression** (`residues_to_value`, like sequence_to_value with per-residue embeddings)
+- **Sequence-level regression** (`sequence_to_value`)
 
 ### Built-in Capabilities
 - Multiple embedding methods (ProtT5, ESM, etc.)
 - Various neural network architectures
 - Cross-validation and model evaluation
 - Performance metrics and visualization
+- Sanity checks and automatic calculation of baselines (such as random, mean...)
 - Docker support for reproducible environments
 
 ## Documentation
@@ -91,7 +93,6 @@ docker run --gpus all --rm \
 
 More information on running docker with gpus: 
 [Nvidia container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
-
 
 ## Getting Help
 - Check our [Troubleshooting Guide](docs/troubleshooting.md)
