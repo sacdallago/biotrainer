@@ -4,12 +4,13 @@ from typing import Dict, List
 from scipy.stats import pearsonr
 from torch.utils.data import DataLoader
 
-from . import Bootstrapper
+from .bootstrapper import Bootstrapper
+
 from ..losses import get_loss
 from ..models import get_model
-from ..optimizers import get_optimizer
-from ..solvers import Solver, MetricsCalculator, get_solver
 from ..protocols import Protocol
+from ..optimizers import get_optimizer
+from ..solvers import MetricsCalculator, get_solver
 from ..utilities import DatasetSample, INTERACTION_INDICATOR, get_logger
 
 logger = get_logger(__name__)
@@ -97,13 +98,9 @@ class SanityChecker:
         """
         protocol: Protocol = self.output_vars["protocol"]
         if protocol in Protocol.per_sequence_protocols() and protocol in Protocol.classification_protocols():
-            ones = torch.ones(len(self.test_dataset))
-            one_only_metrics = self.metrics_calculator.compute_metrics(predicted=ones,
-                                                                       labels=torch.tensor(
-                                                                           [sample.target for sample in
-                                                                            self.test_dataset]))
-            logger.info(f"One-Only Baseline: {one_only_metrics}")
-            return one_only_metrics
+            one_only_baseline = self._value_only_baseline(value=1)
+            logger.info(f"One-Only Baseline: {one_only_baseline}")
+            return one_only_baseline
 
     def _zero_only_baseline(self):
         """
@@ -111,29 +108,40 @@ class SanityChecker:
         """
         protocol: Protocol = self.output_vars["protocol"]
         if protocol in Protocol.per_sequence_protocols() and protocol in Protocol.classification_protocols():
-            zeros = torch.zeros(len(self.test_dataset))
-            zero_only_metrics = self.metrics_calculator.compute_metrics(predicted=zeros,
-                                                                        labels=torch.tensor(
-                                                                            [sample.target for sample in
-                                                                             self.test_dataset]))
-            logger.info(f"Zero-Only Baseline: {zero_only_metrics}")
-            return zero_only_metrics
+            zero_only_baseline = self._value_only_baseline(value=0)
+            logger.info(f"Zero-Only Baseline: {zero_only_baseline}")
+            return zero_only_baseline
 
     def _mean_only_baseline(self):
         """
         Predicts the mean of the test set for every sample in the test set. (Only for regression)
         """
-        if self.output_vars["protocol"] in Protocol.regression_protocols():
+        protocol: Protocol = self.output_vars["protocol"]
+        if protocol in Protocol.regression_protocols():
             test_set_targets = torch.tensor([sample.target for sample in self.test_dataset])
-            test_set_means = torch.full((len(test_set_targets),), torch.mean(test_set_targets).item())
-            mean_only_metrics = self.metrics_calculator.compute_metrics(predicted=test_set_means,
-                                                                        labels=test_set_targets)
-            logger.info(f"Mean-Only Baseline: {mean_only_metrics}")
-            return mean_only_metrics
+            test_set_mean = torch.mean(test_set_targets).item()
+            mean_only_baseline = self._value_only_baseline(value=test_set_mean)
+            logger.info(f"Mean-Only Baseline: {mean_only_baseline}")
+            return mean_only_baseline
+
+    def _value_only_baseline(self, value: float):
+        test_set_value_predictions = {sample.seq_id: value for sample in self.test_dataset}
+        value_only_baseline = Bootstrapper.bootstrap(protocol=self.output_vars['protocol'],
+                                                     device=self.output_vars['device'],
+                                                     bootstrapping_iterations=self.output_vars[
+                                                         'bootstrapping_iterations'],
+                                                     metrics_calculator=self.metrics_calculator,
+                                                     mapped_predictions=test_set_value_predictions,
+                                                     test_loader=self.test_loader)
+        return value_only_baseline
 
     def _random_model_initialization_baseline(self):
         model = get_model(**self.output_vars)
-        optimizer = get_optimizer(model_parameters=model.parameters(), **self.output_vars)
+        optimizer = get_optimizer(protocol=self.output_vars['protocol'],
+                                  model_parameters=model.parameters(),
+                                  learning_rate=0.01,  # Model not trained, so parameter is not relevant
+                                  optimizer_choice='adam',
+                                  **{})
         loss = get_loss(**self.output_vars)
         solver = get_solver(name="random_init_model", network=model,
                             optimizer=optimizer, loss_function=loss,
@@ -141,9 +149,11 @@ class SanityChecker:
         random_init_inference = solver.inference(dataloader=self.test_loader, calculate_test_metrics=True)
         random_init_bootstrapping = Bootstrapper.bootstrap(protocol=self.output_vars['protocol'],
                                                            device=self.output_vars['device'],
-                                                           bootstrapping_iterations=self.output_vars['bootstrapping_iterations'],
+                                                           bootstrapping_iterations=self.output_vars[
+                                                               'bootstrapping_iterations'],
                                                            metrics_calculator=solver.metrics_calculator,
-                                                           inference_results=random_init_inference,
+                                                           mapped_predictions=random_init_inference[
+                                                               "mapped_predictions"],
                                                            test_loader=self.test_loader)
         logger.info(f"Random-Model Baseline: {random_init_bootstrapping}")
         return random_init_bootstrapping

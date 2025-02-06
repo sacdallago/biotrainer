@@ -1,4 +1,5 @@
 from typing import Optional
+
 from .solver import Solver
 from .solver_utils import get_mean_and_confidence_range
 from .residues_regression_solver import ResiduesRegressionSolver
@@ -37,7 +38,7 @@ def get_solver(protocol: Protocol, name: str,
                patience: Optional = None, epsilon: Optional = None, log_writer: Optional = None,
                log_dir: Optional = None, num_classes: Optional[int] = 0,
                **kwargs
-               ):
+               ) -> Solver:
     solver = __SOLVERS.get(protocol)
     metrics_calc = get_metrics_calculator(protocol=protocol, device=device, num_classes=num_classes)
 
