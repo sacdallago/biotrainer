@@ -4,6 +4,7 @@ import torch
 import logging
 import torchmetrics
 
+from sys import platform
 from pathlib import Path
 from abc import ABC, abstractmethod
 from tempfile import TemporaryDirectory
@@ -333,15 +334,39 @@ class Solver(ABC):
         self.network.eval()
 
         # Export
-        export_options = torch.onnx.ExportOptions(dynamic_shapes=True,
-                                                  diagnostic_options=torch.onnx.DiagnosticOptions(
-                                                      verbosity_level=logging.ERROR))
-        onnx_program = torch.onnx.dynamo_export(self.network, dummy_input,
-                                                export_options=export_options)
         onnx_file_name = f"{output_dir}/{self.checkpoint_name.split('.')[0]}.onnx"
-        onnx_program.save(onnx_file_name)
+
+        self._onnx_export_strategy(network=self.network, dummy_input=dummy_input, onnx_file_name=onnx_file_name)
 
         return onnx_file_name
+
+    @staticmethod
+    def _onnx_export_strategy(network, dummy_input, onnx_file_name: str):
+        if "win" in platform.lower():
+            torch.onnx.export(
+                network,
+                dummy_input,
+                onnx_file_name,
+                input_names=['input'],
+                output_names=['output'],
+                dynamic_axes={
+                    'input': {
+                        0: 'batch_size',  # dynamic batch size
+                        1: 'sequence_length'  # dynamic sequence length
+                    },
+                    'output': {
+                        0: 'batch_size',
+                        1: 'sequence_length'
+                    }
+                },
+            )
+        else:
+            export_options = torch.onnx.ExportOptions(dynamic_shapes=True,
+                                                  diagnostic_options=torch.onnx.DiagnosticOptions(
+                                                      verbosity_level=logging.ERROR))
+            onnx_program = torch.onnx.dynamo_export(network, dummy_input,
+                                                export_options=export_options)
+            onnx_program.save(onnx_file_name)
 
     def _early_stop(self, current_loss: float, epoch: int) -> bool:
         if current_loss < (self._min_loss - self.epsilon):
