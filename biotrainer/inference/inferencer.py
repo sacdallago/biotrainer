@@ -10,7 +10,6 @@ import numpy as np
 from ruamel import yaml
 from pathlib import Path
 from copy import deepcopy
-from sklearn.utils import resample
 from torch.utils.data import DataLoader
 from typing import Union, Optional, Dict, Iterable, Tuple, Any, List
 
@@ -363,9 +362,15 @@ class Inferencer:
             sample_size = len(seq_ids)
         # Bootstrapping: Resample over keys to keep track of associated targets
         iteration_results = []
+        try:
+            # If a random seed was already set, e.g. in the biotrainer pipeline, use that
+            seed = np.random.get_state()[1][0]
+        except Exception:
+            seed = 42  # Default value
+        rng = np.random.RandomState(seed)
 
         for iteration in range(iterations):
-            bootstrapping_sample = resample(seq_ids, replace=True, n_samples=sample_size)
+            bootstrapping_sample = rng.choice(seq_ids, size=sample_size, replace=True)
             sampled_predictions = torch.stack([all_predictions_dict[seq_id] for seq_id in bootstrapping_sample])
             sampled_targets = torch.stack([all_targets_dict[seq_id] for seq_id in bootstrapping_sample])
             iteration_result = metrics_calculator.compute_metrics(predicted=sampled_predictions,
