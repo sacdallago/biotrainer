@@ -37,7 +37,7 @@ class Bootstrapper:
                                                              seq_ids=seq_ids,
                                                              all_predictions_dict=all_predictions_dict,
                                                              all_targets_dict=target_dict,
-                                                             metrics_calculator=metrics_calculator)
+                                                             metrics_calculator=metrics_calculator.reset())
         bootstrapping_dict = {"results": bootstrapping_results, "iterations": bootstrapping_iterations,
                               "sample_size": sample_size, "confidence_level": confidence_level}
         return bootstrapping_dict
