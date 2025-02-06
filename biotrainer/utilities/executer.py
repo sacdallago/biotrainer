@@ -1,3 +1,4 @@
+import os
 import torch
 import logging
 
@@ -15,6 +16,10 @@ from ..protocols import Protocol
 from ..trainers import Trainer, HyperParameterManager
 
 def _setup_logging(output_dir: str):
+    # Disable logging during test execution because of problems in Windows
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        return
+
     logging.captureWarnings(True)
     biotrainer_logger = logging.getLogger('biotrainer')
     biotrainer_logger.propagate = False  # Prevent propagation to root logger
@@ -39,6 +44,13 @@ def _setup_logging(output_dir: str):
     for logger_name in ["torch.onnx", "torch._dynamo", "onnxscript"]:
         logging.getLogger(logger_name).setLevel(logging.ERROR)
 
+
+def _clear_logging():
+    biotrainer_logger = logging.getLogger('biotrainer')
+
+    for handler in biotrainer_logger.handlers:
+        biotrainer_logger.removeHandler(handler)
+        handler.close()
 
 def _write_output_file(out_filename: str, config: dict) -> None:
     """
@@ -117,4 +129,7 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]]) 
         str(Path(output_result['output_dir']) / "out.yml"),
         output_result
     )
+
+    _clear_logging()
+
     return output_result
