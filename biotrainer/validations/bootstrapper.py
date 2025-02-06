@@ -8,20 +8,18 @@ from ..solvers import MetricsCalculator
 class Bootstrapper:
     @staticmethod
     def bootstrap(protocol: Protocol, device, bootstrapping_iterations: int, metrics_calculator: MetricsCalculator,
-                  inference_results, test_loader) -> Dict[str, Any]:
+                  mapped_predictions: Dict[str, Any], test_loader) -> Dict[str, Any]:
         try:
-            max_prediction_length = len(max(inference_results["mapped_predictions"].values(), key=len))
+            max_prediction_length = len(max(mapped_predictions.values(), key=len))
         except TypeError:
             max_prediction_length = 1
-            # TODO Avoid copy constructor for torch.tensor for non-per-residue tasks
 
         all_predictions_dict = {
             idx: Inferencer._pad_tensor(protocol=protocol,
                                         target=pred,
                                         length_to_pad=max_prediction_length,
-                                        device=device) for
-            idx, pred in
-            inference_results["mapped_predictions"].items()}
+                                        device=device) for idx, pred in mapped_predictions.items()
+        }
         target_dict = {
             idx: Inferencer._pad_tensor(protocol=protocol,
                                         target=target,

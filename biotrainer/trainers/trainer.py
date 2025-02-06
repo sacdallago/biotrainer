@@ -493,7 +493,7 @@ class Trainer:
         bootstrapping_dict = Bootstrapper.bootstrap(protocol=self._protocol, device=self._device,
                                                     bootstrapping_iterations=self._bootstrapping_iterations,
                                                     metrics_calculator=metrics_calculator,
-                                                    inference_results=test_results,
+                                                    mapped_predictions=test_results["mapped_predictions"],
                                                     test_loader=test_loader)
         bootstrapping_results = bootstrapping_dict["results"]
         self._output_vars['test_iterations_results'].update({"bootstrapping": bootstrapping_results})
