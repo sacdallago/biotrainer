@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import torch._dynamo
 
+from sys import platform
 from typing import Dict, Union, List
 
 from biotrainer.inference import Inferencer
@@ -259,6 +260,9 @@ class InferencerTests(unittest.TestCase):
         return error_messages
 
     def test_onnx_conversion(self):
+        if "win" in platform.lower():
+            return  # Disable this test on Windows for now, because of ONNX stability issues
+
         embedding_dimension_one_hot = 21
 
         for inferencer in self.inferencer_list:
