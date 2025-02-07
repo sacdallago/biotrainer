@@ -136,7 +136,7 @@ class SanityChecker:
         return value_only_baseline
 
     def _random_model_initialization_baseline(self):
-        model = get_model(**self.output_vars)
+        model = get_model(model_weights_init="normal", **self.output_vars)
         optimizer = get_optimizer(protocol=self.output_vars['protocol'],
                                   model_parameters=model.parameters(),
                                   learning_rate=0.01,  # Model not trained, so parameter is not relevant
