@@ -1,56 +1,16 @@
-import os
-import torch
-import logging
-
 from ruamel import yaml
 from pathlib import Path
 from copy import deepcopy
 from typing import Union, Dict, Any
 from ruamel.yaml.comments import CommentedBase
 
-from .logging import get_logger
 from .cuda_device import get_device
+from .logging import get_logger, setup_logging, clear_logging
 
 from ..config import Configurator
 from ..protocols import Protocol
 from ..trainers import Trainer, HyperParameterManager
 
-def _setup_logging(output_dir: str):
-    # Disable logging during test execution because of problems in Windows
-    if "PYTEST_CURRENT_TEST" in os.environ:
-        return
-
-    logging.captureWarnings(True)
-    biotrainer_logger = logging.getLogger('biotrainer')
-    biotrainer_logger.propagate = False  # Prevent propagation to root logger
-
-    # Set up handlers
-    file_handler = logging.FileHandler(output_dir + "/logger_out.log")
-    stream_handler = logging.StreamHandler()
-
-    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-    file_handler.setFormatter(formatter)
-    stream_handler.setFormatter(formatter)
-
-    biotrainer_logger.setLevel(logging.INFO)
-    file_handler.setLevel(logging.INFO)
-    stream_handler.setLevel(logging.INFO)
-
-    biotrainer_logger.addHandler(file_handler)
-    biotrainer_logger.addHandler(stream_handler)
-
-    # Only log errors for onnx and dynamo
-    torch._logging.set_logs(dynamo=logging.ERROR, onnx=logging.ERROR, onnx_diagnostics=False)
-    for logger_name in ["torch.onnx", "torch._dynamo", "onnxscript"]:
-        logging.getLogger(logger_name).setLevel(logging.ERROR)
-
-
-def _clear_logging():
-    biotrainer_logger = logging.getLogger('biotrainer')
-
-    for handler in biotrainer_logger.handlers:
-        biotrainer_logger.removeHandler(handler)
-        handler.close()
 
 def _write_output_file(out_filename: str, config: dict) -> None:
     """
@@ -93,7 +53,7 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]]) 
     output_dir = Path(config["output_dir"])
     if not output_dir.is_dir():
         output_dir.mkdir(parents=True)
-    _setup_logging(str(output_dir))
+    setup_logging(str(output_dir), config["num_epochs"])
     logger = get_logger(__name__)
 
     if "pretrained_model" in config.keys():
@@ -130,6 +90,6 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]]) 
         output_result
     )
 
-    _clear_logging()
+    clear_logging()
 
     return output_result
