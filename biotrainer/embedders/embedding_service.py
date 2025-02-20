@@ -16,7 +16,7 @@ from typing import Dict, Tuple, Any, List, Union, Optional
 from .embedder_interfaces import EmbedderInterface
 
 from ..protocols import Protocol
-from ..utilities import read_FASTA, get_logger
+from ..utilities import read_FASTA, get_logger, is_running_in_notebook
 
 logger = get_logger(__name__)
 
@@ -127,7 +127,7 @@ class EmbeddingService:
 
         logger.info("If your dataset contains long reads, it may take more time to process the first few sequences.")
 
-        with tqdm(total=total_sequences, desc="Computing Embeddings") as pbar:
+        with tqdm(total=total_sequences, desc="Computing Embeddings", disable=is_running_in_notebook()) as pbar:
 
             # Load the first sequence and calculate the initial max_embedding_fit
             embeddings[sequence_ids[0]] = next(embedding_iter, None)
@@ -320,8 +320,8 @@ class EmbeddingService:
         """
         use_reduced_embeddings = protocol in Protocol.using_per_sequence_embeddings()
 
-        embeddings = list(
-            tqdm(self._embedder.embed_many(protein_sequences), total=len(protein_sequences)))
+        embeddings = list(tqdm(self._embedder.embed_many(protein_sequences), total=len(protein_sequences),
+                               disable=is_running_in_notebook()))
 
         if use_reduced_embeddings:
             embeddings = [self._embedder.reduce_per_protein(embedding) for embedding in embeddings]
