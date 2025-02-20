@@ -2,22 +2,7 @@ import os
 import torch
 import logging
 
-from typing import Optional
-from tqdm import tqdm as tqdm_console
-from tqdm.notebook import tqdm as tqdm_notebook
-
-
-def _is_running_in_notebook() -> bool:
-    try:
-        # This will only exist in Jupyter environments
-        shell = get_ipython().__class__.__name__
-        if shell == 'ZMQInteractiveShell':  # Jupyter notebook or qtconsole
-            return True
-        elif shell == 'TerminalInteractiveShell':  # IPython terminal
-            return False
-    except NameError:
-        return False
-    return False
+from .execution_environment import is_running_in_notebook
 
 
 class _TqdmLoggingHandler(logging.Handler):
@@ -67,7 +52,7 @@ def setup_logging(output_dir: str, num_epochs: int):
     file_handler = logging.FileHandler(output_dir + "/logger_out.log")
 
     # Different handling for notebook vs console
-    is_notebook = _is_running_in_notebook()
+    is_notebook = is_running_in_notebook()
     if is_notebook:
         # Create a tqdm progress bar for notebooks
         progress_bar = tqdm_notebook(total=num_epochs)
