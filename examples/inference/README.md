@@ -7,5 +7,5 @@ classes for any new sequences.
 
 Note that you need to have `jupyter` installed for the notebook:
 ```shell
-poetry add jupyter
+poetry install -E jupyter
 ```

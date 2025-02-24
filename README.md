@@ -18,8 +18,8 @@ It provides:
 ```bash
 # Install using poetry (recommended)
 poetry install
-# Adding jupyter notebook (if needed):
-poetry add jupyter
+# Installing with jupyter notebook extra (if required):
+poetry install -E jupyter
 
 # For Windows users with CUDA support:
 # Visit https://pytorch.org/get-started/locally/ and follow GPU-specific installation, e.g.:
