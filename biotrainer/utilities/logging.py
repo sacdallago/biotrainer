@@ -4,34 +4,37 @@ import logging
 
 from .execution_environment import is_running_in_notebook
 
-
-class _TqdmLoggingHandler(logging.Handler):
-    def __init__(self, tqdm_instance: Optional[tqdm_notebook] = None):
+class _NotebookLogHandler(logging.Handler):
+    def __init__(self):
         super().__init__()
-        self.tqdm_instance = tqdm_instance
-        self.current_epoch = 0
+        try:
+            from IPython.display import display, HTML
+            self.display = display
+            self.HTML = HTML
+            self.display("", clear=True)
+            self.display(self.HTML('''
+                <div id="biotrainer_status" style="margin: 10px 0;">
+                    Biotrainer Training Running...
+                </div>
+            '''))
+        except ImportError as e:
+            raise ImportError("You are running in a notebook environment, but missing required dependencies. "
+                            "Please install them via `poetry install --all-extras`.") from e
 
     def emit(self, record):
-        try:
-            update_total = False
-            if "Epoch" in record.msg:
-                self.current_epoch = int(record.msg.split("Epoch ")[-1].strip())
-            if "Running final evaluation on the best model" in record.msg:
-                update_total = True
-            if self.tqdm_instance:
-                if len(record.msg) > 40:
-                    record.msg = record.msg[:37] + "..."
-                msg = self.format(record)
-                self.tqdm_instance.set_description(msg)
-                self.tqdm_instance.n = self.current_epoch
-                if update_total:
-                    self.tqdm_instance.total = self.current_epoch
-                self.tqdm_instance.refresh()
-            else:
-                msg = self.format(record)
-                tqdm_console.write(msg)
-        except Exception:
-            self.handleError(record)
+        self.display(self.HTML(f'''
+            <script>
+                document.getElementById("biotrainer_status").innerHTML = "{self.format(record)}";
+            </script>
+        '''))
+
+    def close(self):
+        self.display(self.HTML('''
+            <script>
+                document.getElementById("biotrainer_status").innerHTML = "Biotrainer Training Finished!";
+            </script>
+        '''))
+        super().close()
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -48,15 +51,19 @@ def setup_logging(output_dir: str, num_epochs: int):
     biotrainer_logger = logging.getLogger('biotrainer')
     biotrainer_logger.propagate = False  # Prevent propagation to root logger
 
+    # Remove existing handlers if they are already there
+    existing_handlers = biotrainer_logger.handlers
+    for handler in existing_handlers:
+        biotrainer_logger.removeHandler(handler)
+
     # Set up handlers
     file_handler = logging.FileHandler(output_dir + "/logger_out.log")
 
     # Different handling for notebook vs console
     is_notebook = is_running_in_notebook()
     if is_notebook:
-        # Create a tqdm progress bar for notebooks
-        progress_bar = tqdm_notebook(total=num_epochs)
-        stream_handler = _TqdmLoggingHandler(progress_bar)
+        # Create a tqdm progress bar like handler for notebooks instead of plain text output
+        stream_handler = _NotebookLogHandler()
     else:
         stream_handler = logging.StreamHandler()  # Regular console output
 
