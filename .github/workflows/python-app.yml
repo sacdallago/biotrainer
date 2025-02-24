@@ -36,7 +36,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install poetry
-          poetry install --all-extras
+          poetry install
 
       - name: Install dependencies (Windows)
         if: matrix.os == 'windows-latest'
