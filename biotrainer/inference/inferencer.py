@@ -360,33 +360,42 @@ class Inferencer:
         """
         if sample_size == -1:
             sample_size = len(seq_ids)
-        # Bootstrapping: Resample over keys to keep track of associated targets
-        iteration_results = []
-        try:
-            # If a random seed was already set, e.g. in the biotrainer pipeline, use that
-            seed = np.random.get_state()[1][0]
-        except Exception:
-            seed = 42  # Default value
+
+        # Convert dictionaries to tensors
+        all_predictions = torch.stack([all_predictions_dict[seq_id] for seq_id in seq_ids])
+        all_targets = torch.stack([all_targets_dict[seq_id] for seq_id in seq_ids])
+
+        # Set random seed
+        seed = np.random.get_state()[1][0] if np.random.get_state() else 42
         rng = np.random.RandomState(seed)
 
-        for iteration in range(iterations):
-            bootstrapping_sample = rng.choice(seq_ids, size=sample_size, replace=True)
-            sampled_predictions = torch.stack([all_predictions_dict[seq_id] for seq_id in bootstrapping_sample])
-            sampled_targets = torch.stack([all_targets_dict[seq_id] for seq_id in bootstrapping_sample])
-            iteration_result = metrics_calculator.compute_metrics(predicted=sampled_predictions,
-                                                       labels=sampled_targets)
+        # Generate all random indices at once
+        all_indices = rng.choice(len(seq_ids), size=(iterations, sample_size), replace=True)
+
+        iteration_results = []
+        for indices in all_indices:
+            # Use integer indexing instead of string keys
+            sampled_predictions = all_predictions[indices]
+            sampled_targets = all_targets[indices]
+
+            iteration_result = metrics_calculator.compute_metrics(
+                predicted=sampled_predictions,
+                labels=sampled_targets
+            )
             iteration_results.append(iteration_result)
 
-        # Calculate mean and error margin for each metric
+        # Process results
         metrics = list(iteration_results[0].keys())
         result_dict = {}
         for metric in metrics:
-            all_metric_values = [iteration_result[metric] for iteration_result in iteration_results]
+            all_metric_values = torch.tensor([res[metric] for res in iteration_results], dtype=torch.float16)
             mean, confidence_range = get_mean_and_confidence_range(
-                values=torch.tensor(all_metric_values, dtype=torch.float16),
+                values=all_metric_values,
                 dimension=0,
-                confidence_level=confidence_level)
+                confidence_level=confidence_level
+            )
             result_dict[metric] = {"mean": mean.item(), "error": confidence_range.item()}
+
         return result_dict
 
     def from_embeddings_with_monte_carlo_dropout(self, embeddings: Union[Iterable, Dict],
