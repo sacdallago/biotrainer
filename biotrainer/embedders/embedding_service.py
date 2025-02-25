@@ -144,12 +144,14 @@ class EmbeddingService:
             # Load other sequences
             for idx in range(1, total_sequences):
                 if max_embedding_fit <= 3 or len(embeddings) % max_embedding_fit == 0 or idx == total_sequences - 1:
+                    pbar.desc = "Saving Embeddings"
                     last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, last_save_id,
                                                                                embeddings_file_path,
                                                                                use_reduced_embeddings)
                     logger.debug(f"New {max_embedding_fit=}")
 
                     embeddings[sequence_ids[idx]] = next(embedding_iter, None)
+                    pbar.desc = "Computing Embeddings"
                     pbar.update(1)
 
                     # Calculate the new max_embedding_fit for the next batch
@@ -173,7 +175,7 @@ class EmbeddingService:
                                                                        embeddings_file_path, use_reduced_embeddings)
 
         end_time = time.time()
-        logger.info(f"Time elapsed for saving embeddings: {end_time - start_time:.2f}[s]")
+        logger.info(f"Time elapsed for computing embeddings: {end_time - start_time:.2f}[s]")
 
         del embeddings
         del self._embedder
