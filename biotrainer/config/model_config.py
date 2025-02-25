@@ -29,6 +29,7 @@ def model_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
             category=model_category,
             required=False,
             default="adam",
+            allow_hyperparameter_optimization=True,
             constraints=ConfigConstraints(
                 type=str,
                 allowed_values=list(get_available_optimizers_dict()[protocol].keys())
