@@ -67,6 +67,7 @@ configurations = {
         "sequence_file": "test_input_files/r2c/sequences.fasta",
         "protocol": "sequence_to_class",
         "model_choice": ["FNN", "DeeperFNN"],
+        "optimizer_choice": ["adam", "sgd"],
         "num_epochs": [100, 200],
         "learning_rate": [1e-3, 1e-4],
         "batch_size": [64, 128],
