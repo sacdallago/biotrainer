@@ -1,8 +1,8 @@
 from ruamel import yaml
 from pathlib import Path
 from copy import deepcopy
-from typing import Union, Dict, Any
 from ruamel.yaml.comments import CommentedBase
+from typing import Union, Dict, Any, Optional, Callable
 
 from .cuda_device import get_device
 from .logging import get_logger, setup_logging, clear_logging
@@ -34,7 +34,8 @@ def _write_output_file(out_filename: str, config: dict) -> None:
         )
 
 
-def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]]) -> Dict[str, Any]:
+def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
+                                      custom_trainer_function: Optional[Callable] = None) -> Dict[str, Any]:
     # Verify config via configurator
     configurator = None
     if isinstance(config, str):
@@ -77,11 +78,16 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]]) 
     # Copy output_vars from config
     output_vars = deepcopy(config)
 
-    # Run biotrainer pipeline
-    trainer = Trainer(hp_manager=hp_manager,
-                      output_vars=output_vars,
-                      **config
-                      )
+    trainer: Trainer
+    if custom_trainer_function:
+        output_vars["custom_trainer"] = True
+        trainer = custom_trainer_function(hp_manager, output_vars, config)
+    else:
+        # Run biotrainer pipeline
+        trainer = Trainer(hp_manager=hp_manager,
+                          output_vars=output_vars,
+                          **config
+                          )
     output_result = trainer.training_and_evaluation_routine()
 
     # Save output_variables in out.yml
