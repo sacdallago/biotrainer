@@ -49,6 +49,7 @@ class Trainer:
                  pretrained_model: str = None,
                  save_split_ids: bool = False,
                  ignore_file_inconsistencies: bool = False,
+                 external_writer: Optional[str] = None,
                  limited_sample_size: int = -1,
                  cross_validation_config: Dict[str, Any] = None,
                  interaction: Optional[str] = None,
@@ -76,6 +77,7 @@ class Trainer:
         self._pretrained_model = Path(pretrained_model) if pretrained_model is not None else None
         self._save_split_ids = save_split_ids
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
+        self._external_writer = external_writer
         self._interaction = interaction
         self._limited_sample_size = limited_sample_size
         self._cross_validation_config = cross_validation_config
@@ -257,22 +259,24 @@ class Trainer:
         )
 
     def _create_writer(self, hyper_params: Dict) -> torch.utils.tensorboard.writer.SummaryWriter:
-        # Tensorboard writer
-        writer = SummaryWriter(log_dir=str(self._output_dir / "runs"))
+        if self._external_writer == "tensorboard":
+            # Tensorboard writer
+            writer = SummaryWriter(log_dir=str(self._output_dir / "runs"))
 
-        writer.add_hparams({
-            'model': hyper_params["model_choice"],
-            'num_epochs': hyper_params["num_epochs"],
-            'use_class_weights': hyper_params["use_class_weights"],
-            'learning_rate': hyper_params["learning_rate"],
-            'batch_size': hyper_params["batch_size"],
-            'embedder_name': self._embedder_name,
-            'seed': self._seed,
-            'loss': hyper_params["loss_choice"],
-            'optimizer': hyper_params["optimizer_choice"],
-        }, {})
+            writer.add_hparams({
+                'model': hyper_params["model_choice"],
+                'num_epochs': hyper_params["num_epochs"],
+                'use_class_weights': hyper_params["use_class_weights"],
+                'learning_rate': hyper_params["learning_rate"],
+                'batch_size': hyper_params["batch_size"],
+                'embedder_name': self._embedder_name,
+                'seed': self._seed,
+                'loss': hyper_params["loss_choice"],
+                'optimizer': hyper_params["optimizer_choice"],
+            }, {})
 
-        return writer
+            return writer
+        return None
 
     def _create_solver(self, split_name, model, loss_function, optimizer, writer, hyper_params: Dict) -> Solver:
         return get_solver(protocol=self._protocol, name=split_name, network=model, optimizer=optimizer,
