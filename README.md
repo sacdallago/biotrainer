@@ -21,6 +21,11 @@ poetry install
 # Installing with jupyter notebook extra (if required):
 poetry install -E jupyter
 
+# If you want to run onnx embedder models or your inference on gpu, you need to manually add the appropriate onnxruntime
+poetry remove onnxruntime
+poetry add onnxruntime-gpu  # CUDA
+poetry add onnxruntime-coreml  # MacOS
+
 # For Windows users with CUDA support:
 # Visit https://pytorch.org/get-started/locally/ and follow GPU-specific installation, e.g.:
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
