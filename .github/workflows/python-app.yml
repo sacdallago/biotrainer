@@ -36,14 +36,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install poetry
-          poetry install
+          poetry install -E onnx-cpu
 
       - name: Install dependencies (Windows)
         if: matrix.os == 'windows-latest'
         run: |
           python -m pip install --upgrade pip
           pip install poetry
-          poetry install
+          poetry install -E onnx-cpu
           pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
       - name: Test with pytest
