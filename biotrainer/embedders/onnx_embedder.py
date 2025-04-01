@@ -38,6 +38,14 @@ class OnnxEmbedder(EmbedderWithFallback):
         if isinstance(tokenizer, CustomTokenizer):
             self._preprocessing_strategy = tokenizer.preprocessing_strategy
 
+    @staticmethod
+    def check_onnxruntime_gpu():
+        # TODO [Cross platform] Add support for mps/coreML (needs onnxruntime-coreml)
+        if torch.cuda.is_available():
+            if 'CUDAExecutionProvider' not in onnxruntime.get_available_providers():
+                print("CUDA is available but onnxruntime-gpu is not installed. "
+                      "Install it with: 1. poetry remove onnxruntime 2. poetry add onnxruntime-gpu")
+
     def _load_model(self) -> OrtSessionWrapper:
         # Create ONNX Runtime session
         onnx_model = onnx.load(self._onnx_path)
@@ -50,9 +58,6 @@ class OnnxEmbedder(EmbedderWithFallback):
             ep_list = ['CPUExecutionProvider']
 
         ort_session = onnxruntime.InferenceSession(self._onnx_path, providers=ep_list)
-
-        print([input.name for input in ort_session.get_inputs()])
-        print([output.name for output in ort_session.get_outputs()])
 
         return OrtSessionWrapper(ort_session)
 
@@ -94,7 +99,7 @@ class OnnxEmbedder(EmbedderWithFallback):
         for seq_num in range(len(embeddings)):
             input_id = input_ids[seq_num]
 
-            # Remove special tokens (if your tokenizer has this functionality)
+            # Remove special tokens
             if hasattr(self._tokenizer, "get_special_tokens_mask"):
                 special_tokens_mask = self._tokenizer.get_special_tokens_mask(
                     input_id,
