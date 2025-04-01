@@ -36,3 +36,14 @@ def is_device_cpu(device: Union[None, str, torch.device] = None) -> bool:
     if device is str:
         return device == "cpu"
     return False
+
+def is_device_cuda(device: Union[None, str, torch.device] = None) -> bool:
+    if device is None:
+        return False
+    if not torch.cuda.is_available():
+        return False
+    if isinstance(device, torch.device):
+        return device.type == "cuda"
+    if device is str:
+        return "cuda" in device
+    return False
