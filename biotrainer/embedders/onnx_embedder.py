@@ -1,13 +1,11 @@
-from pathlib import Path
-
 import onnx
 import torch
-import onnxruntime
 import numpy as np
 
+from pathlib import Path
 from numpy import ndarray
-from typing import Union, List, Any, Generator
 from transformers import PreTrainedTokenizer
+from typing import Union, List, Any, Generator
 
 from .custom_tokenizer import CustomTokenizer
 from .embedder_interfaces import EmbedderWithFallback
@@ -29,6 +27,12 @@ class OrtSessionWrapper:
 class OnnxEmbedder(EmbedderWithFallback):
 
     def __init__(self, onnx_path: Path, tokenizer: PreTrainedTokenizer, device: Union[str, torch.device]):
+        try:
+            import onnxruntime as ort
+            self._onnxruntime = ort
+        except ImportError:
+            raise Exception("No onnxruntime in current environment found! Please install one via poetry extras first!")
+
         self.name = f"onnx-{onnx_path.name.replace('.onnx', '')}"
         self._onnx_path = onnx_path
         self._device = device
@@ -38,11 +42,10 @@ class OnnxEmbedder(EmbedderWithFallback):
         if isinstance(tokenizer, CustomTokenizer):
             self._preprocessing_strategy = tokenizer.preprocessing_strategy
 
-    @staticmethod
-    def check_onnxruntime_gpu():
+    def check_onnxruntime_gpu(self):
         # TODO [Cross platform] Add support for mps/coreML (needs onnxruntime-coreml)
         if torch.cuda.is_available():
-            if 'CUDAExecutionProvider' not in onnxruntime.get_available_providers():
+            if 'CUDAExecutionProvider' not in self._onnxruntime.get_available_providers():
                 print("CUDA is available but onnxruntime-gpu is not installed. "
                       "Install it with: 1. poetry remove onnxruntime 2. poetry add onnxruntime-gpu")
 
@@ -57,7 +60,7 @@ class OnnxEmbedder(EmbedderWithFallback):
         else:
             ep_list = ['CPUExecutionProvider']
 
-        ort_session = onnxruntime.InferenceSession(self._onnx_path, providers=ep_list)
+        ort_session = self._onnxruntime.InferenceSession(self._onnx_path, providers=ep_list)
 
         return OrtSessionWrapper(ort_session)
 
@@ -67,7 +70,7 @@ class OnnxEmbedder(EmbedderWithFallback):
 
         ep_list = ['CPUExecutionProvider']
 
-        ort_session = onnxruntime.InferenceSession(self._onnx_path, providers=ep_list)
+        ort_session = self._onnxruntime.InferenceSession(self._onnx_path, providers=ep_list)
         return OrtSessionWrapper(ort_session)
 
     def _embed_single(self, sequence: str) -> ndarray:

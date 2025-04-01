@@ -4,7 +4,6 @@ import os
 import torch
 import onnx
 import tempfile
-import onnxruntime
 import numpy as np
 
 from ruamel import yaml
@@ -457,6 +456,11 @@ class Inferencer:
     @staticmethod
     def from_onnx_with_embeddings(model_path: str, embeddings: Union[Iterable, Dict],
                                   protocol: Optional[Protocol] = None):
+        try:
+            import onnxruntime
+        except ImportError:
+            raise Exception("No onnxruntime in current environment found! Please install one via poetry extras first!")
+
         if isinstance(embeddings, Dict):
             embeddings_dict = embeddings
         else:

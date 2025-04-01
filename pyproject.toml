@@ -51,7 +51,6 @@ torchmetrics = "^1.5.1"
 safetensors = "^0.4.4"
 onnx = "1.16.1"  # Latest version 1.17.0 has issues currently  https://github.com/sacdallago/biotrainer/issues/111
 onnxscript = "^0.2.2"
-onnxruntime = "^1.21.0"
 pandas = "^2.2.3"
 datasets = "^3.1.0"
 umap-learn = "^0.5.7"
@@ -59,9 +58,16 @@ umap-learn = "^0.5.7"
 # Optional
 jupyter = { version = "^1.1.1", optional = true }
 notebook = { version = "^7.3.2", optional = true }
+onnxruntime = { version = "^1.21.0", optional = true }
+onnxruntime-gpu = { version = "^1.21.0", optional = true}
+onnxruntime-coreml = { version = "^1.13.1", optional = true}
 
 [tool.poetry.extras]
 jupyter = ["jupyter", "notebook"]
+onnx-cpu = ["onnxruntime"]
+onnx-gpu = ["onnxruntime-gpu"]
+onnx-mac = ["onnxruntime-coreml"]
+
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
