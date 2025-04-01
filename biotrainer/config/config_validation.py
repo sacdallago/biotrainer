@@ -120,6 +120,10 @@ def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_d
                                      f"Please provide either an embedder_name to calculate embeddings from scratch or \n"
                                      f"an embeddings_file to use pre-computed embeddings.")
 
+    if "embedder_name" in config_dict and "custom_tokenizer_config" in config_dict \
+            and not str(config_dict["embedder_name"]).endswith(".onnx"):
+        raise ConfigurationException("custom_tokenizer_config is only available for onnx embedders at the moment.")
+
     if "use_half_precision" in config_dict and "device" in config_dict:
         if config_dict["use_half_precision"] and config_dict["device"] == "cpu":
             raise ConfigurationException(f"use_half_precision mode is not compatible with embedding on the CPU. "
