@@ -275,7 +275,10 @@ class Configurator:
             except KeyError:
                 raise ConfigurationException(f"Invalid option key '{option_key}' on verified config.\n"
                                              f"Has the configuration already been verified?")
-            if config_option.is_file_option:
+            # TODO [Refactoring] Special case for ONNX as embedder name - might need to replace file
+            #  option with function to determine dynamically
+            if (config_option.is_file_option or
+                    (config_option.name == "embedder_name" and str(option_value).endswith(".onnx"))):
                 if is_url(option_value):
                     if not self.allow_downloads:
                         raise ConfigurationException(f"Downloading files is disabled!")
