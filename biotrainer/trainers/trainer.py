@@ -40,6 +40,7 @@ class Trainer:
                  # Optional with defaults
                  labels_file: Optional[str] = None, mask_file: Optional[str] = None,
                  embedder_name: str = "custom_embeddings",
+                 custom_tokenizer_config: Optional[str] = None,
                  use_half_precision: bool = False,
                  embeddings_file: str = None,
                  seed: int = 42,
@@ -66,6 +67,7 @@ class Trainer:
         self._labels_file = labels_file
         self._mask_file = mask_file
         self._embedder_name = embedder_name
+        self._custom_tokenizer_config = custom_tokenizer_config
         self._use_half_precision = use_half_precision
         self._embeddings_file = embeddings_file
         self._seed = seed
@@ -179,6 +181,7 @@ class Trainer:
         # Generate embeddings if necessary, otherwise use existing embeddings and overwrite embedder_name
         embeddings_file = self._embeddings_file
         embedding_service: EmbeddingService = get_embedding_service(embeddings_file_path=embeddings_file,
+                                                                    custom_tokenizer_config=self._custom_tokenizer_config,
                                                                     embedder_name=self._embedder_name,
                                                                     use_half_precision=self._use_half_precision,
                                                                     device=self._device)

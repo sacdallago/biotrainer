@@ -12,7 +12,7 @@ def embedding_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]
         ConfigOption(
             name="embedder_name",
             description=f"Allows to define which embedder to use. Can be either a predefined embedder "
-                        f"{get_predefined_embedder_names()} or a huggingface transformer model name.",
+                        f"{get_predefined_embedder_names()}, a .onnx model or a huggingface transformer model name.",
             category=embedding_category,
             required=False,
             default="custom_embeddings",
@@ -22,9 +22,21 @@ def embedding_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]
                 custom_validator=lambda value: (
                     value in get_predefined_embedder_names() or
                     value == "custom_embeddings" or
-                    value.endswith(".py") or
+                    value.endswith(".onnx") or
                     "/" in value, "Could not find given embedder!")
             ),
+        ),
+        ConfigOption(
+            name="custom_tokenizer_config",
+            category=embedding_category,
+            description="Provide a json config file containing information for a custom tokenizer",
+            required=False,
+            is_file_option=True,
+            default=None,
+            constraints=ConfigConstraints(
+                type=str,
+                allowed_formats=[".json"]
+            )
         ),
         ConfigOption(
             name="use_half_precision",
