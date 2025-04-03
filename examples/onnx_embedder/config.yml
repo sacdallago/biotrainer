@@ -1,0 +1,16 @@
+sequence_file: sequences.fasta
+labels_file: labels.fasta
+protocol: residue_to_class
+model_choice: CNN
+dropout_rate: 0.25
+optimizer_choice: adam
+loss_choice: cross_entropy_loss
+num_epochs: 200
+use_class_weights: True
+learning_rate: 1e-3
+batch_size: 128
+ignore_file_inconsistencies: False
+embedder_name: your_model.onnx
+custom_tokenizer_config: custom_tokenizer_config.json
+cross_validation_config:
+  method: hold_out

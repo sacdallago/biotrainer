@@ -1,4 +1,4 @@
-# onnx example
+# onnx_predictor example
 
 These examples show how to convert to and use a ONNX model with the *biotrainer Inferencer* class.
 
