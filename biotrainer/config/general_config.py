@@ -6,6 +6,7 @@ from typing import Union, List, Tuple
 from .config_option import ConfigOption, ConfigConstraints, ConfigKey
 
 from ..protocols import Protocol
+from ..utilities import get_device
 
 
 def general_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
@@ -15,7 +16,7 @@ def general_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
                      description="Select the device on which computations will be performed.",
                      category=general_category,
                      required=False,
-                     default="cpu",
+                     default=str(get_device().type),
                      constraints=ConfigConstraints(
                          type=str,
                          allowed_values=["cpu", "mps"] + [f"cuda:{i}" for i in
