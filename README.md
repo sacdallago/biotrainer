@@ -52,7 +52,7 @@ python3
 - **Sequence-level regression** (`sequence_to_value`)
 
 ### Built-in Capabilities
-- Multiple embedding methods (ProtT5, ESM, etc.)
+- Multiple embedding methods (ProtT5, ESM, ONNX, etc.)
 - Various neural network architectures
 - Cross-validation and model evaluation
 - Performance metrics and visualization
@@ -64,6 +64,7 @@ python3
 ### Tutorials
 - [First Steps Guide](docs/first_steps.md)
 - [Interactive Tutorials](examples/tutorials)
+- [Config Options Overview](docs/config_file_options_overview.md)
 - [Biocentral Web Interface](https://biocentral.cloud/app)
 
 ### Detailed Guides
