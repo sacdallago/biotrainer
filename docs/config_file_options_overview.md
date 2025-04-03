@@ -14,6 +14,7 @@ ignore_file_inconsistencies: True | False  # Default: False
 output_dir: path/to/output/directory  # Default: output
 bootstrapping_iterations: 55  # Default: 30, Disable: 0
 sanity_check: True | False  # Default: True
+external_writer: tensorboard | none  # Default: tensorboard, none deactivates it
 
 # Input Files
 sequence_file: path/to/sequence_file.fasta  # Required for all protocols
@@ -21,11 +22,12 @@ labels_file: path/to/labels_file.fasta  # Required for per-residue protocols
 mask_file: path/to/mask_file.fasta  # Optional for per-residue protocols
 
 # Embeddings
-embedder_name: Rostlab/prot_t5_xl_uniref50 | ElnaggarLab/ankh-large | user/your-hf-model | one_hot_encoding
+embedder_name: Rostlab/prot_t5_xl_uniref50 | ElnaggarLab/ankh-large | user/your-hf-model | one_hot_encoding | your_model.onnx
 use_half_precision: True | False  # Default: False
 embeddings_file: path/to/embeddings.h5  # Optional pre-computed embeddings file
 dimension_reduction_method: umap | tsne  # Default: None, only possible for per-sequence embeddings
 n_reduced_components: 5  # Default: None, requires dimension_reduction_method to be set
+custom_tokenizer_config: tokenizer_config.json  # If no config is provided, the default T5Tokenizer is used. Only applicable if using an onnx embedder
 
 # Model Parameters
 model_choice: FNN | CNN | LogReg | LightAttention  # Protocol-dependent default

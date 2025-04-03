@@ -70,6 +70,12 @@ sanity_check: True | False  # Default: True
 *Keep in mind that this can only be a first insight into the predictive capabilities of your model,
 no warnings in the logs do not imply that the results make (biological) sense!*
 
+By default, *tensorboard* is used as an external summary and trainings statistics writer. This behaviour can be
+turned off by setting it to `none`:
+```yaml
+external_writer: tensorboard | none # Default: tensorboard, none deactivates it
+```
+
 ## Training data (protocol specific)
 
 Depending on the protocol that fits to your dataset, you have to provide different input files. For the data standards
@@ -115,17 +121,18 @@ To compute baselines, there are also predefined embedders directly included in *
 embedder_name: one_hot_encoding
 ```
 
-If you want to use your own embedder directly in *biotrainer*, you can provide it as a python script. 
-You only need to extend the `CustomEmbedder` class from the `embeddings` module. Please take a look at the
-example implementations of `esm-2` in the [custom_embedder example](../examples/custom_embedder/).
-Then, use the `embedder_name` option to declare the path to your script:
+If you want to use your own embedder directly in *biotrainer*, you can provide it as an onnx file. Usually, you will
+also need to provide a custom tokenizer config (see below).
 ```yaml
-embedder_name: your_script.py  # The script path must be relative to the configuration file or absolute.
+embedder_name: your_model.onnx  # The file path must be relative to the configuration file or absolute.
 ```
-**Security measures are in place to prevent arbitrary code from execution. 
-Still, this might introduce a security risk when running biotrainer as a remote service. 
-Downloading of any custom_embedder source file during execution is therefore disabled. Please only run scripts
-from sources you trust.** 
+
+You can provide a custom tokenizer config as a `json` file:
+```yaml
+custom_tokenizer_config: tokenizer_config.json  # If no config is provided, the default T5Tokenizer is used
+```
+Find a complete example and how to convert your embedder to `onnx` [here](../examples/onnx_embedder/).
+
 
 It is also possible to provide a custom embeddings file in h5 format (take a look at the 
 [examples folder](../examples/custom_embeddings/) for more information). Please also have a look at the 
