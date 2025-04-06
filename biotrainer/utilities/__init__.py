@@ -4,7 +4,7 @@ from .version import __version__
 from .revert_mappings import revert_mappings
 from .execution_environment import is_running_in_notebook
 from .data_classes import Split, SplitResult, DatasetSample
-from .cuda_device import get_device, is_device_cpu, is_device_cuda
+from .cuda_device import get_device, is_device_cpu, is_device_cuda, is_device_mps, get_device_memory
 from .constants import (
     SEQUENCE_PAD_VALUE,
     MASK_AND_LABELS_PAD_VALUE,
@@ -26,6 +26,8 @@ __all__ = [
     'get_device',
     'is_device_cpu',
     'is_device_cuda',
+    'is_device_mps',
+    'get_device_memory',
     'is_running_in_notebook',
     'read_FASTA',
     'process_hf_dataset_to_fasta',
