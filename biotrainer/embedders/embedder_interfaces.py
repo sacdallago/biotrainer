@@ -14,7 +14,7 @@ from typing import List, Generator, Optional, Iterable, Any, Union, Callable
 
 from .preprocessing_strategies import preprocess_sequences_without_whitespaces
 
-from ..utilities import get_logger
+from ..utilities import get_logger, get_device_memory
 
 logger = get_logger(__name__)
 
@@ -46,6 +46,13 @@ class EmbedderInterface(abc.ABC):
         for sequence in batch:
             yield self._embed_single(sequence)
 
+    def estimate_batch_size(self) -> int:
+        memory_gb = get_device_memory(self._device)
+        safety_factor = 0.8
+        residues_per_gb = 1024  # Estimating 1MB/residue
+        batch_size = int(memory_gb * residues_per_gb * safety_factor)
+        return batch_size
+
     def embed_many(
             self, sequences: Iterable[str], batch_size: Optional[int] = None
     ) -> Generator[ndarray, None, None]:
@@ -56,9 +63,12 @@ class EmbedderInterface(abc.ABC):
         :param batch_size: For embedders that profit from batching, this is maximum number of AA per batch
         :return: A list object with embeddings of the sequences.
         """
+        if batch_size is None:
+            batch_size = self.estimate_batch_size()
+
         sequences = self._preprocess_sequences(sequences)
 
-        if batch_size:
+        if batch_size and batch_size > 1:
             batch = []
             length = 0
             for sequence in sequences:
