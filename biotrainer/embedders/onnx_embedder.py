@@ -10,7 +10,9 @@ from typing import Union, List, Any, Generator
 from .custom_tokenizer import CustomTokenizer
 from .embedder_interfaces import EmbedderWithFallback
 
-from ..utilities import is_device_cuda
+from ..utilities import is_device_cuda, is_device_mps, get_device_memory, get_logger
+
+logger = get_logger(__name__)
 
 
 class OrtSessionWrapper:
@@ -30,6 +32,7 @@ class OnnxEmbedder(EmbedderWithFallback):
         try:
             import onnxruntime as ort
             self._onnxruntime = ort
+            self._check_onnxruntime_gpu()
         except ImportError:
             raise Exception("No onnxruntime in current environment found! Please install one via poetry extras first!")
 
@@ -42,21 +45,25 @@ class OnnxEmbedder(EmbedderWithFallback):
         if isinstance(tokenizer, CustomTokenizer):
             self._preprocessing_strategy = tokenizer.preprocessing_strategy
 
-    def check_onnxruntime_gpu(self):
-        # TODO [Cross platform] Add support for mps/coreML (needs onnxruntime-coreml)
+    def _check_onnxruntime_gpu(self):
         if torch.cuda.is_available():
             if 'CUDAExecutionProvider' not in self._onnxruntime.get_available_providers():
-                print("CUDA is available but onnxruntime-gpu is not installed. "
-                      "Install it with: 1. poetry remove onnxruntime 2. poetry add onnxruntime-gpu")
+                logger.info("CUDA is available but onnxruntime-gpu is not installed. "
+                      "Install it with: poetry install -E onnx-gpu")
+        if torch.mps.is_available():
+            if 'CoreMLExecutionProvider' not in self._onnxruntime.get_available_providers():
+                logger.info("MPS is available but onnxruntime-coreml is not installed. "
+                      "Install it with: poetry install -E onnx-mac")
 
     def _load_model(self) -> OrtSessionWrapper:
         # Create ONNX Runtime session
         onnx_model = onnx.load(self._onnx_path)
         onnx.checker.check_model(onnx_model)
 
-        # TODO [Cross platform] Add support for mps/coreML (needs onnxruntime-coreml)
         if is_device_cuda(self._device):
             ep_list = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+        elif is_device_mps(self._device):
+            ep_list = ['CoreMLExecutionProvider', 'CPUExecutionProvider']
         else:
             ep_list = ['CPUExecutionProvider']
 
