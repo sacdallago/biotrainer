@@ -1,4 +1,5 @@
 import torch
+import psutil
 
 from typing import Union
 
@@ -37,6 +38,7 @@ def is_device_cpu(device: Union[None, str, torch.device] = None) -> bool:
         return device == "cpu"
     return False
 
+
 def is_device_cuda(device: Union[None, str, torch.device] = None) -> bool:
     if device is None:
         return False
@@ -47,3 +49,35 @@ def is_device_cuda(device: Union[None, str, torch.device] = None) -> bool:
     if device is str:
         return "cuda" in device
     return False
+
+
+def is_device_mps(device: Union[None, str, torch.device] = None) -> bool:
+    if device is None:
+        return False
+    if not torch.backends.mps.is_available():
+        return False
+    if isinstance(device, torch.device):
+        return device.type == "mps"
+    if device is str:
+        return "mps" in device
+    return False
+
+
+def get_device_memory(device: Union[None, str, torch.device] = None) -> float:
+    """ Returns the amount of memory available for this device in GB. If it was not possible to calculate, 4 GB is
+     used as a conservative default and 8 GB for mps """
+    gb_factor = (1024 ** 3)
+    conservative_default = 4
+    default_mps = 8  # TODO [Cross platform] Improve MacOS RAM estimation
+
+    if device is None or isinstance(device, str):
+        device = get_device()
+    if is_device_cuda(device):
+        free_mem, _ = torch.cuda.mem_get_info(device=device)
+        return free_mem / gb_factor
+    if is_device_cpu(device):
+        vm = psutil.virtual_memory()
+        return vm.available / gb_factor
+    if is_device_mps(device):
+        return default_mps
+    return conservative_default
