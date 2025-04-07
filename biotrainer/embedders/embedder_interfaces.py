@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 
 class EmbedderInterface(abc.ABC):
     name: str
-    _device: Union[None, str, torch.device]
+    _device: Union[None, str, torch.device] = None
     _preprocessing_strategy: Callable = lambda self, sequences: preprocess_sequences_without_whitespaces(sequences)
 
     @abc.abstractmethod
