@@ -1,5 +1,16 @@
 # Biotrainer Changelog
 
+## 08.04.2025 - Version 0.9.7
+
+### Features
+* Adding `external_writer` config option to (de-)activate external writer
+* Adding embedding via onnx embedder. A `custom_tokenizer_config` can be provided if necessary (default: T5Tokenizer). 
+For further information, see the "exmaples/onnx_embedder" directory.
+* Adding heuristic to set default batch size for embedder models
+* Adding new cli function `headless_main_with_custom_trainer`. It can be used to provide a custom trainer that allows
+to overwrite most functionality of biotrainer. Note that using this will add the entry "custom_trainer: True" to the
+`out.yml` file.
+
 ## 06.02.2025 - Version 0.9.6
 
 ### Features
