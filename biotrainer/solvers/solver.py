@@ -276,7 +276,7 @@ class Solver(ABC):
             # Load PyTorch checkpoint
             if not allow_torch_pt_loading:
                 raise Exception("Cannot load pt checkpoint because torch_pt_loading is not allowed!")
-            state = torch.load(str(checkpoint_file), map_location=torch.device(self.device))
+            state = torch.load(str(checkpoint_file), map_location=torch.device(self.device), weights_only=True)
 
         try:
             self.network.load_state_dict(state['state_dict'])
