@@ -194,37 +194,125 @@ class InferencerTests(unittest.TestCase):
                                                                    seed=42)
 
     def test_from_embeddings_with_dropout(self):
-        r2c_dict = self.inferencer_r2c.from_embeddings_with_monte_carlo_dropout(self.per_residue_embeddings,
-                                                                                n_forward_passes=10,
-                                                                                confidence_level=0.05,
-                                                                                seed=42)
-        rs2c_dict = self.inferencer_rs2c.from_embeddings_with_monte_carlo_dropout(self.per_residue_embeddings,
-                                                                                  n_forward_passes=15,
-                                                                                  confidence_level=0.5,
-                                                                                  seed=42)
-        s2c_dict = self.inferencer_s2c.from_embeddings_with_monte_carlo_dropout(self.per_sequence_embeddings,
-                                                                                n_forward_passes=1,
-                                                                                confidence_level=0.01,
-                                                                                seed=42)
-        s2v_dict = self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(self.per_sequence_embeddings,
-                                                                                n_forward_passes=10,
-                                                                                confidence_level=0.05,
-                                                                                seed=42)
-        rs2v_dict = self.inferencer_rs2v.from_embeddings_with_monte_carlo_dropout(self.per_residue_embeddings,
-                                                                                  n_forward_passes=10,
-                                                                                  confidence_level=0.05,
-                                                                                  seed=42)
+        # Test with different parameters
+        r2c_dict = self.inferencer_r2c.from_embeddings_with_monte_carlo_dropout(
+            self.per_residue_embeddings,
+            n_forward_passes=10,
+            confidence_level=0.05,
+            seed=42
+        )
+        rs2c_dict = self.inferencer_rs2c.from_embeddings_with_monte_carlo_dropout(
+            self.per_residue_embeddings,
+            n_forward_passes=15,
+            confidence_level=0.5,
+            seed=42
+        )
+        s2c_dict = self.inferencer_s2c.from_embeddings_with_monte_carlo_dropout(
+            self.per_sequence_embeddings,
+            n_forward_passes=2,
+            confidence_level=0.01,
+            seed=42
+        )
+        s2v_dict = self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
+            self.per_sequence_embeddings,
+            n_forward_passes=10,
+            confidence_level=0.05,
+            seed=42
+        )
+        rs2v_dict = self.inferencer_rs2v.from_embeddings_with_monte_carlo_dropout(
+            self.per_residue_embeddings,
+            n_forward_passes=10,
+            confidence_level=0.05,
+            seed=42
+        )
+
+        # Basic structure tests
         self.assertTrue(all([len(r2c_dict[seq]) == len(self._test_sequences[idx])
-                             for idx, seq in enumerate(r2c_dict.keys())]), msg="Missing predictions for r2c!")
-        self.assertTrue("mcd_mean" in list(rs2c_dict.values())[0].keys(), "Missing mcd_mean value for rs2c!")
-        self.assertTrue("mcd_lower_bound" in list(s2c_dict.values())[0].keys(),
-                        "Missing mcd_lower_bound value for s2c!")
-        self.assertTrue("mcd_upper_bound" in list(s2c_dict.values())[0].keys(),
-                        "Missing mcd_upper_bound value for s2c!")
+                             for idx, seq in enumerate(r2c_dict.keys())]),
+                        msg="Missing predictions for r2c!")
+
+        # Check required keys exist
+        required_keys = ["prediction", "all_predictions", "mcd_mean",
+                         "mcd_lower_bound", "mcd_upper_bound", "confidence_range"]
+
+        for dict_to_check in [rs2c_dict, s2c_dict, s2v_dict, rs2v_dict]:
+            for key in required_keys:
+                self.assertTrue(key in list(dict_to_check.values())[0].keys(),
+                                f"Missing {key} in predictions!")
+
+        # Check confidence bounds
+        for dict_to_check in [rs2c_dict, s2c_dict, s2v_dict, rs2v_dict]:
+            for pred in dict_to_check.values():
+                self.assertTrue(np.all((pred["mcd_lower_bound"] <= pred["mcd_mean"]).numpy()),
+                                f"Lower bound greater than mean ({pred})!")
+                self.assertTrue(np.all((pred["mcd_upper_bound"] >= pred["mcd_mean"]).numpy()),
+                                f"Upper bound less than mean ({pred})!")
+
+        # Check number of forward passes
+        self.assertEqual(len(s2c_dict["Seq0"]["all_predictions"]), 2,
+                         "Incorrect number of forward passes for s2c!")
+        self.assertEqual(len(r2c_dict["Seq0"][0]["all_predictions"]), 10,
+                         "Incorrect number of forward passes for r2c!")
+
+        # Check prediction types
         self.assertTrue(all([type(s2v_dict[key]["prediction"]) is float for key in s2v_dict.keys()]),
                         msg="Regression prediction is not float!")
         self.assertTrue(all([type(rs2v_dict[key]["prediction"]) is float for key in rs2v_dict.keys()]),
                         msg="Regression prediction is not float!")
+
+        # Test reproducibility with same seed
+        s2v_dict_repeat = self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
+            self.per_sequence_embeddings,
+            n_forward_passes=10,
+            confidence_level=0.05,
+            seed=42
+        )
+        for key in s2v_dict.keys():
+            np.testing.assert_array_almost_equal(
+                s2v_dict[key]["all_predictions"],
+                s2v_dict_repeat[key]["all_predictions"],
+                decimal=5,
+                err_msg="MC Dropout not reproducible with same seed!"
+            )
+
+        # Test different seeds give different results
+        s2v_dict_different_seed = self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
+            self.per_sequence_embeddings,
+            n_forward_passes=10,
+            confidence_level=0.05,
+            seed=24
+        )
+        for key in s2v_dict.keys():
+            self.assertFalse(
+                np.array_equal(s2v_dict[key]["all_predictions"],
+                               s2v_dict_different_seed[key]["all_predictions"]),
+                "Different seeds produce identical results!"
+            )
+
+        # Test invalid parameters
+        with self.assertRaises(Exception):
+            self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
+                self.per_sequence_embeddings,
+                n_forward_passes=0,  # Invalid number of passes
+                confidence_level=0.05,
+                seed=42
+            )
+
+        with self.assertRaises(Exception):
+            self.inferencer_r2c.from_embeddings_with_monte_carlo_dropout(
+                self.per_sequence_embeddings,
+                n_forward_passes=1,  # Invalid number of passes
+                confidence_level=0.05,
+                seed=42
+            )
+
+        with self.assertRaises(Exception):
+            self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
+                self.per_sequence_embeddings,
+                n_forward_passes=10,
+                confidence_level=1.5,  # Invalid confidence level
+                seed=42
+            )
 
     def _compare_predictions(self, preds: Dict[str, Union[float, List, List[List]]],
                              other_preds: Dict[str, Union[float, List, List[List]]]) -> List[str]:

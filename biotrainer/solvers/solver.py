@@ -193,7 +193,7 @@ class Solver(ABC):
             confidence_level: Confidence level for result confidence intervals (0.05 => 95% percentile)
         """
         if not 0 < confidence_level < 1:
-            raise Exception(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
+            raise ValueError(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
 
         mapped_predictions = {}
 
@@ -210,12 +210,15 @@ class Solver(ABC):
 
             # Create dict with seq_id: prediction
             for idx, prediction in enumerate(prediction_by_mean):
-                mapped_predictions[seq_ids[idx]] = {"prediction": prediction_by_mean[idx].item(),
+                mapped_predictions[seq_ids[idx]] = {"prediction": prediction.item(),
+                                                    "all_predictions": [dropout_iteration["prediction"][idx] for
+                                                                        dropout_iteration in dropout_iterations],
                                                     "mcd_mean": dropout_mean[idx],
                                                     "mcd_lower_bound": (
                                                             dropout_mean[idx] - confidence_range[idx]),
                                                     "mcd_upper_bound": (
-                                                            dropout_mean[idx] + confidence_range[idx])
+                                                            dropout_mean[idx] + confidence_range[idx]),
+                                                    "confidence_range": confidence_range[idx]
                                                     }
 
         return {

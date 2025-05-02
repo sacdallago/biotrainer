@@ -410,7 +410,7 @@ class Inferencer:
         :param embeddings: Iterable or dictionary containing the input embeddings to predict on.
         :param split_name: Name of the split to use for prediction. Default is "hold_out".
         :param n_forward_passes: Number of times to repeat the prediction calculation
-                                with different dropout nodes enabled.
+                                with different dropout nodes enabled. Must be > 1.
         :param confidence_level: Confidence level for the result confidence intervals. Default is 0.05,
                                 which corresponds to a 95% percentile.
         :param seed: Seed to use for the dropout predictions
@@ -418,12 +418,19 @@ class Inferencer:
         :return: Dictionary containing with keys that will either be taken from the embeddings dict or
          represent the indexes if embeddings are given as a list. Contains the following values for each key:
                  - 'prediction': Class or value prediction based on the mean over `n_forward_passes` forward passes.
+                 - 'all_predictions': All raw predictions, i.e. one prediction per forward pass.
                  - 'mcd_mean': Average over `n_forward_passes` forward passes for each class.
                  - 'mcd_lower_bound': Lower bound of the confidence interval using a normal distribution with the given
                                       confidence level.
                  - 'mcd_upper_bound': Upper bound of the confidence interval using a normal distribution with the given
                                       confidence level.
+                 - 'confidence_range': Confidence range (== mcd_mean - mcd_lower_bound)
         """
+        if n_forward_passes <= 1:
+            raise ValueError(f"n_forward_passes must be > 1, given: {n_forward_passes}")
+
+        if not 0 < confidence_level < 1:
+            raise ValueError(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
 
         # Necessary because dropout layer have a random part by design
         seed_all(seed)
