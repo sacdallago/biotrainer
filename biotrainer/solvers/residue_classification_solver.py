@@ -37,7 +37,7 @@ class ResidueClassificationSolver(Solver):
             confidence_level: Confidence level for result confidence intervals (0.05 => 95% percentile)
         """
         if not 0 < confidence_level < 1:
-            raise Exception(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
+            raise ValueError(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
 
         mapped_predictions = {}
 
@@ -54,6 +54,7 @@ class ResidueClassificationSolver(Solver):
                     class_probabilities_by_sequence[seq_ids[idx]].append(class_probabilities)
 
             # Calculate dropout mean and confidence range for each residue in sequence
+            seq_idx = 0
             for seq_id, dropout_residues in class_probabilities_by_sequence.items():
                 stacked_residues_tensor = torch.stack([torch.tensor(by_class) for by_class in dropout_residues], dim=1)
 
@@ -67,13 +68,17 @@ class ResidueClassificationSolver(Solver):
                 for residue_idx, residue_prediction in enumerate(prediction_by_mean):
                     mapped_predictions[seq_id].append(
                         {"prediction": residue_prediction.item(),
+                         "all_predictions": [dropout_iteration["prediction"][seq_idx][residue_idx] for
+                                             dropout_iteration in dropout_iterations],
                          "mcd_mean": dropout_mean.T[residue_idx],
                          "mcd_lower_bound": (
                                  dropout_mean.T[residue_idx] - confidence_range.T[residue_idx]),
                          "mcd_upper_bound": (
-                                 dropout_mean.T[residue_idx] + confidence_range.T[residue_idx])
+                                 dropout_mean.T[residue_idx] + confidence_range.T[residue_idx]),
+                         "confidence_range": confidence_range.T[residue_idx],
                          })
 
+                seq_idx += 1
             return {
                 'mapped_predictions': mapped_predictions
             }
