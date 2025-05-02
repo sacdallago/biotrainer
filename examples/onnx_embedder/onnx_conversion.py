@@ -8,50 +8,51 @@ from transformers import PreTrainedTokenizer
 
 
 class YourTokenizer(PreTrainedTokenizer):
-    class CustomTokenizer(PreTrainedTokenizer):
-        def __init__(self, vocab=None, unk_token="<unk>", pad_token="<pad>", eos_token="</s>"):
-            # Define vocabulary mapping amino acids & special tokens
-            self.vocab = {
-                "A": 5, "L": 6, "G": 7, "V": 8,
-                # ... rest of your vocabulary
-                pad_token: 0, eos_token: 1, unk_token: 2
-            }
-
-            # Reverse vocabulary for decoding
-            self.reverse_vocab = {v: k for k, v in self.vocab.items()}
-
-            # Set special tokens explicitly
-            self.unk_token = unk_token
-            self.pad_token = pad_token
-            self.eos_token = eos_token
-
-            # Preprocessing
-            self.characters_to_replace = "UZOB"
-            self.replacement_character = "X"
-            self.uses_whitespaces = False
-
-            # Initialize parent class properly
-            super().__init__(
-                unk_token=unk_token,
-                pad_token=pad_token,
-                eos_token=eos_token,
-                vocab=vocab
-            )
-
-    """ Rest of your tokenizer functionality... """
-
-    def to_biotrainer_config(self):
-        json_output = {
-            "vocab": self.vocab,
-            "unk_token": self.unk_token,
-            "pad_token": self.pad_token,
-            "eos_token": self.eos_token,
-            "characters_to_replace": self.characters_to_replace,
-            "replacement_character": self.replacement_character,
-            "uses_whitespaces": self.uses_whitespaces,
+    def __init__(self, vocab=None, unk_token="<unk>", pad_token="<pad>", eos_token="</s>"):
+        # Define vocabulary mapping amino acids & special tokens
+        self.vocab = {
+            "A": 5, "L": 6, "G": 7, "V": 8,
+            # ... rest of your vocabulary
+            pad_token: 0, eos_token: 1, unk_token: 2
         }
-        with open("custom_tokenizer_config.json", "w") as f:
-            json.dump(json_output, f)
+
+        # Reverse vocabulary for decoding
+        self.reverse_vocab = {v: k for k, v in self.vocab.items()}
+
+        # Set special tokens explicitly
+        self.unk_token = unk_token
+        self.pad_token = pad_token
+        self.eos_token = eos_token
+
+        # Preprocessing
+        self.characters_to_replace = "UZOB"
+        self.replacement_character = "X"
+        self.uses_whitespaces = False
+
+        # Initialize parent class properly
+        super().__init__(
+            unk_token=unk_token,
+            pad_token=pad_token,
+            eos_token=eos_token,
+            vocab=vocab
+        )
+
+
+""" Rest of your tokenizer functionality... """
+
+
+def to_biotrainer_config(self):
+    json_output = {
+        "vocab": self.vocab,
+        "unk_token": self.unk_token,
+        "pad_token": self.pad_token,
+        "eos_token": self.eos_token,
+        "characters_to_replace": self.characters_to_replace,
+        "replacement_character": self.replacement_character,
+        "uses_whitespaces": self.uses_whitespaces,
+    }
+    with open("custom_tokenizer_config.json", "w") as f:
+        json.dump(json_output, f)
 
 
 class YourModel(torch.nn.Module):
