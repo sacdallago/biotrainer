@@ -27,7 +27,8 @@ class TargetManager:
     # Dataset split lists
     training_ids: List[str] = None
     validation_ids: List[str] = None
-    testing_ids: List[str] = None
+    testing_ids: Dict[str, List[str]] = None
+    prediction_ids: List[str] = None
 
     # Interaction operations
     interaction_operations = {
@@ -88,6 +89,14 @@ class TargetManager:
                     sequence_masks = read_FASTA(self._mask_file)
                     mask2fasta = {protein.id: np.array([int(mask_value) for mask_value in str(protein.seq)])
                                   for protein in sequence_masks}
+
+                    # Validate masks (each mask must contain at least one resolved (1) value)
+                    for seq_id, mask in mask2fasta.items():
+                        if 1 not in mask:
+                            raise ValueError(f"{seq_id} does not have a valid mask as it does "
+                                             f"not contain at least one resolved (1) value!")
+
+                    # Replace labels with masking value
                     for identifier, unmasked in self._id2target.items():
                         mask = mask2fasta[identifier]
                         target_with_mask = np.array([value if mask[index] == 1 else MASK_AND_LABELS_PAD_VALUE for
@@ -104,7 +113,8 @@ class TargetManager:
             # For more info check file specifications!
             self._id2attributes = attributes_from_seqrecords_function(protein_sequences)
 
-            self._id2target = {seq_id: seq_vals["TARGET"] for seq_id, seq_vals in self._id2attributes.items()}
+            self._id2target = {seq_id: seq_vals["TARGET"] for seq_id, seq_vals in self._id2attributes.items()
+                               if "TARGET" in seq_vals}  # Can be missing for prediction dataset
             # a) Class output
             if self.protocol in Protocol.classification_protocols():
                 # Infer classes from data
@@ -153,6 +163,9 @@ class TargetManager:
 
         for seq_id, seq in id2emb.items():
             # Check that all embeddings have a corresponding label
+            if seq_id in self.prediction_ids:
+                continue
+
             if seq_id not in all_ids_with_target:
                 embeddings_without_labels.append(seq_id)
             # Make sure the length of the sequences in the embeddings match the length of the seqs in the labels
@@ -218,13 +231,14 @@ class TargetManager:
                             f"Found: {shapes}")
 
     def get_datasets_by_annotations(self, id2emb: Dict[str, Any]) -> \
-            Tuple[List[DatasetSample], List[DatasetSample], List[DatasetSample]]:
-        # At first calculate id2target and validate
+            Tuple[List[DatasetSample], List[DatasetSample], Dict[str, List[DatasetSample]], List[DatasetSample]]:
         self._calculate_targets()
-        self._validate_targets(id2emb)
 
         # Get dataset splits from file
-        self.training_ids, self.validation_ids, self.testing_ids = get_split_lists(self._id2attributes)
+        (self.training_ids, self.validation_ids,
+         self.testing_ids, self.prediction_ids) = get_split_lists(self._id2attributes)
+
+        self._validate_targets(id2emb)
 
         # Check dataset splits are not empty
         def except_on_empty(split_ids: List[str], name: str):
@@ -236,7 +250,8 @@ class TargetManager:
             except_on_empty(split_ids=self.training_ids, name="training")
             if self._cross_validation_method == "hold_out":
                 except_on_empty(split_ids=self.validation_ids, name="validation")
-            except_on_empty(split_ids=self.testing_ids, name="test")
+            for test_set in self.testing_ids.values():
+                except_on_empty(split_ids=test_set, name="test")
 
         # Combine embeddings for protein_protein_interaction
         if self._interaction:
@@ -264,11 +279,17 @@ class TargetManager:
         val_dataset = [
             DatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.validation_ids
         ]
-        test_dataset = [
-            DatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.testing_ids
+
+        test_datasets = {}
+        for test_set_id, test_set in self.testing_ids.items():
+            test_datasets[test_set_id] = [DatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx]))
+                                          for idx in test_set]
+
+        pred_dataset = [
+            DatasetSample(idx, id2emb[idx], torch.empty(1)) for idx in self.prediction_ids
         ]
 
-        return train_dataset, val_dataset, test_dataset
+        return train_dataset, val_dataset, test_datasets, pred_dataset
 
     def compute_class_weights(self) -> torch.FloatTensor:
         if self.protocol in Protocol.classification_protocols():
