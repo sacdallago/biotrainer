@@ -1,5 +1,5 @@
 import torch
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from scipy.stats import pearsonr
 from torch.utils.data import DataLoader
@@ -17,18 +17,30 @@ logger = get_logger(__name__)
 
 
 class SanityChecker:
-    def __init__(self, output_vars: Dict,
+    def __init__(self,
+                 output_vars: Dict[str, Any],
+                 metrics_calculator: MetricsCalculator,
                  train_val_dataset: List[DatasetSample],
                  test_dataset: List[DatasetSample],
                  test_loader: DataLoader,
-                 metrics_calculator: MetricsCalculator,
+                 test_results_dict: Dict[str, Any],
                  mode: str = "warn"):
         self.output_vars = output_vars
+        self.protocol = output_vars.get("protocol")
+        self.n_classes = output_vars.get("n_classes", None)
+        if self.protocol in Protocol.classification_protocols():
+            assert self.n_classes is not None, "Sanity checker was not given n_classes for classification protocol!"
+
+        self.device = output_vars.get("device")
+        self.interaction = output_vars.get("interaction", None)
+        self.bootstrapping_iterations = output_vars.get("bootstrapping_iterations", 30)
+        self.metrics_calculator = metrics_calculator
+
         self.train_val_dataset = train_val_dataset
         self.test_dataset = test_dataset
         self.test_loader = test_loader
-        self.metrics_calculator = metrics_calculator
-        self.bootstrapping_iterations = self.output_vars.get("bootstrapping_iterations", 30)
+        self.test_results_dict = test_results_dict
+
         self.mode = mode
 
     def _handle_result(self, result: str):
@@ -38,26 +50,26 @@ class SanityChecker:
             #  Might be useful for integration tests later
             raise SanityException(result)
 
-    def check_test_results(self):
-        logger.info("Running sanity checks on test results..")
+    def check_test_results(self, test_set_id) -> Dict[str, Any]:
+        logger.info(f"Running sanity checks on test set results ({test_set_id}) ..")
 
         self._check_metrics()
         self._check_predictions()
-        self._check_baselines()
+        baseline_dict = self._check_baselines()
 
-        logger.info("Sanity check on test results finished!")
+        logger.info(f"Sanity check on test results ({test_set_id}) finished!")
+
+        return baseline_dict
 
     def _check_metrics(self):
-        test_results = self.output_vars['test_iterations_results']
-
-        if self.output_vars["protocol"] in Protocol.classification_protocols():
-            if "metrics" in test_results.keys():
-                test_result_metrics = test_results['metrics']
+        if self.protocol in Protocol.classification_protocols():
+            if "metrics" in self.test_results_dict.keys():
+                test_result_metrics = self.test_results_dict['metrics']
             else:
                 self._handle_result(f"No test result metrics found!")
                 return
             # Multi-class metrics
-            if self.output_vars['n_classes'] > 2:
+            if self.n_classes > 2:
                 pass
             else:
                 # Binary metrics
@@ -68,37 +80,37 @@ class SanityChecker:
                     self._handle_result(f"Accuracy ({accuracy}) == Precision == Recall for binary prediction!")
 
     def _check_predictions(self):
-        test_results = self.output_vars['test_iterations_results']
+        mapped_predictions = self.test_results_dict.get('mapped_predictions', None)
 
-        if "mapped_predictions" in test_results:
-            predictions = list(test_results['mapped_predictions'].values())
+        if mapped_predictions:
+            predictions = list(mapped_predictions.values())
             # Check if the model is only predicting the same value for all test samples:
             if all(prediction == predictions[0] for prediction in predictions):
                 self._handle_result(f"Model is only predicting {predictions[0]} for all test samples!")
 
-    def _check_baselines(self):
-        self.output_vars["test_iterations_results"]["test_baselines"] = {}
-        baseline_dict = self.output_vars["test_iterations_results"]["test_baselines"]
-        baseline_dict["random_model"] = self._random_model_initialization_baseline()
+    def _check_baselines(self) -> Dict[str, Any]:
+        # self.output_vars["test_iterations_results"]["test_baselines"] = {}
+        baseline_dict = {"random_model": self._random_model_initialization_baseline()}
 
-        if self.output_vars["protocol"] in Protocol.classification_protocols():
+        if self.protocol in Protocol.classification_protocols():
             # Only for binary classification tasks at the moment:
-            if self.output_vars['n_classes'] <= 2:
+            if self.n_classes <= 2:
                 baseline_dict["one_only"] = self._one_only_baseline()
                 baseline_dict["zero_only"] = self._zero_only_baseline()
 
-                if "interaction" in self.output_vars:
+                if self.interaction:
                     baseline_dict["bias_predictions"] = self._bias_interaction_baseline()
 
-        elif self.output_vars["protocol"] in Protocol.regression_protocols():
+        elif self.protocol in Protocol.regression_protocols():
             baseline_dict["mean_only"] = self._mean_only_baseline()
+
+        return baseline_dict
 
     def _one_only_baseline(self):
         """
         Predicts "1" for every sample in the test set. (Only for binary classification)
         """
-        protocol: Protocol = self.output_vars["protocol"]
-        if protocol in Protocol.per_sequence_protocols() and protocol in Protocol.classification_protocols():
+        if self.protocol in Protocol.per_sequence_protocols() and self.protocol in Protocol.classification_protocols():
             one_only_baseline = self._value_only_baseline(value=1)
             logger.info(f"One-Only Baseline: {one_only_baseline}")
             return one_only_baseline
@@ -107,8 +119,7 @@ class SanityChecker:
         """
         Predicts "0" for every sample in the test set. (Only for binary classification)
         """
-        protocol: Protocol = self.output_vars["protocol"]
-        if protocol in Protocol.per_sequence_protocols() and protocol in Protocol.classification_protocols():
+        if self.protocol in Protocol.per_sequence_protocols() and self.protocol in Protocol.classification_protocols():
             zero_only_baseline = self._value_only_baseline(value=0)
             logger.info(f"Zero-Only Baseline: {zero_only_baseline}")
             return zero_only_baseline
@@ -117,8 +128,7 @@ class SanityChecker:
         """
         Predicts the mean of the test set for every sample in the test set. (Only for regression)
         """
-        protocol: Protocol = self.output_vars["protocol"]
-        if protocol in Protocol.regression_protocols():
+        if self.protocol in Protocol.regression_protocols():
             test_set_targets = torch.tensor([sample.target for sample in self.test_dataset])
             test_set_mean = torch.mean(test_set_targets).item()
             mean_only_baseline = self._value_only_baseline(value=test_set_mean)
@@ -127,8 +137,8 @@ class SanityChecker:
 
     def _value_only_baseline(self, value: float):
         test_set_value_predictions = {sample.seq_id: value for sample in self.test_dataset}
-        value_only_baseline = Bootstrapper.bootstrap(protocol=self.output_vars['protocol'],
-                                                     device=self.output_vars['device'],
+        value_only_baseline = Bootstrapper.bootstrap(protocol=self.protocol,
+                                                     device=self.device,
                                                      bootstrapping_iterations=self.bootstrapping_iterations,
                                                      metrics_calculator=self.metrics_calculator,
                                                      mapped_predictions=test_set_value_predictions,
@@ -137,7 +147,7 @@ class SanityChecker:
 
     def _random_model_initialization_baseline(self):
         model = get_model(model_weights_init="normal", **self.output_vars)
-        optimizer = get_optimizer(protocol=self.output_vars['protocol'],
+        optimizer = get_optimizer(protocol=self.protocol,
                                   model_parameters=model.parameters(),
                                   learning_rate=0.01,  # Model not trained, so parameter is not relevant
                                   optimizer_choice='adam',
@@ -147,7 +157,7 @@ class SanityChecker:
                             optimizer=optimizer, loss_function=loss,
                             num_classes=self.output_vars['n_classes'], **self.output_vars)
         random_init_inference = solver.inference(dataloader=self.test_loader, calculate_test_metrics=True)
-        random_init_bootstrapping = Bootstrapper.bootstrap(protocol=self.output_vars['protocol'],
+        random_init_bootstrapping = Bootstrapper.bootstrap(protocol=self.protocol,
                                                            device=self.output_vars['device'],
                                                            bootstrapping_iterations=self.bootstrapping_iterations,
                                                            metrics_calculator=solver.metrics_calculator,
@@ -167,8 +177,7 @@ class SanityChecker:
             The predictor itself just sums up the positive and negative counts for both interactors and "predicts"
             the higher value.
         """
-        protocol: Protocol = self.output_vars["protocol"]
-        if protocol in Protocol.per_sequence_protocols() and protocol in Protocol.classification_protocols():
+        if self.protocol in Protocol.per_sequence_protocols() and self.protocol in Protocol.classification_protocols():
             # 1. Calculate protein counts
             positive_counts = {}
             negative_counts = {}
