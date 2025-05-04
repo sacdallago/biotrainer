@@ -194,6 +194,8 @@ class Trainer:
         return self._output_vars
 
     def _setup(self):
+        # Log model hash
+        logger.info(f"Training model with hash: {self._output_vars['model_hash']}")
         # Seed
         seed_all(self._seed)
         # Log device
