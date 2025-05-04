@@ -101,14 +101,15 @@ class Trainer:
                                        ignore_file_inconsistencies=self._ignore_file_inconsistencies,
                                        cross_validation_method=self._cross_validation_config["method"],
                                        interaction=self._interaction)
-        train_dataset, val_dataset, test_dataset = target_manager.get_datasets_by_annotations(id2emb)
+        train_dataset, val_dataset, test_datasets, prediction_dataset = target_manager.get_datasets_by_annotations(
+            id2emb)
         del id2emb  # No longer required and should not be used later in the routine
 
         # LOG COMMON VALUES FOR ALL k-fold SPLITS:
         embeddings_dimension = train_dataset[0].embedding.shape[-1]  # Last position in shape is always embedding dim
         logger.info(f"Number of features: {embeddings_dimension}")
         self._output_vars['n_features'] = embeddings_dimension
-        self._output_vars['n_testing_ids'] = len(test_dataset)
+        self._output_vars['n_testing_ids'] = sum(len(test_dataset) for test_dataset in test_datasets.values())
         self._output_vars['n_classes'] = target_manager.number_of_outputs
 
         # CLASS WEIGHTS
@@ -135,28 +136,50 @@ class Trainer:
         best_split = self._get_best_model_of_splits(split_results)
 
         # TESTING
-        test_dataset_embeddings = self._create_embeddings_dataset(test_dataset, mode="test")
-        test_loader = self._create_dataloader(dataset=test_dataset_embeddings, hyper_params=best_split.hyper_params)
-        test_results = self._do_and_log_evaluation(best_split.solver, test_loader, target_manager)
+        for test_set_id, test_dataset in test_datasets.items():
+            logger.info('Running final evaluation on the best model')
+            test_dataset_embeddings = self._create_embeddings_dataset(test_dataset, mode="test")
+            test_loader = self._create_dataloader(dataset=test_dataset_embeddings, hyper_params=best_split.hyper_params)
+            test_results = self._do_and_log_evaluation(solver=best_split.solver,
+                                                       test_loader=test_loader,
+                                                       target_manager=target_manager,
+                                                       test_set_id=test_set_id)
 
-        # ADDITIONAL EVALUATION
-        metrics_calculator = get_metrics_calculator(protocol=self._protocol,
-                                                    device=self._device,
-                                                    num_classes=self._output_vars.get('n_classes', 0))
-        # BOOTSTRAPPING
-        if self._bootstrapping_iterations > 0:
-            self._do_and_log_bootstrapping_evaluation(metrics_calculator=metrics_calculator, test_results=test_results,
-                                                      test_loader=test_loader)
+            # ADDITIONAL EVALUATION
+            metrics_calculator = get_metrics_calculator(protocol=self._protocol,
+                                                        device=self._device,
+                                                        num_classes=self._output_vars.get('n_classes', 0))
+            # BOOTSTRAPPING
+            if self._bootstrapping_iterations > 0:
+                self._do_and_log_bootstrapping_evaluation(metrics_calculator=metrics_calculator,
+                                                          test_results=test_results,
+                                                          test_loader=test_loader,
+                                                          test_set_id=test_set_id)
 
-        # SANITY CHECKER
-        if self._sanity_check:
-            sanity_checker = SanityChecker(output_vars=self._output_vars,
-                                           train_val_dataset=train_dataset + val_dataset,
-                                           test_dataset=test_dataset,
-                                           test_loader=test_loader,
-                                           metrics_calculator=metrics_calculator,
-                                           mode="warn")
-            sanity_checker.check_test_results()
+            # SANITY CHECKER
+            if self._sanity_check:
+                sanity_checker = SanityChecker(output_vars=self._output_vars,
+                                               train_val_dataset=train_dataset + val_dataset,
+                                               test_dataset=test_dataset,
+                                               test_loader=test_loader,
+                                               metrics_calculator=metrics_calculator,
+                                               test_results_dict=test_results,
+                                               mode="warn")
+                baseline_results = sanity_checker.check_test_results(test_set_id=test_set_id)
+                if baseline_results is not None and len(baseline_results) > 0:
+                    self._output_vars["test_iterations_results"][test_set_id].update(
+                        {"test_baselines": baseline_results}
+                    )
+
+        # PREDICTION
+        if len(prediction_dataset) > 0:
+            logger.info(f'Calculating predictions for {len(prediction_dataset)} samples!')
+            pred_dataset_embeddings = self._create_embeddings_dataset(prediction_dataset, mode="pred")
+            pred_loader = self._create_dataloader(dataset=pred_dataset_embeddings, hyper_params=best_split.hyper_params)
+
+            _ = self._do_and_log_prediction(solver=best_split.solver,
+                                            pred_loader=pred_loader,
+                                            target_manager=target_manager)
 
         # SAVE BEST SPLIT AS ONNX
         try:
@@ -366,7 +389,6 @@ class Trainer:
         val_loader = self._create_dataloader(dataset=val_dataset, hyper_params=hyper_params)
 
         # MODEL, LOSS, OPTIMIZER
-
         model, loss_function, optimizer = self._create_model_loss_optimizer(
             class_weights=self._class_weights if hyper_params["use_class_weights"] else None,
             **hyper_params)
@@ -476,32 +498,44 @@ class Trainer:
             logger.info(f"Average split results: {average_dict}")
             self._output_vars["split_results"]["average_outer_split_results"] = average_dict
 
-    def _do_and_log_evaluation(self, solver, test_loader, target_manager):
+    def _do_and_log_evaluation(self, solver, test_loader, target_manager, test_set_id: str):
         # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
-        logger.info('Running final evaluation on the best model')
-
         solver.load_checkpoint(resume_training=False)
         test_results = solver.inference(test_loader, calculate_test_metrics=True)
 
+        if 'test_iterations_results' not in self._output_vars:
+            self._output_vars['test_iterations_results'] = {}
         if self._save_split_ids:
             test_results['test_set_predictions'] = revert_mappings(protocol=self._protocol,
                                                                    test_predictions=test_results['mapped_predictions'],
                                                                    class_int2str=target_manager.class_int2str)
-            self._output_vars['test_iterations_results'] = {k: v for k, v in test_results.items()
-                                                            if k != "mapped_probabilities"}
+            self._output_vars['test_iterations_results'][test_set_id] = {k: v for k, v in test_results.items()
+                                                                         if k != "mapped_probabilities"}
         else:
-            self._output_vars['test_iterations_results'] = {'metrics': test_results['metrics']}
+            self._output_vars['test_iterations_results'][test_set_id] = {'metrics': test_results['metrics']}
 
-        logger.info(f"Test set metrics: {test_results['metrics']}")
+        logger.info(f"Test set {test_set_id} metrics: {test_results['metrics']}")
         return test_results
 
-    def _do_and_log_bootstrapping_evaluation(self, metrics_calculator, test_results, test_loader):
-        logger.info('Running bootstrapping evaluation on the best model')
+    def _do_and_log_prediction(self, solver, pred_loader, target_manager):
+        # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
+        solver.load_checkpoint(resume_training=False)
+        pred_results = solver.inference(pred_loader, calculate_test_metrics=False)
+
+        self._output_vars['predictions'] = revert_mappings(protocol=self._protocol,
+                                                           test_predictions=pred_results['mapped_predictions'],
+                                                           class_int2str=target_manager.class_int2str)
+
+        logger.info(f"Calculated predictions for {len(pred_loader)} samples!")
+        return pred_results
+
+    def _do_and_log_bootstrapping_evaluation(self, metrics_calculator, test_results, test_loader, test_set_id: str):
+        logger.info(f'Running bootstrapping evaluation on the best model for test set ({test_set_id})')
         bootstrapping_dict = Bootstrapper.bootstrap(protocol=self._protocol, device=self._device,
                                                     bootstrapping_iterations=self._bootstrapping_iterations,
                                                     metrics_calculator=metrics_calculator,
                                                     mapped_predictions=test_results["mapped_predictions"],
                                                     test_loader=test_loader)
         bootstrapping_results = bootstrapping_dict["results"]
-        self._output_vars['test_iterations_results'].update({"bootstrapping": bootstrapping_results})
-        logger.info(f'Bootstrapping results: {bootstrapping_dict}')
+        self._output_vars['test_iterations_results'][test_set_id].update({"bootstrapping": bootstrapping_results})
+        logger.info(f'Bootstrapping results for test set ({test_set_id}): {bootstrapping_dict}')

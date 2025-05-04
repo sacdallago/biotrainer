@@ -55,17 +55,23 @@ def get_attributes_from_seqrecords_for_protein_interactions(sequences: List[SeqR
     return result
 
 
-def get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], List[str]]:
-    training_ids = list()
-    validation_ids = list()
-    testing_ids = list()
+def get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], Dict[str, List[str]], List[str]]:
+    training_ids = []
+    validation_ids = []
+    testing_ids = {}
+    prediction_ids = []
 
     # Check that all set annotations are given and correct
+    incorrect_sets_exception = lambda idx, split: Exception(f"Labels FASTA header must contain SET. "
+                                                            f"SET must be either 'train', "
+                                                            f"'val', 'test'/'test{{nr}}' or 'pred'. "
+                                                            f"Id: {idx}; SET={split}")
+
     for idx, attributes in id2attributes.items():
         split = attributes.get("SET")
-        if split is None or split.lower() not in ["train", "val", "test"]:
-            raise Exception(f"Labels FASTA header must contain SET. SET must be either 'train', 'val' or 'test'. "
-                            f"Id: {idx}; SET={split}")
+        if split is None or (split.lower() not in ["train", "val", "pred"] and "test" not in split.lower()):
+            raise incorrect_sets_exception(idx, split)
+
     # Decide between old VALIDATION=True/False annotation and new split (train/val/test) annotation
     validation_annotation: bool = any(
         [attributes.get("VALIDATION") is not None for attributes in id2attributes.values()])
@@ -77,6 +83,8 @@ def get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], List[str
                                       f"annotation is present in the dataset.")
     if validation_annotation and set_annotation:
         raise deprecation_exception
+
+    # Parse splits
     for idx, attributes in id2attributes.items():
         split = attributes.get("SET").lower()
 
@@ -105,13 +113,16 @@ def get_split_lists(id2attributes: dict) -> Tuple[List[str], List[str], List[str
             if validation_annotation or not set_annotation:
                 raise deprecation_exception
             validation_ids.append(idx)
-        elif split == 'test':
-            testing_ids.append(idx)
+        elif 'test' in split:
+            if split not in testing_ids:
+                testing_ids[split] = []
+            testing_ids[split].append(idx)
+        elif split == 'pred':
+            prediction_ids.append(idx)
         else:
-            raise Exception(f"Labels FASTA header must contain SET. SET must be either 'train', 'val' or 'test'. "
-                            f"Id: {idx}; SET={split}")
+            raise incorrect_sets_exception(idx, split)
 
-    return training_ids, validation_ids, testing_ids
+    return training_ids, validation_ids, testing_ids, prediction_ids
 
 
 def read_FASTA(path: str) -> List[SeqRecord]:
