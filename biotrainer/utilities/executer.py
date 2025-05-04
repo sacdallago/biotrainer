@@ -5,6 +5,7 @@ from ruamel.yaml.comments import CommentedBase
 from typing import Union, Dict, Any, Optional, Callable
 
 from .cuda_device import get_device
+from .model_hash import calculate_model_hash
 from .logging import get_logger, setup_logging, clear_logging
 
 from ..config import Configurator
@@ -77,6 +78,14 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
 
     # Copy output_vars from config
     output_vars = deepcopy(config)
+
+    # Calculate model hash
+    model_hash = calculate_model_hash(dataset_files=[Path(val) for key, val in config.items()
+                                                     if "_file" in key and Path(str(val)).exists()],
+                                      config=config,
+                                      custom_trainer=True if custom_trainer_function else False
+                                      )
+    output_vars["model_hash"] = model_hash
 
     trainer: Trainer
     if custom_trainer_function:
