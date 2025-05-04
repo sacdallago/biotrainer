@@ -26,7 +26,7 @@ An overview of our decision process and about arguments for and against certain 
 
 ### Sample attributes
   - `ID` --> Identifier of the sequence, right after ">" (.fasta standard) 
-  - `SET` --> The partition in which the sample falls. Can be `train`, `val` or `test`.
+  - `SET` --> The partition in which the sample falls. Can be `train`, `val`, `test`/`test{nr}` or `pred`.
   - `TARGET` --> The class or value to predict, e.g. `Nucleus` or `1.3`
 
 <details>
