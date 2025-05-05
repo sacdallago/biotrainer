@@ -1,5 +1,20 @@
 # Biotrainer Changelog
 
+## 05.05.2025 - Version 0.9.8
+
+### Features
+* Adding multiple distinct test sets (e.g. >Seq SET=test ... >Seq2 SET=test2 ... >Seq3 SET=test5 ...)
+* Adding a prediction set (unlabeled sequence, 
+that is predicted with the best model after the training, e.g. >SeqPred SET=pred)
+* Adding a unique model hash (16 chars sha256, based on input files, config options and custom trainer)
+* Improving monte carlo dropout predictions: Adding new test cases, checks for correct parameters and 
+`all_predictions` and `confidence_range` to result dict
+
+### Maintenance
+* Adding validation for per-residue masks (must each contain at least one resolved (1) value)
+* Adapting .pt API usage for new PyTorch version
+* Updating dependencies
+
 ## 08.04.2025 - Version 0.9.7
 
 ### Features
