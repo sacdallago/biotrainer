@@ -2,20 +2,18 @@ from pathlib import Path
 from datasets import load_dataset
 from typing import Any, Dict, List, Optional, Tuple
 
-from .logging import get_logger
-
 from ..protocols import Protocol
+from ..utilities import get_logger
 
 logger = get_logger(__name__)
 
 
-def hf_to_fasta(
+def _write_hf_to_fasta(
         sequences: List[str],
         targets: List[Any],
         set_values: List[str],
         hf_storage_path: Path,
-        write_targets_to_sequences: bool,
-        masks: Optional[List[Any]] = None, ) -> (Optional[Path], Optional[Path], Optional[Path]):
+        masks: Optional[List[Any]] = None, ) -> Optional[Path]:
     """
     Converts sequences, targets, and optional masks from a HuggingFace dataset into FASTA file(s).
 
@@ -24,7 +22,6 @@ def hf_to_fasta(
         targets (List[Any]): A list of target values.
         set_values (List[str]): A list of SET values corresponding to each sequence.
         hf_storage_path (Path): Path to the HuggingFace storage path.
-        write_targets_to_sequences (bool): Whether to write targets to the sequence file directly or to a labels file.
         masks (Optional[List[Any]]): A list of mask values, or None if masks are not provided.
 
     Raises:
@@ -38,27 +35,8 @@ def hf_to_fasta(
         if not (len(sequences) == len(targets) == len(set_values) == len(masks)):
             raise ValueError("The number of sequences, targets, set_values, and masks must be the same.")
 
-    files = {}
-    sequences_file_name = hf_storage_path / "sequences.fasta"
-    labels_file_name = hf_storage_path / "targets.fasta" if not write_targets_to_sequences else None
-    mask_file_name = hf_storage_path / "mask.fasta" if masks else None
-    try:
-        # Open the necessary files
-        seq_file = open(sequences_file_name, 'w')
-        files['seq_file'] = seq_file
-
-        if labels_file_name:
-            tgt_file = open(labels_file_name, 'w')
-            files['tgt_file'] = tgt_file
-        else:
-            tgt_file = None
-
-        if mask_file_name:
-            mask_file = open(mask_file_name, 'w')
-            files['mask_file'] = mask_file
-        else:
-            mask_file = None
-
+    input_file_name = hf_storage_path / "input.fasta"
+    with open(input_file_name, "w") as input_file:
         # Write the data
         for idx in range(len(sequences)):
             seq_id = f"Seq{idx + 1}"
@@ -67,37 +45,15 @@ def hf_to_fasta(
             set_val = set_values[idx]
             mask = masks[idx] if masks is not None else None
 
-            # Write to sequence file
-            if tgt_file is None:
-                # Include target in the header
-                seq_header = f">{seq_id} SET={set_val} TARGET={target}"
-            else:
-                seq_header = f">{seq_id}"
-            seq_file.write(f"{seq_header}\n{seq}\n")
+            seq_header = f">{seq_id} TARGET={target} SET={set_val}"
+            if mask is not None:
+                seq_header += f" MASK={mask}"
+            input_file.write(f"{seq_header}\n{seq}\n")
 
-            if tgt_file is not None:
-                # Write to target file
-                tgt_header = f">{seq_id} SET={set_val}"
-                tgt_file.write(f"{tgt_header}\n{target}\n")
-
-            if mask_file is not None:
-                # Write to mask file
-                mask_header = f">{seq_id}"
-                mask_file.write(f"{mask_header}\n{mask}\n")
-
-        # Close all files
-        for f in files.values():
-            f.close()
-
-        return sequences_file_name, labels_file_name, mask_file_name
-    except IOError as e:
-        # Ensure all files are closed in case of exception
-        for f in files.values():
-            f.close()
-        raise IOError(f"Error writing to FASTA file(s): {e}")
+        return input_file_name
 
 
-def process_subset(
+def _process_subset(
         current_subset: Any,
         sequence_column: str,
         target_column: str,
@@ -123,10 +79,10 @@ def process_subset(
         Exception: If any of the specified columns are missing from the dataset.
     """
     # Verify columns
-    verify_column(current_subset, sequence_column)
-    verify_column(current_subset, target_column)
+    _verify_dataset_column(current_subset, sequence_column)
+    _verify_dataset_column(current_subset, target_column)
     if mask_column:
-        verify_column(current_subset, mask_column)
+        _verify_dataset_column(current_subset, mask_column)
 
     # Extract data
     sequences = current_subset[sequence_column]
@@ -136,18 +92,19 @@ def process_subset(
     return sequences, targets, masks
 
 
-def determine_set_name(subset_name: str) -> str:
+def _determine_set_name(subset_name: str) -> str:
     """
-    Determines the corresponding set name ("TRAIN", "VAL", "TEST") based on the provided subset name.
+    Determines the corresponding set name ("TRAIN", "VAL", "TEST", "PRED") based on the provided subset name.
 
     This function normalizes and categorizes the input subset name into one of the standard set names. If the input does not
-    match any of the expected patterns ("train", "val", "test"), it logs a warning and assigns the subset to "TEST" by default.
+    match any of the expected patterns ("train", "val", "test", "pred"),
+    it logs a warning and assigns the subset to "TEST-{subset_name}" by default.
 
     Args:
         subset_name (str): The name of the subset (e.g., "train1", "validation", "testing").
 
     Returns:
-        str: The normalized set name ("TRAIN", "VAL", "TEST").
+        str: The normalized set name ("TRAIN", "VAL", "TEST", "PRED", "TEST-{subset_name}").
 
     Logs:
         Warning: Logs a warning if the subset name is unrecognized and defaults to "TEST".
@@ -160,12 +117,14 @@ def determine_set_name(subset_name: str) -> str:
         return "VAL"
     elif lower_subset_name.startswith("test"):
         return "TEST"
+    elif lower_subset_name.startswith("pred"):
+        return "PRED"
     else:
-        logger.warning(f"Unrecognized subset name '{subset_name}'. Assigning to 'TEST'.")
-        return "TEST"
+        logger.warning(f"Unrecognized subset name '{subset_name}'. Assigning to 'TEST-{lower_subset_name}'.")
+        return f"TEST-{lower_subset_name}"
 
 
-def verify_column(dataset: Any, column: str) -> None:
+def _verify_dataset_column(dataset: Any, column: str) -> None:
     """
     Verifies that the specified column exists in the given dataset.
 
@@ -183,7 +142,7 @@ def verify_column(dataset: Any, column: str) -> None:
         )
 
 
-def load_and_split_hf_dataset(hf_map: Dict) -> Tuple[List[str], List[Any], List[Any], List[str]]:
+def _load_and_split_hf_dataset(hf_map: Dict) -> Tuple[List[str], List[Any], List[Any], List[str]]:
     """
     Loads a HuggingFace dataset and splits it into sequences, targets, masks (if available), and set values.
 
@@ -247,11 +206,11 @@ def load_and_split_hf_dataset(hf_map: Dict) -> Tuple[List[str], List[Any], List[
                 continue
 
             # Process subset
-            current_sequences, current_targets, current_masks = process_subset(current_subset, sequence_column,
-                                                                               target_column, mask_column)
+            current_sequences, current_targets, current_masks = _process_subset(current_subset, sequence_column,
+                                                                                target_column, mask_column)
 
             # Determine SET value based on split name
-            current_set_value = determine_set_name(subset_name)
+            current_set_value = _determine_set_name(subset_name)
 
             sequences.extend(current_sequences)
             targets.extend(current_targets)
@@ -263,16 +222,15 @@ def load_and_split_hf_dataset(hf_map: Dict) -> Tuple[List[str], List[Any], List[
 
     else:
         raise Exception(
-            f"Expected 3 subsets (TRAIN, VAL, TEST) in the dataset at path '{path}'. Found: {subset_names}."
+            f"Expected at least 3 subsets (TRAIN, VAL, TEST) in the dataset at path '{path}'. Found: {subset_names}."
         )
 
     return sequences, targets, masks, set_values
 
 
 def process_hf_dataset_to_fasta(
-        protocol: Protocol,
         hf_storage_path: Path,
-        hf_map: Dict) -> (Optional[Path], Optional[Path], Optional[Path]):
+        hf_map: Dict) -> Optional[Path]:
     """
     Loads a HuggingFace dataset, splits it according to the protocol, and writes the data to FASTA files.
 
@@ -285,34 +243,20 @@ def process_hf_dataset_to_fasta(
         Exception: If there is an issue during the creation of the required files or processing the dataset.
     """
     try:
-        sequences, targets, masks, set_values = load_and_split_hf_dataset(hf_map)
+        sequences, targets, masks, set_values = _load_and_split_hf_dataset(hf_map)
     except Exception as e:
         raise Exception(f"Failed to load and split HuggingFace dataset: {e}")
 
-    sequence_file_path, labels_file_path, mask_file_path = None, None, None
     try:
-        if protocol in Protocol.per_sequence_protocols():
-            sequence_file_path, labels_file_path, mask_file_path = hf_to_fasta(
-                sequences=sequences,
-                targets=targets,
-                masks=None,
-                set_values=set_values,
-                hf_storage_path=hf_storage_path,
-                write_targets_to_sequences=True,
-            )
-        elif protocol in Protocol.per_residue_protocols():
-            sequence_file_path, labels_file_path, mask_file_path = hf_to_fasta(
-                sequences=sequences,
-                targets=targets,
-                masks=masks if any([m is not None for m in masks]) else None,
-                set_values=set_values,
-                hf_storage_path=hf_storage_path,
-                write_targets_to_sequences=False,
-            )
-        else:
-            raise Exception(f"Unsupported protocol: {protocol}")
-    except Exception as e:
-        raise Exception(f"Failed to write FASTA files: {e}")
+        input_file_path = _write_hf_to_fasta(
+            sequences=sequences,
+            targets=targets,
+            masks=masks if any([m is not None for m in masks]) else None,
+            set_values=set_values,
+            hf_storage_path=hf_storage_path,
+        )
 
-    logger.info("HuggingFace dataset downloaded and processed successfully.")
-    return sequence_file_path, labels_file_path, mask_file_path
+        logger.info("HuggingFace dataset downloaded and processed successfully.")
+        return input_file_path
+    except Exception as e:
+        raise Exception(f"Failed to write huggingface dataset to FASTA files: {e}")

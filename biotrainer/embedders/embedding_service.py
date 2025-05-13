@@ -16,7 +16,8 @@ from typing import Dict, Tuple, Any, List, Union, Optional
 from .embedder_interfaces import EmbedderInterface
 
 from ..protocols import Protocol
-from ..utilities import read_FASTA, get_logger, is_running_in_notebook
+from ..utilities import get_logger, is_running_in_notebook
+from ..input_files import read_FASTA
 
 logger = get_logger(__name__)
 
@@ -60,10 +61,8 @@ class EmbeddingService:
         logger.info(f"Computing embeddings to: {str(embeddings_file_path)}")
 
         # Process input data
-        if isinstance(input_data, str):
-            protein_sequences = {seq.id: str(seq.seq) for seq in read_FASTA(input_data)}
-        elif isinstance(input_data, Path):
-            protein_sequences = {seq.id: str(seq.seq) for seq in read_FASTA(str(input_data))}
+        if isinstance(input_data, str) or isinstance(input_data, Path):
+            protein_sequences = {seq_id: seq.seq for seq_id, seq in read_FASTA(str(input_data)).items()}
         elif isinstance(input_data, dict):
             protein_sequences = input_data
         else:

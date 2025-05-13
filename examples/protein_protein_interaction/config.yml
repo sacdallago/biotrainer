@@ -1,4 +1,4 @@
-sequence_file: interactions.fasta
+input_file: interactions.fasta
 protocol: sequence_to_class
 interaction: multiply
 model_choice: DeeperFNN

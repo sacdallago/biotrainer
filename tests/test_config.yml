@@ -1,5 +1,4 @@
-sequence_file: ''
-labels_file: ''
+input_file: ''
 protocol: sequence_to_value
 model_choice: LogReg
 optimizer_choice: adam

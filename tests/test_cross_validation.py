@@ -4,7 +4,7 @@ import tempfile
 from ruamel import yaml
 from pathlib import Path
 from biotrainer.config import ConfigurationException
-from biotrainer.utilities.cli import headless_main as biotrainer_headless_main
+from biotrainer.utilities.cli import train
 
 
 def test_cross_validation(cv_config: dict):
@@ -21,13 +21,13 @@ def test_cross_validation(cv_config: dict):
         else:
             base_config["learning_rate"] = 1e-3
         base_config["cross_validation_config"] = cv_config
-        base_config["sequence_file"] = str(Path("test_input_files/cv_s2v/meltome_cv_test.fasta").absolute())
+        base_config["input_file"] = str(Path("test_input_files/cv_s2v/meltome_cv_test.fasta").absolute())
         base_config["output_dir"] = tmp_dir_name
         with open(tmp_config_path, "w") as tmp_config_file:
             tmp_config_file.write(yaml.dump(base_config))
 
         try:
-            result = biotrainer_headless_main(str(Path(tmp_config_path).absolute()))
+            result = train(config=str(Path(tmp_config_path).absolute()))
             assert os.path.exists(f"{tmp_dir_name}/out.yml"), "No output file generated, run failed!"
         except ConfigurationException:
             assert False, "A ConfigurationException was thrown although it shouldn't have."

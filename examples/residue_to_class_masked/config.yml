@@ -1,6 +1,4 @@
-sequence_file: sequences.fasta
-labels_file: labels.fasta
-mask_file: mask.fasta
+input_file: input.fasta
 protocol: residue_to_class
 model_choice: CNN
 optimizer_choice: adam
