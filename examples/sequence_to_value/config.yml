@@ -1,4 +1,4 @@
-sequence_file: sequences.fasta
+input_file: sequences.fasta
 protocol: sequence_to_value
 model_choice: FNN
 optimizer_choice: adam

@@ -1,4 +1,4 @@
-sequence_file: sequences.fasta
+input_file: sequences.fasta
 protocol: residues_to_class
 model_choice: LightAttention
 optimizer_choice: adam

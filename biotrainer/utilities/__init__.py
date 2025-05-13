@@ -11,14 +11,7 @@ from .constants import (
     INTERACTION_INDICATOR,
     METRICS_WITHOUT_REVERSED_SORTING
 )
-from .fasta import (
-    read_FASTA,
-    get_attributes_from_seqrecords,
-    get_attributes_from_seqrecords_for_protein_interactions,
-    get_split_lists
-)
 
-from .hf_dataset_to_fasta import process_hf_dataset_to_fasta
 
 __all__ = [
     'seed_all',
@@ -29,11 +22,6 @@ __all__ = [
     'is_device_mps',
     'get_device_memory',
     'is_running_in_notebook',
-    'read_FASTA',
-    'process_hf_dataset_to_fasta',
-    'get_attributes_from_seqrecords',
-    'get_attributes_from_seqrecords_for_protein_interactions',
-    'get_split_lists',
     'SEQUENCE_PAD_VALUE',
     'MASK_AND_LABELS_PAD_VALUE',
     'INTERACTION_INDICATOR',

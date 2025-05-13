@@ -75,8 +75,7 @@ python3
 ## Example Configuration
 ```yaml
 protocol: residue_to_class
-sequence_file: sequences.fasta
-labels_file: labels.fasta
+input_file: input.fasta
 model_choice: CNN
 optimizer_choice: adam
 learning_rate: 1e-3

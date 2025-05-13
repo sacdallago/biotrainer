@@ -99,15 +99,8 @@ def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_d
                                          "do not provide any other input file "
                                          "(sequence_file/labels_file/mask_file)!")
     else:
-        # Protocol Requires
-        if protocol in Protocol.per_residue_protocols():
-            if "sequence_file" not in config_dict or "labels_file" not in config_dict and not ignore_file_checks:
-                raise ConfigurationException(f"sequence_file and labels_file are required "
-                                             f"for given protocol {protocol}!")
-
-        if protocol in Protocol.per_sequence_protocols():
-            if "sequence_file" not in config_dict and not ignore_file_checks:
-                raise ConfigurationException(f"sequence_file is required for given protocol {protocol}!")
+        if "input_file" not in config_dict:
+            raise ConfigurationException("No huggingface dataset or input_file provided!")
 
     # Mutual Exclusive
     if "auto_resume" in config_dict and "pretrained_model" in config_dict:

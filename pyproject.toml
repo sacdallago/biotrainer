@@ -62,6 +62,7 @@ notebook = { version = "^7.4.0", optional = true }
 onnxruntime = { version = "^1.21.0", optional = true }
 onnxruntime-gpu = { version = "^1.21.0", optional = true}
 onnxruntime-coreml = { version = "^1.13.1", optional = true}
+cyclopts = "^3.16.0"
 
 [tool.poetry.extras]
 jupyter = ["jupyter", "notebook"]

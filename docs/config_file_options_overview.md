@@ -16,10 +16,8 @@ bootstrapping_iterations: 55  # Default: 30, Disable: 0
 sanity_check: True | False  # Default: True
 external_writer: tensorboard | none  # Default: tensorboard, none deactivates it
 
-# Input Files
-sequence_file: path/to/sequence_file.fasta  # Required for all protocols
-labels_file: path/to/labels_file.fasta  # Required for per-residue protocols
-mask_file: path/to/mask_file.fasta  # Optional for per-residue protocols
+# Input File
+input_file: path/to/input_file.fasta  # Required for all protocols (unless huggingface dataset is used)
 
 # Embeddings
 embedder_name: Rostlab/prot_t5_xl_uniref50 | ElnaggarLab/ankh-large | user/your-hf-model | one_hot_encoding | your_model.onnx

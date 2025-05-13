@@ -3,19 +3,18 @@ import itertools
 import numpy as np
 
 from collections import Counter
-from Bio.SeqRecord import SeqRecord
 from typing import Dict, Any, Tuple, Optional, List
 
 from ..protocols import Protocol
-from ..utilities import get_attributes_from_seqrecords, get_attributes_from_seqrecords_for_protein_interactions, \
-    get_split_lists, MASK_AND_LABELS_PAD_VALUE, read_FASTA, INTERACTION_INDICATOR, DatasetSample, get_logger
+from ..utilities import MASK_AND_LABELS_PAD_VALUE,INTERACTION_INDICATOR, DatasetSample, get_logger
+from ..input_files import BiotrainerSequenceRecord, merge_protein_interactions, get_split_lists, read_FASTA
 
 logger = get_logger(__name__)
 
 
 class TargetManager:
     _id2target: Dict[str, Any] = dict()
-    _id2attributes: Dict[str, Any] = dict()
+    _id2sets: Dict[str, str] = dict()
     # This will be 1 for regression tasks, 2 for binary classification tasks, and N>2 for everything else
     number_of_outputs: int = 1
 
@@ -36,36 +35,30 @@ class TargetManager:
         "concat": lambda embedding_left, embedding_right: torch.concat([embedding_left, embedding_right])
     }
 
-    def __init__(self, protocol: Protocol, sequence_file: str,
-                 labels_file: Optional[str] = None, mask_file: Optional[str] = None,
+    def __init__(self, protocol: Protocol, input_file: str,
                  ignore_file_inconsistencies: Optional[bool] = False,
                  cross_validation_method: str = "",
                  interaction: Optional[str] = None):
         self.protocol = protocol
-        self._sequence_file = sequence_file
-        self._labels_file = labels_file
-        self._mask_file = mask_file
+        self._input_file = input_file
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
         self._cross_validation_method = cross_validation_method
         self._interaction = interaction
 
     def _calculate_targets(self):
         # Parse FASTA protein sequences
-        protein_sequences: List[SeqRecord] = read_FASTA(self._sequence_file)
-        id2fasta = {protein.id: str(protein.seq) for protein in protein_sequences}
-        attributes_from_seqrecords_function = get_attributes_from_seqrecords
+        input_records: Dict[str, BiotrainerSequenceRecord] = read_FASTA(self._input_file)
+        self._id2target, id2masks, self._id2sets = BiotrainerSequenceRecord.get_dicts(input_records)
         if self._interaction:
-            attributes_from_seqrecords_function = get_attributes_from_seqrecords_for_protein_interactions
+            self._id2target = merge_protein_interactions(input_records)
+
+        # Remove None targets from pred set
+        self._id2target = {seq_id: target for seq_id, target in self._id2target.items() if target is not None}
+        if len(self._id2target) == 0:
+            raise ValueError("Could not parse any valid targets from given input file!")
 
         # 1. Residue Level
         if self.protocol in Protocol.per_residue_protocols():
-            # Expect labels file to be in FASTA format, with each "residue" being the residue-associated-label
-            label_sequences = read_FASTA(self._labels_file)
-            self._id2attributes = attributes_from_seqrecords_function(label_sequences)
-
-            # Generate Mapping from Ids to Labels
-            self._id2target = {label.id: str(label.seq) for label in label_sequences}
-
             # a) Class output
             if self.protocol in Protocol.classification_protocols():
                 class_labels_temp = set()
@@ -84,37 +77,27 @@ class TargetManager:
                 # Convert label values to lists of numbers based on the maps
                 self._id2target = {identifier: np.array([self.class_str2int[label] for label in labels])
                                    for identifier, labels in self._id2target.items()}  # classes idxs (zero-based)
-                # Apply masks if provided:
-                if self._mask_file:
-                    sequence_masks = read_FASTA(self._mask_file)
-                    mask2fasta = {protein.id: np.array([int(mask_value) for mask_value in str(protein.seq)])
-                                  for protein in sequence_masks}
 
-                    # Validate masks (each mask must contain at least one resolved (1) value)
-                    for seq_id, mask in mask2fasta.items():
-                        if 1 not in mask:
-                            raise ValueError(f"{seq_id} does not have a valid mask as it does "
-                                             f"not contain at least one resolved (1) value!")
+                # MASKS
+                # Validate masks (each mask must contain at least one resolved (1) value)
+                for seq_id, mask in id2masks.items():
+                    if mask is not None and 1 not in mask:
+                        raise ValueError(f"{seq_id} does not have a valid mask as it does "
+                                         f"not contain at least one resolved (1) value!")
 
-                    # Replace labels with masking value
-                    for identifier, unmasked in self._id2target.items():
-                        mask = mask2fasta[identifier]
+                # Replace labels with masking value
+                for seq_id, unmasked_target in self._id2target.items():
+                    mask = id2masks[seq_id]
+                    if mask is not None:
                         target_with_mask = np.array([value if mask[index] == 1 else MASK_AND_LABELS_PAD_VALUE for
-                                                     index, value in enumerate(unmasked)])
-                        self._id2target[identifier] = target_with_mask
+                                                     index, value in enumerate(unmasked_target)])
+                        self._id2target[seq_id] = target_with_mask
             # b) Value output
             else:
                 raise NotImplementedError
 
         # 2. Sequence Level
         elif self.protocol in Protocol.per_sequence_protocols():
-
-            # In sequence task, split definitions are in sequence header, as well as target
-            # For more info check file specifications!
-            self._id2attributes = attributes_from_seqrecords_function(protein_sequences)
-
-            self._id2target = {seq_id: seq_vals["TARGET"] for seq_id, seq_vals in self._id2attributes.items()
-                               if "TARGET" in seq_vals}  # Can be missing for prediction dataset
             # a) Class output
             if self.protocol in Protocol.classification_protocols():
                 # Infer classes from data
@@ -126,8 +109,8 @@ class TargetManager:
                 self.class_int2str = {idx: letter for idx, letter in enumerate(self._class_labels)}
 
                 # Convert label values to lists of numbers based on the maps
-                self._id2target = {identifier: np.array(self.class_str2int[label])
-                                   for identifier, label in self._id2target.items()}  # classes idxs (zero-based)
+                self._id2target = {seq_id: np.array(self.class_str2int[label])
+                                   for seq_id, label in self._id2target.items()}  # classes idxs (zero-based)
 
             # b) Value output
             elif self.protocol in Protocol.regression_protocols():
@@ -138,8 +121,8 @@ class TargetManager:
         else:
             raise NotImplementedError
 
-        if not self._id2target:
-            raise Exception("Prediction targets not found or could not be extracted!")
+        if not self._id2target or len(self._id2target) == 0:
+            raise ValueError("Prediction targets not found or could not be extracted!")
 
     def _validate_targets(self, id2emb: Dict[str, Any]):
         """
@@ -192,7 +175,7 @@ class TargetManager:
                                     f"Missing label sequence ids:\n"
                 for seq_id in embeddings_without_labels:
                     exception_message += f"Sequence {seq_id}\n"
-                raise Exception(exception_message[:-1])  # Discard last \n
+                raise ValueError(exception_message[:-1])  # Discard last \n
 
         if len(labels_without_embeddings) > 0:
             if self._ignore_file_inconsistencies:
@@ -202,7 +185,6 @@ class TargetManager:
                                f"Data loss: {(len(labels_without_embeddings) / len(id2emb.keys())) * 100:.2f}%")
                 for seq_id in labels_without_embeddings:
                     self._id2target.pop(seq_id)  # Remove redundant labels
-                    self._id2attributes.pop(seq_id)  # Remove redundant labels
             else:
                 exception_message = f"{len(labels_without_embeddings)} label(s) not found in embeddings file! " \
                                     f"Make sure that for every sequence id in the labels file, there is a " \
@@ -214,20 +196,20 @@ class TargetManager:
                                     f"Missing sequence ids:\n"
                 for seq_id in labels_without_embeddings:
                     exception_message += f"Sequence {seq_id}\n"
-                raise Exception(exception_message[:-1])  # Discard last \n
+                raise ValueError(exception_message[:-1])  # Discard last \n
 
         if len(invalid_sequence_lengths) > 0:
             exception_message = f"Length mismatch for {len(invalid_sequence_lengths)} sequence(s)!\n"
             for seq_id, seq_len, target_len in invalid_sequence_lengths:
                 exception_message += f"{seq_id}: Sequence={seq_len} vs. Labels={self._id2target[seq_id].size}\n"
-            raise Exception(exception_message[:-1])  # Discard last \n
+            raise ValueError(exception_message[:-1])  # Discard last \n
 
     @staticmethod
     def _validate_embeddings_shapes(id2emb: Dict[str, Any]):
         shapes = set([val.shape[-1] for val in id2emb.values()])
         all_embeddings_have_same_dimension = len(shapes) == 1
         if not all_embeddings_have_same_dimension:
-            raise Exception(f"Embeddings dimensions differ between sequences, but all must be equal!\n"
+            raise ValueError(f"Embeddings dimensions differ between sequences, but all must be equal!\n"
                             f"Found: {shapes}")
 
     def get_datasets_by_annotations(self, id2emb: Dict[str, Any]) -> \
@@ -236,14 +218,14 @@ class TargetManager:
 
         # Get dataset splits from file
         (self.training_ids, self.validation_ids,
-         self.testing_ids, self.prediction_ids) = get_split_lists(self._id2attributes)
+         self.testing_ids, self.prediction_ids) = get_split_lists(self._id2sets)
 
         self._validate_targets(id2emb)
 
         # Check dataset splits are not empty
         def except_on_empty(split_ids: List[str], name: str):
             if len(split_ids) == 0:
-                raise Exception(f"The provided {name} set is empty! Please provide at least one sequence for "
+                raise ValueError(f"The provided {name} set is empty! Please provide at least one sequence for "
                                 f"the {name} set.")
 
         if not self._ignore_file_inconsistencies:
@@ -259,7 +241,7 @@ class TargetManager:
             if not interaction_operation:
                 raise NotImplementedError(f"Chosen interaction operation {self._interaction} is not supported!")
             interaction_id2emb = {}
-            for interaction_id in self._id2attributes.keys():
+            for interaction_id in self._id2target.keys():
                 interactor_left = interaction_id.split(INTERACTION_INDICATOR)[0]
                 interactor_right = interaction_id.split(INTERACTION_INDICATOR)[1]
                 embedding_left = id2emb[interactor_left]
@@ -298,9 +280,8 @@ class TargetManager:
                 # concatenate all targets irrespective of protein to count class sizes
                 training_targets = list(itertools.chain.
                                         from_iterable([list(targets) for targets in training_targets]))
-                if self._mask_file:
-                    # Ignore unresolved residues for class weights
-                    training_targets = [target for target in training_targets if target != MASK_AND_LABELS_PAD_VALUE]
+                # Ignore unresolved residues for class weights
+                training_targets = [target for target in training_targets if target != MASK_AND_LABELS_PAD_VALUE]
 
                 counter = Counter(training_targets)
             else:  # Per-sequence

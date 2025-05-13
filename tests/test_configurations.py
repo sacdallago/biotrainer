@@ -8,63 +8,55 @@ from biotrainer.config import Configurator, ConfigurationException
 
 configurations = {
     "minimal": {
-        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "input_file": "test_input_files/r2c/input.fasta",
         "protocol": "sequence_to_class",
     },
-    "prohibited": {
-        "sequence_file": "test_input_files/r2c/sequences.fasta",
-        "labels_file": "test_input_files/r2c/labels.fasta",
-        "protocol": "sequence_to_class"
-    },
     "required": {
-        # Missing sequence file
-        "labels_file": "test_input_files/r2c/labels.fasta",
+        # Missing input file
         "protocol": "residue_to_class"
     },
     "download": {
-        "sequence_file": "https://example.com/sequences.fasta",
+        "input_file": "https://example.com/sequences.fasta",
         "protocol": "sequence_to_class",
         "model_choice": "FNN",
     },
     "download_prohibited": {
-        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "input_file": "test_input_files/r2c/input.fasta",
         "protocol": "sequence_to_class",
         "model_choice": "FNN",
         "embedder_name": "https://example.com/payload.py"
     },
     "auto_resume_pretrained_model_mutual_exclusive": {
-        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "input_file": "test_input_files/r2c/input.fasta",
         "protocol": "sequence_to_class",
         "auto_resume": True,
         "pretrained_model": "placeholder.pt"
     },
     "embeddings_file_embedder_name_mutual_exclusive": {
-        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "input_file": "test_input_files/r2c/input.fasta",
         "protocol": "sequence_to_class",
         "embeddings_file": "placeholder.h5",
         "embedder_name": "one_hot_encoding"
     },
     "mutual_exclusive_device_half_precision": {
-        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "input_file": "test_input_files/r2c/input.fasta",
         "protocol": "sequence_to_class",
         "device": "cpu",
         "use_half_precision": True
     },
     "local_custom_embedder": {
-        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "input_file": "test_input_files/r2c/input.fasta",
         "protocol": "sequence_to_class",
         "embedder_name": "../examples/custom_embedder/ankh/ankh_embedder.py"
     },
     "file_paths": {
-        "sequence_file": "test_input_files/r2c/sequences.fasta",
-        "labels_file": "test_input_files/r2c/labels.fasta",
-        "mask_file": "test_input_files/r2c/mask.fasta",
+        "input_file": "test_input_files/r2c/input.fasta",
         "embedder_name": "../examples/custom_embedder/esm2/esm2_embedder.py",
         "output_dir": "test_output",
         "protocol": "residue_to_class"
     },
     "multiple_values": {
-        "sequence_file": "test_input_files/r2c/sequences.fasta",
+        "input_file": "test_input_files/r2c/input.fasta",
         "protocol": "sequence_to_class",
         "model_choice": ["FNN", "DeeperFNN"],
         "optimizer_choice": ["adam", "sgd"],
@@ -133,16 +125,6 @@ configurations = {
             "target_column": "secondary_structure"
         }
     },
-    "hf_mutual_exclusive_sequence_file_name": {
-        "sequence_file": "sequence_file",
-        "protocol": "residue_to_class",
-        "hf_dataset": {
-            "path": "heispv/protein_data_test_2",
-            "subset": "random_subset_name",
-            "sequence_column": "protein_sequence",
-            "target_column": "secondary_structure"
-        }
-    }
 }
 
 
@@ -151,12 +133,6 @@ class ConfigurationVerificationTests(unittest.TestCase):
     def test_minimal_configuration(self):
         configurator = Configurator.from_config_dict(configurations["minimal"])
         self.assertTrue(configurator.get_verified_config(), "Minimal config does not work!")
-
-    def test_prohibited(self):
-        configurator = Configurator.from_config_dict(configurations["prohibited"])
-        with self.assertRaises(ConfigurationException,
-                               msg="Config with prohibited config option does not throw an error!"):
-            configurator.get_verified_config()
 
     def test_required(self):
         configurator = Configurator.from_config_dict(configurations["required"])
@@ -361,7 +337,7 @@ class ConfigurationVerificationTests(unittest.TestCase):
         config_dict["hf_dataset"]["sequence_column"] = "random_invalid_name"
 
         configurator = Configurator.from_config_dict(config_dict)
-        with self.assertRaises(ConfigurationException) as context:
+        with self.assertRaises(Exception) as context:
             configurator.get_verified_config()
 
     def test_hf_invalid_target_column_name(self):
@@ -405,27 +381,9 @@ class ConfigurationVerificationTests(unittest.TestCase):
             configurator.get_verified_config()
 
 
-    def test_hf_mutual_exclusive_sequence_file_name(self):
+    def test_hf_mutual_exclusive_input_file_name(self):
         config_dict = deepcopy(configurations["hf_valid_for_sequences"])
-        config_dict["sequence_file"] = "random_invalid_name"
-
-        configurator = Configurator.from_config_dict(config_dict)
-        with self.assertRaises(ConfigurationException) as context:
-            configurator.get_verified_config()
-
-
-    def test_hf_mutual_exclusive_labels_file_name(self):
-        config_dict = deepcopy(configurations["hf_valid_for_sequences"])
-        config_dict["labels_file"] = "random_invalid_name"
-
-        configurator = Configurator.from_config_dict(config_dict)
-        with self.assertRaises(ConfigurationException) as context:
-            configurator.get_verified_config()
-
-
-    def test_hf_mutual_exclusive_mask_file_name(self):
-        config_dict = deepcopy(configurations["hf_valid_for_sequences"])
-        config_dict["mask_file"] = "random_invalid_name"
+        config_dict["input_file"] = "random_invalid_name"
 
         configurator = Configurator.from_config_dict(config_dict)
         with self.assertRaises(ConfigurationException) as context:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import sys
 
-from biotrainer.utilities.cli import main as biotrainer_main
+from biotrainer.utilities.cli import app as biotrainer_app
 
-biotrainer_main(sys.argv[1:])
+biotrainer_app()

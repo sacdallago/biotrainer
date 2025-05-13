@@ -1,21 +1,28 @@
-import argparse
+import cyclopts
+
 from pathlib import Path
-from typing import Union, Dict, Any, Callable
+from typing import Union, Dict, Any, Callable, List, Optional
 
 from .executer import parse_config_file_and_execute_run
 
+from ..input_files import convert_deprecated_fastas
 
-def headless_main(config: Union[str, Path, Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Entry point for usage in scripts
 
-    @param config: Biotrainer configuration file path or config dict
+app = cyclopts.App()
+
+
+@app.command
+def train(config: Union[str, Path, Dict[str, Any]]) -> Dict[str, Any]:
     """
+       Entry point for training
+
+       @param config: Biotrainer configuration file path or config dict
+       """
     return parse_config_file_and_execute_run(config)
 
 
-def headless_main_with_custom_trainer(config: Union[str, Path, Dict[str, Any]],
-                                      custom_trainer_function: Callable) -> Dict[str, Any]:
+def train_with_custom_trainer(config: Union[str, Path, Dict[str, Any]],
+                              custom_trainer_function: Callable) -> Dict[str, Any]:
     """
     Entry point for usage in scripts with a function to create a custom trainer.
     The custom trainer function must take the trainer parameters as input and return a (subclass of) Trainer e.g.
@@ -29,22 +36,22 @@ def headless_main_with_custom_trainer(config: Union[str, Path, Dict[str, Any]],
     return parse_config_file_and_execute_run(config, custom_trainer_function=custom_trainer_function)
 
 
-def main(args=None):
-    """
-    Pipeline commandline entry point
-    """
-    parser = argparse.ArgumentParser(description='Trains models on protein embeddings.')
-    parser.add_argument('config_path', metavar='/path/to/pipeline_definition.yml', type=str, nargs='?',
-                        help='The path to the config. For examples, see folder "examples".')
+@app.command
+def inference(training_output_file: Union[str, Path], model_input: Union[str, List[str], Path]) -> int:
+    # TODO
+    return 0
 
-    arguments = parser.parse_args()
+@app.command
+def convert(sequence_file: str,
+            labels_file: Optional[str] = None,
+            masks_file: Optional[str] = None,
+            converted_file: Optional[str] = "converted.fasta",
+            target_format: Optional[str] = "fasta"):
+    convert_deprecated_fastas(result_file=converted_file,
+                              sequence_file=sequence_file,
+                              labels_file=labels_file,
+                              masks_file=masks_file)
 
-    config_path = arguments.config_path
-    if not config_path:
-        parser.print_help()
-    else:
-        parse_config_file_and_execute_run(config_path)
 
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    app()

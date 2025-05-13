@@ -1,5 +1,4 @@
-sequence_file: /mnt/sequences.fasta
-labels_file: /mnt/labels.fasta
+input_file: /mnt/input.fasta
 protocol: residue_to_class
 model_choice: CNN
 optimizer_choice: adam
