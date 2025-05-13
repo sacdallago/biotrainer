@@ -121,6 +121,9 @@ class TargetManager:
         else:
             raise NotImplementedError
 
+        # Double-checking after target loading for correctness
+        if self.protocol in Protocol.regression_protocols():
+            assert self.number_of_outputs == 1, f"Number of outputs does not equal 1 for regression protocol!"
         if not self._id2target or len(self._id2target) == 0:
             raise ValueError("Prediction targets not found or could not be extracted!")
 

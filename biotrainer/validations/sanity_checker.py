@@ -18,22 +18,23 @@ logger = get_logger(__name__)
 
 class SanityChecker:
     def __init__(self,
-                 output_vars: Dict[str, Any],
+                 training_config: Dict[str, Any],
+                 n_classes: int,
+                 n_features: int,
                  metrics_calculator: MetricsCalculator,
                  train_val_dataset: List[DatasetSample],
                  test_dataset: List[DatasetSample],
                  test_loader: DataLoader,
                  test_results_dict: Dict[str, Any],
                  mode: str = "warn"):
-        self.output_vars = output_vars
-        self.protocol = output_vars.get("protocol")
-        self.n_classes = output_vars.get("n_classes", None)
-        if self.protocol in Protocol.classification_protocols():
-            assert self.n_classes is not None, "Sanity checker was not given n_classes for classification protocol!"
+        self.training_config = training_config
+        self.protocol = self.training_config.get("protocol")
+        self.n_classes = n_classes
+        self.n_features = n_features
 
-        self.device = output_vars.get("device")
-        self.interaction = output_vars.get("interaction", None)
-        self.bootstrapping_iterations = output_vars.get("bootstrapping_iterations", 30)
+        self.device = self.training_config.get("device")
+        self.interaction = self.training_config.get("interaction", None)
+        self.bootstrapping_iterations = self.training_config.get("bootstrapping_iterations", 30)
         self.metrics_calculator = metrics_calculator
 
         self.train_val_dataset = train_val_dataset
@@ -43,14 +44,17 @@ class SanityChecker:
 
         self.mode = mode
 
-    def _handle_result(self, result: str):
+        self._warnings = []
+
+    def _handle_sanity_check_warning(self, warning: str):
+        self._warnings.append(warning)
         if self.mode == "warn":
-            logger.warning(result)
+            logger.warning(warning)
         elif self.mode == "error":
             #  Might be useful for integration tests later
-            raise SanityException(result)
+            raise SanityException(warning)
 
-    def check_test_results(self, test_set_id) -> Dict[str, Any]:
+    def check_test_results(self, test_set_id) -> (Dict[str, Any], List[str]):
         logger.info(f"Running sanity checks on test set results ({test_set_id}) ..")
 
         self._check_metrics()
@@ -59,14 +63,14 @@ class SanityChecker:
 
         logger.info(f"Sanity check on test results ({test_set_id}) finished!")
 
-        return baseline_dict
+        return baseline_dict, self._warnings
 
     def _check_metrics(self):
         if self.protocol in Protocol.classification_protocols():
             if "metrics" in self.test_results_dict.keys():
                 test_result_metrics = self.test_results_dict['metrics']
             else:
-                self._handle_result(f"No test result metrics found!")
+                self._handle_sanity_check_warning(f"No test result metrics found!")
                 return
             # Multi-class metrics
             if self.n_classes > 2:
@@ -77,7 +81,7 @@ class SanityChecker:
                 precision = test_result_metrics['precision']
                 recall = test_result_metrics['recall']
                 if accuracy == precision == recall:
-                    self._handle_result(f"Accuracy ({accuracy}) == Precision == Recall for binary prediction!")
+                    self._handle_sanity_check_warning(f"Accuracy ({accuracy}) == Precision == Recall for binary prediction!")
 
     def _check_predictions(self):
         mapped_predictions = self.test_results_dict.get('mapped_predictions', None)
@@ -86,10 +90,9 @@ class SanityChecker:
             predictions = list(mapped_predictions.values())
             # Check if the model is only predicting the same value for all test samples:
             if all(prediction == predictions[0] for prediction in predictions):
-                self._handle_result(f"Model is only predicting {predictions[0]} for all test samples!")
+                self._handle_sanity_check_warning(f"Model is only predicting {predictions[0]} for all test samples!")
 
     def _check_baselines(self) -> Dict[str, Any]:
-        # self.output_vars["test_iterations_results"]["test_baselines"] = {}
         baseline_dict = {"random_model": self._random_model_initialization_baseline()}
 
         if self.protocol in Protocol.classification_protocols():
@@ -146,19 +149,20 @@ class SanityChecker:
         return value_only_baseline
 
     def _random_model_initialization_baseline(self):
-        model = get_model(model_weights_init="normal", **self.output_vars)
+        model = get_model(n_classes=self.n_classes, n_features=self.n_features,
+                          model_weights_init="normal", **self.training_config)
         optimizer = get_optimizer(protocol=self.protocol,
                                   model_parameters=model.parameters(),
                                   learning_rate=0.01,  # Model not trained, so parameter is not relevant
                                   optimizer_choice='adam',
                                   **{})
-        loss = get_loss(**self.output_vars)
+        loss = get_loss(**self.training_config)
         solver = get_solver(name="random_init_model", network=model,
                             optimizer=optimizer, loss_function=loss,
-                            num_classes=self.output_vars['n_classes'], **self.output_vars)
+                            num_classes=self.n_classes, **self.training_config)
         random_init_inference = solver.inference(dataloader=self.test_loader, calculate_test_metrics=True)
         random_init_bootstrapping = Bootstrapper.bootstrap(protocol=self.protocol,
-                                                           device=self.output_vars['device'],
+                                                           device=self.device,
                                                            bootstrapping_iterations=self.bootstrapping_iterations,
                                                            metrics_calculator=solver.metrics_calculator,
                                                            mapped_predictions=random_init_inference[

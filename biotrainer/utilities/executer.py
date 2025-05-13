@@ -1,38 +1,16 @@
-from ruamel import yaml
 from pathlib import Path
 from copy import deepcopy
-from ruamel.yaml.comments import CommentedBase
 from typing import Union, Dict, Any, Optional, Callable
 
 from .cuda_device import get_device
 from .model_hash import calculate_model_hash
 from .logging import get_logger, setup_logging, clear_logging
+from ..config.training_config import training_config
 
-from ..config import Configurator
 from ..protocols import Protocol
+from ..config import Configurator
+from ..output_files import OutputManager
 from ..trainers import Trainer, HyperParameterManager
-
-
-def _write_output_file(out_filename: str, config: dict) -> None:
-    """
-    Save configuration data structure in YAML file.
-
-    Parameters
-    ----------
-    out_filename : str
-        Filename of output file
-    config : dict
-        Config data that will be written to file
-    """
-    if isinstance(config, CommentedBase):
-        dumper = yaml.RoundTripDumper
-    else:
-        dumper = yaml.Dumper
-
-    with open(out_filename, "w") as f:
-        f.write(
-            yaml.dump(config, Dumper=dumper, default_flow_style=False)
-        )
 
 
 def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
@@ -76,34 +54,31 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
     # Create hyper parameter manager
     hp_manager = HyperParameterManager(**config)
 
-    # Copy output_vars from config
-    output_vars = deepcopy(config)
-
     # Calculate model hash
     model_hash = calculate_model_hash(dataset_files=[Path(val) for key, val in config.items()
                                                      if "_file" in key and Path(str(val)).exists()],
                                       config=config,
                                       custom_trainer=True if custom_trainer_function else False
                                       )
-    output_vars["model_hash"] = model_hash
+
+    output_manager = OutputManager(config=config, model_hash=model_hash)
 
     trainer: Trainer
     if custom_trainer_function:
-        output_vars["custom_trainer"] = True
-        trainer = custom_trainer_function(hp_manager, output_vars, config)
+        output_manager.add_derived_values(derived_values={"custom_trainer": True})
+        trainer = custom_trainer_function(hp_manager, training_config, model_hash, output_manager, config)
     else:
         # Run biotrainer pipeline
         trainer = Trainer(hp_manager=hp_manager,
-                          output_vars=output_vars,
+                          training_config=config,
+                          model_hash=model_hash,
+                          output_manager=output_manager,
                           **config
                           )
-    output_result = trainer.training_and_evaluation_routine()
+    output_manager = trainer.training_and_evaluation_routine()
 
     # Save output_variables in out.yml
-    _write_output_file(
-        str(Path(output_result['output_dir']) / "out.yml"),
-        output_result
-    )
+    output_result = output_manager.write_to_file(output_dir=output_dir)
 
     clear_logging()
 
