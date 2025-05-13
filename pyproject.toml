@@ -34,7 +34,6 @@ Repository = "https://github.com/sacdallago/biotrainer"
 python = ">=3.10,<3.12"
 
 accelerate = "^1.1.1"
-biopython = ">=1.83,<2.0"
 h5py = ">=3.8.0,<4.0.0"
 pip-audit = "^2.9.0"
 protobuf = "^5.29.1"
