@@ -46,16 +46,20 @@ acid sequences. Of course, the corresponding sequence ids have to match here. Ad
 the dataset annotations, which divide the sequences into `train/validation/test` sets. As the name of the file suggests,
 splits have been generated randomly, with a distribution of about 90% train, 5% validation, 5% test.
 
+We combine the two files to our input file:
+```shell
+biotrainer convert --sequence-file sequences.fasta --labels-file sampled.fasta
+```
+
 ## Creating the configuration file
 
-Next, we need to specify a config file in `.yaml` format. *Biotrainer* supports downloading input files directly
-from within the pipeline, so we can just use the links to the files in the config.
+Next, we need to specify a config file in `.yaml` format. You need to specify the path to the combined dataset there
+(or just copy the file in the same directory as the config file).
 
-Create and save the following file in a new directory:
+Create and save the following file in the new directory:
 ```yaml
 # config.yaml
-sequence_file: http://data.bioembeddings.com/public/FLIP/fasta/conservation/sequences.fasta
-labels_file: http://data.bioembeddings.com/public/FLIP/fasta/conservation/sampled.fasta
+input_file: path/to/converted.fasta
 protocol: residue_to_class
 model_choice: CNN
 device: cpu

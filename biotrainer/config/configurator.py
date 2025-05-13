@@ -7,6 +7,7 @@ from ruamel.yaml import YAMLError
 from typing import Union, List, Dict, Any, Tuple
 
 from .config_option import ConfigOption, ConfigKey
+from .deprecated_config import deprecated_config_keys
 from .general_config import general_config
 from .input_config import input_config
 from .model_config import model_config
@@ -19,8 +20,7 @@ from .config_validation import validate_config_rules, validate_config_options
 from .config_utils import download_file_from_config, is_url, make_path_absolute_if_necessary
 
 from ..protocols import Protocol
-
-from ..utilities import process_hf_dataset_to_fasta
+from ..input_files import process_hf_dataset_to_fasta
 
 
 class Configurator:
@@ -201,10 +201,18 @@ class Configurator:
         if ConfigKey.CROSS_VALIDATION.value not in self._config_dict:
             self._config_dict.update(get_default_cross_validation_config())
 
+        # Check config is deprecated
+        deprecated_keys_with_replacement = deprecated_config_keys(config_dict=self._config_dict)
+        if len(deprecated_keys_with_replacement) > 0:
+            deprecation_information = "\n".join([f'Deprecated Key: {key} - Replacement: {replacement}'
+                                                 for key, replacement
+                                                 in deprecated_keys_with_replacement.items()])
+            raise ConfigurationException(f"Config contains deprecated keys:\n{deprecation_information}")
+
         if not validate_config_rules(protocol=self.protocol,
                                      ignore_file_checks=ignore_file_checks,
                                      config_dict=self._config_dict):
-            return {}
+            raise ConfigurationException(f"Provided config is not valid!")
 
         verified_config = {}
         main_config, sub_configs = self._get_relevant_config_options(protocol=self.protocol,
@@ -252,15 +260,11 @@ class Configurator:
             try:
                 hf_dataset_dir = output_dir / "hf_db"
                 hf_dataset_dir.mkdir(exist_ok=True)
-                sequence_file_path, labels_file_path, mask_file_path = process_hf_dataset_to_fasta(
-                    protocol=self.protocol, hf_storage_path=hf_dataset_dir,
+                input_file_path = process_hf_dataset_to_fasta(
+                    hf_storage_path=hf_dataset_dir,
                     hf_map=verified_config["hf_dataset"])
-                if sequence_file_path:
-                    verified_config["sequence_file"] = str(sequence_file_path)
-                if labels_file_path:
-                    verified_config["labels_file"] = str(labels_file_path)
-                if mask_file_path:
-                    verified_config["mask_file"] = str(mask_file_path)
+                if input_file_path:
+                    verified_config["input_file"] = str(input_file_path)
             except Exception as e:
                 raise ConfigurationException(f"Error while creating huggingface dataset files: {e}")
 

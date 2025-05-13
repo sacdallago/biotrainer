@@ -1,0 +1,70 @@
+from typing import List, Dict, Tuple
+
+from .biotrainer_seq_record import BiotrainerSequenceRecord
+
+from ..utilities.constants import INTERACTION_INDICATOR
+
+
+def merge_protein_interactions(sequences: Dict[str, BiotrainerSequenceRecord]) -> Dict[str, Dict[str, str]]:
+    """
+    :param sequences: a list of BiotrainerSequenceRecord
+    :return: A dictionary of ids and their attributes
+    """
+    result = {}
+
+    for seq_id, sequence in sequences.items():
+        interactor = sequence.get_ppi()
+        if not interactor:
+            raise ValueError(f"Sequence {seq_id} does not have a valid interactor!")
+
+        interaction_id = f"{seq_id}{INTERACTION_INDICATOR}{interactor}"
+        interaction_id_flipped = f"{interactor}{INTERACTION_INDICATOR}{seq_id}"
+
+        # Check that target annotations and sets are consistent:
+        for int_id in [interaction_id, interaction_id_flipped]:
+            if int_id in result.keys():
+                if sequence.get_target() != result[int_id]["TARGET"]:
+                    raise ValueError(f"Interaction multiple times present in fasta file, but TARGET=values are "
+                                     f"different for {int_id}!")
+                if sequence.get_set() != result[int_id]["SET"]:
+                    raise ValueError(f"Interaction multiple times present in fasta file, but SET=sets are "
+                                     f"different for {int_id}!")
+
+        if interaction_id_flipped not in result.keys():
+            result[interaction_id] = sequence.attributes
+
+    return result
+
+
+def get_split_lists(id2sets: dict) -> Tuple[List[str], List[str], Dict[str, List[str]], List[str]]:
+    """ Parse splits from input_file and check that all set annotations are given and correct """
+    training_ids = []
+    validation_ids = []
+    testing_ids = {}
+    prediction_ids = []
+
+    incorrect_sets_exception = lambda idx, split: ValueError(f"FASTA header must contain SET. "
+                                                             f"SET must be either 'train', "
+                                                             f"'val', 'test'/'test{{nr}}' or 'pred'. "
+                                                             f"Id: {idx}; SET={split}")
+
+    for idx, split in id2sets.items():
+        split = split.lower() if split else ""
+        if split == "" or (split.lower() not in ["train", "val", "pred"] and "test" not in split.lower()):
+            raise incorrect_sets_exception(idx, split)
+        match split:
+            case "train":
+                training_ids.append(idx)
+            case "val":
+                validation_ids.append(idx)
+            case "pred":
+                prediction_ids.append(idx)
+            case _:
+                if "test" in split:
+                    if split not in testing_ids:
+                        testing_ids[split] = []
+                    testing_ids[split].append(idx)
+                else:
+                    raise incorrect_sets_exception(idx, split)
+
+    return training_ids, validation_ids, testing_ids, prediction_ids

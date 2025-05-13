@@ -32,13 +32,12 @@ class Trainer:
 
     def __init__(self,
                  # Needed
-                 sequence_file: str,
+                 input_file: str,
                  protocol: Protocol,
                  output_dir: str,
                  hp_manager: HyperParameterManager,
                  output_vars: Dict[str, Any],
                  # Optional with defaults
-                 labels_file: Optional[str] = None, mask_file: Optional[str] = None,
                  embedder_name: str = "custom_embeddings",
                  custom_tokenizer_config: Optional[str] = None,
                  use_half_precision: bool = False,
@@ -62,11 +61,9 @@ class Trainer:
                  ):
         self._output_vars = output_vars
 
-        self._sequence_file = sequence_file
+        self._input_file = input_file
         self._protocol = protocol
         self._output_dir = Path(output_dir)
-        self._labels_file = labels_file
-        self._mask_file = mask_file
         self._embedder_name = embedder_name
         self._custom_tokenizer_config = custom_tokenizer_config
         self._use_half_precision = use_half_precision
@@ -96,8 +93,7 @@ class Trainer:
         id2emb = self._create_and_load_embeddings()
 
         # TARGETS => DATASETS
-        target_manager = TargetManager(protocol=self._protocol, sequence_file=self._sequence_file,
-                                       labels_file=self._labels_file, mask_file=self._mask_file,
+        target_manager = TargetManager(protocol=self._protocol, input_file=self._input_file,
                                        ignore_file_inconsistencies=self._ignore_file_inconsistencies,
                                        cross_validation_method=self._cross_validation_config["method"],
                                        interaction=self._interaction)
@@ -214,7 +210,7 @@ class Trainer:
                                                                     device=self._device)
         if not embeddings_file or not Path(embeddings_file).is_file():
             embeddings_file = embedding_service.compute_embeddings(
-                input_data=self._sequence_file,
+                input_data=self._input_file,
                 protocol=self._protocol, output_dir=self._output_dir
             )
             # Add to out config
