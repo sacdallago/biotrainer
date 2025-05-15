@@ -1,63 +1,37 @@
 import torch
-import functools
 
-from enum import Enum
 from ruamel import yaml
 from pathlib import Path
-from typing import Dict, Callable, Any
+from typing import Dict, Any, List
 
+from .biotrainer_output_observer import BiotrainerOutputObserver, OutputData
+
+from ..utilities import EpochMetrics
 from ..protocols import Protocol
 from ..utilities import get_logger
 
 logger = get_logger(__name__)
 
 
-class OutputManagerEvent(Enum):
-    GENERIC = 0
-    TRAINING_ITERATION = 1
-
-
-def notify_callbacks(event_type: OutputManagerEvent = OutputManagerEvent.GENERIC):
-    """
-    Decorator that notifies all registered callbacks after a method executes.
-
-    Args:
-        event_type: Optional custom event type. If None, uses the method name.
-    """
-
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(self, *args, **kwargs):
-            # Execute the original method
-            result = func(self, *args, **kwargs)
-
-            # Notify callbacks
-            for callback in self._callbacks:
-                try:
-                    callback(event_type, self._data)
-                except Exception as e:
-                    logger.error(f"Error in callback during {event_type}: {str(e)}")
-
-            # Return the original result
-            return result
-
-        return wrapper
-
-    return decorator
-
-
 class OutputManager:
     """Manages training outputs, results, and logging in a structured way."""
 
-    def __init__(self, config: Dict[str, Any], model_hash: str):
-        self._input_config = {str(k): self._convert_config_value(v) for k, v in config.items()}
-        self._derived_values = {"model_hash": model_hash}
+    def __init__(self, observers: List[BiotrainerOutputObserver]):
+        self._observers: List[BiotrainerOutputObserver] = observers
+
+        self._input_config = {}
+        self._derived_values = {}
         self._split_specific_values = {}
-        self._training_results = {}
+        self._training_results: Dict[str, List[EpochMetrics]] = {}  # split_name -> Epoch Metrics
         self._test_results = {}
         self._predictions: Dict[str, Any] = {}  # seq_id -> prediction
 
-        self._callbacks = []
+    def _notify_observers(self, data: OutputData) -> None:
+        for observer in self._observers:
+            try:
+                observer.update(data)
+            except Exception as e:
+                logger.error(f"Error in observer during output event: {str(e)}")
 
     @staticmethod
     def _convert_config_value(value: Any) -> Any:
@@ -67,40 +41,42 @@ class OutputManager:
             return value.name
         return value
 
-    def add_callback(self, callback: Callable) -> None:
-        self._callbacks.append(callback)
+    def add_config(self, config: Dict[str, Any]) -> None:
+        self._input_config = {str(k): self._convert_config_value(v) for k, v in config.items()}
 
-    @notify_callbacks(event_type=OutputManagerEvent.GENERIC)
+        self._notify_observers(data=OutputData(config=self._input_config))
+
     def add_derived_values(self, derived_values: Dict[str, Any]):
         self._derived_values.update(derived_values)
 
-    @notify_callbacks(event_type=OutputManagerEvent.GENERIC)
-    def add_split_specific_values(self, split_specific_values: Dict[str, Any],
-                                  split_name: str,
-                                  ):
+        self._notify_observers(data=OutputData(derived_values=self._derived_values))
+
+    def add_split_specific_values(self, split_name: str, split_specific_values: Dict[str, Any]):
         if split_name not in self._split_specific_values:
             self._split_specific_values[split_name] = {}
         self._split_specific_values[split_name].update(split_specific_values)
 
-    @notify_callbacks(event_type=OutputManagerEvent.TRAINING_ITERATION)
-    def add_training_iteration(self, epoch_metrics: Dict[str, Any],
-                               split_name: str,
-                               ):
+        self._notify_observers(data=OutputData(split_specific_values=self._split_specific_values))
+
+    def add_training_iteration(self, split_name: str, epoch_metrics: EpochMetrics):
         if split_name not in self._training_results:
             self._training_results[split_name] = []
-
         self._training_results[split_name].append(epoch_metrics)
 
-    @notify_callbacks(event_type=OutputManagerEvent.TRAINING_ITERATION)
+        self._notify_observers(data=OutputData(training_iteration=(split_name, epoch_metrics)))
+
     def add_test_set_result(self, test_set_id: str, test_set_results: Dict[str, Any]):
         if test_set_id not in self._test_results:
             self._test_results[test_set_id] = {}
         self._test_results[test_set_id].update(test_set_results)
 
-    @notify_callbacks(event_type=OutputManagerEvent.TRAINING_ITERATION)
+        self._notify_observers(data=OutputData(test_results=self._test_results))
+
     def add_prediction_result(self, prediction_results: Dict[str, Any]):
         assert len(self._predictions) == 0, f"Tried to add predictions more than one time!"
         self._predictions.update(prediction_results)
+
+        self._notify_observers(data=OutputData(predictions=self._predictions))
 
     @staticmethod
     def _sort_dict(d: dict):

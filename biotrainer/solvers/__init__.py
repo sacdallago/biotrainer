@@ -14,7 +14,6 @@ from .metrics_calculator import MetricsCalculator, SequenceClassificationMetrics
 
 from ..protocols import Protocol
 
-
 __SOLVERS = {
     Protocol.residue_to_class: ResidueClassificationSolver,
     Protocol.residues_to_class: ResiduesClassificationSolver,
@@ -35,7 +34,7 @@ __METRICS_CALCULATORS = {
 def get_solver(protocol: Protocol, name: str,
                network: Optional = None, optimizer: Optional = None, loss_function: Optional = None,
                device: Optional = None, number_of_epochs: Optional = None,
-               patience: Optional = None, epsilon: Optional = None, log_writer: Optional = None,
+               patience: Optional = None, epsilon: Optional = None, output_manager: Optional = None,
                log_dir: Optional = None, num_classes: Optional[int] = 0,
                **kwargs
                ) -> Solver:
@@ -46,10 +45,10 @@ def get_solver(protocol: Protocol, name: str,
         raise NotImplementedError
     else:
         return solver(
-            name=name, protocol=protocol,
+            split_name=name, protocol=protocol,
             network=network, optimizer=optimizer, loss_function=loss_function, metrics_calculator=metrics_calc,
             device=device, number_of_epochs=number_of_epochs,
-            patience=patience, epsilon=epsilon, log_writer=log_writer,
+            patience=patience, epsilon=epsilon, output_manager=output_manager,
             log_dir=log_dir, num_classes=num_classes
         )
 

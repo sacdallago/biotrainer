@@ -15,7 +15,8 @@ from typing import Callable, Optional, Union, Dict, List, Any
 from .metrics_calculator import MetricsCalculator
 from .solver_utils import get_mean_and_confidence_range
 
-from ..utilities import get_logger
+from ..output_files import OutputManager
+from ..utilities import get_logger, EpochMetrics
 
 logger = get_logger(__name__)
 
@@ -24,23 +25,25 @@ class Solver(ABC):
 
     def __init__(self,
                  # Necessary
-                 name, protocol, network, optimizer, loss_function, metrics_calculator: MetricsCalculator,
+                 split_name, protocol, network, optimizer, loss_function, metrics_calculator: MetricsCalculator,
                  # Optional with defaults
-                 log_writer: Optional = None, log_dir: str = "",
+                 output_manager: Optional[OutputManager] = None,
+                 log_dir: str = "",
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
                  device: Union[None, str, torch.device] = None,
                  # Used by classification subclasses
                  num_classes: Optional[int] = 0):
 
+        self.split_name = split_name
         self.checkpoint_type = "safetensors"
-        self.checkpoint_name = f"{name}_checkpoint.{self.checkpoint_type}"
+        self.checkpoint_name = f"{self.split_name}_checkpoint.{self.checkpoint_type}"
         self.protocol = protocol
         self.network = network
         self.optimizer = optimizer
         self.loss_function = loss_function
         self.metrics_calculator = metrics_calculator
 
-        self.log_writer = log_writer
+        self.output_manager = output_manager
         self.start_epoch = 0
         self.number_of_epochs = number_of_epochs
         self.patience = patience
@@ -60,11 +63,11 @@ class Solver(ABC):
     def __del__(self):
         self._tempdir.cleanup()
 
-    def train(self, training_dataloader: DataLoader, validation_dataloader: DataLoader) -> List[Dict[str, Any]]:
+    def train(self, training_dataloader: DataLoader, validation_dataloader: DataLoader) -> List[EpochMetrics]:
         # Get things ready
         self.network = self.network.train()
         self._min_loss = math.inf
-        epoch_iterations = list()
+        epoch_iterations: List[EpochMetrics] = []
 
         # Make an initial save of the model if trained from scratch
         if self.start_epoch == 0:
@@ -93,32 +96,27 @@ class Solver(ABC):
                 train_iterations.append(iteration_result)
             train_epoch_metrics = self.metrics_calculator.compute_metrics()
 
-            epoch_metrics = {
-                'training': {**Solver._aggregate_iteration_losses(train_iterations), **train_epoch_metrics},
-                'validation': {**Solver._aggregate_iteration_losses(validation_iterations), **validation_epoch_metrics},
-                'epoch': epoch
-            }
+            epoch_metrics = EpochMetrics(epoch=epoch,
+                                         training={**Solver._aggregate_iteration_losses(train_iterations),
+                                                   **train_epoch_metrics},
+                                         validation={**Solver._aggregate_iteration_losses(validation_iterations),
+                                                     **validation_epoch_metrics},)
 
             epoch_iterations.append(epoch_metrics)
 
             # Logging
             logger.info(f"Epoch {epoch}")
             logger.info(f"Training results")
-            for key in epoch_metrics['training']:
-                logger.info(f"\t{key}: {epoch_metrics['training'][key]:.2f}")
+            for key in epoch_metrics.training:
+                logger.info(f"\t{key}: {epoch_metrics.training[key]:.2f}")
             logger.info(f"Validation results")
-            for key in epoch_metrics['validation']:
-                logger.info(f"\t{key}: {epoch_metrics['validation'][key]:.2f}")
+            for key in epoch_metrics.validation:
+                logger.info(f"\t{key}: {epoch_metrics.validation[key]:.2f}")
 
-            if self.log_writer:
-                self.log_writer.add_scalars("Epoch/train", epoch_metrics['training'], epoch)
-                self.log_writer.add_scalars("Epoch/validation", epoch_metrics['validation'], epoch)
-                self.log_writer.add_scalars("Epoch/comparison", {
-                    'training_loss': epoch_metrics['training']['loss'],
-                    'validation_loss': epoch_metrics['validation']['loss'],
-                }, epoch)
+            if self.output_manager:
+                self.output_manager.add_training_iteration(split_name=self.split_name, epoch_metrics=epoch_metrics)
 
-            if self._early_stop(current_loss=epoch_metrics['validation']['loss'], epoch=epoch):
+            if self._early_stop(current_loss=epoch_metrics.validation['loss'], epoch=epoch):
                 logger.info(f"Early stopping triggered! (Best epoch: {self._best_epoch})")
                 return epoch_iterations
 
@@ -461,8 +459,8 @@ class Solver(ABC):
                 loss.backward()  # backpropagation, compute gradients
                 self.optimizer.step()  # apply gradients
 
-                if self.log_writer:
-                    self.log_writer.add_scalars("Step/train", metrics, step)
+                # if self.log_writer: TODO is that really necessary?
+                #     self.log_writer.add_scalars("Step/train", metrics, step)
 
             return {
                 'loss': loss.item(),
