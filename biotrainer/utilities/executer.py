@@ -1,6 +1,5 @@
 from pathlib import Path
-from copy import deepcopy
-from typing import Union, Dict, Any, Optional, Callable
+from typing import Union, Dict, Any, Optional, Callable, List
 
 from .cuda_device import get_device
 from .model_hash import calculate_model_hash
@@ -9,12 +8,14 @@ from ..config.training_config import training_config
 
 from ..protocols import Protocol
 from ..config import Configurator
-from ..output_files import OutputManager
 from ..trainers import Trainer, HyperParameterManager
+from ..output_files import OutputManager, output_observer_factory, BiotrainerOutputObserver
 
 
 def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
-                                      custom_trainer_function: Optional[Callable] = None) -> Dict[str, Any]:
+                                      custom_trainer_function: Optional[Callable] = None,
+                                      custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None) \
+        -> Dict[str, Any]:
     # Verify config via configurator
     configurator = None
     if isinstance(config, str):
@@ -51,7 +52,7 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
     device = get_device(config["device"] if "device" in config.keys() else None)
     config["device"] = device
 
-    # Create hyper parameter manager
+    # Create hyperparameter manager
     hp_manager = HyperParameterManager(**config)
 
     # Calculate model hash
@@ -61,7 +62,13 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
                                       custom_trainer=True if custom_trainer_function else False
                                       )
 
-    output_manager = OutputManager(config=config, model_hash=model_hash)
+    output_observers = output_observer_factory(output_dir=output_dir, config=config)
+    if custom_output_observers and len(custom_output_observers) > 0:
+        output_observers.extend(custom_output_observers)
+
+    output_manager = OutputManager(observers=output_observers)
+    output_manager.add_config(config=config)
+    output_manager.add_derived_values({"model_hash": model_hash})
 
     trainer: Trainer
     if custom_trainer_function:

@@ -5,7 +5,6 @@ import datetime
 
 from pathlib import Path
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from typing import Optional, Dict, Any, Union, List
 
 from .target_manager import TargetManager
@@ -15,14 +14,14 @@ from .cv_splitter import CrossValidationSplitter
 from ..losses import get_loss
 from ..protocols import Protocol
 from ..optimizers import get_optimizer
-from ..output_files import output_manager, OutputManager
+from ..output_files import OutputManager
 from ..validations import SanityChecker, Bootstrapper
 from ..solvers import get_solver, Solver, get_metrics_calculator
 from ..models import count_parameters, get_model
 from ..datasets import get_collate_function, get_dataset
 from ..embedders import EmbeddingService, get_embedding_service
 from ..utilities import seed_all, Split, SplitResult, DatasetSample, METRICS_WITHOUT_REVERSED_SORTING, __version__, \
-    revert_mappings, get_logger
+    revert_mappings, get_logger, EpochMetrics
 
 logger = get_logger(__name__)
 
@@ -292,30 +291,13 @@ class Trainer:
             collate_fn=get_collate_function(self._protocol)
         )
 
-    def _create_writer(self, hyper_params: Dict) -> torch.utils.tensorboard.writer.SummaryWriter:
-        if self._external_writer == "tensorboard":
-            # Tensorboard writer
-            writer = SummaryWriter(log_dir=str(self._output_dir / "runs"))
-
-            writer.add_hparams({
-                'model': hyper_params["model_choice"],
-                'num_epochs': hyper_params["num_epochs"],
-                'use_class_weights': hyper_params["use_class_weights"],
-                'learning_rate': hyper_params["learning_rate"],
-                'batch_size': hyper_params["batch_size"],
-                'embedder_name': self._embedder_name,
-                'seed': self._seed,
-                'loss': hyper_params["loss_choice"],
-                'optimizer': hyper_params["optimizer_choice"],
-            }, {})
-
-            return writer
-        return None
-
-    def _create_solver(self, split_name, model, loss_function, optimizer, writer, hyper_params: Dict) -> Solver:
+    def _create_solver(self, split_name, model, loss_function, optimizer, hyper_params: Dict) -> Solver:
         return get_solver(protocol=self._protocol, name=split_name, network=model, optimizer=optimizer,
-                          loss_function=loss_function, device=self._device, number_of_epochs=hyper_params["num_epochs"],
-                          patience=hyper_params["patience"], epsilon=hyper_params["epsilon"], log_writer=writer,
+                          loss_function=loss_function,
+                          output_manager=self._output_manager,
+                          device=self._device,
+                          number_of_epochs=hyper_params["num_epochs"],
+                          patience=hyper_params["patience"], epsilon=hyper_params["epsilon"],
                           log_dir=hyper_params["log_dir"], num_classes=self._n_classes)
 
     def _run_cross_validation(self, splits: List[Split]) -> List[SplitResult]:
@@ -412,12 +394,10 @@ class Trainer:
                                                        split_specific_values={
                                                            'n_free_parameters': n_free_parameters,
                                                        })
-        # WRITER
-        writer = self._create_writer(hyper_params=hyper_params)
 
         # SOLVER
         solver = self._create_solver(split_name=current_split_name,
-                                     model=model, loss_function=loss_function, optimizer=optimizer, writer=writer,
+                                     model=model, loss_function=loss_function, optimizer=optimizer,
                                      hyper_params=hyper_params)
         # TRAINING/VALIDATION
         if self._auto_resume:
@@ -438,7 +418,7 @@ class Trainer:
                                                            val_loader=val_loader)
 
         # Save metrics from best training epoch
-        self._output_manager.add_derived_values({'best_training_epoch_metrics': best_epoch_metrics})
+        self._output_manager.add_derived_values({'best_training_epoch_metrics': best_epoch_metrics.to_dict()})
 
         return best_epoch_metrics, solver
 
@@ -456,7 +436,7 @@ class Trainer:
 
         return model, loss_function, optimizer
 
-    def _do_and_log_training(self, split_name: str, solver, train_loader, val_loader):
+    def _do_and_log_training(self, split_name: str, solver, train_loader, val_loader) -> EpochMetrics:
         start_time_abs = datetime.datetime.now()
         start_time = time.perf_counter()
         epoch_iterations = solver.train(train_loader, val_loader)
@@ -486,7 +466,7 @@ class Trainer:
         choose_by_metric = self._cross_validation_config["choose_by"]
         split_results_sorted = self._sort_according_to_chosen_metric(split_results,
                                                                      lambda split_result:
-                                                                     split_result.best_epoch_metrics["validation"][
+                                                                     split_result.best_epoch_metrics.validation[
                                                                          choose_by_metric])
         best_split_result = split_results_sorted[0]
         if len(split_results) > 1:  # Not for hold_out cross validation
@@ -497,7 +477,7 @@ class Trainer:
 
     def _get_average_of_chosen_metric_for_splits(self, split_results: List[SplitResult]) -> float:
         choose_by_metric = self._cross_validation_config["choose_by"]
-        sum_metric = sum([split_result.best_epoch_metrics["validation"][choose_by_metric]
+        sum_metric = sum([split_result.best_epoch_metrics.validation[choose_by_metric]
                           for split_result in split_results])
         return sum_metric / len(split_results)
 
@@ -505,10 +485,10 @@ class Trainer:
         n = len(split_results)
         if n > 1:  # Not for hold_out cross validation
             average_dict = {}
-            result_metric_keys = split_results[0].best_epoch_metrics["validation"].keys()
+            result_metric_keys = split_results[0].best_epoch_metrics.validation.keys()
             for key in result_metric_keys:
                 average_dict[key] = sum(
-                    [split_result.best_epoch_metrics["validation"][key] for split_result in split_results]) / n
+                    [split_result.best_epoch_metrics.validation[key] for split_result in split_results]) / n
             logger.info(f"Average split results: {average_dict}")
             self._output_manager.add_derived_values({'average_outer_split_results': average_dict})
 

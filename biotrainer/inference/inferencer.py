@@ -122,12 +122,12 @@ class Inferencer:
         log_dir = kwargs["log_dir"]
         split_checkpoints = {file.split("_checkpoint.")[0]: file for file in os.listdir(log_dir) if
                              (Path(log_dir) / Path(file)).is_file()}
-        for split in splits:
+        for split_name in splits:
             # Ignore average or best result
-            if "average" in split or "best" in split:
+            if "average" in split_name or "best" in split_name:
                 continue
             split_config = deepcopy(kwargs)
-            for key, value in kwargs["split_results"][split]["split_hyper_params"].items():
+            for key, value in kwargs["split_results"][split_name]["split_hyper_params"].items():
                 split_config[key] = value
 
             # Positional arguments
@@ -137,7 +137,7 @@ class Inferencer:
             optimizer_choice = split_config.pop("optimizer_choice")
             learning_rate = split_config.pop("learning_rate")
             log_dir = split_config.pop("log_dir")
-            checkpoint_path = Path(log_dir) / Path(split_checkpoints[split])
+            checkpoint_path = Path(log_dir) / Path(split_checkpoints[split_name])
 
             model = get_model(protocol=self.protocol, model_choice=model_choice,
                               n_classes=n_classes, n_features=self.embedding_dimension,
@@ -153,7 +153,7 @@ class Inferencer:
                                       **split_config
                                       )
 
-            solver = get_solver(protocol=self.protocol, name=split, network=model, optimizer=optimizer,
+            solver = get_solver(protocol=self.protocol, name=split_name, network=model, optimizer=optimizer,
                                 loss_function=loss_function, device=self.device, log_dir=log_dir,
                                 num_classes=n_classes)
             solver.load_checkpoint(checkpoint_path=checkpoint_path, resume_training=False,
@@ -164,7 +164,7 @@ class Inferencer:
                                   shuffle=False, drop_last=False,
                                   collate_fn=self.collate_function)
 
-            result_dict[split] = (solver, dataloader_function)
+            result_dict[split_name] = (solver, dataloader_function)
         return result_dict
 
     def _convert_class_str2int(self, to_convert: str):
