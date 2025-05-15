@@ -62,7 +62,7 @@ def test_protocol_config(protocol: str, model: str, embedder_name: str, should_f
                               tmp_config_dir=tmp_dir_name)
         try:
             result = train(config=config)
-            assert "test_iterations_results" in result, "Result does not contain test set metrics!"
+            assert "test_results" in result, "Result does not contain test set metrics!"
             assert os.path.exists(f"{tmp_dir_name}/out.yml"), "No output file generated, run failed!"
         except ConfigurationException:
             assert should_fail, "A ConfigurationException was thrown although it shouldn't have."
