@@ -256,8 +256,7 @@ class Solver(ABC):
                     f"Training new model from scratch!")
         return train_wrapper(self)
 
-    def load_checkpoint(self, checkpoint_path: Path = None, resume_training: bool = False,
-                        allow_torch_pt_loading: bool = True):
+    def load_checkpoint(self, checkpoint_path: Path = None, resume_training: bool = False):
         if checkpoint_path:
             checkpoint_file = checkpoint_path
             self.checkpoint_type = checkpoint_path.suffix
@@ -274,11 +273,8 @@ class Solver(ABC):
                 'epoch': state_dict.pop('epoch').item()
             }
         else:
-            # Load PyTorch checkpoint
-            if not allow_torch_pt_loading:
-                raise Exception("Cannot load pt checkpoint because torch_pt_loading is not allowed!")
-            state = torch.load(str(checkpoint_file), map_location=torch.device(self.device), weights_only=True)
-
+            # Load PyTorch checkpoint is deprecated since v1.0.0
+            raise Exception("Cannot load pt checkpoint because torch_pt_loading is not allowed since v1.0.0!")
         try:
             self.network.load_state_dict(state['state_dict'])
             if resume_training:

@@ -264,8 +264,8 @@ class Trainer:
         class_weights = None
         if self._protocol in Protocol.classification_protocols():
             self._output_manager.add_derived_values(
-                {'class_int_to_string': target_manager.class_int2str,
-                 'class_str_to_int': target_manager.class_str2int}
+                {'class_int2str': target_manager.class_int2str,
+                 'class_str2int': target_manager.class_str2int}
             )
             # Compute class weights to pass as bias to model if option is set
             class_weights = target_manager.compute_class_weights()
