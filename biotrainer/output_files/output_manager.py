@@ -1,14 +1,15 @@
+import os
 import torch
 
 from ruamel import yaml
 from pathlib import Path
+from copy import deepcopy
 from typing import Dict, Any, List
 
 from .biotrainer_output_observer import BiotrainerOutputObserver, OutputData
 
-from ..utilities import EpochMetrics
 from ..protocols import Protocol
-from ..utilities import get_logger
+from ..utilities import EpochMetrics, get_device, get_logger, __version__
 
 logger = get_logger(__name__)
 
@@ -82,13 +83,16 @@ class OutputManager:
     def _sort_dict(d: dict):
         return dict(sorted(d.items(), key=lambda t: t[0]))
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {"config": self._sort_dict(self._input_config),
+                "derived_values": self._sort_dict(self._derived_values),
+                "splits": self._sort_dict(self._split_specific_values),
+                "test_results": self._sort_dict(self._test_results),
+                "predictions": self._sort_dict(self._predictions),
+                }
+
     def write_to_file(self, output_dir: Path) -> Dict[str, Any]:
-        output_result = {"config": self._sort_dict(self._input_config),
-                         "derived_values": self._sort_dict(self._derived_values),
-                         "splits": self._sort_dict(self._split_specific_values),
-                         "test_results": self._sort_dict(self._test_results),
-                         "predictions": self._sort_dict(self._predictions),
-                         }
+        output_result = self.to_dict()
         dumper = yaml.RoundTripDumper
         with open(output_dir / "out.yml", "w") as f:
             f.write(
@@ -96,3 +100,95 @@ class OutputManager:
             )
 
         return output_result
+
+
+class InferenceOutputManager(OutputManager):
+    def __init__(self, output_file_path: Path, automatic_path_correction: bool = True):
+        super().__init__(observers=[])
+        print(f"Reading {output_file_path}..")
+        with open(output_file_path, "r") as output_file:
+            training_output = yaml.load(output_file, Loader=yaml.RoundTripLoader)
+            self._input_config = training_output["config"]
+            self._derived_values = training_output["derived_values"]
+            self._split_specific_values = training_output["splits"]
+            self._test_results = training_output["test_results"]
+            self._predictions = training_output["predictions"]
+
+        if automatic_path_correction:
+            self._do_automatic_path_correction(output_file_path)
+
+        if self._derived_values["biotrainer_version"] != __version__:
+            print("WARNING: The loaded model was trained on a different biotrainer version than currently running.\n"
+                  "This may lead to unexpected behaviour if another torch version was used for training.")
+
+    def _do_automatic_path_correction(self, output_file_path: Path):
+        log_dir = self._input_config["log_dir"]
+        log_dir_path = Path(log_dir)
+        if not log_dir_path.exists():
+            # Expect checkpoints to be in output/model_choice/embedder_name
+            checkpoints_path = self._input_config["model_choice"] + "/" + self._input_config["embedder_name"]
+            new_log_dir_path = Path("/".join(
+                [directory for directory in str(output_file_path).split("/")[0:-1]])) / Path(checkpoints_path)
+
+            if not new_log_dir_path.exists():
+                print(f"Could not automatically correct the checkpoint file paths! "
+                      f"Tried: {str(new_log_dir_path)} but it does not exist.")
+            elif len(os.listdir(str(new_log_dir_path))) == 0:
+                print(f"Found corrected path ({str(new_log_dir_path)}), but it does not contain any files!")
+            else:
+                print(f"Reading checkpoint(s) from directory: {new_log_dir_path}..")
+                self._input_config["log_dir"] = new_log_dir_path
+
+    def protocol(self):
+        return Protocol.from_string(self._input_config["protocol"])
+
+    def embedder_name(self):
+        return self._input_config["embedder_name"]
+
+    def use_half_precision(self):
+        return self._input_config["use_half_precision"]
+
+    def log_dir(self):
+        return self._input_config["log_dir"]
+
+    def device(self):
+        return get_device(self._input_config["device"])
+
+    def disable_pytorch_compile(self):
+        return self._input_config["disable_pytorch_compile"]
+
+    def n_features(self):
+        return self._derived_values["n_features"]
+
+    def class_int2str(self):
+        return self._derived_values.get("class_int2str", None)
+
+    def class_str2int(self):
+        return self._derived_values.get("class_str2int", None)
+
+    def splits(self):
+        return self._split_specific_values
+
+    def split_config(self, split_name: str):
+        config = {**self._input_config, **self._derived_values}
+        config.update(self._split_specific_values[split_name]["split_hyper_params"])
+        return deepcopy(config)
+
+
+""" 
+TODO Is this still necessary?
+#with tempfile.TemporaryDirectory() as tmp_dir_name:
+            tmp_output_path = tmp_dir_name + "/tmp_output.yml"
+            with open(out_file_path, "r") as output_file, open(tmp_output_path, "w") as tmp_output_file:
+                ids_list = False
+                for line in output_file.readlines():
+                    if line.strip() == "training_ids:" or line.strip() == "validation_ids:":
+                        ids_list = True
+                        continue
+                    elif ids_list and ("-" in line and ":" not in line):
+                        continue
+                    else:
+                        ids_list = False
+                    if not ids_list:
+                        tmp_output_file.write(line)
+"""
