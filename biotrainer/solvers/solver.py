@@ -32,7 +32,7 @@ class Solver(ABC):
                  number_of_epochs: int = 1000, patience: int = 20, epsilon: float = 0.001,
                  device: Union[None, str, torch.device] = None,
                  # Used by classification subclasses
-                 num_classes: Optional[int] = 0):
+                 n_classes: Optional[int] = 0):
 
         self.split_name = split_name
         self.checkpoint_type = "safetensors"

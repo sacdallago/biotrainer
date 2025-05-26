@@ -35,11 +35,11 @@ def get_solver(protocol: Protocol, name: str,
                network: Optional = None, optimizer: Optional = None, loss_function: Optional = None,
                device: Optional = None, number_of_epochs: Optional = None,
                patience: Optional = None, epsilon: Optional = None, output_manager: Optional = None,
-               log_dir: Optional = None, num_classes: Optional[int] = 0,
+               log_dir: Optional = None, n_classes: Optional[int] = 0,
                **kwargs
                ) -> Solver:
     solver = __SOLVERS.get(protocol)
-    metrics_calc = get_metrics_calculator(protocol=protocol, device=device, num_classes=num_classes)
+    metrics_calc = get_metrics_calculator(protocol=protocol, device=device, n_classes=n_classes)
 
     if not solver:
         raise NotImplementedError
@@ -49,17 +49,17 @@ def get_solver(protocol: Protocol, name: str,
             network=network, optimizer=optimizer, loss_function=loss_function, metrics_calculator=metrics_calc,
             device=device, number_of_epochs=number_of_epochs,
             patience=patience, epsilon=epsilon, output_manager=output_manager,
-            log_dir=log_dir, num_classes=num_classes
+            log_dir=log_dir, n_classes=n_classes
         )
 
 
-def get_metrics_calculator(protocol: Protocol, device: Optional = None, num_classes: Optional[int] = 0):
+def get_metrics_calculator(protocol: Protocol, device: Optional = None, n_classes: Optional[int] = 0):
     metrics_calc = __METRICS_CALCULATORS.get(protocol)
 
     if not metrics_calc:
         raise NotImplementedError
     else:
-        return metrics_calc(device=device, num_classes=num_classes)
+        return metrics_calc(device=device, n_classes=n_classes)
 
 
 __all__ = [
