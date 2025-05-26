@@ -34,7 +34,9 @@ class SanityChecker:
 
         self.device = self.training_config.get("device")
         self.interaction = self.training_config.get("interaction", None)
-        self.bootstrapping_iterations = self.training_config.get("bootstrapping_iterations", 30)
+        self.bootstrapping_iterations = self.training_config.get("bootstrapping_iterations", 0)
+        if self.bootstrapping_iterations <= 0:
+            self.bootstrapping_iterations = 30  # Always use bootstrapping for sanity checks with default 30 iterations
         self.metrics_calculator = metrics_calculator
 
         self.train_val_dataset = train_val_dataset

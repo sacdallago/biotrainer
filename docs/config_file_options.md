@@ -62,11 +62,12 @@ output_dir: path/to/output_dir  # Default: path/to/config/output
 After evaluating the test set, *biotrainer* automatically does a bootstrapping evaluation (default iterations: 30)
 on the test set. This provides a mean and error confidence interval (`confidence_level = 0.05`) for each test set
 metric. The samples are drawn from the full test set with replacement.
-You can define a different number of iterations in the config file, or disable it by setting the parameter to 0:
+You can define a different number of iterations in the config file, or disable it by setting the parameter to `0`:
 
 ```yaml
 bootstrapping_iterations: 55  # Default: 30, Disable: 0
 ```
+*Note that even for `0` iterations, sanity checks will still use bootstrapping with a default of 30 iterations.*
 
 *Biotrainer* automatically performs sanity checks on your test results. The checks are handled by the
 `validations` module. For example, a warning will be logged if the model predicts only one unique value for every

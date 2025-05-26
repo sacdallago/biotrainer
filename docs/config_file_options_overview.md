@@ -12,7 +12,7 @@ device: cpu | cuda | cuda:0 | cuda:1  # Default: Uses cuda if available, otherwi
 save_split_ids: True | False  # Default: False
 ignore_file_inconsistencies: True | False  # Default: False
 output_dir: path/to/output/directory  # Default: output
-bootstrapping_iterations: 55  # Default: 30, Disable: 0
+bootstrapping_iterations: 55  # Default: 30, Disable: 0, note that sanity checks will always use bootstrapping
 sanity_check: True | False  # Default: True
 external_writer: tensorboard | none  # Default: tensorboard, none deactivates it
 
