@@ -2,15 +2,9 @@ import torch
 import random
 import numpy as np
 
-from .logging import get_logger
-
-logger = get_logger(__name__)
-
 
 # https://discuss.pytorch.org/t/reproducibility-with-all-the-bells-and-whistles/81097
 def seed_all(seed=42):
-    logger.info(f"Using Seed: {seed}")
-
     random.seed(seed)
 
     np.random.seed(seed)  # Also seeds sklearn

@@ -92,10 +92,15 @@ class Trainer:
 
     def training_and_evaluation_routine(self) -> OutputManager:
         # SETUP
-        self._setup()
+        pipeline_start_time = self._setup()
 
         # EMBEDDINGS
+        start_time_embedding = time.perf_counter()
         id2emb = self._create_and_load_embeddings()
+        end_time_embedding = time.perf_counter()
+        embedding_elapsed_time = end_time_embedding - start_time_embedding
+        self._output_manager.add_derived_values({'embedding_elapsed_time': embedding_elapsed_time})
+        logger.info(f"Total elapsed time for embedding computation and/or loading: {embedding_elapsed_time} [s]")
 
         # TARGETS => DATASETS
         target_manager = TargetManager(protocol=self._protocol, input_file=self._input_file,
@@ -137,8 +142,10 @@ class Trainer:
         else:
             split_results = self._run_cross_validation(splits)
         end_time_training = time.perf_counter()
+        training_elapsed_time = end_time_training - start_time_training
 
-        self._output_manager.add_derived_values({'elapsed_time_training': end_time_training - start_time_training})
+        self._output_manager.add_derived_values({'training_elapsed_time': training_elapsed_time})
+        logger.info(f"Total elapsed time for training: {training_elapsed_time} [s]")
         self._log_average_result_of_splits(split_results)
         best_split = self._get_best_model_of_splits(split_results)
 
@@ -198,18 +205,36 @@ class Trainer:
         except Exception as e:
             logger.error("Could not save model as ONNX!")
 
+        # LOG TIME
+        pipeline_end_time = time.perf_counter()
+        pipeline_end_time_abs = datetime.datetime.now()
+        pipeline_elapsed_time = pipeline_end_time - pipeline_start_time
+        logger.info(f"Pipeline end time: {pipeline_end_time_abs}")
+        logger.info(f"Total elapsed time for pipeline: {pipeline_elapsed_time} [s]")
+        self._output_manager.add_derived_values({'pipeline_end_time': pipeline_end_time_abs})
+        self._output_manager.add_derived_values({'pipeline_elapsed_time': pipeline_elapsed_time})
+
         logger.info(f"Extensive output information can be found at {self._output_dir}/out.yml")
         return self._output_manager
 
-    def _setup(self):
+    def _setup(self) -> float:
+        pipeline_start_time = time.perf_counter()
+        pipeline_start_time_abs = datetime.datetime.now()
+        # Log version
+        logger.info(f"** Running biotrainer (v{__version__}) training routine **")
+        self._output_manager.add_derived_values({'biotrainer_version': str(__version__)})
+        # Log start time
+        logger.info(f"Pipeline start time: {pipeline_start_time_abs}")
+        self._output_manager.add_derived_values({'pipeline_start_time': pipeline_start_time_abs})
         # Log model hash
         logger.info(f"Training model with hash: {self._model_hash}")
+        self._output_manager.add_derived_values({"model_hash": self._model_hash})
         # Seed
         seed_all(self._seed)
+        logger.info(f"Using seed: {self._seed}")
         # Log device
         logger.info(f"Using device: {self._device}")
-        # Log version
-        self._output_manager.add_derived_values({'biotrainer_version': str(__version__)})
+        return pipeline_start_time
 
     def _create_and_load_embeddings(self) -> Dict[str, Any]:
         # Generate embeddings if necessary, otherwise use existing embeddings and overwrite embedder_name
@@ -444,7 +469,7 @@ class Trainer:
         end_time_abs = datetime.datetime.now()
 
         # Logging
-        logger.info(f'Total training time for {split_name}: {(end_time - start_time) / 60:.1f}[m]')
+        logger.info(f'Total training time for split {split_name}: {end_time - start_time} [s]')
 
         # Save training time for prosperity
         self._output_manager.add_split_specific_values(split_name=split_name,

@@ -68,7 +68,6 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
 
     output_manager = OutputManager(observers=output_observers)
     output_manager.add_config(config=config)
-    output_manager.add_derived_values({"model_hash": model_hash})
 
     trainer: Trainer
     if custom_trainer_function:
