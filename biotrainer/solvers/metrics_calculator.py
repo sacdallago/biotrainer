@@ -11,9 +11,9 @@ from ..utilities import MASK_AND_LABELS_PAD_VALUE
 
 
 class MetricsCalculator(ABC):
-    def __init__(self, device, num_classes: int):
+    def __init__(self, device, n_classes: int):
         self.device = device
-        self.num_classes = num_classes
+        self.n_classes = n_classes
 
     def reset(self) -> MetricsCalculator:
         # Reset all metric attributes that are instances of torchmetrics.Metric
@@ -54,27 +54,27 @@ class MetricsCalculator(ABC):
 
 
 class ClassificationMetricsCalculator(MetricsCalculator):
-    def __init__(self, device, num_classes: int):
-        super().__init__(device, num_classes)
+    def __init__(self, device, n_classes: int):
+        super().__init__(device, n_classes)
 
-        task = "multiclass" if self.num_classes > 2 else "binary"
+        task = "multiclass" if self.n_classes > 2 else "binary"
 
-        self.acc = Accuracy(task=task, average="micro", num_classes=self.num_classes)
+        self.acc = Accuracy(task=task, average="micro", num_classes=self.n_classes)
 
-        self.macro_precision = Precision(task=task, average="macro", num_classes=self.num_classes)
-        self.micro_precision = Precision(task=task, average="micro", num_classes=self.num_classes)
-        self.precision_per_class = Precision(task=task, average="none", num_classes=self.num_classes)
+        self.macro_precision = Precision(task=task, average="macro", num_classes=self.n_classes)
+        self.micro_precision = Precision(task=task, average="micro", num_classes=self.n_classes)
+        self.precision_per_class = Precision(task=task, average="none", num_classes=self.n_classes)
 
-        self.macro_recall = Recall(task=task, average="macro", num_classes=self.num_classes)
-        self.micro_recall = Recall(task=task, average="micro", num_classes=self.num_classes)
-        self.recall_per_class = Recall(task=task, average="none", num_classes=self.num_classes)
+        self.macro_recall = Recall(task=task, average="macro", num_classes=self.n_classes)
+        self.micro_recall = Recall(task=task, average="micro", num_classes=self.n_classes)
+        self.recall_per_class = Recall(task=task, average="none", num_classes=self.n_classes)
 
-        self.macro_f1_score = F1Score(task=task, average="macro", num_classes=self.num_classes)
-        self.micro_f1_score = F1Score(task=task, average="micro", num_classes=self.num_classes)
-        self.f1_per_class = F1Score(task=task, average="none", num_classes=self.num_classes)
+        self.macro_f1_score = F1Score(task=task, average="macro", num_classes=self.n_classes)
+        self.micro_f1_score = F1Score(task=task, average="micro", num_classes=self.n_classes)
+        self.f1_per_class = F1Score(task=task, average="none", num_classes=self.n_classes)
 
         self.scc = SpearmanCorrCoef()
-        self.mcc = MatthewsCorrCoef(task=task, num_classes=self.num_classes)
+        self.mcc = MatthewsCorrCoef(task=task, num_classes=self.n_classes)
 
     def compute_metrics(
             self, predicted: Optional[torch.Tensor] = None,
@@ -86,22 +86,22 @@ class ClassificationMetricsCalculator(MetricsCalculator):
         metrics_dict = {'accuracy': _compute_metric(self.acc).item()}
 
         # Multi-class prediction
-        if self.num_classes > 2:
+        if self.n_classes > 2:
             precision_per_class = _compute_metric(self.precision_per_class)
             precisions = {'- precision class {}'.format(i): precision_per_class[i].item() for i in
-                          range(self.num_classes)}
+                          range(self.n_classes)}
             metrics_dict['macro-precision'] = _compute_metric(self.macro_precision).item()
             metrics_dict['micro-precision'] = _compute_metric(self.micro_precision).item()
             metrics_dict.update(precisions)
 
             recall_per_class = _compute_metric(self.recall_per_class)
-            recalls = {'- recall class {}'.format(i): recall_per_class[i].item() for i in range(self.num_classes)}
+            recalls = {'- recall class {}'.format(i): recall_per_class[i].item() for i in range(self.n_classes)}
             metrics_dict['macro-recall'] = _compute_metric(self.macro_recall).item()
             metrics_dict['micro-recall'] = _compute_metric(self.micro_recall).item()
             metrics_dict.update(recalls)
 
             f1_per_class = _compute_metric(self.f1_per_class)
-            f1scores = {'- f1_score class {}'.format(i): f1_per_class[i].item() for i in range(self.num_classes)}
+            f1scores = {'- f1_score class {}'.format(i): f1_per_class[i].item() for i in range(self.n_classes)}
             metrics_dict['macro-f1_score'] = _compute_metric(self.macro_f1_score).item()
             metrics_dict['micro-f1_score'] = _compute_metric(self.micro_f1_score).item()
             metrics_dict.update(f1scores)
@@ -118,8 +118,8 @@ class ClassificationMetricsCalculator(MetricsCalculator):
 
 
 class RegressionMetricsCalculator(MetricsCalculator):
-    def __init__(self, device, num_classes: int):
-        super().__init__(device, num_classes)
+    def __init__(self, device, n_classes: int):
+        super().__init__(device, n_classes)
 
         self.mse = MeanSquaredError(squared=True)
         self.rmse = MeanSquaredError(squared=False)

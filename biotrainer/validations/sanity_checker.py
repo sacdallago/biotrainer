@@ -161,7 +161,7 @@ class SanityChecker:
         loss = get_loss(**self.training_config)
         solver = get_solver(name="random_init_model", network=model,
                             optimizer=optimizer, loss_function=loss,
-                            num_classes=self.n_classes, **self.training_config)
+                            n_classes=self.n_classes, **self.training_config)
         random_init_inference = solver.inference(dataloader=self.test_loader, calculate_test_metrics=True)
         random_init_bootstrapping = Bootstrapper.bootstrap(protocol=self.protocol,
                                                            device=self.device,
