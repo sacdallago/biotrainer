@@ -162,7 +162,7 @@ class Trainer:
             # ADDITIONAL EVALUATION
             metrics_calculator = get_metrics_calculator(protocol=self._protocol,
                                                         device=self._device,
-                                                        num_classes=self._n_classes)
+                                                        n_classes=self._n_classes)
             # BOOTSTRAPPING
             if self._bootstrapping_iterations > 0:
                 self._do_and_log_bootstrapping_evaluation(metrics_calculator=metrics_calculator,
@@ -323,7 +323,7 @@ class Trainer:
                           device=self._device,
                           number_of_epochs=hyper_params["num_epochs"],
                           patience=hyper_params["patience"], epsilon=hyper_params["epsilon"],
-                          log_dir=hyper_params["log_dir"], num_classes=self._n_classes)
+                          log_dir=hyper_params["log_dir"], n_classes=self._n_classes)
 
     def _run_cross_validation(self, splits: List[Split]) -> List[SplitResult]:
         split_results = list()
