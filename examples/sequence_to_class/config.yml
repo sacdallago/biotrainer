@@ -13,4 +13,4 @@ device: cuda
 disable_pytorch_compile: True
 bootstrapping_iterations: 30
 external_writer: tensorboard
-embedder_name: Rostlab/prot_t5_xl_uniref50
+embedder_name: one_hot_encoding #Rostlab/prot_t5_xl_uniref50

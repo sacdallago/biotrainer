@@ -107,7 +107,7 @@ class InferencerTests(unittest.TestCase):
 
         self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 1.8236459493637085, delta=self.error_tolerance,
                                msg="Loss not as expected for r2c!")
-        self.assertAlmostEqual(rs2c_dict["metrics"]["loss"], 2.0559282302856445, delta=self.error_tolerance,
+        self.assertAlmostEqual(rs2c_dict["metrics"]["loss"], 1.7416267395019531, delta=self.error_tolerance,
                                msg="Loss not as expected for rs2c!")
         self.assertAlmostEqual(s2c_dict["metrics"]["loss"], 1.3706077337265015, delta=self.error_tolerance,
                                msg="Loss not as expected for s2c!")

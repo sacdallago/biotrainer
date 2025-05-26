@@ -1,80 +1,114 @@
-auto_resume: false
-batch_size: 128
-biotrainer_version: 0.9.5
-bootstrapping_iterations: 30
-cross_validation_config:
-  choose_by: loss
-  method: hold_out
-device: cpu
-disable_pytorch_compile: true
-dropout_rate: 0.25
-elapsed_time_total: 1.4266811999996207
-embedder_name: one_hot_encoding
-embeddings_file: 
-  C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_value\output\residues_to_value\one_hot_encoding\embeddings_file_one_hot_encoding.h5
-epsilon: 0.001
-ignore_file_inconsistencies: false
-learning_rate: 0.001
-limited_sample_size: -1
-log_dir: 
-  C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_value\output\LightAttention\one_hot_encoding
-loss_choice: mean_squared_error
-model_choice: LightAttention
-n_classes: 1
-n_features: 21
-n_testing_ids: 2
-num_epochs: 200
-optimizer_choice: adam
-output_dir: C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_value\output
-patience: 10
-protocol: residues_to_value
-sanity_check: true
-save_split_ids: false
-seed: 42
-sequence_file: 
-  C:\Users\sebie\PycharmProjects\biotrainer\examples\residues_to_value\sequences.fasta
-shuffle: true
-split_results:
+config:
+  auto_resume: false
+  batch_size: 128
+  bootstrapping_iterations: 30
+  cross_validation_config:
+    method: hold_out
+    choose_by: loss
+  device: cpu
+  disable_pytorch_compile: true
+  dropout_rate: 0.25
+  embedder_name: one_hot_encoding
+  epsilon: 0.001
+  external_writer: tensorboard
+  ignore_file_inconsistencies: false
+  input_file: 
+    /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_value/sequences.fasta
+  learning_rate: 0.001
+  limited_sample_size: -1
+  log_dir: 
+    /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_value/output/LightAttention/one_hot_encoding
+  loss_choice: mean_squared_error
+  model_choice: LightAttention
+  num_epochs: 200
+  optimizer_choice: adam
+  output_dir: /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_value/output
+  patience: 10
+  protocol: residues_to_value
+  sanity_check: true
+  save_split_ids: false
+  seed: 42
+  shuffle: true
+  use_class_weights: false
+  use_half_precision: false
+derived_values:
+  best_training_epoch_metrics:
+    epoch: 138
+    training:
+      loss: 828.9908447265625
+      mse: 828.9908447265625
+      rmse: 28.79220199584961
+      spearmans-corr-coeff: 0.9999959468841553
+    validation:
+      loss: 1221.713134765625
+      mse: 1221.713134765625
+      rmse: 34.9530143737793
+      spearmans-corr-coeff: -0.9999959468841553
+  biotrainer_version: 0.9.8
+  embedding_elapsed_time: 0.0023900159994809655
+  embeddings_file: 
+    /home/sebie/PycharmProjects/biotrainerFork/examples/residues_to_value/output/residues_to_value/one_hot_encoding/embeddings_file_one_hot_encoding.h5
+  model_hash: dd5045e770ddac25
+  n_classes: 1
+  n_features: 21
+  n_testing_ids: 2
+  pipeline_elapsed_time: 2.9669596120002097
+  pipeline_end_time: 2025-05-26 13:49:46.897441
+  pipeline_start_time: 2025-05-26 13:49:43.930481
+  training_elapsed_time: 2.0021183429998928
+splits:
   hold_out:
-    elapsed_time: 1.4178616999997757
-    end_time: 2025-02-06 11:44:25.447320
-    n_free_parameters: 9453
     n_training_ids: 2
     n_validation_ids: 2
     split_hyper_params: {}
-    start_time: 2025-02-06 11:44:24.029764
-    training_iteration_result_best_epoch:
-      epoch: 138
-      training:
-        loss: 828.9908447265625
-        mse: 828.9908447265625
-        rmse: 28.79220199584961
-        spearmans-corr-coeff: 0.9999959468841553
-      validation:
-        loss: 1221.713134765625
-        mse: 1221.713134765625
-        rmse: 34.9530143737793
-        spearmans-corr-coeff: -0.9999959468841553
-test_iterations_results:
-  bootstrapping:
-    mse:
-      error: 1675.0
-      mean: 1176.0
-    rmse:
-      error: 32.78125
-      mean: 30.109375
-    spearmans-corr-coeff:
-      error: 0.98779296875
-      mean: 0.433349609375
-  metrics:
-    loss: 1138.50439453125
-    mse: 1138.50439453125
-    rmse: 33.741729736328125
-    spearmans-corr-coeff: 0.9999959468841553
-  test_baselines:
-    mean_only:
-      mse: 461.5345458984375
-      rmse: 21.483354568481445
-      spearmans-corr-coeff: 0.0
-use_class_weights: false
-use_half_precision: false
+    n_free_parameters: 9453
+    start_time: 2025-05-26 13:49:43.937388
+    end_time: 2025-05-26 13:49:45.936519
+    elapsed_time: 1.9991273360001287
+test_results:
+  test:
+    metrics:
+      loss: 1138.50439453125
+      mse: 1138.50439453125
+      rmse: 33.741729736328125
+      spearmans-corr-coeff: 0.9999959468841553
+    bootstrapping:
+      mse:
+        mean: 1176.0
+        error: 1675.0
+      rmse:
+        mean: 30.109375
+        error: 32.78125
+      spearmans-corr-coeff:
+        mean: 0.433349609375
+        error: 0.98779296875
+    test_baselines:
+      random_model:
+        results:
+          mse:
+            mean: 1642.0
+            error: 2168.0
+          rmse:
+            mean: 37.0625
+            error: 32.5625
+          spearmans-corr-coeff:
+            mean: -0.433349609375
+            error: 0.98779296875
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      mean_only:
+        results:
+          mse:
+            mean: 461.5
+            error: 0.0
+          rmse:
+            mean: 21.484375
+            error: 0.0
+          spearmans-corr-coeff:
+            mean: 0.0
+            error: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+predictions: {}
