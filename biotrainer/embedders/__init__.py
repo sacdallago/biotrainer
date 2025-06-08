@@ -20,15 +20,10 @@ __PREDEFINED_EMBEDDERS = {
 logger = get_logger(__name__)
 
 
-def get_embedding_service(embeddings_file_path: Optional[str],
-                          embedder_name: Optional[str],
+def get_embedding_service(embedder_name: str,
                           custom_tokenizer_config: Optional[str],
                           use_half_precision: Optional[bool] = False,
                           device: Optional[Union[str, torch.device]] = None) -> EmbeddingService:
-    if embeddings_file_path is not None:
-        # Only for loading
-        return EmbeddingService()
-
     embedder: EmbedderInterface = _get_embedder(embedder_name=embedder_name,
                                                 custom_tokenizer_config=custom_tokenizer_config,
                                                 use_half_precision=use_half_precision,

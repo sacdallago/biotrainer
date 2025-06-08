@@ -1,7 +1,8 @@
 from .seeder import seed_all
-from .logging import get_logger
 from .version import __version__
+from .model_hash import calculate_model_hash
 from .revert_mappings import revert_mappings
+from .logging import get_logger, setup_logging
 from .execution_environment import is_running_in_notebook
 from .data_classes import Split, SplitResult, DatasetSample, EpochMetrics
 from .cuda_device import get_device, is_device_cpu, is_device_cuda, is_device_mps, get_device_memory
@@ -16,6 +17,8 @@ from .constants import (
 __all__ = [
     'seed_all',
     'get_logger',
+    'calculate_model_hash',
+    'setup_logging',
     'get_device',
     'is_device_cpu',
     'is_device_cuda',
