@@ -37,7 +37,7 @@ def train_with_custom_trainer(config: Union[str, Path, Dict[str, Any]],
 
     @param config: Biotrainer configuration file path or config dict
     """
-    return parse_config_file_and_execute_run(config, custom_trainer_function=custom_trainer_function)
+    return parse_config_file_and_execute_run(config, custom_pipeline=custom_trainer_function)
 
 
 @app.command
@@ -55,8 +55,7 @@ def predict(training_output_file: Union[str, Path], model_input: str,
     inferencer, iom = Inferencer.create_from_out_file(out_file_path=training_output_file,
                                                          automatic_path_correction=True)
 
-    embedding_service = get_embedding_service(embeddings_file_path=None,
-                                              embedder_name=iom.embedder_name(),
+    embedding_service = get_embedding_service(embedder_name=iom.embedder_name(),
                                               custom_tokenizer_config=None,  # TODO
                                               use_half_precision=iom.use_half_precision(),
                                               device=iom.device())

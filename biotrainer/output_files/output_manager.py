@@ -40,6 +40,8 @@ class OutputManager:
             return str(value)
         if isinstance(value, Protocol):
             return value.name
+        if isinstance(value, Path):
+            return str(value)
         return value
 
     def add_config(self, config: Dict[str, Any]) -> None:

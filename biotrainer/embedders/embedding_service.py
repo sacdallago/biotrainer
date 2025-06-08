@@ -51,7 +51,12 @@ class EmbeddingService:
             str: Path to the generated output embeddings file.
         """
         use_reduced_embeddings = protocol in Protocol.using_per_sequence_embeddings()
-        embeddings_file_path = self._get_embeddings_file_path(output_dir, protocol, force_output_dir)
+        embeddings_file_path = self.get_embeddings_file_path(output_dir=output_dir,
+                                                             protocol=protocol,
+                                                             embedder_name=self._embedder.name,
+                                                             use_half_precision=self._use_half_precision,
+                                                             force_output_dir=force_output_dir
+                                                             )
 
         # Avoid re-computation if file already exists
         if not force_recomputing and embeddings_file_path.is_file():
@@ -79,10 +84,14 @@ class EmbeddingService:
 
         return str(embeddings_file_path)
 
-    def _get_embeddings_file_path(self, output_dir: Path, protocol: Protocol,
-                                  force_output_dir: Optional[bool] = False) -> Path:
+    @staticmethod
+    def get_embeddings_file_path(output_dir: Path,
+                                 protocol: Protocol,
+                                 embedder_name: str,
+                                 use_half_precision: bool,
+                                 force_output_dir: Optional[bool] = False) -> Path:
         use_reduced_embeddings = protocol in Protocol.using_per_sequence_embeddings()
-        embedder_name = self._embedder.name.split("/")[-1]
+        embedder_name = embedder_name.split("/")[-1]
 
         if force_output_dir:
             embeddings_file_path = output_dir
@@ -99,7 +108,7 @@ class EmbeddingService:
 
         # Append file name to output path
         embeddings_file_path /= (("reduced_" if use_reduced_embeddings else "")
-                                 + f"embeddings_file_{embedder_name}{'_half' if self._use_half_precision else ''}.h5")
+                                 + f"embeddings_file_{embedder_name}{'_half' if use_half_precision else ''}.h5")
         return embeddings_file_path
 
     def _do_embeddings_computation(self, protein_sequences: Dict[str, str], embeddings_file_path: Path,

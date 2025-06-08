@@ -15,4 +15,4 @@ def output_observer_factory(output_dir: Union[Path, str], config: Dict[str, Any]
           result.append(TensorboardWriter(log_dir=Path(output_dir) / "runs"))
     return result
 
-__all__ = ["OutputManager", "InferenceOutputManager", "output_observer_factory"]
+__all__ = ["OutputManager", "InferenceOutputManager", "BiotrainerOutputObserver", "output_observer_factory"]

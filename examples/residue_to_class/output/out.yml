@@ -104,26 +104,23 @@ derived_values:
     2: 1.0
     3: 1.0
     4: 0.8888888955116272
-  embedding_elapsed_time: 0.0018228219996672124
-  embeddings_file: 
-    /home/sebie/PycharmProjects/biotrainerFork/examples/residue_to_class/output/residue_to_class/one_hot_encoding/embeddings_file_one_hot_encoding.h5
   model_hash: e3e4f86b316dd1fb
   n_classes: 5
   n_features: 21
   n_testing_ids: 1
-  pipeline_elapsed_time: 4.422056102999704
-  pipeline_end_time: 2025-05-26 13:48:12.176766
-  pipeline_start_time: 2025-05-26 13:48:07.754710
-  training_elapsed_time: 3.3411394109998582
+  pipeline_elapsed_time: 3.900324251000029
+  pipeline_end_time: 2025-06-08 14:10:05.496236
+  pipeline_start_time: 2025-06-08 14:10:01.595911
+  training_elapsed_time: 2.811113106999983
 splits:
   hold_out:
     n_training_ids: 1
     n_validation_ids: 1
     split_hyper_params: {}
     n_free_parameters: 5861
-    start_time: 2025-05-26 13:48:07.762453
-    end_time: 2025-05-26 13:48:11.099168
-    elapsed_time: 3.3367084490000707
+    start_time: 2025-06-08 14:10:01.606758
+    end_time: 2025-06-08 14:10:04.413441
+    elapsed_time: 2.8066776729999674
 test_results:
   test:
     metrics:
