@@ -1,10 +1,12 @@
 import re
-from typing import Dict
+
+from pathlib import Path
+from typing import Dict, Union, List
 
 from .biotrainer_seq_record import BiotrainerSequenceRecord
 
 
-def read_FASTA(path: str) -> Dict[str, BiotrainerSequenceRecord]:
+def read_FASTA(path: Union[str, Path]) -> Dict[str, BiotrainerSequenceRecord]:
     """
     Pure Python FASTA file parser. Parses attributes on the go.
 
@@ -64,3 +66,20 @@ def read_FASTA(path: str) -> Dict[str, BiotrainerSequenceRecord]:
         raise e
     except Exception as e:
         raise ValueError(f"Could not parse '{path}'. Are you sure this is a valid fasta file?") from e
+
+
+def write_FASTA(path: Union[str, Path], seq_records: List[BiotrainerSequenceRecord]) -> int:
+    """
+    Save a list of BiotrainerSequenceRecord objects to a FASTA file.
+
+    :param path: Path to store the file
+    :param seq_records: List of BiotrainerSequenceRecord objects
+    :return: number of sequence records written (following biopython standard)
+    """
+    with open(path, 'w') as fasta_file:
+        n_written = 0
+        for seq_record in seq_records:
+            attributes_str = " ".join([f"{key.upper()}={value}" for key, value in seq_record.attributes.items()])
+            fasta_file.write(f">{seq_record.seq_id} {attributes_str}\n{seq_record.seq}\n")
+            n_written += 1
+    return n_written
