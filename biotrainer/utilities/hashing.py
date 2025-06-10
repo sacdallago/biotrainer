@@ -5,6 +5,12 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 
+def calculate_sequence_hash(sequence: str) -> str:
+    suffix = len(sequence)
+    sequence = f"{sequence}_{suffix}"
+    return hashlib.sha256(sequence.encode()).hexdigest()
+
+
 def calculate_model_hash(
         dataset_files: List[Path],
         config: Dict[Any, Any],
