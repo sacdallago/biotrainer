@@ -16,8 +16,8 @@ from typing import Dict, Tuple, Any, List, Union, Optional
 from .embedder_interfaces import EmbedderInterface
 
 from ..protocols import Protocol
-from ..utilities import get_logger, is_running_in_notebook
-from ..input_files import read_FASTA
+from ..input_files import read_FASTA, BiotrainerSequenceRecord
+from ..utilities import get_logger, is_running_in_notebook, calculate_sequence_hash
 
 logger = get_logger(__name__)
 
@@ -32,7 +32,7 @@ class EmbeddingService:
         self._use_half_precision = use_half_precision
 
     def compute_embeddings(self,
-                           input_data: Union[str, Path, Dict[str, str]],
+                           input_data: Union[str, Path, List[str], Dict[str, BiotrainerSequenceRecord]],
                            output_dir: Path,
                            protocol: Protocol,
                            force_output_dir: bool = False,
@@ -66,19 +66,23 @@ class EmbeddingService:
         logger.info(f"Computing embeddings to: {str(embeddings_file_path)}")
 
         # Process input data
+        seq_records: List[BiotrainerSequenceRecord]
         if isinstance(input_data, str) or isinstance(input_data, Path):
-            protein_sequences = {seq_id: seq.seq for seq_id, seq in read_FASTA(str(input_data)).items()}
+            seq_records = [seq_record for seq_record in read_FASTA(str(input_data)).values()]
+        elif isinstance(input_data, list):
+            seq_records = [BiotrainerSequenceRecord(seq_id=f"Seq{idx}", seq=seq)
+                           for idx, seq in enumerate(input_data)]
         elif isinstance(input_data, dict):
-            protein_sequences = input_data
+            seq_records = [seq_record for seq_record in input_data.values()]
         else:
-            raise ValueError("input_data must be either a file path or a dictionary of sequences")
+            raise ValueError("input_data must be either a file path or a list or dictionary of sequences")
 
         # Sort sequences by length in descending order
-        protein_sequences = dict(sorted(protein_sequences.items(),
-                                        key=lambda item: len(item[1]),
-                                        reverse=True))
+        seq_records = list(sorted(seq_records,
+                                  key=lambda seq_record: len(seq_record.seq),
+                                  reverse=True))
 
-        embeddings_file_path = self._do_embeddings_computation(protein_sequences,
+        embeddings_file_path = self._do_embeddings_computation(seq_records,
                                                                embeddings_file_path,
                                                                use_reduced_embeddings)
 
@@ -111,80 +115,80 @@ class EmbeddingService:
                                  + f"embeddings_file_{embedder_name}{'_half' if use_half_precision else ''}.h5")
         return embeddings_file_path
 
-    def _do_embeddings_computation(self, protein_sequences: Dict[str, str], embeddings_file_path: Path,
+    def _do_embeddings_computation(self, seq_records: List[BiotrainerSequenceRecord],
+                                   embeddings_file_path: Path,
                                    use_reduced_embeddings: bool) -> str:
         """
         Performs the embedding service for the given protein sequences.
 
         Parameters:
-            protein_sequences (Dict[str, str]): A dictionary mapping sequence IDs to protein sequences.
+            seq_records (Dict[str, str]): A list of BiotrainerSequenceRecords.
             embeddings_file_path (Path): The path where embeddings will be saved.
             use_reduced_embeddings (bool): Indicates if reduced embeddings should be used.
 
         Returns:
             str: The path to the embeddings file.
         """
-        sequence_ids = list(protein_sequences.keys())
-        embeddings = {}
-        idx: int = 0
-        last_save_id: int = 0
+        sequences: List[str] = [seq_record.seq for seq_record in seq_records]
+        embeddings: List[BiotrainerSequenceRecord] = []  # Seq Records with updated embeddings
         start_time = time.time()
 
-        embedding_iter = self._embedder.embed_many(protein_sequences.values())
-        total_sequences = len(protein_sequences.values())
+        embedding_iter = self._embedder.embed_many(sequences)
+        total_sequences = len(seq_records)
 
         logger.info("If your dataset contains long reads, it may take more time to process the first few sequences.")
 
         with tqdm(total=total_sequences, desc="Computing Embeddings", disable=is_running_in_notebook()) as pbar:
 
             # Load the first sequence and calculate the initial max_embedding_fit
-            embeddings[sequence_ids[0]] = next(embedding_iter, None)
+            first_embedding = next(embedding_iter, None)
+
+            if first_embedding is None:
+                raise Exception("No embeddings were calculated for the first sequence!")
+
             pbar.update(1)
-
-            max_embedding_fit = self._max_embedding_fit(embeddings[sequence_ids[0]])
-
-            if embeddings[sequence_ids[0]] is None:
-                logger.info(f"No embeddings found.")
-                return str(embeddings_file_path)
-
-            embedding_dimension = embeddings[sequence_ids[0]].shape[-1]
+            max_embedding_fit = self._max_embedding_fit(first_embedding)
+            embedding_dimension = first_embedding.shape[-1]
+            embeddings.append(seq_records[0].copy_with_embedding(first_embedding))
 
             # Load other sequences
             for idx in range(1, total_sequences):
                 if max_embedding_fit <= 3 or len(embeddings) % max_embedding_fit == 0 or idx == total_sequences - 1:
                     pbar.desc = "Saving Embeddings"
-                    last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, last_save_id,
-                                                                               embeddings_file_path,
-                                                                               use_reduced_embeddings)
+                    embeddings = self._save_and_reset_embeddings(embeddings,
+                                                                 embeddings_file_path,
+                                                                 use_reduced_embeddings)
                     logger.debug(f"New {max_embedding_fit=}")
 
-                    embeddings[sequence_ids[idx]] = next(embedding_iter, None)
+                    calculated_embedding = next(embedding_iter, None)
+                    embeddings.append(seq_records[idx].copy_with_embedding(calculated_embedding))
                     pbar.desc = "Computing Embeddings"
                     pbar.update(1)
 
                     # Calculate the new max_embedding_fit for the next batch
-                    max_embedding_fit = self._max_embedding_fit(embeddings[sequence_ids[idx]])
+                    max_embedding_fit = self._max_embedding_fit(calculated_embedding)
 
                 else:
-                    embeddings[sequence_ids[idx]] = next(embedding_iter, None)
+                    calculated_embedding = next(embedding_iter, None)
+                    embeddings.append(seq_records[idx].copy_with_embedding(calculated_embedding))
                     pbar.update(1)
 
-                    if embeddings[sequence_ids[idx]] is None:
-                        logger.debug(
-                            f"len(sequence_ids) > len(embedding_iter) or found a None value in the embedding_iter")
-                        del embeddings[sequence_ids[idx]]
-                        return str(embeddings_file_path)
+                    if calculated_embedding is None:
+                        raise Exception(f"len(sequence_ids) > len(embedding_iter) or "
+                                        f"encountered a None value during embedding calculation!")
 
         logger.info(f"Embedding dimension: {embedding_dimension}")
 
         # Save remaining embeddings
         if len(embeddings) > 0:
-            last_save_id, embeddings = self._save_and_reset_embeddings(embeddings, last_save_id,
-                                                                       embeddings_file_path, use_reduced_embeddings)
+            embeddings = self._save_and_reset_embeddings(embeddings,
+                                                         embeddings_file_path,
+                                                         use_reduced_embeddings)
 
         end_time = time.time()
         logger.info(f"Time elapsed for computing embeddings: {end_time - start_time:.2f}[s]")
 
+        # Manually clear the memory from costly embeddings and embedder model
         del embeddings
         del self._embedder
         gc.collect()
@@ -219,45 +223,43 @@ class EmbeddingService:
         max_embedding_fit = 1 if max_embedding_fit == 0 else max_embedding_fit
         return max_embedding_fit
 
-    def _save_and_reset_embeddings(self, embeddings: Dict[str, ndarray], last_save_id: int,
-                                   embeddings_file_path: Path, use_reduced_embeddings: bool) -> Tuple[
-        int, Dict[str, ndarray]]:
+    def _save_and_reset_embeddings(self, embd_records: List[BiotrainerSequenceRecord],
+                                   embeddings_file_path: Path,
+                                   use_reduced_embeddings: bool) -> List[BiotrainerSequenceRecord]:
         """
-        Save the embeddings and reset the dictionary.
+        Save the embeddings and reset the list.
 
         Parameters:
-            embeddings (Dict[str, ndarray]): Dictionary of embeddings to be saved.
-            last_save_id (int): The last save ID used for tracking saved embeddings.
+            embd_records (List[BiotrainerSequenceRecord]): List of seq records with embeddings to be saved.
             embeddings_file_path (Path): The path where embeddings are saved.
             use_reduced_embeddings (bool): Flag to determine if embeddings should be reduced.
 
         Returns:
-            out (Tuple[int, Dict[str, ndarray]]): Updated last_save_id and an empty embeddings dictionary.
+           Deleted and emptied seq records list
         """
         if use_reduced_embeddings:
-            embeddings = self._reduce_embeddings(embeddings, self._embedder)
-        last_save_id = self._save_embeddings(save_id=last_save_id, embeddings=embeddings,
-                                             embeddings_file_path=embeddings_file_path)
-        del embeddings
-        return last_save_id, {}
+            embd_records = self._reduce_embeddings(embd_records, self._embedder)
+        self._save_embeddings(embd_records=embd_records, embeddings_file_path=embeddings_file_path)
+        del embd_records
+        return []
 
     @staticmethod
     def embeddings_dimensionality_reduction(
-            embeddings: Dict[str, Any],
+            embeddings: Dict[str, torch.tensor],
             dimension_reduction_method: str,
-            n_reduced_components: int) -> Dict[str, Any]:
+            n_reduced_components: int) -> Dict[str, torch.tensor]:
         """Reduces the dimension of per-protein embeddings using one of the
         dimensionality reduction methods
 
         Args:
-            embeddings (Dict[str, Any]): Dictionary of embeddings.
+            embeddings (Dict[str, torch.tensor]): Dictionary of embeddings.
             dimension_reduction_method (str): The method used to reduce 
             the dimensionality of embeddings. Options are 'umap' or 'tsne'.
             n_reduced_components (int): The target number of dimensions for 
             the reduced embeddings.
 
         Returns:
-            Dict[str, Any]: Dictionary of embeddings with reduced dimensions.
+            Dict[str, torch.tensor]: Dictionary of embeddings with reduced dimensions.
         """
         sorted_keys = sorted(list(embeddings.keys()))
         all_embeddings = torch.stack([embeddings[k] for k in sorted_keys], dim=0)
@@ -282,40 +284,38 @@ class EmbeddingService:
         return {sorted_keys[i]: torch.tensor(embeddings_reduced_dimensions[i]) for i in range(len(sorted_keys))}
 
     @staticmethod
-    def _reduce_embeddings(embeddings: Dict[str, ndarray], embedder) -> Dict[str, ndarray]:
+    def _reduce_embeddings(embd_records: List[BiotrainerSequenceRecord], embedder) -> List[BiotrainerSequenceRecord]:
         """
         Reduces the per-residue embeddings to per-protein embeddings.
 
         Parameters:
-            embeddings (Dict[str, ndarray]): Dictionary of embeddings.
+            embd_records (List[BiotrainerSequenceRecord]): Dictionary of seq records with embeddings.
             embedder: The embedder used for reducing embeddings.
 
         Returns:
-            out (Dict[str, ndarray]): Dictionary of reduced embeddings.
+            out (List[BiotrainerSequenceRecord]): Dictionary of seq records with reduced embeddings.
         """
-        return {seq_id: embedder.reduce_per_protein(embedding) for seq_id, embedding in
-                embeddings.items()}
+        return [seq_record.copy_with_embedding(embedder.reduce_per_protein(seq_record.embedding))
+                for seq_record in embd_records]
 
     @staticmethod
-    def _save_embeddings(save_id: int, embeddings: Dict[str, ndarray], embeddings_file_path: Path) -> int:
+    def _save_embeddings(embd_records: List[BiotrainerSequenceRecord], embeddings_file_path: Path):
         """
         Saves the embeddings to a file.
 
         Args:
-            save_id (int): The save ID used for tracking saved embeddings.
-            embeddings (Dict[str, ndarray]): Dictionary of embeddings to be saved.
+            embd_records (List[BiotrainerSequenceRecord]): List of seq records with embeddings to be saved.
             embeddings_file_path (Path): The path where embeddings are saved.
 
         Returns:
             out (int): The updated save ID.
         """
         with h5py.File(embeddings_file_path, "a") as embeddings_file:
-            idx = save_id
-            for seq_id, embedding in embeddings.items():
-                embeddings_file.create_dataset(str(idx), data=embedding, compression="gzip", chunks=True)
-                embeddings_file[str(idx)].attrs["original_id"] = seq_id  # Follows biotrainer & bio_embeddings standard
-                idx += 1
-            return idx
+            for seq_record in embd_records:
+                seq_hash = seq_record.get_hash()
+                embeddings_file.create_dataset(seq_hash, data=seq_record.embedding, compression="gzip", chunks=True)
+                embeddings_file[seq_hash].attrs[
+                    "original_id"] = seq_record.seq_id  # Follows biotrainer & bio_embeddings standard
 
     def compute_embeddings_from_list(self, protein_sequences: List[str], protocol: Protocol) -> List:
         """
@@ -338,7 +338,7 @@ class EmbeddingService:
         return embeddings
 
     @staticmethod
-    def load_embeddings(embeddings_file_path: str) -> Dict[str, Any]:
+    def load_embeddings(embeddings_file_path: str) -> Dict[str, torch.tensor]:
         """
         Loads precomputed embeddings from a file.
 
@@ -346,7 +346,7 @@ class EmbeddingService:
             embeddings_file_path (str): Path to the embeddings file.
 
         Returns:
-            out (Dict[str, Any]): Dictionary mapping sequence IDs to embeddings.
+            out (Dict[str, torch.tensor]): Dictionary mapping sequence hashes to embeddings.
         """
         # Load computed embeddings in .h5 file format
         logger.info(f"Loading embeddings from: {embeddings_file_path}")
@@ -356,9 +356,8 @@ class EmbeddingService:
         # https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
         embeddings_file = h5py.File(embeddings_file_path, 'r')
 
-        # "original_id" from embeddings file -> Embedding
-        id2emb = {embeddings_file[idx].attrs["original_id"]: torch.tensor(np.array(embedding)) for (idx, embedding) in
-                  embeddings_file.items()}
+        # Sequence hash from embeddings file -> Embedding
+        id2emb = {idx: torch.tensor(np.array(embedding)) for (idx, embedding) in embeddings_file.items()}
 
         # Logging
         logger.info(f"Read {len(id2emb)} entries.")

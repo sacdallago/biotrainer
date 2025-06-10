@@ -6,6 +6,7 @@ import cyclopts
 from pathlib import Path
 from typing import Union, Dict, Any, Callable, List, Optional
 
+from .hashing import calculate_sequence_hash
 from .executer import parse_config_file_and_execute_run
 
 from ..inference import Inferencer
@@ -46,9 +47,11 @@ def predict(training_output_file: Union[str, Path], model_input: str,
     if isinstance(model_input, str):
         if "." in model_input and Path(model_input).exists():
             model_input = read_FASTA(model_input)
-            model_input = {seq_record.seq_id: seq_record.seq for seq_record in model_input.values()}
+            input_ids = {seq_record.get_hash(): seq_record.seq_id for seq_record in model_input.values()}
+            model_input = {seq_record.get_hash(): seq_record.seq for seq_record in model_input.values()}
         else:
-            model_input = {f"Seq{idx}": seq for idx, seq in enumerate(model_input.split(","))}
+            model_input = [seq for seq in model_input.split(",")]
+            input_ids = {calculate_sequence_hash(seq): f"Seq{idx}"  for idx, seq in enumerate(model_input)}
     else:
         raise ValueError("model_input must be a Path to an input file or a comma separated list of sequences!")
 
@@ -71,7 +74,16 @@ def predict(training_output_file: Union[str, Path], model_input: str,
 
     result = inferencer.from_embeddings(embeddings=embeddings)["mapped_predictions"]
 
-    print(result)
+    sorted_results = []
+    for seq_hash, prediction in result.items():
+        input_id = input_ids[seq_hash]
+        sorted_results.append((input_id, seq_hash, prediction))
+
+    sorted_results = sorted(sorted_results, key=lambda x: x[0])
+
+    for input_id, seq_hash, prediction in sorted_results:
+        print(f"Prediction for {input_id} (sequence hash {seq_hash}):\n\t{prediction}")
+
     return result
 
 

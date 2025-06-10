@@ -13,6 +13,7 @@ logger = get_logger(__name__)
 
 
 class TargetManager:
+    _input_ids: Dict[str, str] = dict()
     _id2target: Dict[str, Any] = dict()
     _id2sets: Dict[str, str] = dict()
     # This will be 1 for regression tasks, 2 for binary classification tasks, and N>2 for everything else
@@ -48,12 +49,19 @@ class TargetManager:
     def _calculate_targets(self):
         # Parse FASTA protein sequences
         input_records: Dict[str, BiotrainerSequenceRecord] = read_FASTA(self._input_file)
+        # Store input ids for better error messages
+        self._input_ids: Dict[str, str] = {seq_record.get_hash(): seq_record.seq_id
+                                           for seq_record in input_records.values()}
+        # id2X => sequence hash to X
         self._id2target, id2masks, self._id2sets = BiotrainerSequenceRecord.get_dicts(input_records)
+        assert len(self._id2target.keys()) == len(id2masks.keys()) == len(self._input_ids) \
+                == len(self._id2sets.keys()) == len(input_records.keys()), f"Length mismatch after reading input file!"
+
         if self._interaction:
             self._id2target = merge_protein_interactions(input_records)
 
         # Remove None targets from pred set
-        self._id2target = {seq_id: target for seq_id, target in self._id2target.items() if target is not None}
+        self._id2target = {seq_hash: target for seq_hash, target in self._id2target.items() if target is not None}
         if len(self._id2target) == 0:
             raise ValueError("Could not parse any valid targets from given input file!")
 
@@ -80,18 +88,18 @@ class TargetManager:
 
                 # MASKS
                 # Validate masks (each mask must contain at least one resolved (1) value)
-                for seq_id, mask in id2masks.items():
+                for seq_hash, mask in id2masks.items():
                     if mask is not None and 1 not in mask:
-                        raise ValueError(f"{seq_id} does not have a valid mask as it does "
+                        raise ValueError(f"{self._input_ids[seq_hash]} does not have a valid mask as it does "
                                          f"not contain at least one resolved (1) value!")
 
                 # Replace labels with masking value
-                for seq_id, unmasked_target in self._id2target.items():
-                    mask = id2masks[seq_id]
+                for seq_hash, unmasked_target in self._id2target.items():
+                    mask = id2masks[seq_hash]
                     if mask is not None:
                         target_with_mask = np.array([value if mask[index] == 1 else MASK_AND_LABELS_PAD_VALUE for
                                                      index, value in enumerate(unmasked_target)])
-                        self._id2target[seq_id] = target_with_mask
+                        self._id2target[seq_hash] = target_with_mask
             # b) Value output
             else:
                 raise NotImplementedError
@@ -109,12 +117,12 @@ class TargetManager:
                 self.class_int2str = {idx: letter for idx, letter in enumerate(self._class_labels)}
 
                 # Convert label values to lists of numbers based on the maps
-                self._id2target = {seq_id: np.array(self.class_str2int[label])
-                                   for seq_id, label in self._id2target.items()}  # classes idxs (zero-based)
+                self._id2target = {seq_hash: np.array(self.class_str2int[label])
+                                   for seq_hash, label in self._id2target.items()}  # classes idxs (zero-based)
 
             # b) Value output
             elif self.protocol in Protocol.regression_protocols():
-                self._id2target = {seq_id: float(seq_val) for seq_id, seq_val in self._id2target.items()}
+                self._id2target = {seq_hash: float(seq_val) for seq_hash, seq_val in self._id2target.items()}
                 self.number_of_outputs = 1
             else:
                 raise NotImplementedError
@@ -127,7 +135,7 @@ class TargetManager:
         if not self._id2target or len(self._id2target) == 0:
             raise ValueError("Prediction targets not found or could not be extracted!")
 
-    def _validate_targets(self, id2emb: Dict[str, Any]):
+    def _validate_targets(self, id2emb: Dict[str, torch.tensor]):
         """
         1. Check if number of embeddings and corresponding labels match for every protocol:
             # embeddings == # labels --> SUCCESS
@@ -147,21 +155,21 @@ class TargetManager:
         else:
             all_ids_with_target = set(self._id2target.keys())
 
-        for seq_id, seq in id2emb.items():
+        for seq_hash, embd in id2emb.items():
             # Check that all embeddings have a corresponding label
-            if seq_id in self.prediction_ids:
+            if seq_hash in self.prediction_ids:
                 continue
 
-            if seq_id not in all_ids_with_target:
-                embeddings_without_labels.append(seq_id)
+            if seq_hash not in all_ids_with_target:
+                embeddings_without_labels.append(seq_hash)
             # Make sure the length of the sequences in the embeddings match the length of the seqs in the labels
-            elif self.protocol in Protocol.per_residue_protocols() and len(seq) != self._id2target[seq_id].size:
-                invalid_sequence_lengths.append((seq_id, len(seq), self._id2target[seq_id].size))
+            elif self.protocol in Protocol.per_residue_protocols() and len(embd) != self._id2target[seq_hash].size:
+                invalid_sequence_lengths.append((seq_hash, len(embd), self._id2target[seq_hash].size))
 
-        for seq_id in all_ids_with_target:
+        for seq_hash in all_ids_with_target:
             # Check that all labels have a corresponding embedding
-            if seq_id not in id2emb.keys():
-                labels_without_embeddings.append(seq_id)
+            if seq_hash not in id2emb.keys():
+                labels_without_embeddings.append(seq_hash)
 
         if len(embeddings_without_labels) > 0:
             if self._ignore_file_inconsistencies:
@@ -169,15 +177,15 @@ class TargetManager:
                                f"entry in the labels file! Because ignore_file_inconsistencies flag is set, "
                                f"these sequences are dropped for training. "
                                f"Data loss: {(len(embeddings_without_labels) / len(id2emb.keys())) * 100:.2f}%")
-                for seq_id in embeddings_without_labels:
-                    id2emb.pop(seq_id)  # Remove redundant sequences
+                for seq_hash in embeddings_without_labels:
+                    id2emb.pop(seq_hash)  # Remove redundant sequences
             else:
                 exception_message = f"{len(embeddings_without_labels)} sequence(s) not found in labels file! " \
                                     f"Make sure that all sequences are present and annotated in the labels file " \
                                     f"or set the ignore_file_inconsistencies flag to True.\n" \
                                     f"Missing label sequence ids:\n"
-                for seq_id in embeddings_without_labels:
-                    exception_message += f"Sequence {seq_id}\n"
+                for seq_hash in embeddings_without_labels:
+                    exception_message += f"Sequence - ID: {self._input_ids[seq_hash]} - Hash: {seq_hash}\n"
                 raise ValueError(exception_message[:-1])  # Discard last \n
 
         if len(labels_without_embeddings) > 0:
@@ -186,8 +194,8 @@ class TargetManager:
                                f"entry in the embeddings file! Because ignore_file_inconsistencies flag is set, "
                                f"these labels are dropped for training. "
                                f"Data loss: {(len(labels_without_embeddings) / len(id2emb.keys())) * 100:.2f}%")
-                for seq_id in labels_without_embeddings:
-                    self._id2target.pop(seq_id)  # Remove redundant labels
+                for seq_hash in labels_without_embeddings:
+                    self._id2target.pop(seq_hash)  # Remove redundant labels
             else:
                 exception_message = f"{len(labels_without_embeddings)} label(s) not found in embeddings file! " \
                                     f"Make sure that for every sequence id in the labels file, there is a " \
@@ -197,14 +205,15 @@ class TargetManager:
                                     f"Setting the ignore_file_inconsistencies flag to True " \
                                     f"will ignore this problem.\n" \
                                     f"Missing sequence ids:\n"
-                for seq_id in labels_without_embeddings:
-                    exception_message += f"Sequence {seq_id}\n"
+                for seq_hash in labels_without_embeddings:
+                    exception_message += f"Sequence - ID: {self._input_ids[seq_hash]} - Hash: {seq_hash}\n"
                 raise ValueError(exception_message[:-1])  # Discard last \n
 
         if len(invalid_sequence_lengths) > 0:
             exception_message = f"Length mismatch for {len(invalid_sequence_lengths)} sequence(s)!\n"
-            for seq_id, seq_len, target_len in invalid_sequence_lengths:
-                exception_message += f"{seq_id}: Sequence={seq_len} vs. Labels={self._id2target[seq_id].size}\n"
+            for seq_hash, seq_len, target_len in invalid_sequence_lengths:
+                exception_message += (f"Sequence - ID: {self._input_ids[seq_hash]} - Hash: {seq_hash} - "
+                                      f"Sequence_Length={seq_len} vs. Labels_Length={self._id2target[seq_hash].size}\n")
             raise ValueError(exception_message[:-1])  # Discard last \n
 
     @staticmethod
