@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from .config_utils import is_url, is_list_option
 from .config_option import ConfigOption, ConfigKey
@@ -107,11 +107,6 @@ def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_d
         raise ConfigurationException(f"auto_resume and pretrained_model are mutual exclusive.\n"
                                      f"Use auto_resume in case you need to restart your training job multiple times.\n"
                                      f"Use pretrained_model if you want to continue to train a specific model.")
-
-    if "embedder_name" in config_dict and "embeddings_file" in config_dict:
-        raise ConfigurationException(f"embedder_name and embeddings_file are mutual exclusive.\n"
-                                     f"Please provide either an embedder_name to calculate embeddings from scratch or \n"
-                                     f"an embeddings_file to use pre-computed embeddings.")
 
     if "embedder_name" in config_dict and "custom_tokenizer_config" in config_dict \
             and not str(config_dict["embedder_name"]).endswith(".onnx"):
