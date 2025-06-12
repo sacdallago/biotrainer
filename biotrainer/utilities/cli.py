@@ -47,8 +47,8 @@ def predict(training_output_file: Union[str, Path], model_input: str,
     if isinstance(model_input, str):
         if "." in model_input and Path(model_input).exists():
             model_input = read_FASTA(model_input)
-            input_ids = {seq_record.get_hash(): seq_record.seq_id for seq_record in model_input.values()}
-            model_input = {seq_record.get_hash(): seq_record.seq for seq_record in model_input.values()}
+            input_ids = {seq_record.get_hash(): seq_record.seq_id for seq_record in model_input}
+            model_input = {seq_record.get_hash(): seq_record.seq for seq_record in model_input}
         else:
             model_input = [seq for seq in model_input.split(",")]
             input_ids = {calculate_sequence_hash(seq): f"Seq{idx}"  for idx, seq in enumerate(model_input)}
