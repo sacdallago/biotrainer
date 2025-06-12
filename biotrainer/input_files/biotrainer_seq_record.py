@@ -1,7 +1,7 @@
 from __future__ import annotations
 import numpy as np
 
-from typing import Dict, Any, Union, Optional
+from typing import Dict, Any, Union, Optional, List
 
 from ..utilities import calculate_sequence_hash
 
@@ -23,6 +23,17 @@ class BiotrainerSequenceRecord:
     def get_set(self) -> Union[None, str]:
         return self.attributes.get("SET")
 
+    def get_deprecated_set(self) -> Union[None, str]:
+        if "SET" not in self.attributes:
+            return None
+        set_name = self.attributes["SET"]
+        if set_name.lower() == "train":
+            val = self.attributes.get("VALIDATION")
+            if val is not None:
+                val = eval(val)
+                set_name = "val" if val else "train"
+        return set_name
+
     def get_ppi(self) -> Union[None, str]:
         """ Get the INTERACTOR id (i.e. another sequence id in the same fasta file) """
         return self.attributes.get("INTERACTOR")
@@ -36,11 +47,11 @@ class BiotrainerSequenceRecord:
                                         attributes=self.attributes, embedding=embedding)
 
     @staticmethod
-    def get_dicts(input_records: Dict[str, BiotrainerSequenceRecord]) -> (dict, dict, dict):
+    def get_dicts(input_records: List[BiotrainerSequenceRecord]) -> (dict, dict, dict):
         id2targets = {}
         id2masks = {}
         id2sets = {}
-        for seq_record in input_records.values():
+        for seq_record in input_records:
             seq_hash = seq_record.get_hash()
             id2targets[seq_hash] = seq_record.get_target()
             mask = seq_record.get_mask()
