@@ -6,14 +6,14 @@ from collections import Counter
 from typing import Dict, Any, Tuple, Optional, List
 
 from ..protocols import Protocol
-from ..utilities import MASK_AND_LABELS_PAD_VALUE,INTERACTION_INDICATOR, DatasetSample, get_logger
+from ..utilities import MASK_AND_LABELS_PAD_VALUE, INTERACTION_INDICATOR, DatasetSample, get_logger
 from ..input_files import BiotrainerSequenceRecord, merge_protein_interactions, get_split_lists, read_FASTA
 
 logger = get_logger(__name__)
 
 
 class TargetManager:
-    _input_ids: Dict[str, str] = dict()
+    _input_ids: Dict[str, List[str]] = dict()
     _id2target: Dict[str, Any] = dict()
     _id2sets: Dict[str, str] = dict()
     # This will be 1 for regression tasks, 2 for binary classification tasks, and N>2 for everything else
@@ -48,14 +48,18 @@ class TargetManager:
 
     def _calculate_targets(self):
         # Parse FASTA protein sequences
-        input_records: Dict[str, BiotrainerSequenceRecord] = read_FASTA(self._input_file)
+        input_records: List[BiotrainerSequenceRecord] = read_FASTA(self._input_file)
         # Store input ids for better error messages
-        self._input_ids: Dict[str, str] = {seq_record.get_hash(): seq_record.seq_id
-                                           for seq_record in input_records.values()}
+        for seq_record in input_records:
+            seq_hash = seq_record.get_hash()
+            if seq_hash not in self._input_ids:
+                self._input_ids[seq_hash] = []
+            self._input_ids[seq_hash].append(seq_record.seq_id)
+
         # id2X => sequence hash to X
         self._id2target, id2masks, self._id2sets = BiotrainerSequenceRecord.get_dicts(input_records)
-        assert len(self._id2target.keys()) == len(id2masks.keys()) == len(self._input_ids) \
-                == len(self._id2sets.keys()) == len(input_records.keys()), f"Length mismatch after reading input file!"
+        assert len(self._id2target.keys()) == len(id2masks.keys()) \
+               == len(self._id2sets.keys()), f"Length mismatch after reading input file!"
 
         if self._interaction:
             self._id2target = merge_protein_interactions(input_records)
@@ -151,28 +155,31 @@ class TargetManager:
             for interaction_key in self._id2target.keys():
                 protein_ids = interaction_key.split(INTERACTION_INDICATOR)
                 all_protein_ids.extend(protein_ids)
-            all_ids_with_target = set(all_protein_ids)
+            all_hashes_with_target = set(all_protein_ids)
         else:
-            all_ids_with_target = set(self._id2target.keys())
+            all_hashes_with_target = set(self._id2target.keys())
 
         for seq_hash, embd in id2emb.items():
             # Check that all embeddings have a corresponding label
             if seq_hash in self.prediction_ids:
                 continue
 
-            if seq_hash not in all_ids_with_target:
+            if seq_hash not in all_hashes_with_target:
                 embeddings_without_labels.append(seq_hash)
             # Make sure the length of the sequences in the embeddings match the length of the seqs in the labels
             elif self.protocol in Protocol.per_residue_protocols() and len(embd) != self._id2target[seq_hash].size:
                 invalid_sequence_lengths.append((seq_hash, len(embd), self._id2target[seq_hash].size))
 
-        for seq_hash in all_ids_with_target:
+        for seq_hash in all_hashes_with_target:
             # Check that all labels have a corresponding embedding
             if seq_hash not in id2emb.keys():
                 labels_without_embeddings.append(seq_hash)
 
         if len(embeddings_without_labels) > 0:
             if self._ignore_file_inconsistencies:
+                if len(embeddings_without_labels) == len(id2emb):
+                    raise ValueError(f"Did not find any labels for any given embedding!")
+
                 logger.warning(f"Found {len(embeddings_without_labels)} embedding(s) without a corresponding "
                                f"entry in the labels file! Because ignore_file_inconsistencies flag is set, "
                                f"these sequences are dropped for training. "
@@ -185,10 +192,11 @@ class TargetManager:
                                     f"or set the ignore_file_inconsistencies flag to True.\n" \
                                     f"Missing label sequence ids:\n"
                 for seq_hash in embeddings_without_labels:
-                    exception_message += f"Sequence - ID: {self._input_ids[seq_hash]} - Hash: {seq_hash}\n"
+                    exception_message += f"Sequence - ID(s): {self._input_ids.get(seq_hash, 'N/A')} - Hash: {seq_hash}\n"
                 raise ValueError(exception_message[:-1])  # Discard last \n
 
         if len(labels_without_embeddings) > 0:
+
             if self._ignore_file_inconsistencies:
                 logger.warning(f"Found {len(labels_without_embeddings)} label(s) without a corresponding "
                                f"entry in the embeddings file! Because ignore_file_inconsistencies flag is set, "
@@ -206,13 +214,13 @@ class TargetManager:
                                     f"will ignore this problem.\n" \
                                     f"Missing sequence ids:\n"
                 for seq_hash in labels_without_embeddings:
-                    exception_message += f"Sequence - ID: {self._input_ids[seq_hash]} - Hash: {seq_hash}\n"
+                    exception_message += f"Sequence - ID(s): {self._input_ids.get(seq_hash, 'N/A')} - Hash: {seq_hash}\n"
                 raise ValueError(exception_message[:-1])  # Discard last \n
 
         if len(invalid_sequence_lengths) > 0:
             exception_message = f"Length mismatch for {len(invalid_sequence_lengths)} sequence(s)!\n"
             for seq_hash, seq_len, target_len in invalid_sequence_lengths:
-                exception_message += (f"Sequence - ID: {self._input_ids[seq_hash]} - Hash: {seq_hash} - "
+                exception_message += (f"Sequence - ID(s): {self._input_ids.get(seq_hash, 'N/A')} - Hash: {seq_hash} - "
                                       f"Sequence_Length={seq_len} vs. Labels_Length={self._id2target[seq_hash].size}\n")
             raise ValueError(exception_message[:-1])  # Discard last \n
 
@@ -222,7 +230,7 @@ class TargetManager:
         all_embeddings_have_same_dimension = len(shapes) == 1
         if not all_embeddings_have_same_dimension:
             raise ValueError(f"Embeddings dimensions differ between sequences, but all must be equal!\n"
-                            f"Found: {shapes}")
+                             f"Found: {shapes}")
 
     def get_datasets_by_annotations(self, id2emb: Dict[str, Any]) -> \
             Tuple[List[DatasetSample], List[DatasetSample], Dict[str, List[DatasetSample]], List[DatasetSample]]:
@@ -238,7 +246,7 @@ class TargetManager:
         def except_on_empty(split_ids: List[str], name: str):
             if len(split_ids) == 0:
                 raise ValueError(f"The provided {name} set is empty! Please provide at least one sequence for "
-                                f"the {name} set.")
+                                 f"the {name} set.")
 
         if not self._ignore_file_inconsistencies:
             except_on_empty(split_ids=self.training_ids, name="training")

@@ -1,5 +1,4 @@
 import os
-import gc
 import time
 import h5py
 import torch
@@ -11,7 +10,7 @@ from tqdm import tqdm
 from pathlib import Path
 from numpy import ndarray
 from sklearn.manifold import TSNE
-from typing import Dict, Tuple, Any, List, Union, Optional
+from typing import Dict, List, Union, Optional
 
 from .embedder_interfaces import EmbedderInterface
 
@@ -32,11 +31,13 @@ class EmbeddingService:
         self._use_half_precision = use_half_precision
 
     def compute_embeddings(self,
-                           input_data: Union[str, Path, List[str], Dict[str, BiotrainerSequenceRecord]],
+                           input_data: Union[str, Path, List[str],
+                           List[BiotrainerSequenceRecord], Dict[str, BiotrainerSequenceRecord]],
                            output_dir: Path,
                            protocol: Protocol,
                            force_output_dir: bool = False,
-                           force_recomputing: bool = False) -> str:
+                           force_recomputing: bool = False,
+                           store_by_hash: bool = True) -> str:
         """
         Compute embeddings with the provided embedder from a sequence file or a dictionary of sequences.
 
@@ -46,9 +47,10 @@ class EmbeddingService:
             protocol (Protocol): Protocol for the embeddings. Determines if the embeddings should be reduced to per-protein.
             force_output_dir (bool): If True, the given output directory is directly used to store the embeddings file.
             force_recomputing (bool): If True, the embedding file is re-computed, even if it already exists.
+            store_by_hash (bool): If True, sequence hashes are used as indices for the h5 result file.
 
         Returns:
-            str: Path to the generated output embeddings file.
+            str: Path to the generated output h5 embeddings file.
         """
         use_reduced_embeddings = protocol in Protocol.using_per_sequence_embeddings()
         embeddings_file_path = self.get_embeddings_file_path(output_dir=output_dir,
@@ -68,23 +70,37 @@ class EmbeddingService:
         # Process input data
         seq_records: List[BiotrainerSequenceRecord]
         if isinstance(input_data, str) or isinstance(input_data, Path):
-            seq_records = [seq_record for seq_record in read_FASTA(str(input_data)).values()]
+            seq_records = [seq_record for seq_record in read_FASTA(input_data)]
         elif isinstance(input_data, list):
-            seq_records = [BiotrainerSequenceRecord(seq_id=f"Seq{idx}", seq=seq)
-                           for idx, seq in enumerate(input_data)]
+            if isinstance(input_data[0], BiotrainerSequenceRecord):
+                seq_records = input_data
+            elif isinstance(input_data[0], str):
+                seq_records = [BiotrainerSequenceRecord(seq_id=f"Seq{idx}", seq=seq)
+                               for idx, seq in enumerate(input_data)]
+            else:
+                raise ValueError(f"Non-supported type for compute_embeddings input_data: {type(input_data[0])}")
         elif isinstance(input_data, dict):
             seq_records = [seq_record for seq_record in input_data.values()]
         else:
-            raise ValueError("input_data must be either a file path or a list or dictionary of sequences")
+            raise ValueError(f"Non-supported type for compute_embeddings input_data: {type(input_data)}")
+
+        # Check for not-allowed characters in sequence ids
+        if not store_by_hash:
+            # / is incompatible because of hierarchical structure of h5
+            all_seq_ids_allowed = all(["/" not in seq_record.seq_id for seq_record in seq_records])
+            if not all_seq_ids_allowed:
+                raise ValueError(f"A sequence id contains the not allowed '/' character, which cannot be stored"
+                                 f"in a h5 dataset. Consider changing the id or storing the embeddings by hash.")
 
         # Sort sequences by length in descending order
         seq_records = list(sorted(seq_records,
                                   key=lambda seq_record: len(seq_record.seq),
                                   reverse=True))
 
-        embeddings_file_path = self._do_embeddings_computation(seq_records,
-                                                               embeddings_file_path,
-                                                               use_reduced_embeddings)
+        embeddings_file_path = self._do_embeddings_computation(seq_records=seq_records,
+                                                               embeddings_file_path=embeddings_file_path,
+                                                               use_reduced_embeddings=use_reduced_embeddings,
+                                                               store_by_hash=store_by_hash)
 
         return str(embeddings_file_path)
 
@@ -117,7 +133,8 @@ class EmbeddingService:
 
     def _do_embeddings_computation(self, seq_records: List[BiotrainerSequenceRecord],
                                    embeddings_file_path: Path,
-                                   use_reduced_embeddings: bool) -> str:
+                                   use_reduced_embeddings: bool,
+                                   store_by_hash: bool) -> str:
         """
         Performs the embedding service for the given protein sequences.
 
@@ -125,10 +142,16 @@ class EmbeddingService:
             seq_records (Dict[str, str]): A list of BiotrainerSequenceRecords.
             embeddings_file_path (Path): The path where embeddings will be saved.
             use_reduced_embeddings (bool): Indicates if reduced embeddings should be used.
+            store_by_hash (bool): Flag to determine if h5 index should be by hash.
 
         Returns:
             str: The path to the embeddings file.
         """
+
+        # Get unique seq records by sequence
+        seq_records = [seq_record for _, seq_record in
+                       {seq_record.seq: seq_record for seq_record in seq_records}.items()
+                       ]
         sequences: List[str] = [seq_record.seq for seq_record in seq_records]
         embeddings: List[BiotrainerSequenceRecord] = []  # Seq Records with updated embeddings
         start_time = time.time()
@@ -155,15 +178,18 @@ class EmbeddingService:
             for idx in range(1, total_sequences):
                 if max_embedding_fit <= 3 or len(embeddings) % max_embedding_fit == 0 or idx == total_sequences - 1:
                     pbar.desc = "Saving Embeddings"
-                    embeddings = self._save_and_reset_embeddings(embeddings,
-                                                                 embeddings_file_path,
-                                                                 use_reduced_embeddings)
+                    pbar.refresh()
+                    embeddings = self._save_and_reset_embeddings(embd_records=embeddings,
+                                                                 embeddings_file_path=embeddings_file_path,
+                                                                 use_reduced_embeddings=use_reduced_embeddings,
+                                                                 store_by_hash=store_by_hash)
                     logger.debug(f"New {max_embedding_fit=}")
 
                     calculated_embedding = next(embedding_iter, None)
                     embeddings.append(seq_records[idx].copy_with_embedding(calculated_embedding))
                     pbar.desc = "Computing Embeddings"
                     pbar.update(1)
+                    pbar.refresh()
 
                     # Calculate the new max_embedding_fit for the next batch
                     max_embedding_fit = self._max_embedding_fit(calculated_embedding)
@@ -172,6 +198,7 @@ class EmbeddingService:
                     calculated_embedding = next(embedding_iter, None)
                     embeddings.append(seq_records[idx].copy_with_embedding(calculated_embedding))
                     pbar.update(1)
+                    pbar.refresh()
 
                     if calculated_embedding is None:
                         raise Exception(f"len(sequence_ids) > len(embedding_iter) or "
@@ -181,17 +208,15 @@ class EmbeddingService:
 
         # Save remaining embeddings
         if len(embeddings) > 0:
-            embeddings = self._save_and_reset_embeddings(embeddings,
-                                                         embeddings_file_path,
-                                                         use_reduced_embeddings)
+            pbar.desc = "Saving Embeddings"
+            pbar.refresh()
+            embeddings = self._save_and_reset_embeddings(embd_records=embeddings,
+                                                         embeddings_file_path=embeddings_file_path,
+                                                         use_reduced_embeddings=use_reduced_embeddings,
+                                                         store_by_hash=store_by_hash)
 
         end_time = time.time()
         logger.info(f"Time elapsed for computing embeddings: {end_time - start_time:.2f}[s]")
-
-        # Manually clear the memory from costly embeddings and embedder model
-        del embeddings
-        del self._embedder
-        gc.collect()
 
         return str(embeddings_file_path)
 
@@ -225,7 +250,8 @@ class EmbeddingService:
 
     def _save_and_reset_embeddings(self, embd_records: List[BiotrainerSequenceRecord],
                                    embeddings_file_path: Path,
-                                   use_reduced_embeddings: bool) -> List[BiotrainerSequenceRecord]:
+                                   use_reduced_embeddings: bool,
+                                   store_by_hash: bool) -> List[BiotrainerSequenceRecord]:
         """
         Save the embeddings and reset the list.
 
@@ -233,13 +259,14 @@ class EmbeddingService:
             embd_records (List[BiotrainerSequenceRecord]): List of seq records with embeddings to be saved.
             embeddings_file_path (Path): The path where embeddings are saved.
             use_reduced_embeddings (bool): Flag to determine if embeddings should be reduced.
-
+            store_by_hash (bool): Flag to determine if h5 index should be by hash.
         Returns:
            Deleted and emptied seq records list
         """
         if use_reduced_embeddings:
             embd_records = self._reduce_embeddings(embd_records, self._embedder)
-        self._save_embeddings(embd_records=embd_records, embeddings_file_path=embeddings_file_path)
+        self._save_embeddings(embd_records=embd_records, embeddings_file_path=embeddings_file_path,
+                              store_by_hash=store_by_hash)
         del embd_records
         return []
 
@@ -299,7 +326,7 @@ class EmbeddingService:
                 for seq_record in embd_records]
 
     @staticmethod
-    def _save_embeddings(embd_records: List[BiotrainerSequenceRecord], embeddings_file_path: Path):
+    def _save_embeddings(embd_records: List[BiotrainerSequenceRecord], embeddings_file_path: Path, store_by_hash: bool):
         """
         Saves the embeddings to a file.
 
@@ -312,9 +339,11 @@ class EmbeddingService:
         """
         with h5py.File(embeddings_file_path, "a") as embeddings_file:
             for seq_record in embd_records:
-                seq_hash = seq_record.get_hash()
-                embeddings_file.create_dataset(seq_hash, data=seq_record.embedding, compression="gzip", chunks=True)
-                embeddings_file[seq_hash].attrs[
+                h5_index = seq_record.seq_id
+                if store_by_hash:
+                    h5_index = seq_record.get_hash()
+                embeddings_file.create_dataset(h5_index, data=seq_record.embedding, compression="gzip", chunks=True)
+                embeddings_file[h5_index].attrs[
                     "original_id"] = seq_record.seq_id  # Follows biotrainer & bio_embeddings standard
 
     def compute_embeddings_from_list(self, protein_sequences: List[str], protocol: Protocol) -> List:

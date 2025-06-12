@@ -1,3 +1,5 @@
+import gc
+
 from pathlib import Path
 
 from ..pipeline import PipelineContext, PipelineStep
@@ -34,6 +36,10 @@ class EmbeddingStep(PipelineStep):
                 protocol=context.config["protocol"], output_dir=context.config["output_dir"]
             )
             context.output_manager.add_derived_values({'embeddings_file': embeddings_file})
+
+            # Manually clear the memory from costly embedder model
+            del embedding_service._embedder
+            gc.collect()
         else:
             logger.info(f'Embeddings file was found at {embeddings_file}. Embeddings have not been computed.')
 
