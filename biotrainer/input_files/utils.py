@@ -5,15 +5,16 @@ from .biotrainer_seq_record import BiotrainerSequenceRecord
 from ..utilities.constants import INTERACTION_INDICATOR
 
 
-def merge_protein_interactions(sequences: Dict[str, BiotrainerSequenceRecord]) -> Dict[str, Dict[str, str]]:
+def merge_protein_interactions(seq_records: List[BiotrainerSequenceRecord]) -> Dict[str, Dict[str, str]]:
     """
-    :param sequences: a list of BiotrainerSequenceRecord
+    :param seq_records: a list of BiotrainerSequenceRecord
     :return: A dictionary of ids and their attributes
     """
     result = {}
 
-    for seq_id, sequence in sequences.items():
-        interactor = sequence.get_ppi()
+    for seq_record in seq_records:
+        seq_id = seq_record.seq_id
+        interactor = seq_record.get_ppi()
         if not interactor:
             raise ValueError(f"Sequence {seq_id} does not have a valid interactor!")
 
@@ -23,15 +24,15 @@ def merge_protein_interactions(sequences: Dict[str, BiotrainerSequenceRecord]) -
         # Check that target annotations and sets are consistent:
         for int_id in [interaction_id, interaction_id_flipped]:
             if int_id in result.keys():
-                if sequence.get_target() != result[int_id]["TARGET"]:
+                if seq_record.get_target() != result[int_id]["TARGET"]:
                     raise ValueError(f"Interaction multiple times present in fasta file, but TARGET=values are "
                                      f"different for {int_id}!")
-                if sequence.get_set() != result[int_id]["SET"]:
+                if seq_record.get_set() != result[int_id]["SET"]:
                     raise ValueError(f"Interaction multiple times present in fasta file, but SET=sets are "
                                      f"different for {int_id}!")
 
         if interaction_id_flipped not in result.keys():
-            result[interaction_id] = sequence.attributes
+            result[interaction_id] = seq_record.attributes
 
     return result
 
