@@ -1,21 +1,21 @@
 import re
 
 from pathlib import Path
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Callable
 
 from .biotrainer_seq_record import BiotrainerSequenceRecord
 
 
-def read_FASTA(path: Union[str, Path]) -> Dict[str, BiotrainerSequenceRecord]:
+def read_FASTA(path: Union[str, Path]) -> List[BiotrainerSequenceRecord]:
     """
     Pure Python FASTA file parser. Parses attributes on the go.
 
     :param path: path to a valid FASTA file
-    :return: a dict of seq_id -> BiotrainerSequenceRecord objects
+    :return: a list of BiotrainerSequenceRecord objects
     """
     attributes_pattern = re.compile(r"([A-Z_]+)=(-?[A-z0-9]+-?[A-z0-9]*[.0-9]*)")
 
-    records = {}
+    records = []
     try:
         with open(path, 'r') as file:
             current_id = ""
@@ -30,13 +30,11 @@ def read_FASTA(path: Union[str, Path]) -> Dict[str, BiotrainerSequenceRecord]:
                 if line.startswith('>'):
                     # Save the previous sequence if it exists
                     if current_id:
-                        if current_id in records:
-                            raise ValueError(f"Duplicated sequence id in fasta file: {current_id}!")
-                        records[current_id] = BiotrainerSequenceRecord(
+                        records.append(BiotrainerSequenceRecord(
                             seq_id=current_id,
                             attributes=current_attributes,
                             seq=current_seq
-                        )
+                        ))
 
                     # Parse the header line
                     header = line[1:].strip()
@@ -50,13 +48,11 @@ def read_FASTA(path: Union[str, Path]) -> Dict[str, BiotrainerSequenceRecord]:
 
             # Ensure last sequence is added
             if current_id:
-                if current_id in records:
-                    raise ValueError(f"Duplicated sequence id in fasta file: {current_id}!")
-                records[current_id] = BiotrainerSequenceRecord(
+                records.append(BiotrainerSequenceRecord(
                     seq_id=current_id,
                     attributes=current_attributes,
                     seq=current_seq
-                )
+                ))
 
         return records
 
@@ -83,3 +79,21 @@ def write_FASTA(path: Union[str, Path], seq_records: List[BiotrainerSequenceReco
             fasta_file.write(f">{seq_record.seq_id} {attributes_str}\n{seq_record.seq}\n")
             n_written += 1
     return n_written
+
+
+def filter_FASTA(input_path: Union[str, Path], output_path: Union[str, Path],
+                 filter_function: Callable[[BiotrainerSequenceRecord], bool]) -> (int, int):
+    """
+    Reads a fasta file from input_path, applies the filter function to all seq_records
+    and stores the result at output_path.
+
+    :param input_path: The path to a fasta file
+    :param output_path: The path were the filtered fasta file will be written
+    :param filter_function: Callable that takes a BiotrainerSequenceRecord and returns a bool (True == keep)
+    :return: (Number of kept sequences, Number of all sequences)
+    """
+    seq_records = read_FASTA(input_path)
+    n_all = len(seq_records)
+    keep_records = [seq_record for seq_record in seq_records if filter_function(seq_record)]
+    n_kept = write_FASTA(output_path, keep_records)
+    return n_kept, n_all
