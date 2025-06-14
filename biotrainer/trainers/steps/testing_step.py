@@ -55,9 +55,8 @@ class TestingStep(PipelineStep):
                                                     metrics_calculator=metrics_calculator,
                                                     mapped_predictions=test_results["mapped_predictions"],
                                                     test_loader=test_loader)
-        bootstrapping_results = bootstrapping_dict["results"]
         context.output_manager.add_test_set_result(test_set_id=test_set_id,
-                                                   test_set_results={"bootstrapping": bootstrapping_results})
+                                                   test_set_results={"bootstrapping": bootstrapping_dict})
         logger.info(f'Bootstrapping results for test set ({test_set_id}): {bootstrapping_dict}')
 
     def process(self, context: PipelineContext) -> PipelineContext:
