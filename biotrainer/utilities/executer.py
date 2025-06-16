@@ -1,16 +1,15 @@
 from pathlib import Path
-from typing import Union, Dict, Any, Optional, Callable, List
-
+from typing import Union, Dict, Any, Optional, List
 
 from .logging import clear_logging
 
-from ..trainers import Trainer, Pipeline
 from ..config import Configurator
+from ..trainers import Trainer, Pipeline
 from ..output_files import OutputManager, output_observer_factory, BiotrainerOutputObserver
 
 
 def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
-                                      custom_pipeline: Optional[Callable] = None,
+                                      custom_pipeline: Optional[Pipeline] = None,
                                       custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None) \
         -> Dict[str, Any]:
     # Verify config via configurator
@@ -37,12 +36,12 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
     trainer: Trainer
     if custom_pipeline:
         output_manager.add_derived_values(derived_values={"custom_pipeline": True})
-        trainer = None # TODO
-    else:
-        # Run biotrainer pipeline
-        trainer = Trainer(config=config,
-                          output_manager=output_manager,
-                          )
+
+    # Run biotrainer pipeline
+    trainer = Trainer(config=config,
+                      output_manager=output_manager,
+                      custom_pipeline=custom_pipeline
+                      )
 
     output_manager = trainer.run()
 
