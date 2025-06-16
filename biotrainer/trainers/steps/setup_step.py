@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ..hp_manager import HyperParameterManager
 from ..pipeline import PipelineStep, PipelineContext
+from ..pipeline.pipeline_step import PipelineStepType
 
 from ...protocols import Protocol
 from ...utilities import seed_all, get_logger, __version__, setup_logging, get_device, calculate_model_hash
@@ -13,6 +14,9 @@ logger = get_logger(__name__)
 
 
 class SetupStep(PipelineStep):
+
+    def get_step_type(self) -> PipelineStepType:
+        return PipelineStepType.SETUP
 
     @staticmethod
     def _post_process_config(context: PipelineContext):

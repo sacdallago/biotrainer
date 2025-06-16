@@ -3,6 +3,7 @@ import torch
 from typing import Union
 
 from ..pipeline import PipelineContext, PipelineStep
+from ..pipeline.pipeline_step import PipelineStepType
 
 from ..target_manager import TargetManager
 
@@ -13,6 +14,9 @@ logger = get_logger(__name__)
 
 
 class DataLoadingStep(PipelineStep):
+
+    def get_step_type(self) -> PipelineStepType:
+        return PipelineStepType.DATA_LOADING
 
     @staticmethod
     def _get_class_weights(context: PipelineContext, target_manager: TargetManager) -> Union[
