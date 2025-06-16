@@ -8,6 +8,7 @@ from .training_factory import TrainingFactory
 
 from ..cv_splitter import CrossValidationSplitter
 from ..pipeline import PipelineContext, PipelineStep
+from ..pipeline.pipeline_step import PipelineStepType
 
 from ...solvers import Solver
 from ...models import count_parameters
@@ -17,6 +18,9 @@ logger = get_logger(__name__)
 
 
 class TrainingStep(PipelineStep):
+
+    def get_step_type(self) -> PipelineStepType:
+        return PipelineStepType.TRAINING
 
     def _run_cross_validation(self, context: PipelineContext, splits: List[Split]) -> List[SplitResult]:
         split_results = list()

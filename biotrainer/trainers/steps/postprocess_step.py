@@ -1,22 +1,19 @@
 import time
 import datetime
 
-from torch.utils.data import DataLoader
-from typing import List, Dict, Optional, Any
-
-from .training_factory import TrainingFactory
-
-from ..cv_splitter import CrossValidationSplitter
 from ..pipeline import PipelineContext, PipelineStep
+from ..pipeline.pipeline_step import PipelineStepType
 
-from ...solvers import Solver
-from ...models import count_parameters
-from ...utilities import get_logger, Split, SplitResult, EpochMetrics, METRICS_WITHOUT_REVERSED_SORTING
+from ...utilities import get_logger
 
 logger = get_logger(__name__)
 
 
 class PostProcessStep(PipelineStep):
+
+    def get_step_type(self) -> PipelineStepType:
+        return PipelineStepType.POST_PROCESS
+
     @staticmethod
     def _onnx_export(context: PipelineContext):
         try:

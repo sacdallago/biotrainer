@@ -3,6 +3,7 @@ import gc
 from pathlib import Path
 
 from ..pipeline import PipelineContext, PipelineStep
+from ..pipeline.pipeline_step import PipelineStepType
 
 from ...utilities import get_logger
 from ...embedders import get_embedding_service, EmbeddingService
@@ -11,6 +12,10 @@ logger = get_logger(__name__)
 
 
 class EmbeddingStep(PipelineStep):
+
+    def get_step_type(self) -> PipelineStepType:
+        return PipelineStepType.EMBEDDING
+
     def process(self, context: PipelineContext) -> PipelineContext:
         # Generate embeddings if necessary, otherwise use existing embeddings
         embeddings_file = context.config.get("embeddings_file", None)
