@@ -150,7 +150,10 @@ class TrainingStep(PipelineStep):
                                                            val_loader=val_loader)
 
         # Save metrics from best training epoch
-        context.output_manager.add_derived_values({'best_training_epoch_metrics': best_epoch_metrics.to_dict()})
+        context.output_manager.add_split_specific_values(split_name=current_split_name,
+                                                         split_specific_values={
+                                                             'best_training_epoch_metrics': best_epoch_metrics.to_dict()
+                                                         })
 
         return best_epoch_metrics, solver
 
