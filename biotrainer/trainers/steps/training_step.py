@@ -18,7 +18,6 @@ logger = get_logger(__name__)
 
 class TrainingStep(PipelineStep):
 
-
     def _run_cross_validation(self, context: PipelineContext, splits: List[Split]) -> List[SplitResult]:
         split_results = list()
         for split in splits:
@@ -109,7 +108,8 @@ class TrainingStep(PipelineStep):
                                                              })
 
         # DATALOADERS
-        train_loader = TrainingFactory.create_dataloader(context=context, dataset=train_dataset, hyper_params=hyper_params)
+        train_loader = TrainingFactory.create_dataloader(context=context, dataset=train_dataset,
+                                                         hyper_params=hyper_params)
         val_loader = TrainingFactory.create_dataloader(context=context, dataset=val_dataset, hyper_params=hyper_params)
 
         # MODEL, LOSS, OPTIMIZER
@@ -160,11 +160,11 @@ class TrainingStep(PipelineStep):
     @staticmethod
     def _do_and_log_training(context: PipelineContext, split_name: str, solver: Solver, train_loader: DataLoader,
                              val_loader: DataLoader) -> EpochMetrics:
-        start_time_abs = datetime.datetime.now()
+        start_time_abs = str(datetime.datetime.now().isoformat())
         start_time = time.perf_counter()
         epoch_iterations = solver.train(train_loader, val_loader)
         end_time = time.perf_counter()
-        end_time_abs = datetime.datetime.now()
+        end_time_abs = str(datetime.datetime.now().isoformat())
 
         # Logging
         logger.info(f'Total training time for split {split_name}: {end_time - start_time} [s]')

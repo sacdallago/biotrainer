@@ -27,7 +27,7 @@ class PostProcessStep(PipelineStep):
     @staticmethod
     def _log_time(context: PipelineContext):
         pipeline_end_time = time.perf_counter()
-        pipeline_end_time_abs = datetime.datetime.now()
+        pipeline_end_time_abs = str(datetime.datetime.now().isoformat())
         pipeline_elapsed_time = pipeline_end_time - context.pipeline_start_time
         logger.info(f"Pipeline end time: {pipeline_end_time_abs}")
         logger.info(f"Total elapsed time for pipeline: {pipeline_elapsed_time} [s]")
