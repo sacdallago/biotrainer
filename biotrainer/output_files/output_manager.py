@@ -85,10 +85,24 @@ class OutputManager:
     def _sort_dict(d: dict):
         return dict(sorted(d.items(), key=lambda t: t[0]))
 
+    def _format_splits_with_results(self) -> Dict[str, Any]:
+        result = deepcopy(self._split_specific_values)
+        for split_name, epoch_metrics in self._training_results.items():
+            result[split_name].update({
+                "training_loss": {},
+                "validation_loss": {}
+            })
+            for epoch_metric in epoch_metrics:
+                epoch_str = str(epoch_metric.epoch)
+                result[split_name]["training_loss"][epoch_str] = epoch_metric.training["loss"]
+                result[split_name]["validation_loss"][epoch_str] = epoch_metric.validation["loss"]
+        return result
+
     def to_dict(self) -> Dict[str, Any]:
         return {"config": self._sort_dict(self._input_config),
+                "database_type": "PPI" if self._input_config.get("interaction") is not None else "Protein",
                 "derived_values": self._sort_dict(self._derived_values),
-                "splits": self._sort_dict(self._split_specific_values),
+                "training_results": self._sort_dict(self._format_splits_with_results()),
                 "test_results": self._sort_dict(self._test_results),
                 "predictions": self._sort_dict(self._predictions),
                 }
