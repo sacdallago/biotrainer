@@ -1,6 +1,18 @@
+from enum import Enum
 from abc import ABC, abstractmethod
 
 from .pipeline_context import PipelineContext
+
+
+class PipelineStepType(Enum):
+    SETUP = "setup"
+    EMBEDDING = "embedding"
+    PROJECTION = "projection"
+    DATA_LOADING = "data_loading"
+    TRAINING = "training"
+    TESTING = "testing"
+    POST_PROCESS = "post_process"
+    CUSTOM = "custom"
 
 
 class PipelineStep(ABC):
@@ -8,6 +20,10 @@ class PipelineStep(ABC):
     @abstractmethod
     def process(self, context: PipelineContext) -> PipelineContext:
         pass
+
+    @abstractmethod
+    def get_step_type(self) -> PipelineStepType:
+        raise NotImplementedError
 
     def __str__(self) -> str:
         return self.__class__.__name__

@@ -1,6 +1,7 @@
 from .training_factory import TrainingFactory
 
 from ..pipeline import PipelineContext, PipelineStep
+from ..pipeline.pipeline_step import PipelineStepType
 
 from ...solvers import get_metrics_calculator
 from ...utilities import get_logger, revert_mappings
@@ -10,6 +11,10 @@ logger = get_logger(__name__)
 
 
 class TestingStep(PipelineStep):
+
+    def get_step_type(self) -> PipelineStepType:
+        return PipelineStepType.TESTING
+
     @staticmethod
     def _do_and_log_evaluation(context: PipelineContext, solver, test_loader, test_set_id: str):
         # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights

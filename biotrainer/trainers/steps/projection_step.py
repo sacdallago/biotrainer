@@ -1,6 +1,7 @@
 from typing import Dict, Any
 
 from ..pipeline import PipelineContext, PipelineStep
+from ..pipeline.pipeline_step import PipelineStepType
 
 from ...protocols import Protocol
 from ...utilities import get_logger
@@ -10,6 +11,9 @@ logger = get_logger(__name__)
 
 
 class ProjectionStep(PipelineStep):
+
+    def get_step_type(self) -> PipelineStepType:
+        return PipelineStepType.PROJECTION
 
     @staticmethod
     def _is_dimension_reduction_possible(context: PipelineContext, dimension_reduction_method, n_reduced_components,
