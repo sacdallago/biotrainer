@@ -41,7 +41,7 @@ class SetupStep(PipelineStep):
 
     def process(self, context: PipelineContext) -> PipelineContext:
         context.pipeline_start_time = time.perf_counter()
-        pipeline_start_time_abs = datetime.datetime.now()
+        pipeline_start_time_abs = str(datetime.datetime.now().isoformat())
 
         self._post_process_config(context)
 
