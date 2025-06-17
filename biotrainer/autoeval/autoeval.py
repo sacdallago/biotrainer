@@ -11,6 +11,7 @@ from .data_handler import AutoEvalDataHandler, AutoEvalTask
 
 from ..trainers import Pipeline
 from ..protocols import Protocol
+from ..utilities import get_device
 from ..input_files import read_FASTA, BiotrainerSequenceRecord
 from ..embedders import EmbeddingService, get_embedding_service
 from ..utilities.executer import parse_config_file_and_execute_run
@@ -220,7 +221,8 @@ def autoeval_pipeline(embedder_name: str,
         if not custom_embedding_function_per_residue or not custom_embedding_function_per_sequence:
             embedding_service: EmbeddingService = get_embedding_service(embedder_name=embedder_name,
                                                                         custom_tokenizer_config=custom_tokenizer_config,
-                                                                        use_half_precision=use_half_precision
+                                                                        use_half_precision=use_half_precision,
+                                                                        device=get_device()
                                                                         )
 
         if not custom_embedding_function_per_residue:
