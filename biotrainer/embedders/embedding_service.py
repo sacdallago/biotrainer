@@ -102,18 +102,17 @@ class EmbeddingService:
     def generate_embeddings(self,
                             input_data: Union[str, Path, List[str], List[BiotrainerSequenceRecord], Dict[
                                 str, BiotrainerSequenceRecord]],
-                            protocol: Protocol) -> Generator[Tuple[BiotrainerSequenceRecord, np.ndarray], None, None]:
+                            reduce: bool) -> Generator[Tuple[BiotrainerSequenceRecord, np.ndarray], None, None]:
         """
         Generator function that yields embeddings as they are computed.
 
         Parameters:
             input_data: Input sequences in various formats
-            protocol: Protocol for the embeddings
+            reduce: If True, embeddings will be reduced to per-sequence embeddings.
 
         Yields:
-            Tuple[str, np.ndarray]: Tuple of (sequence_id, embedding)
+            Tuple[BiotrainerSequenceRecord, np.ndarray]: Tuple of (BiotrainerSequenceRecord, embedding)
         """
-        use_reduced_embeddings = protocol in Protocol.using_per_sequence_embeddings()
 
         # Process input data
         seq_records = self._process_input_data(input_data)
@@ -124,7 +123,7 @@ class EmbeddingService:
                                   reverse=True))
 
         # Generate embeddings
-        yield from self._embeddings_generator(seq_records, use_reduced_embeddings)
+        yield from self._embeddings_generator(seq_records, reduce)
 
     @staticmethod
     def _process_input_data(input_data) -> List[BiotrainerSequenceRecord]:
@@ -158,7 +157,7 @@ class EmbeddingService:
             use_reduced_embeddings: Whether to reduce embeddings to per-protein
 
         Yields:
-            Tuple[str, np.ndarray]: Tuple of (sequence_id, embedding)
+            Tuple[BiotrainerSequenceRecord, np.ndarray]: Tuple of (BiotrainerSequenceRecord, embedding)
         """
         sequences = [seq_record.seq for seq_record in seq_records]
         embedding_iter = self._embedder.embed_many(sequences)
