@@ -93,14 +93,15 @@ def validate_config_options(protocol: Protocol,
 
 def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_dict: Dict[str, Any]) -> bool:
     # Input files
-    if "hf_dataset" in config_dict:
-        if any([file_key in config_dict for file_key in ["sequence_file", "labels_file", "mask_file"]]):
-            raise ConfigurationException("If you want to use a dataset from HuggingFace, "
-                                         "do not provide any other input file "
-                                         "(sequence_file/labels_file/mask_file)!")
-    else:
-        if "input_file" not in config_dict:
-            raise ConfigurationException("No huggingface dataset or input_file provided!")
+    if not ignore_file_checks:
+        if "hf_dataset" in config_dict:
+            if any([file_key in config_dict for file_key in ["sequence_file", "labels_file", "mask_file"]]):
+                raise ConfigurationException("If you want to use a dataset from HuggingFace, "
+                                             "do not provide any other input file "
+                                             "(sequence_file/labels_file/mask_file)!")
+        else:
+            if "input_file" not in config_dict:
+                raise ConfigurationException("No huggingface dataset or input_file provided!")
 
     # Mutual Exclusive
     if "auto_resume" in config_dict and "pretrained_model" in config_dict:
