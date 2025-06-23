@@ -254,5 +254,6 @@ def autoeval_pipeline(embedder_name: str,
                          output_dir=output_dir,
                          min_seq_length=min_seq_length,
                          max_seq_length=max_seq_length,
+                         custom_pipeline=custom_pipeline,
                          custom_framework_storage_path=custom_framework_storage_path
                          )
