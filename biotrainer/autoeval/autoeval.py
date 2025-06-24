@@ -12,6 +12,7 @@ from .data_handler import AutoEvalDataHandler, AutoEvalTask
 from ..trainers import Pipeline
 from ..protocols import Protocol
 from ..utilities import get_device
+from ..output_files import BiotrainerOutputObserver
 from ..input_files import read_FASTA, BiotrainerSequenceRecord
 from ..embedders import EmbeddingService, get_embedding_service
 from ..utilities.executer import parse_config_file_and_execute_run
@@ -107,6 +108,7 @@ def _run_pipeline(embedder_name: str,
                   max_seq_length: int,
                   custom_pipeline: Optional[Pipeline] = None,
                   custom_framework_storage_path: Optional[str] = None,
+                  custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
                   ) -> Dict[str, Any]:
     task_config_tuples, unique_per_residue, unique_per_sequence = get_unique_framework_sequences(framework=framework,
                                                                                                  min_seq_length=min_seq_length,
@@ -149,7 +151,8 @@ def _run_pipeline(embedder_name: str,
                                                                 output_dir=task_output_dir,
                                                                 )
         result = parse_config_file_and_execute_run(config=config,
-                                                   custom_pipeline=custom_pipeline)
+                                                   custom_pipeline=custom_pipeline,
+                                                   custom_output_observers=custom_output_observers)
 
         report_manager.add_result(task=task, result_dict=result)
         print(f"Finished task {task.name}!")
@@ -171,6 +174,7 @@ def autoeval_pipeline(embedder_name: str,
                       custom_embedding_function_per_residue: Optional[Callable[[Iterable[str]], Path]] = None,
                       custom_embedding_function_per_sequence: Optional[Callable[[Iterable[str]], Path]] = None,
                       custom_framework_storage_path: Optional[Union[Path, str]] = None,
+                      custom_output_observers: List[BiotrainerOutputObserver] = None,
                       ) -> Dict[str, Any]:
     """
     Run the autoeval pipeline for given embedder_name and framework.
@@ -196,6 +200,7 @@ def autoeval_pipeline(embedder_name: str,
         Takes an iterable of sequence strings as input and must provide the 
         full path to the saved per-sequence embeddings as an output.
     :param custom_framework_storage_path: Optional path where to store the framework datasets if not downloaded yet.
+    :param custom_output_observers: Optional list of custom training output observers.
     :return: A dictionary containing the autoeval pipeline results. Each task result is a biotrainer model output dict.
     """
     _validate_input(framework, min_seq_length, max_seq_length)
