@@ -90,14 +90,21 @@ class EmbeddingService:
                     desc="Computing Embeddings",
                     disable=is_running_in_notebook()
             ):
-                h5_index = seq_record.get_hash() if store_by_hash else seq_record.seq_id
-                embeddings_file.create_dataset(h5_index, data=embedding, compression="gzip", chunks=True)
-                embeddings_file[h5_index].attrs["original_id"] = seq_record.seq_id
+                self.store_embedding(embeddings_file_handle=embeddings_file,
+                                     seq_record=seq_record,
+                                     embedding=embedding,
+                                     store_by_hash=store_by_hash)
 
         end_time = time.time()
         logger.info(f"Time elapsed for computing embeddings: {end_time - start_time:.2f}[s]")
 
         return str(embeddings_file_path)
+
+    @staticmethod
+    def store_embedding(embeddings_file_handle, seq_record, embedding, store_by_hash: bool = True):
+        h5_index = seq_record.get_hash() if store_by_hash else seq_record.seq_id
+        embeddings_file_handle.create_dataset(h5_index, data=embedding, compression="gzip", chunks=True)
+        embeddings_file_handle[h5_index].attrs["original_id"] = seq_record.seq_id
 
     def generate_embeddings(self,
                             input_data: Union[str, Path, List[str], List[BiotrainerSequenceRecord], Dict[
