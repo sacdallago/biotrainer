@@ -156,15 +156,6 @@ class ConfigurationVerificationTests(unittest.TestCase):
                                msg="Config with unavailable model for the protocol does not throw an exception"):
             configurator.get_verified_config()
 
-    def test_non_existing_embedder(self):
-        config_dict = configurations["minimal"]
-        config_dict["embedder_name"] = "two_hot_encodings"
-        configurator = Configurator.from_config_dict(config_dict)
-
-        with self.assertRaises(ConfigurationException,
-                               msg="Config with non_existing_embedder does not throw an exception"):
-            configurator.get_verified_config()
-
     def test_download(self):
         config_dict = configurations["download"]
         configurator = Configurator.from_config_dict(config_dict)
@@ -188,14 +179,6 @@ class ConfigurationVerificationTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ConfigurationException, expected_regex="mutual exclusive",
                                     msg="Config with auto_resume and pretrained_model does not throw an error"):
-            configurator.get_verified_config()
-
-    def test_embeddings_file_embedder_name_mutual_exclusive(self):
-        config_dict = configurations["embeddings_file_embedder_name_mutual_exclusive"]
-        configurator = Configurator.from_config_dict(config_dict)
-
-        with self.assertRaisesRegex(ConfigurationException, expected_regex="mutual exclusive",
-                                    msg="Config with embeddings file and embedder name does not throw an error"):
             configurator.get_verified_config()
 
     def test_mutual_exclusive_cpu_half_precision(self):

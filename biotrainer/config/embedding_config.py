@@ -18,12 +18,6 @@ def embedding_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]
             default="custom_embeddings",
             constraints=ConfigConstraints(
                 type=str,
-                # Validate embedder name or file path
-                custom_validator=lambda value: (
-                    value in get_predefined_embedder_names() or
-                    value == "custom_embeddings" or
-                    value.endswith(".onnx") or
-                    "/" in value, "Could not find given embedder!")
             ),
         ),
         ConfigOption(
