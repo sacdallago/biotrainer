@@ -202,9 +202,18 @@ class EmbeddingService:
                 os.mkdir(embeddings_file_path)
 
         # Append file name to output path
-        embeddings_file_path /= (("reduced_" if use_reduced_embeddings else "")
-                                 + f"embeddings_file_{embedder_name}{'_half' if use_half_precision else ''}.h5")
+        embeddings_file_path /= EmbeddingService.get_embeddings_file_name(embedder_name,
+                                                                          use_half_precision,
+                                                                          use_reduced_embeddings)
         return embeddings_file_path
+
+    @staticmethod
+    def get_embeddings_file_name(embedder_name: str,
+                                 use_half_precision: bool,
+                                 use_reduced_embeddings: bool):
+        embedder_name = embedder_name.split("/")[-1]
+        return (("reduced_" if use_reduced_embeddings else "")
+                + f"embeddings_file_{embedder_name}{'_half' if use_half_precision else ''}.h5")
 
     @staticmethod
     def embeddings_dimensionality_reduction(
