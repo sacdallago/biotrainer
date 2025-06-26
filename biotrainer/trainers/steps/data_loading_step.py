@@ -43,7 +43,7 @@ class DataLoadingStep(PipelineStep):
         assert id2emb is not None and len(id2emb) > 0, f"id2emb cannot be None or empty at the data loading step!"
 
         # TARGETS => DATASETS
-        target_manager = TargetManager(protocol=context.config["protocol"], input_file=context.config["input_file"],
+        target_manager = TargetManager(protocol=context.config["protocol"], input_data=context.input_data,
                                        ignore_file_inconsistencies=context.config["ignore_file_inconsistencies"],
                                        cross_validation_method=context.config["cross_validation_config"]["method"],
                                        interaction=context.config.get("interaction"))

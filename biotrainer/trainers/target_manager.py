@@ -2,8 +2,9 @@ import torch
 import itertools
 import numpy as np
 
+from pathlib import Path
 from collections import Counter
-from typing import Dict, Any, Tuple, Optional, List
+from typing import Dict, Any, Tuple, Optional, List, Union
 
 from ..protocols import Protocol
 from ..utilities import MASK_AND_LABELS_PAD_VALUE, INTERACTION_INDICATOR, DatasetSample, get_logger
@@ -36,19 +37,24 @@ class TargetManager:
         "concat": lambda embedding_left, embedding_right: torch.concat([embedding_left, embedding_right])
     }
 
-    def __init__(self, protocol: Protocol, input_file: str,
+    def __init__(self, protocol: Protocol, input_data: Union[str, Path, List[BiotrainerSequenceRecord]],
                  ignore_file_inconsistencies: Optional[bool] = False,
                  cross_validation_method: str = "",
                  interaction: Optional[str] = None):
         self.protocol = protocol
-        self._input_file = input_file
+        self._input_data = input_data
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
         self._cross_validation_method = cross_validation_method
         self._interaction = interaction
 
     def _calculate_targets(self):
-        # Parse FASTA protein sequences
-        input_records: List[BiotrainerSequenceRecord] = read_FASTA(self._input_file)
+        # Parse FASTA protein sequences if not done yet
+        if isinstance(self._input_data, str) or isinstance(self._input_data, Path):
+            input_records: List[BiotrainerSequenceRecord] = read_FASTA(self._input_data)
+        else:
+            input_records: List[BiotrainerSequenceRecord] = self._input_data
+        assert isinstance(input_records[0], BiotrainerSequenceRecord)
+
         # Store input ids for better error messages
         for seq_record in input_records:
             seq_hash = seq_record.get_hash()
