@@ -43,6 +43,9 @@ class SetupStep(PipelineStep):
         device = get_device(context.config["device"] if "device" in context.config.keys() else None)
         context.config["device"] = device
 
+        # Set input data
+        context.input_data = context.config["input_file"]
+
     def process(self, context: PipelineContext) -> PipelineContext:
         context.pipeline_start_time = time.perf_counter()
         pipeline_start_time_abs = str(datetime.datetime.now().isoformat())

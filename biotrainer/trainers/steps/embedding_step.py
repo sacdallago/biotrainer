@@ -37,7 +37,7 @@ class EmbeddingStep(PipelineStep):
                 device=context.config["device"]
             )
             embeddings_file = embedding_service.compute_embeddings(
-                input_data=context.config["input_file"],
+                input_data=context.input_data,
                 protocol=context.config["protocol"], output_dir=context.config["output_dir"]
             )
             context.output_manager.add_derived_values({'embeddings_file': embeddings_file})

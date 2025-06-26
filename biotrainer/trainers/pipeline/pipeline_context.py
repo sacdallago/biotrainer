@@ -1,6 +1,8 @@
-from typing import Dict, Any
+from pathlib import Path
+from typing import Dict, Any, Union, List, Optional
 
 from ...output_files import OutputManager
+from ...input_files import BiotrainerSequenceRecord
 
 
 class PipelineContext:
@@ -17,6 +19,8 @@ class PipelineContext:
         self.pipeline_start_time = None
         self.model_hash = None
         self.hp_manager = None
+        # Input Data
+        self.input_data: Optional[Union[Path, List[BiotrainerSequenceRecord]]] = None
         # Embedding + Projection
         self.id2emb = None
         # Data Loading
@@ -28,10 +32,6 @@ class PipelineContext:
         self.test_datasets = None
         self.prediction_dataset = None
         self.class_weights = None
-
-        #self.splits = []
-        #self.split_results = []
-        # self.pipeline_metrics = {}
 
         # Training
         self.best_split = None
