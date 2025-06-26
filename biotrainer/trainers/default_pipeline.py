@@ -1,13 +1,14 @@
 from typing import Optional
 
 from .pipeline import Pipeline, PipelineStep
-from .steps import SetupStep, EmbeddingStep, ProjectionStep, DataLoadingStep, TrainingStep, TestingStep, PostProcessStep
+from .steps import SetupStep, EmbeddingStep, ProjectionStep, DataLoadingStep, TrainingStep, TestingStep, PostProcessStep, InputValidationStep
 
 
 class DefaultPipeline:
     def __init__(self):
         self.pipeline = (Pipeline()
                          .add_step(SetupStep())
+                         .add_step(InputValidationStep())
                          .add_step(EmbeddingStep())
                          .add_step(ProjectionStep())
                          .add_step(DataLoadingStep())
@@ -18,6 +19,7 @@ class DefaultPipeline:
 
     def with_custom_steps(self,
                           custom_setup_step: Optional[PipelineStep] = None,
+                          custom_input_validation_step: Optional[PipelineStep] = None,
                           custom_embedding_step: Optional[PipelineStep] = None,
                           custom_projection_step: Optional[PipelineStep] = None,
                           custom_data_loading_step: Optional[PipelineStep] = None,
@@ -27,6 +29,7 @@ class DefaultPipeline:
 
         custom_steps = [
             custom_setup_step,
+            custom_input_validation_step,
             custom_embedding_step,
             custom_projection_step,
             custom_data_loading_step,

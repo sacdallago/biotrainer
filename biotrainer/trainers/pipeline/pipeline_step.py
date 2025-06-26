@@ -6,6 +6,7 @@ from .pipeline_context import PipelineContext
 
 class PipelineStepType(Enum):
     SETUP = "setup"
+    INPUT_VALIDATION = "input_validation"
     EMBEDDING = "embedding"
     PROJECTION = "projection"
     DATA_LOADING = "data_loading"
