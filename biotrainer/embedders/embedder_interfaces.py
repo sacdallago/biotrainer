@@ -46,11 +46,17 @@ class EmbedderInterface(abc.ABC):
         for sequence in batch:
             yield self._embed_single(sequence)
 
-    def estimate_batch_size(self) -> int:
+    def estimate_batch_size(self, preprocessed_sequences: List[str]) -> int:
         memory_gb = get_device_memory(self._device)
         safety_factor = 0.8
         residues_per_gb = 1024  # Estimating 1MB/residue
         batch_size = int(memory_gb * residues_per_gb * safety_factor)
+
+        # Account for separators that are processed by the tokenizer (do not count towards batch_size => double it)
+        first_sequence = preprocessed_sequences[0]
+        if any([separator in first_sequence for separator in (' ', ',', ';')]):
+            batch_size *= 2
+
         return batch_size
 
     def embed_many(
@@ -63,10 +69,10 @@ class EmbedderInterface(abc.ABC):
         :param batch_size: For embedders that profit from batching, this is maximum number of AA per batch
         :return: A list object with embeddings of the sequences.
         """
-        if batch_size is None:
-            batch_size = self.estimate_batch_size()
-
         sequences = self._preprocess_sequences(sequences)
+
+        if batch_size is None:
+            batch_size = self.estimate_batch_size(preprocessed_sequences=sequences)
 
         if batch_size and batch_size > 1:
             batch = []
