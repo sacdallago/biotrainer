@@ -34,17 +34,17 @@ def get_duplicates(split_name: str, all_seq_records, report: bool):
         seq_counts[seq].append(seq_record)
 
     csv_report = ""
-    duplicates_with_conflicting_targets = set()
+    duplicates = set()
     for seq, seq_records in seq_counts.items():
         count = len(seq_records)
         if count > 1:
-            target_conflict = len({seq_record.get_target() for seq_record in seq_records}) > 1
-            if target_conflict:
-                for seq_record in seq_records:
-                    duplicates_with_conflicting_targets.add(seq_record)
+            for seq_record in seq_records:
+                duplicates.add(seq_record)
 
+            targets = {seq.get_target() for seq in seq_records}
+            target_string = ';'.join(targets) if all([target is not None for target in targets]) else "N/A"
             csv_line = (f"{split_name},{count},{';'.join([seq.seq_id for seq in seq_records])},"
-                        f"{';'.join([seq.get_target() for seq in seq_records])}")
+                        f"{target_string}")
             csv_report += csv_line
             csv_report += "\n"
             print(csv_line)
@@ -59,7 +59,7 @@ def get_duplicates(split_name: str, all_seq_records, report: bool):
                 csv_file.write(header)
             csv_file.write(csv_report)
 
-    return duplicates_with_conflicting_targets
+    return duplicates
 
 
 def ensure_preprocessed_file(dataset_dir: Path, name: str, min_seq_length: int, max_seq_length: int) -> Path:
@@ -89,7 +89,7 @@ def ensure_preprocessed_file(dataset_dir: Path, name: str, min_seq_length: int, 
     # Only keep unique sequences
     keep_seqs = {seq_record.get_hash(): seq_record for seq_record in keep_seqs}
 
-    # Remove duplicates with conflicting targets
+    # Remove all duplicates
     duplicates = get_duplicates(complete_name, all_seq_records, False)
     duplicates_hashed = {dup.get_hash() for dup in duplicates}
 
