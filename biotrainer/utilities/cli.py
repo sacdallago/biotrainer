@@ -105,12 +105,13 @@ def autoeval(embedder_name: str,
              max_seq_length: Optional[int] = 2000,
              use_half_precision: Optional[bool] = False,
              ):
-    return autoeval_pipeline(embedder_name=embedder_name,
-                             framework=framework,
-                             min_seq_length=min_seq_length,
-                             max_seq_length=max_seq_length,
-                             use_half_precision=use_half_precision,
-                             )
+    for progress in autoeval_pipeline(embedder_name=embedder_name,
+                                      framework=framework,
+                                      min_seq_length=min_seq_length,
+                                      max_seq_length=max_seq_length,
+                                      use_half_precision=use_half_precision,
+                                      ):
+        print(progress)
 
 
 if __name__ == "__main__":
