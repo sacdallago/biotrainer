@@ -139,11 +139,11 @@ def _run_pipeline(embedder_name: str,
                                    max_seq_len=max_seq_length,
                                    )
     # Execute biotrainer
-    current_task = 0
+    completed_tasks = 0
     total_tasks = len(task_config_tuples)
     for task, config in task_config_tuples:
         print(f"Running task {task.name}...")
-        yield AutoEvalProgress(current_task=current_task, total_tasks=total_tasks)
+        yield AutoEvalProgress(completed_tasks=completed_tasks, total_tasks=total_tasks)
 
         task_output_dir = output_dir / task.name
         if custom_pipeline:
@@ -165,13 +165,13 @@ def _run_pipeline(embedder_name: str,
 
         report_manager.add_result(task=task, result_dict=result)
 
-        current_task += 1
+        completed_tasks += 1
         print(f"Finished task {task.name}!")
 
     report = report_manager.write(output_dir=output_dir)
 
     print(f"Autoeval pipeline for {embedder_name} finished successfully!")
-    yield AutoEvalProgress(current_task=total_tasks, total_tasks=total_tasks, final_report=report)
+    yield AutoEvalProgress(completed_tasks=total_tasks, total_tasks=total_tasks, final_report=report)
 
 
 def _setup_embedding_functions(embedder_name,
