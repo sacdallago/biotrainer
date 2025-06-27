@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Callable, Dict, Tuple, List, Any, Union, Iterable, Generator
 
+from .autoeval_progress import AutoEvalProgress
 from .report_manager import ReportManager
 from .config_bank import AutoEvalConfigBank
 from .flip import FLIPDataHandler, FLIPConfigBank
@@ -111,7 +112,7 @@ def _run_pipeline(embedder_name: str,
                   custom_pipeline: Optional[Pipeline] = None,
                   custom_framework_storage_path: Optional[str] = None,
                   custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
-                  ) -> Dict[str, Any]:
+                  ) -> Generator[AutoEvalProgress, None, None]:
     task_config_tuples, unique_per_residue, unique_per_sequence = get_unique_framework_sequences(framework=framework,
                                                                                                  min_seq_length=min_seq_length,
                                                                                                  max_seq_length=max_seq_length,
@@ -138,8 +139,12 @@ def _run_pipeline(embedder_name: str,
                                    max_seq_len=max_seq_length,
                                    )
     # Execute biotrainer
+    current_task = 0
+    total_tasks = len(task_config_tuples)
     for task, config in task_config_tuples:
         print(f"Running task {task.name}...")
+        yield AutoEvalProgress(current_task=current_task, total_tasks=total_tasks)
+
         task_output_dir = output_dir / task.name
         if custom_pipeline:
             task_embeddings_file = None
@@ -159,12 +164,14 @@ def _run_pipeline(embedder_name: str,
                                                    custom_output_observers=custom_output_observers)
 
         report_manager.add_result(task=task, result_dict=result)
+
+        current_task += 1
         print(f"Finished task {task.name}!")
 
     report = report_manager.write(output_dir=output_dir)
 
     print(f"Autoeval pipeline for {embedder_name} finished successfully!")
-    return report
+    yield AutoEvalProgress(current_task=total_tasks, total_tasks=total_tasks, final_report=report)
 
 
 def _setup_embedding_functions(embedder_name,
@@ -267,7 +274,7 @@ def autoeval_pipeline(embedder_name: str,
                           Callable[[Iterable[str]], Generator[Tuple[str, np.ndarray], None, None]]] = None,
                       custom_framework_storage_path: Optional[Union[Path, str]] = None,
                       custom_output_observers: List[BiotrainerOutputObserver] = None,
-                      ) -> Dict[str, Any]:
+                      ) -> Generator[AutoEvalProgress, None, None]:
     """
     Run the autoeval pipeline for given embedder_name and framework.
 
@@ -324,7 +331,7 @@ def autoeval_pipeline(embedder_name: str,
         custom_embedding_function_per_residue=custom_embedding_function_per_residue,
         custom_embedding_function_per_sequence=custom_embedding_function_per_sequence)
 
-    return _run_pipeline(embedder_name=embedder_name,
+    yield from _run_pipeline(embedder_name=embedder_name,
                          framework=framework,
                          embedding_function_per_residue=embedding_function_per_residue,
                          embedding_function_per_sequence=embedding_function_per_sequence,
