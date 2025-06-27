@@ -7,9 +7,11 @@ from .data_handler import AutoEvalTask
 
 
 class ReportManager:
-    def __init__(self, embedder_name: str, training_date):
+    def __init__(self, embedder_name: str, training_date, min_seq_len: int, max_seq_len: int):
         self.embedder_name = embedder_name
         self.training_date = training_date
+        self.min_seq_len = min_seq_len
+        self.max_seq_len = max_seq_len
         self.results = {}
 
     def add_result(self, task: AutoEvalTask, result_dict: Dict[str, Any]):
@@ -19,6 +21,8 @@ class ReportManager:
         result_dict = {
             "embedder_name": self.embedder_name,
             "training_date": self.training_date,
+            "min_seq_len": self.min_seq_len,
+            "max_seq_len": self.max_seq_len,
             "results": self.results
         }
         report_name = output_dir / f'autoeval_report_{self.embedder_name}.json'
