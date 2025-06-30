@@ -464,6 +464,34 @@ limited_sample_size: 100  # Default: -1, must be > 0 to be applied
 Note that this value is applied only to the train dataset and embedding calculation is currently
 done for all sequences!
 
+## Finetuning options
+
+*Biotrainer* supports finetuning of language models. Currently, LoRA (Low-Rank Adaptation) is implemented as a finetuning method.
+To use finetuning, specify the following options in your configuration file:
+
+```yaml
+finetuning:
+  method: lora  # Currently, only LoRA is supported
+```
+
+For LoRA finetuning, the following parameters can be configured:
+
+```yaml
+finetuning:
+  method: lora
+  lora_r: 8  # Default: 8, The rank of the LoRA adaptation matrices
+  lora_alpha: 16  # Default: 16, scaling factor for LoRA
+  lora_dropout: 0.05  # Default: 0.05, dropout probability for LoRA layers (must be between 0 and 1)
+  lora_target_modules: ["query", "key", "value"]  # Default: ["query", "key", "value"], Modules to apply LoRA to
+  lora_bias: none | all | lora_only  # Default: none, Type of bias to use in LoRA
+```
+
+The `lora_target_modules` parameter can be either a list of module names or a regex string to match module names. 
+ESM works with the default values, ProtT5 could use ["q", "k", "v", "o"] for example.
+
+After training, the LoRA adapter weights will be saved separately from the base model, allowing for efficient storage
+and deployment of the finetuned model.
+
 ## HF Dataset Integration
 
 This configuration enables the use of datasets hosted on the HuggingFace repository. By specifying the `hf_dataset`

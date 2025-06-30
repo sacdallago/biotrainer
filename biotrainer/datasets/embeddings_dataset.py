@@ -1,45 +1,36 @@
 import torch
 
-from typing import Tuple, List
+from typing import List, Union
 
-from ..utilities import DatasetSample
+from ..utilities import EmbeddingDatasetSample, SequenceDatasetSample
 
 
-class __EmbeddingsDataset(torch.utils.data.Dataset):
-    def __init__(self, samples: List[DatasetSample]):
-        self.ids, self.inputs, self.targets = zip(
-            *[(sample.seq_id, sample.embedding, sample.target) for sample in samples]
-        )
+class BiotrainerDataset(torch.utils.data.Dataset):
+    ids: List[str]
+    inputs: Union[List[torch.tensor], List[str]]  # Embeddings / Sequences
+    targets: List[torch.tensor]
 
     def __len__(self):
         return len(self.inputs)
 
-    def __getitem__(self, index: int) -> Tuple[str, torch.FloatTensor, torch.LongTensor]:
+    def __getitem__(self, index: int):
         seq_id = self.ids[index]
-        x = self.inputs[index].float()
-        y = self.targets[index].long()
+        x = self.inputs[index]
+        y = self.targets[index]
         return seq_id, x, y
 
 
-class ResidueEmbeddingsClassificationDataset(__EmbeddingsDataset):
-    pass
+class EmbeddingsDataset(BiotrainerDataset):
+    """Embeddings dataset for training on pre-calculated embeddings."""
+    def __init__(self, samples: List[EmbeddingDatasetSample]):
+        self.ids, self.inputs, self.targets = zip(
+            *[(sample.seq_id, sample.embedding, sample.target) for sample in samples]
+        )
 
 
-class ResidueEmbeddingsRegressionDataset(__EmbeddingsDataset):
-    def __getitem__(self, index: int) -> Tuple[str, torch.FloatTensor, torch.LongTensor]:
-        seq_id = self.ids[index]
-        x = self.inputs[index].float()
-        y = self.targets[index].float()
-        return seq_id, x, y
-
-
-class SequenceEmbeddingsClassificationDataset(__EmbeddingsDataset):
-    pass
-
-
-class SequenceEmbeddingsRegressionDataset(__EmbeddingsDataset):
-    def __getitem__(self, index: int) -> Tuple[str, torch.FloatTensor, torch.LongTensor]:
-        seq_id = self.ids[index]
-        x = self.inputs[index].float()
-        y = self.targets[index].float()
-        return seq_id, x, y
+class SequenceDataset(BiotrainerDataset):
+    """Sequence dataset for fine-tuning"""
+    def __init__(self, samples: List[SequenceDatasetSample],):
+        self.ids, self.inputs, self.targets = zip(
+            *[(sample.seq_id, sample.seq_record.seq, sample.target) for sample in samples]
+        )

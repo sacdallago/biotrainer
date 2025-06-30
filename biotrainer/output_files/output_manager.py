@@ -4,7 +4,7 @@ import torch
 from ruamel import yaml
 from pathlib import Path
 from copy import deepcopy
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
 
 from .biotrainer_output_observer import BiotrainerOutputObserver, OutputData
 
@@ -190,6 +190,12 @@ class InferenceOutputManager(OutputManager):
         config.update(self._training_results[split_name]["split_hyper_params"])
         return deepcopy(config)
 
+    def adapter_path(self) -> Union[Path, None]:
+        if "finetuning_config" in self._input_config:
+            finetuning_path = Path(self._input_config["log_dir"])
+            if finetuning_path.exists():
+                return finetuning_path
+        return None
 
 """ 
 TODO Is removing split ids still necessary?

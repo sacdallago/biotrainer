@@ -7,8 +7,10 @@ from typing import Dict, Set, Any, Optional
 from .cnn import CNN
 from .log_reg import LogReg
 from .fnn import FNN, DeeperFNN
-from .light_attention import LightAttention
 from .model_params import count_parameters
+from .light_attention import LightAttention
+from .biotrainer_model import BiotrainerModel
+from .fine_tuning_model import FineTuningModel
 
 from ..protocols import Protocol
 from ..utilities import get_logger
@@ -107,4 +109,6 @@ __all__ = [
     "get_available_models_dict",
     "get_available_models_set",
     "count_parameters",
+    "BiotrainerModel",
+    "FineTuningModel",
 ]

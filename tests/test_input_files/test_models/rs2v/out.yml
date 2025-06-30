@@ -41,19 +41,19 @@ derived_values:
   n_classes: 1
   n_features: 21
   n_testing_ids: 2
-  pipeline_elapsed_time: 2.193223416999899
-  pipeline_end_time: '2025-06-30T12:15:39.491706'
-  pipeline_start_time: '2025-06-30T12:15:37.298483'
-  training_elapsed_time: 1.2801643030006744
+  pipeline_elapsed_time: 2.1990655019999394
+  pipeline_end_time: '2025-07-02T18:25:01.178774'
+  pipeline_start_time: '2025-07-02T18:24:58.979708'
+  training_elapsed_time: 1.1985612949993083
 training_results:
   hold_out:
     n_training_ids: 2
     n_validation_ids: 2
     split_hyper_params: {}
     n_free_parameters: 9453
-    start_time: '2025-06-30T12:15:37.489039'
-    end_time: '2025-06-30T12:15:38.766977'
-    elapsed_time: 1.2779303229999641
+    start_time: '2025-07-02T18:24:59.158445'
+    end_time: '2025-07-02T18:25:00.354747'
+    elapsed_time: 1.1962917750006454
     best_training_epoch_metrics:
       epoch: 138
       training:

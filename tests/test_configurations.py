@@ -125,6 +125,20 @@ configurations = {
             "target_column": "secondary_structure"
         }
     },
+    "finetuning_ohe": {
+        "protocol": "sequence_to_class",
+        "embedder_name": "one_hot_encoding",
+        "finetuning_config": {
+            "method": "lora",
+        }
+    },
+    "finetuning_no_method": {
+        "protocol": "sequence_to_class",
+        "embedder_name": "one_hot_encoding",
+        "finetuning_config": {
+            "lora_r": 10,
+        }
+    }
 }
 
 
@@ -436,3 +450,17 @@ class ConfigurationVerificationTests(unittest.TestCase):
 
             with self.assertRaises(ConfigurationException) as context:
                 configurator.get_verified_config()
+
+    def test_finetuning_ohe(self):
+        config_dict = deepcopy(configurations["finetuning_ohe"])
+        configurator = Configurator.from_config_dict(config_dict)
+
+        with self.assertRaises(ConfigurationException) as context:
+            configurator.get_verified_config()
+
+    def test_finetuning_no_method(self):
+        config_dict = deepcopy(configurations["finetuning_no_method"])
+        configurator = Configurator.from_config_dict(config_dict)
+
+        with self.assertRaises(ConfigurationException) as context:
+            configurator.get_verified_config()

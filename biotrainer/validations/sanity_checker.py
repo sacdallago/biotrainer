@@ -11,7 +11,7 @@ from ..models import get_model
 from ..protocols import Protocol
 from ..optimizers import get_optimizer
 from ..solvers import MetricsCalculator, get_solver
-from ..utilities import DatasetSample, INTERACTION_INDICATOR, get_logger
+from ..utilities import EmbeddingDatasetSample, INTERACTION_INDICATOR, get_logger
 
 logger = get_logger(__name__)
 
@@ -22,8 +22,8 @@ class SanityChecker:
                  n_classes: int,
                  n_features: int,
                  metrics_calculator: MetricsCalculator,
-                 train_val_dataset: List[DatasetSample],
-                 test_dataset: List[DatasetSample],
+                 train_val_dataset: List,
+                 test_dataset: List,
                  test_loader: DataLoader,
                  test_results_dict: Dict[str, Any],
                  mode: str = "warn"):

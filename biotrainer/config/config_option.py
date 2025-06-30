@@ -59,8 +59,8 @@ class ConfigKey(Enum):
     ROOT = ""
     HF_DATASET = "hf_dataset"
     CROSS_VALIDATION = "cross_validation_config"
+    FINETUNING = "finetuning_config"
 
     @staticmethod
     def all_subconfig_keys() -> List[ConfigKey]:
-        return [ConfigKey.HF_DATASET,
-                ConfigKey.CROSS_VALIDATION]
+        return [key for key in ConfigKey if key != ConfigKey.ROOT]

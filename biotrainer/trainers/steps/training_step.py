@@ -94,8 +94,9 @@ class TrainingStep(PipelineStep):
         current_split_name = self._get_split_name(current_split, inner_split)
 
         # DATASETS
-        train_dataset = TrainingFactory.create_embeddings_dataset(context, current_split.train, mode="train")
-        val_dataset = TrainingFactory.create_embeddings_dataset(context, current_split.val, mode="val")
+        finetuning = "finetuning_config" in context.config
+        train_dataset = TrainingFactory.create_dataset(context, current_split.train, mode="train", finetuning=finetuning)
+        val_dataset = TrainingFactory.create_dataset(context, current_split.val, mode="val", finetuning=finetuning)
 
         split_hyper_params = context.hp_manager.get_only_params_to_optimize(hyper_params)
         context.output_manager.add_split_specific_values(split_name=current_split_name,
@@ -113,8 +114,9 @@ class TrainingStep(PipelineStep):
 
         # DATALOADERS
         train_loader = TrainingFactory.create_dataloader(context=context, dataset=train_dataset,
-                                                         hyper_params=hyper_params)
-        val_loader = TrainingFactory.create_dataloader(context=context, dataset=val_dataset, hyper_params=hyper_params)
+                                                         hyper_params=hyper_params, finetuning=finetuning)
+        val_loader = TrainingFactory.create_dataloader(context=context, dataset=val_dataset,
+                                                       hyper_params=hyper_params, finetuning=finetuning)
 
         # MODEL, LOSS, OPTIMIZER
         model, loss_function, optimizer = TrainingFactory.create_model_loss_optimizer(context=context,

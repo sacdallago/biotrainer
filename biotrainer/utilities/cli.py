@@ -61,6 +61,9 @@ def predict(training_output_file: Union[str, Path], model_input: str,
                                               custom_tokenizer_config=None,  # TODO
                                               use_half_precision=iom.use_half_precision(),
                                               device=iom.device())
+    adapter_path = iom.adapter_path()
+    if adapter_path is not None:
+        embedding_service.add_finetuned_adapter(adapter_path=adapter_path)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         result_file = embedding_service.compute_embeddings(input_data=model_input,
