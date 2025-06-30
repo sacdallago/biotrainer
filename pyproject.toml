@@ -56,6 +56,7 @@ umap-learn = "^0.5.7"
 llvmlite = "^0.44.0"
 cyclopts = "^3.16.0"
 appdirs = "^1.4.4"
+peft = "^0.15.2"
 
 # Optional
 jupyter = { version = "^1.1.1", optional = true }

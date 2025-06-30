@@ -15,6 +15,7 @@ from typing import Callable, Optional, Union, Dict, List, Any
 from .metrics_calculator import MetricsCalculator
 from .solver_utils import get_mean_and_confidence_range
 
+from ..models import BiotrainerModel
 from ..output_files import OutputManager
 from ..utilities import get_logger, EpochMetrics
 
@@ -25,7 +26,8 @@ class Solver(ABC):
 
     def __init__(self,
                  # Necessary
-                 split_name, protocol, network, optimizer, loss_function, metrics_calculator: MetricsCalculator,
+                 split_name, protocol, network: BiotrainerModel, optimizer,
+                 loss_function, metrics_calculator: MetricsCalculator,
                  # Optional with defaults
                  output_manager: Optional[OutputManager] = None,
                  log_dir: str = "",
@@ -100,7 +102,7 @@ class Solver(ABC):
                                          training={**Solver._aggregate_iteration_losses(train_iterations),
                                                    **train_epoch_metrics},
                                          validation={**Solver._aggregate_iteration_losses(validation_iterations),
-                                                     **validation_epoch_metrics},)
+                                                     **validation_epoch_metrics}, )
 
             epoch_iterations.append(epoch_metrics)
 
@@ -276,7 +278,7 @@ class Solver(ABC):
             # Load PyTorch checkpoint is deprecated since v1.0.0
             raise Exception("Cannot load pt checkpoint because torch_pt_loading is not allowed since v1.0.0!")
         try:
-            self.network.load_state_dict(state['state_dict'])
+            self.network.get_downstream_model().load_state_dict(state['state_dict'])
             if resume_training:
                 self.start_epoch = state['epoch'] + 1
                 if self.start_epoch == self.number_of_epochs:
@@ -299,7 +301,7 @@ class Solver(ABC):
         # Prepare the state dictionary
         state = {
             'epoch': torch.tensor(epoch),
-            **self.network.state_dict(),
+            **self.network.get_downstream_model().state_dict(),
         }
 
         # Flatten optimizer state
@@ -336,7 +338,9 @@ class Solver(ABC):
         # Export
         onnx_file_name = f"{output_dir}/{self.checkpoint_name.split('.')[0]}.onnx"
 
-        self._onnx_export_strategy(network=self.network, dummy_input=dummy_input, onnx_file_name=onnx_file_name)
+        self._onnx_export_strategy(network=self.network.get_downstream_model(),
+                                   dummy_input=dummy_input,
+                                   onnx_file_name=onnx_file_name)
 
         return onnx_file_name
 
@@ -362,10 +366,10 @@ class Solver(ABC):
             )
         else:
             export_options = torch.onnx.ExportOptions(dynamic_shapes=True,
-                                                  diagnostic_options=torch.onnx.DiagnosticOptions(
-                                                      verbosity_level=logging.ERROR))
+                                                      diagnostic_options=torch.onnx.DiagnosticOptions(
+                                                          verbosity_level=logging.ERROR))
             onnx_program = torch.onnx.dynamo_export(network, dummy_input,
-                                                export_options=export_options)
+                                                    export_options=export_options)
             onnx_program.save(onnx_file_name)
 
     def _early_stop(self, current_loss: float, epoch: int) -> bool:
@@ -430,14 +434,20 @@ class Solver(ABC):
             do_loss_propagation = True
 
         # Move everything on device
-        x = x.to(self.device)
-        y = y.to(self.device)
+        x = x.to(self.device) if isinstance(x, torch.Tensor) else x
+        y = y.to(self.device) if isinstance(y, torch.Tensor) else y
 
         with context():
             if do_loss_propagation:
                 self.optimizer.zero_grad()
 
-            logits = self.network(x)
+            # Targets are necessary for the fine-tuning model
+            network_output = self.network(x, targets=y)
+            if isinstance(network_output, tuple) and len(network_output) == 2:
+                logits = network_output[0]
+                y = network_output[1]
+            else:
+                logits = network_output
 
             # Apply logit transformations before computing loss
             logits = self._transform_network_output(logits)
@@ -455,9 +465,6 @@ class Solver(ABC):
                 loss.backward()  # backpropagation, compute gradients
                 self.optimizer.step()  # apply gradients
 
-                # if self.log_writer: TODO is that really necessary?
-                #     self.log_writer.add_scalars("Step/train", metrics, step)
-
             return {
                 'loss': loss.item(),
                 'prediction': prediction.tolist(),
@@ -469,8 +476,13 @@ class Solver(ABC):
 
         with torch.no_grad():
             # Move everything on device
-            x = x.to(self.device)
-            logits = self.network(x)
+            x = x.to(self.device) if isinstance(x, torch.Tensor) else x
+            network_output = self.network(x)
+            if isinstance(network_output, tuple) and len(network_output) == 2:
+                logits = network_output[0]
+            else:
+                logits = network_output
+
             # Apply transformations
             logits = self._transform_network_output(logits)
             # Transform logits to probabilities if necessary

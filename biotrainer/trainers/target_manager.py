@@ -7,16 +7,18 @@ from collections import Counter
 from typing import Dict, Any, Tuple, Optional, List, Union
 
 from ..protocols import Protocol
-from ..utilities import MASK_AND_LABELS_PAD_VALUE, INTERACTION_INDICATOR, DatasetSample, get_logger
+from ..utilities import MASK_AND_LABELS_PAD_VALUE, INTERACTION_INDICATOR, EmbeddingDatasetSample, get_logger, \
+    SequenceDatasetSample
 from ..input_files import BiotrainerSequenceRecord, merge_protein_interactions, get_split_lists, read_FASTA
 
 logger = get_logger(__name__)
 
 
 class TargetManager:
-    _input_ids: Dict[str, List[str]] = dict()
-    _id2target: Dict[str, Any] = dict()
-    _id2sets: Dict[str, str] = dict()
+    _input_records: Dict[str, BiotrainerSequenceRecord]  # Hash To Record (for Fine-Tuning)
+    _input_ids: Dict[str, List[str]] = dict()  # Hash To List of IDs
+    _id2target: Dict[str, Any] = dict()  # Hash To Target
+    _id2sets: Dict[str, str] = dict()  # Hash to Set
     # This will be 1 for regression tasks, 2 for binary classification tasks, and N>2 for everything else
     number_of_outputs: int = 1
 
@@ -54,6 +56,9 @@ class TargetManager:
         else:
             input_records: List[BiotrainerSequenceRecord] = self._input_data
         assert isinstance(input_records[0], BiotrainerSequenceRecord)
+
+        # Store records for fine-tuning sequence datasets
+        self._input_records = {seq_record.get_hash(): seq_record for seq_record in input_records}
 
         # Store input ids for better error messages
         for seq_record in input_records:
@@ -93,7 +98,7 @@ class TargetManager:
                 self.class_int2str = {idx: letter for idx, letter in enumerate(self._class_labels)}
 
                 # Convert label values to lists of numbers based on the maps
-                self._id2target = {identifier: np.array([self.class_str2int[label] for label in labels])
+                self._id2target = {identifier: torch.tensor([self.class_str2int[label] for label in labels]).long()
                                    for identifier, labels in self._id2target.items()}  # classes idxs (zero-based)
 
                 # MASKS
@@ -107,8 +112,8 @@ class TargetManager:
                 for seq_hash, unmasked_target in self._id2target.items():
                     mask = id2masks[seq_hash]
                     if mask is not None:
-                        target_with_mask = np.array([value if mask[index] == 1 else MASK_AND_LABELS_PAD_VALUE for
-                                                     index, value in enumerate(unmasked_target)])
+                        target_with_mask = torch.tensor([value if mask[index] == 1 else MASK_AND_LABELS_PAD_VALUE for
+                                                         index, value in enumerate(unmasked_target)]).long()
                         self._id2target[seq_hash] = target_with_mask
             # b) Value output
             else:
@@ -127,12 +132,13 @@ class TargetManager:
                 self.class_int2str = {idx: letter for idx, letter in enumerate(self._class_labels)}
 
                 # Convert label values to lists of numbers based on the maps
-                self._id2target = {seq_hash: np.array(self.class_str2int[label])
+                self._id2target = {seq_hash: torch.tensor(self.class_str2int[label]).long()
                                    for seq_hash, label in self._id2target.items()}  # classes idxs (zero-based)
 
             # b) Value output
             elif self.protocol in Protocol.regression_protocols():
-                self._id2target = {seq_hash: float(seq_val) for seq_hash, seq_val in self._id2target.items()}
+                self._id2target = {seq_hash: torch.tensor(float(seq_val)).float()
+                                   for seq_hash, seq_val in self._id2target.items()}
                 self.number_of_outputs = 1
             else:
                 raise NotImplementedError
@@ -173,8 +179,8 @@ class TargetManager:
             if seq_hash not in all_hashes_with_target:
                 embeddings_without_labels.append(seq_hash)
             # Make sure the length of the sequences in the embeddings match the length of the seqs in the labels
-            elif self.protocol in Protocol.per_residue_protocols() and len(embd) != self._id2target[seq_hash].size:
-                invalid_sequence_lengths.append((seq_hash, len(embd), self._id2target[seq_hash].size))
+            elif self.protocol in Protocol.per_residue_protocols() and len(embd) != self._id2target[seq_hash].size()[0]:
+                invalid_sequence_lengths.append((seq_hash, len(embd), self._id2target[seq_hash].size()))
 
         for seq_hash in all_hashes_with_target:
             # Check that all labels have a corresponding embedding
@@ -238,13 +244,13 @@ class TargetManager:
             raise ValueError(f"Embeddings dimensions differ between sequences, but all must be equal!\n"
                              f"Found: {shapes}")
 
-    def get_datasets_by_annotations(self, id2emb: Dict[str, Any]) -> \
-            Tuple[List[DatasetSample], List[DatasetSample], Dict[str, List[DatasetSample]], List[DatasetSample]]:
+    def get_embedding_datasets(self, id2emb: Dict[str, Any]) -> \
+            Tuple[List[EmbeddingDatasetSample], List[EmbeddingDatasetSample], Dict[str, List[EmbeddingDatasetSample]],
+            List[EmbeddingDatasetSample]]:
         self._calculate_targets()
 
         # Get dataset splits from file
-        (self.training_ids, self.validation_ids,
-         self.testing_ids, self.prediction_ids) = get_split_lists(self._id2sets)
+        self.training_ids, self.validation_ids, self.testing_ids, self.prediction_ids = get_split_lists(self._id2sets)
 
         self._validate_targets(id2emb)
 
@@ -282,20 +288,56 @@ class TargetManager:
 
         # Create datasets
         train_dataset = [
-            DatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.training_ids
+            EmbeddingDatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.training_ids
         ]
         val_dataset = [
-            DatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.validation_ids
+            EmbeddingDatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.validation_ids
         ]
 
         test_datasets = {}
         for test_set_id, test_set in self.testing_ids.items():
-            test_datasets[test_set_id] = [DatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx]))
+            test_datasets[test_set_id] = [EmbeddingDatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx]))
                                           for idx in test_set]
 
         pred_dataset = [
-            DatasetSample(idx, id2emb[idx], torch.empty(1)) for idx in self.prediction_ids
+            EmbeddingDatasetSample(idx, id2emb[idx], torch.empty(1)) for idx in self.prediction_ids
         ]
+
+        return train_dataset, val_dataset, test_datasets, pred_dataset
+
+    def get_sequence_datasets(self):
+        self._calculate_targets()
+
+        # Get dataset splits from file
+        self.training_ids, self.validation_ids, self.testing_ids, self.prediction_ids = get_split_lists(self._id2sets)
+
+        # TODO DUPLICATED CODE
+        # Check dataset splits are not empty
+        def except_on_empty(split_ids: List[str], name: str):
+            if len(split_ids) == 0:
+                raise ValueError(f"The provided {name} set is empty! Please provide at least one sequence for "
+                                 f"the {name} set.")
+
+        if not self._ignore_file_inconsistencies:
+            except_on_empty(split_ids=self.training_ids, name="training")
+            if self._cross_validation_method == "hold_out":
+                except_on_empty(split_ids=self.validation_ids, name="validation")
+            for test_set in self.testing_ids.values():
+                except_on_empty(split_ids=test_set, name="test")
+
+        # Create datasets
+        train_dataset = [SequenceDatasetSample(idx, self._input_records[idx], self._id2target[idx])
+                         for idx in self.training_ids]
+        val_dataset = [SequenceDatasetSample(idx, self._input_records[idx], self._id2target[idx])
+                       for idx in self.validation_ids]
+
+        test_datasets = {}
+        for test_set_id, test_set in self.testing_ids.items():
+            test_datasets[test_set_id] = [SequenceDatasetSample(idx, self._input_records[idx], self._id2target[idx])
+                                          for idx in test_set]
+
+        pred_dataset = [SequenceDatasetSample(idx, self._input_records[idx], self._id2target[idx])
+                        for idx in self.prediction_ids]
 
         return train_dataset, val_dataset, test_datasets, pred_dataset
 

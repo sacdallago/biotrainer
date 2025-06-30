@@ -13,6 +13,7 @@ from .input_config import input_config
 from .model_config import model_config
 from .training_config import training_config
 from .embedding_config import embedding_config
+from .finetuning_config import finetuning_config
 from .hf_dataset_config import hf_dataset_config
 from .config_exception import ConfigurationException
 from .cross_validation_config import cross_validation_config, get_default_cross_validation_config
@@ -179,7 +180,7 @@ class Configurator:
         )}
         sub_configs = {config_key: {config_option.name: config_option for config_option in config_options} for
                        config_key, config_options in
-                       [hf_dataset_config(protocol), cross_validation_config(protocol)]
+                       [hf_dataset_config(protocol), cross_validation_config(protocol), finetuning_config(protocol)]
                        if config_key.value in config_keys}
 
         return main_config, sub_configs

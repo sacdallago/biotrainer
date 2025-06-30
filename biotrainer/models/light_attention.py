@@ -3,10 +3,12 @@ import torch.nn as nn
 
 import biotrainer.utilities as utils
 
+from .biotrainer_model import BiotrainerModel
+
 
 # LightAttention model originally from Hannes Stark:
 # https://github.com/HannesStark/protein-localization/blob/master/models/light_attention.py
-class LightAttention(nn.Module):
+class LightAttention(BiotrainerModel):
     def __init__(self, n_features: int, n_classes: int, dropout_rate=0.25, kernel_size=9, conv_dropout: float = 0.25,
                  **kwargs
                  ):
@@ -30,7 +32,7 @@ class LightAttention(nn.Module):
 
         self.output = nn.Linear(32, n_classes)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         """
         Args:
             x: [batch_size, embeddings_dim, sequence_length] embedding tensor that should be classified

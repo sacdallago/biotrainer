@@ -1,9 +1,11 @@
 import torch.nn as nn
 import biotrainer.utilities as utils
 
+from .biotrainer_model import BiotrainerModel
+
 
 # Convolutional neural network (two convolutional layers)
-class CNN(nn.Module):
+class CNN(BiotrainerModel):
     def __init__(
             self, n_classes: int, n_features: int,
             bottleneck_dim: int = 32,
@@ -17,7 +19,7 @@ class CNN(nn.Module):
         self.dropout = nn.Dropout(dropout_rate)
         self.conv2 = nn.Conv2d(bottleneck_dim, n_classes, kernel_size=(7, 1), padding=(3, 0))
 
-    def forward(self, x):
+    def forward(self, x, *args, **kwargs):
         """
             L = protein length
             B = batch-size

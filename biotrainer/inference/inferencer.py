@@ -14,9 +14,9 @@ from ..models import get_model
 from ..protocols import Protocol
 from ..optimizers import get_optimizer
 from ..output_files import InferenceOutputManager
-from ..datasets import get_dataset, get_collate_function
+from ..datasets import get_dataset, get_embeddings_collate_function
 from ..solvers import get_solver, get_mean_and_confidence_range, MetricsCalculator
-from ..utilities import seed_all, DatasetSample, MASK_AND_LABELS_PAD_VALUE, revert_mappings
+from ..utilities import seed_all, EmbeddingDatasetSample, MASK_AND_LABELS_PAD_VALUE, revert_mappings
 
 
 class Inferencer:
@@ -31,7 +31,7 @@ class Inferencer:
         self.class_int2str = iom.class_int2str()
         self.class_str2int = iom.class_str2int()
         self.device = iom.device()
-        self.collate_function = get_collate_function(self.protocol)
+        self.collate_function = get_embeddings_collate_function(self.protocol)
 
         self.solvers_and_loaders_by_split = self._create_solvers_and_loaders_by_split(iom)
         print(f"Got {len(self.solvers_and_loaders_by_split.keys())} split(s): "
@@ -151,11 +151,11 @@ class Inferencer:
             targets = [self._convert_class_str2int(target) for target in targets]
 
         solver, loader = self.solvers_and_loaders_by_split[split_name]
-        dataset = get_dataset(self.protocol, samples=[
-            DatasetSample(seq_id, torch.tensor(np.array(embedding)),
-                          torch.empty(1) if not targets else torch.tensor(np.array(targets[idx])))
+        dataset = get_dataset(samples=[
+            EmbeddingDatasetSample(seq_id, torch.tensor(np.array(embedding)),
+                                   torch.empty(1) if not targets else torch.tensor(np.array(targets[idx])))
             for idx, (seq_id, embedding) in enumerate(embeddings_dict.items())
-        ])
+        ], finetuning=False)
         dataloader = loader(dataset)
         return solver, dataloader
 

@@ -1,8 +1,10 @@
 import torch.nn as nn
 
+from .biotrainer_model import BiotrainerModel
+
 
 # Feed-Forward Neural Network (FNN) with two linear layers connected by a non-lin
-class FNN(nn.Module):
+class FNN(BiotrainerModel):
     def __init__(
             self, n_classes: int, n_features: int,
             bottleneck_dim: int = 32, dropout_rate: float = 0.25,
@@ -17,12 +19,12 @@ class FNN(nn.Module):
             nn.Linear(bottleneck_dim, n_classes)
         )
 
-    def forward(self, x):
+    def forward(self, x, *args, **kwargs):
         """
             L = protein length
             B = batch-size
             F = number of features (1024 for embeddings)
-            N = number of classes (9 for conservation)
+            N = number of classes (e.g. 9 for conservation)
         """
         # IN: X = (B x L x F)
         Yhat = self.classifier(x)  # OUT: Yhat_consurf = (B x L x N)

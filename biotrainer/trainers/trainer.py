@@ -15,7 +15,7 @@ class Trainer:
         self.pipeline_context = PipelineContext(config=config,
                                                 output_manager=output_manager,
                                                 custom_pipeline=False)
-        self.pipeline: Pipeline = custom_pipeline if custom_pipeline else DefaultPipeline().pipeline
+        self.pipeline: Pipeline = custom_pipeline if custom_pipeline else DefaultPipeline(config).pipeline
 
     def run(self) -> OutputManager:
         pipeline_context = self.pipeline.execute(context=self.pipeline_context)

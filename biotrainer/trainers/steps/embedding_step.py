@@ -53,3 +53,22 @@ class EmbeddingStep(PipelineStep):
 
         context.id2emb = id2emb
         return context
+
+
+class FineTuningEmbeddingStep(EmbeddingStep):
+    def process(self, context: PipelineContext) -> PipelineContext:
+        # Calculate / Load embeddings from not-finetuned model once in the beginning for baselines later
+        logger.info(f'Finetuning embedder model is activated. Non-finetuned embeddings are calculated once at the '
+                    f'beginning to calculate baselines later.')
+        context = super().process(context)
+
+        embedding_service = get_embedding_service(
+            custom_tokenizer_config=context.config.get("custom_tokenizer_config"),
+            embedder_name=context.config["embedder_name"],
+            use_half_precision=context.config.get("use_half_precision"),
+            device=context.config["device"],
+            finetuning_config=context.config["finetuning_config"]
+        )
+
+        context.embedding_service = embedding_service
+        return context

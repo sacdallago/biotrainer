@@ -1,15 +1,17 @@
 import torch.nn as nn
 
+from .biotrainer_model import BiotrainerModel
+
 
 # Logistic regression (single linear layer directly mapping to classes)
-class LogReg(nn.Module):
+class LogReg(BiotrainerModel):
     def __init__(self, n_classes: int, n_features: int, **kwargs):
         super(LogReg, self).__init__()
         self.classifier = nn.Sequential(
             nn.Linear(n_features, n_classes),  # 7x32
         )
 
-    def forward(self, x):
+    def forward(self, x, *args, **kwargs):
         """
             L = protein length
             B = batch-size
