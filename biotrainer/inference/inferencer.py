@@ -59,7 +59,7 @@ class Inferencer:
 
     def _create_solvers_and_loaders_by_split(self, iom: InferenceOutputManager) -> Dict[str, Tuple[Any, Any]]:
         result_dict = {}
-        splits = iom.splits().keys()
+        splits = iom.training_results().keys()
         log_dir = iom.log_dir()
         split_checkpoints = {file.split("_checkpoint.")[0]: file for file in os.listdir(log_dir) if
                              (Path(log_dir) / Path(file)).is_file()}
