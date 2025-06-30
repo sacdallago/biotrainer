@@ -22,7 +22,7 @@ class OutputManager:
 
         self._input_config = {}
         self._derived_values = {}
-        self._split_specific_values = {}
+        self._split_specific_values = {}  # TODO Refactor into _training_results
         self._training_results: Dict[str, List[EpochMetrics]] = {}  # split_name -> Epoch Metrics
         self._test_results = {}
         self._predictions: Dict[str, Any] = {}  # seq_id -> prediction
@@ -126,7 +126,7 @@ class InferenceOutputManager(OutputManager):
             training_output = yaml.load(output_file, Loader=yaml.RoundTripLoader)
             self._input_config = training_output["config"]
             self._derived_values = training_output["derived_values"]
-            self._split_specific_values = training_output["splits"]
+            self._training_results = training_output["training_results"]
             self._test_results = training_output["test_results"]
             self._predictions = training_output["predictions"]
 
@@ -182,17 +182,17 @@ class InferenceOutputManager(OutputManager):
     def class_str2int(self):
         return self._derived_values.get("class_str2int", None)
 
-    def splits(self):
-        return self._split_specific_values
+    def training_results(self):
+        return self._training_results
 
     def split_config(self, split_name: str):
         config = {**self._input_config, **self._derived_values}
-        config.update(self._split_specific_values[split_name]["split_hyper_params"])
+        config.update(self._training_results[split_name]["split_hyper_params"])
         return deepcopy(config)
 
 
 """ 
-TODO Is this still necessary?
+TODO Is removing split ids still necessary?
 #with tempfile.TemporaryDirectory() as tmp_dir_name:
             tmp_output_path = tmp_dir_name + "/tmp_output.yml"
             with open(out_file_path, "r") as output_file, open(tmp_output_path, "w") as tmp_output_file:
