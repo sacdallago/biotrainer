@@ -1,14 +1,15 @@
+from __future__ import annotations
+
 import os
 import time
 import h5py
 import torch
 import numpy as np
 
-from umap import UMAP
 from tqdm import tqdm
 from pathlib import Path
 from sklearn.manifold import TSNE
-from typing import Dict, List, Union, Optional, Generator, Tuple
+from typing import Dict, List, Union, Optional, Generator, Tuple, Any
 
 from .embedder_interfaces import EmbedderInterface
 
@@ -27,6 +28,28 @@ class EmbeddingService:
     def __init__(self, embedder: EmbedderInterface = None, use_half_precision: bool = False):
         self._embedder = embedder
         self._use_half_precision = use_half_precision
+
+    def save_embedder(self, output_dir: Path):
+        """Save fine-tuned model after training"""
+        logger.warning("Trying to save non-finetuned model!")
+
+    def add_finetuned_adapter(self, adapter_path: Path) -> EmbeddingService:
+        """Add finetuned adapter after training to embedder model. Used for inference."""
+        from peft import PeftModel
+        # Apply LoRA adapters to the embedder model
+        model = self._embedder._model
+        if model is None:
+            raise ValueError(f"{self._embedder.name} does not provide a model to add the finetuning adapter!")
+
+        model = PeftModel.from_pretrained(
+            self._embedder._model,
+            adapter_path
+        )
+
+        self._embedder._model = model
+
+        print(f"Added fine-tuned adapter to {self._embedder.name}: {adapter_path}")
+        return self
 
     def compute_embeddings(self,
                            input_data: Union[str, Path, List[str],
@@ -233,6 +256,8 @@ class EmbeddingService:
         Returns:
             Dict[str, torch.tensor]: Dictionary of embeddings with reduced dimensions.
         """
+        from umap import UMAP
+
         sorted_keys = sorted(list(embeddings.keys()))
         all_embeddings = torch.stack([embeddings[k] for k in sorted_keys], dim=0)
         max_dim_dict = {
@@ -282,3 +307,48 @@ class EmbeddingService:
         logger.info(f"Time elapsed for reading embeddings: {(time.perf_counter() - start):.1f}[s]")
 
         return id2emb
+
+
+class FineTuningEmbeddingService(EmbeddingService):
+    def __init__(self, embedder: EmbedderInterface = None, use_half_precision: bool = False,
+                 finetuning_config: Dict[str, Any] = None):
+        super().__init__(embedder, use_half_precision)
+        self._finetuning_config = finetuning_config
+        self._lora_model = None
+
+    def save_embedder(self, output_dir: Path):
+        logger.info(f"Saving fine-tuned embedder to {output_dir}")
+        self._lora_model.save_pretrained(output_dir)
+
+    def _apply_lora(self):
+        """Apply LoRA adapters to the underlying model"""
+        if self._lora_model:
+            return
+
+        from peft import LoraConfig, PeftModel
+
+        # Extract LoRA parameters from config
+        lora_config = LoraConfig(
+            r=self._finetuning_config.get("lora_r", 8),
+            lora_alpha=self._finetuning_config.get("lora_alpha", 16),
+            target_modules=self._finetuning_config.get("lora_target_modules", ["query", "key", "value"]),
+            lora_dropout=self._finetuning_config.get("lora_dropout", 0.05),
+            bias=self._finetuning_config.get("lora_bias", "none"),
+        )
+
+        # Apply LoRA adapters to the embedder model
+        model = self._embedder._model
+        if model is None:
+            raise ValueError(f"{self._embedder.name} does not provide a model for finetuning!")
+
+        peft_model = PeftModel(model=model, peft_config=lora_config)
+
+        self._embedder.model = peft_model
+
+        self._lora_model = peft_model
+
+    def _embeddings_generator(self,
+                              seq_records: List[BiotrainerSequenceRecord],
+                              use_reduced_embeddings: bool) -> Generator[Tuple[BiotrainerSequenceRecord, np.ndarray], None, None]:
+        self._apply_lora()
+        yield from super()._embeddings_generator(seq_records, use_reduced_embeddings)

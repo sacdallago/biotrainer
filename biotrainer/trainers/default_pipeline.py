@@ -1,21 +1,41 @@
-from typing import Optional
+from typing import Optional, Any, Dict
 
 from .pipeline import Pipeline, PipelineStep
-from .steps import SetupStep, EmbeddingStep, ProjectionStep, DataLoadingStep, TrainingStep, TestingStep, PostProcessStep, InputValidationStep
+from .steps import SetupStep, EmbeddingStep, FineTuningEmbeddingStep, ProjectionStep, DataLoadingStep, TrainingStep, \
+    TestingStep, PostProcessStep, InputValidationStep
 
 
 class DefaultPipeline:
-    def __init__(self):
-        self.pipeline = (Pipeline()
-                         .add_step(SetupStep())
-                         .add_step(InputValidationStep())
-                         .add_step(EmbeddingStep())
-                         .add_step(ProjectionStep())
-                         .add_step(DataLoadingStep())
-                         .add_step(TrainingStep())
-                         .add_step(TestingStep())
-                         .add_step(PostProcessStep())
-                         )
+    def __init__(self, config: Dict[str, Any]):
+        if "finetuning_config" in config:
+            self.pipeline = self._default_finetuning_pipeline()
+        else:
+            self.pipeline = self._default_pipeline()
+
+    @staticmethod
+    def _default_pipeline():
+        return (Pipeline()
+                .add_step(SetupStep())
+                .add_step(InputValidationStep())
+                .add_step(EmbeddingStep())
+                .add_step(ProjectionStep())
+                .add_step(DataLoadingStep())
+                .add_step(TrainingStep())
+                .add_step(TestingStep())
+                .add_step(PostProcessStep())
+                )
+
+    @staticmethod
+    def _default_finetuning_pipeline():
+        return (Pipeline()
+                .add_step(SetupStep())
+                .add_step(InputValidationStep())
+                .add_step(FineTuningEmbeddingStep())
+                .add_step(DataLoadingStep())
+                .add_step(TrainingStep())
+                .add_step(TestingStep())
+                .add_step(PostProcessStep())
+                )
 
     def with_custom_steps(self,
                           custom_setup_step: Optional[PipelineStep] = None,

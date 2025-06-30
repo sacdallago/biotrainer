@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from sklearn.model_selection import KFold, StratifiedKFold, RepeatedStratifiedKFold, RepeatedKFold, LeavePOut
 
 from ..protocols import Protocol
-from ..utilities import Split, DatasetSample, get_logger
+from ..utilities import Split, EmbeddingDatasetSample, get_logger
 
 logger = get_logger(__name__)
 
@@ -43,14 +43,14 @@ class CrossValidationSplitter:
             self._split_strategy = lambda train_dataset, val_dataset: \
                 self._leave_p_out_split(p=p, train_dataset=train_dataset, val_dataset=val_dataset)
 
-    def split(self, train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
+    def split(self, train_dataset: List, val_dataset: List) -> List[Split]:
         return self._split_strategy(train_dataset, val_dataset)
 
-    def nested_split(self, train_dataset: List[DatasetSample], current_outer_k: int, hp_iteration: int) -> List[Split]:
+    def nested_split(self, train_dataset: List, current_outer_k: int, hp_iteration: int) -> List[Split]:
         return self._nested_split_strategy(train_dataset, current_outer_k, hp_iteration)
 
     @staticmethod
-    def _hold_out_split(train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
+    def _hold_out_split(train_dataset: List, val_dataset: List) -> List[Split]:
         return [Split("hold_out", train_dataset, val_dataset)]
 
     @staticmethod
@@ -103,7 +103,7 @@ class CrossValidationSplitter:
         return bins
 
     def _k_fold_split(self, k: int, stratified: bool, nested: bool, repeat: int,
-                      train_dataset: List[DatasetSample], val_dataset: List[DatasetSample],
+                      train_dataset: List, val_dataset: List,
                       hp_iteration: Optional[int] = None,
                       current_outer_k: Optional[int] = None) -> List[Split]:
         concat_dataset = train_dataset + val_dataset
@@ -153,7 +153,7 @@ class CrossValidationSplitter:
 
     @staticmethod
     def _leave_p_out_split(p: int,
-                           train_dataset: List[DatasetSample], val_dataset: List[DatasetSample]) -> List[Split]:
+                           train_dataset: List, val_dataset: List) -> List[Split]:
         concat_dataset = train_dataset + val_dataset
 
         lpo = LeavePOut(p=p)

@@ -67,6 +67,15 @@ auto_resume: True | False  # Default: False
 pretrained_model: path/to/model_checkpoint.safetensors  # Mutually exclusive with auto_resume
 limited_sample_size: 100  # Default: -1 (all options)
 
+# Finetuning
+finetuning_config:
+  method: lora  # Only lora supported at the moment
+  lora_r: 8  # Lora Rank
+  lora_alpha: 16  # Lora Alpha
+  lora_dropout: 0.05  # Lora dropout probability
+  lora_target_modules: ["query", "key", "value"]  # Names of target modules for lora (ESM), ProtT5: ["q", "k", "v", "o"]
+  lora_bias: none | all | lora_only  # Bias type for lora
+
 # HuggingFace Dataset Integration
 hf_dataset:
   path: huggingface_user_name/repository_name  # Required

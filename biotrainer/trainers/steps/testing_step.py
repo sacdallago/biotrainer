@@ -71,12 +71,15 @@ class TestingStep(PipelineStep):
         assert test_datasets is not None, f"test_datasets cannot be None at the testing step!"
         assert best_split is not None, f"best_split cannot be None at the testing step!"
 
+        finetuning = "finetuning_config" in context.config
         for test_set_id, test_dataset in test_datasets.items():
             logger.info('Running final evaluation on the best model')
-            test_dataset_embeddings = TrainingFactory.create_embeddings_dataset(context=context, split=test_dataset,
-                                                                                mode="test")
+            test_dataset_embeddings = TrainingFactory.create_dataset(context=context,
+                                                                     split=test_dataset,
+                                                                     mode="test",
+                                                                     finetuning=finetuning)
             test_loader = TrainingFactory.create_dataloader(context=context, dataset=test_dataset_embeddings,
-                                                            hyper_params=best_split.hyper_params)
+                                                            hyper_params=best_split.hyper_params, finetuning=finetuning)
             test_results = self._do_and_log_evaluation(context=context,
                                                        solver=best_split.solver,
                                                        test_loader=test_loader,
@@ -96,12 +99,21 @@ class TestingStep(PipelineStep):
 
             # SANITY CHECKER
             if context.config.get("sanity_check", True):
+                baseline_test_dataset = context.baseline_test_datasets[test_set_id]
+                baseline_test_dataset_embeddings = TrainingFactory.create_dataset(context=context,
+                                                                                  split=baseline_test_dataset,
+                                                                                  mode="test",
+                                                                                  finetuning=False)
+                baseline_test_loader = TrainingFactory.create_dataloader(context=context,
+                                                                         dataset=baseline_test_dataset_embeddings,
+                                                                         hyper_params=best_split.hyper_params,
+                                                                         finetuning=False)
                 sanity_checker = SanityChecker(training_config=context.config,
                                                n_classes=context.n_classes,
                                                n_features=context.n_features,
                                                train_val_dataset=context.train_dataset + context.val_dataset,
-                                               test_dataset=test_dataset,
-                                               test_loader=test_loader,
+                                               test_dataset=baseline_test_dataset,
+                                               test_loader=baseline_test_loader,
                                                metrics_calculator=metrics_calculator,
                                                test_results_dict=test_results,
                                                mode="warn")
@@ -117,10 +129,10 @@ class TestingStep(PipelineStep):
         prediction_dataset = context.prediction_dataset
         if prediction_dataset and len(prediction_dataset) > 0:
             logger.info(f'Calculating predictions for {len(prediction_dataset)} samples!')
-            pred_dataset_embeddings = TrainingFactory.create_embeddings_dataset(context=context,
-                                                                                split=prediction_dataset, mode="pred")
+            pred_dataset_embeddings = TrainingFactory.create_dataset(context=context,
+                                                                     split=prediction_dataset, mode="pred")
             pred_loader = TrainingFactory.create_dataloader(context=context, dataset=pred_dataset_embeddings,
-                                                            hyper_params=best_split.hyper_params)
+                                                            hyper_params=best_split.hyper_params, finetuning=finetuning)
 
             _ = self._do_and_log_prediction(context=context,
                                             solver=best_split.solver,

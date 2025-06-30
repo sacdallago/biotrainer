@@ -1,14 +1,14 @@
 import torch
 
 from pathlib import Path
-from typing import Union, Optional, List, Tuple
+from typing import Union, Optional, List, Tuple, Dict, Any
 from transformers import AutoTokenizer, T5Tokenizer, T5EncoderModel, EsmTokenizer, EsmModel
 
-from .custom_tokenizer import CustomTokenizer
 from .onnx_embedder import OnnxEmbedder
-from .embedding_service import EmbeddingService
+from .custom_tokenizer import CustomTokenizer
 from .embedder_interfaces import EmbedderInterface
 from .one_hot_encoding_embedder import OneHotEncodingEmbedder
+from .embedding_service import EmbeddingService, FineTuningEmbeddingService
 from .huggingface_transformer_embedder import HuggingfaceTransformerEmbedder
 
 from ..utilities import is_device_cpu, get_logger
@@ -23,11 +23,17 @@ logger = get_logger(__name__)
 def get_embedding_service(embedder_name: str,
                           custom_tokenizer_config: Optional[str],
                           use_half_precision: Optional[bool] = False,
-                          device: Optional[Union[str, torch.device]] = None) -> EmbeddingService:
+                          device: Optional[Union[str, torch.device]] = None,
+                          finetuning_config: Optional[Dict[str, Any]] = None) -> Union[
+    EmbeddingService, FineTuningEmbeddingService]:
     embedder: EmbedderInterface = _get_embedder(embedder_name=embedder_name,
                                                 custom_tokenizer_config=custom_tokenizer_config,
                                                 use_half_precision=use_half_precision,
                                                 device=device)
+    if finetuning_config:
+        return FineTuningEmbeddingService(embedder=embedder, use_half_precision=use_half_precision,
+                                          finetuning_config=finetuning_config)
+
     return EmbeddingService(embedder=embedder, use_half_precision=use_half_precision)
 
 
@@ -69,7 +75,6 @@ def _get_embedder(embedder_name: Optional[str],
     # Custom Embedders
     if embedder_name.endswith(".py"):  # Check that file ends on .py => Python script
         raise Exception(f"Custom embedders from script have been replaced with onnx models in v0.9.7!")
-
 
     # ONNX Embedders
     if embedder_name.endswith(".onnx"):
@@ -120,7 +125,6 @@ def get_predefined_embedder_names() -> List[str]:
 __all__ = [
     "EmbeddingService",
     "OneHotEncodingEmbedder",
-    "CustomEmbedder",
     "get_embedding_service",
     "get_predefined_embedder_names"
 ]

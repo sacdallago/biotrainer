@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import torch
 
 from typing import Union
@@ -8,7 +10,7 @@ from ..pipeline.pipeline_step import PipelineStepType
 from ..target_manager import TargetManager
 
 from ...protocols import Protocol
-from ...utilities import get_logger
+from ...utilities import get_logger, EmbeddingDatasetSample
 
 logger = get_logger(__name__)
 
@@ -41,26 +43,32 @@ class DataLoadingStep(PipelineStep):
     def process(self, context: PipelineContext) -> PipelineContext:
         id2emb = context.id2emb
         assert id2emb is not None and len(id2emb) > 0, f"id2emb cannot be None or empty at the data loading step!"
+        first_embedding = next(iter(context.id2emb.values()))
 
         # TARGETS => DATASETS
         target_manager = TargetManager(protocol=context.config["protocol"], input_data=context.input_data,
                                        ignore_file_inconsistencies=context.config["ignore_file_inconsistencies"],
                                        cross_validation_method=context.config["cross_validation_config"]["method"],
                                        interaction=context.config.get("interaction"))
-        train_dataset, val_dataset, test_datasets, prediction_dataset = target_manager.get_datasets_by_annotations(
-            context.id2emb)
+
+
+        finetuning = "finetuning_config" in context.config
+        if finetuning:
+            train_dataset, val_dataset, test_datasets, prediction_dataset = target_manager.get_sequence_datasets()
+            baseline_test_datasets = {test_name: [
+                EmbeddingDatasetSample(seq_id=data_point.seq_id, embedding=context.id2emb[data_point.seq_id],
+                                       target=data_point.target) for data_point in test_data] for test_name, test_data
+                                      in test_datasets.items()}
+        else:
+            train_dataset, val_dataset, test_datasets, prediction_dataset = target_manager.get_embedding_datasets(
+                context.id2emb)
+            baseline_test_datasets = deepcopy(test_datasets)
+
         del context.id2emb  # No longer required and should not be used later in the routine
         context.id2emb = None
 
-        # Store datasets
-        context.train_dataset = train_dataset
-        context.val_dataset = val_dataset
-        context.test_datasets = test_datasets
-        context.prediction_dataset = prediction_dataset
-
         # LOG COMMON VALUES FOR ALL k-fold SPLITS:
-        embeddings_dimension = train_dataset[0].embedding.shape[-1]  # Last position in shape is always embedding dim
-        context.n_features = embeddings_dimension
+        context.n_features = first_embedding.shape[-1]  # Last position in shape is always embedding dim
         context.n_classes = target_manager.number_of_outputs
 
         logger.info(f"Number of features: {context.n_features}")
@@ -71,6 +79,13 @@ class DataLoadingStep(PipelineStep):
             'n_testing_ids': sum(len(test_dataset) for test_dataset in test_datasets.values()),
             'n_classes': context.n_classes,
         })
+
+        # Store datasets
+        context.train_dataset = train_dataset
+        context.val_dataset = val_dataset
+        context.test_datasets = test_datasets
+        context.baseline_test_datasets = baseline_test_datasets
+        context.prediction_dataset = prediction_dataset
 
         # CLASS WEIGHTS
         context.class_weights = self._get_class_weights(context=context, target_manager=target_manager)

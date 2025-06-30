@@ -22,6 +22,12 @@ class PostProcessStep(PipelineStep):
             logger.error("Could not save model as ONNX!")
 
     @staticmethod
+    def _save_finetuned_model(context: PipelineContext):
+        embedding_service = context.embedding_service
+        if embedding_service:
+            embedding_service.save_embedder(output_dir=context.config["log_dir"])
+
+    @staticmethod
     def _log_time(context: PipelineContext):
         pipeline_end_time = time.perf_counter()
         pipeline_end_time_abs = str(datetime.datetime.now().isoformat())
@@ -38,6 +44,9 @@ class PostProcessStep(PipelineStep):
 
         # SAVE BEST SPLIT AS ONNX
         self._onnx_export(context)
+
+        # SAVE FINETUNED EMBEDDER MODEL (IF APPLICABLE)
+        self._save_finetuned_model(context)
 
         # LOG TIME
         self._log_time(context)

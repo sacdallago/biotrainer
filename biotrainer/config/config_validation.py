@@ -5,6 +5,7 @@ from .config_option import ConfigOption, ConfigKey
 from .config_exception import ConfigurationException
 
 from ..protocols import Protocol
+from ..embedders import get_predefined_embedder_names
 
 
 def validate_config_options(protocol: Protocol,
@@ -109,6 +110,9 @@ def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_d
                                      f"Use auto_resume in case you need to restart your training job multiple times.\n"
                                      f"Use pretrained_model if you want to continue to train a specific model.")
 
+    if ("auto_resume" in config_dict or "pretrained_model" in config_dict) and "finetuning_config" in config_dict:
+        raise ConfigurationException(f"auto_resume and pretrained_model are not supported for finetuning yet!\n")
+
     if "embedder_name" in config_dict and "custom_tokenizer_config" in config_dict \
             and not str(config_dict["embedder_name"]).endswith(".onnx"):
         raise ConfigurationException("custom_tokenizer_config is only available for onnx embedders at the moment.")
@@ -158,5 +162,14 @@ def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_d
 
         if cv_config["method"] != "hold_out" and "pretrained_model" in config_dict:
             raise ConfigurationException(f"Using pretrained_model is only possible for hold_out cross validation!")
+
+    # Finetuning
+    if "finetuning_config" in config_dict:
+        embedder_name = config_dict["embedder_name"]
+        if ".onnx" in embedder_name:
+            raise ConfigurationException(f"Finetuning an onnx model is not supported!")
+
+        if embedder_name in get_predefined_embedder_names():
+            raise ConfigurationException(f"Finetuning {embedder_name} is not supported!")
 
     return True

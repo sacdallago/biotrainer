@@ -7,32 +7,37 @@ from torch.utils.data import DataLoader
 from ..pipeline import PipelineContext
 
 from ...losses import get_loss
-from ...models import get_model
+from ...utilities import get_logger
 from ...optimizers import get_optimizer
 from ...solvers import get_solver, Solver
-from ...utilities import DatasetSample, get_logger
-from ...datasets import get_dataset, get_collate_function
+from ...models import get_model, FineTuningModel
+from ...datasets import get_dataset, get_embeddings_collate_function, BiotrainerDataset
 
 logger = get_logger(__name__)
 
 
 class TrainingFactory:
     @staticmethod
-    def create_embeddings_dataset(context: PipelineContext, split: List[DatasetSample], mode: str):
+    def create_dataset(context: PipelineContext, split: List, mode: str, finetuning: bool = False) -> BiotrainerDataset:
         # Apply limited sample number
         limited_sample_size = context.config["limited_sample_size"]
         if mode == "train" and limited_sample_size and limited_sample_size > 0:
             logger.info(f"Using limited sample size of {limited_sample_size} for training dataset")
             split = random.sample(split,
                                   k=min(limited_sample_size, len(split)))
-        return get_dataset(context.config["protocol"], split)
+        return get_dataset(samples=split, finetuning=finetuning)
 
     @staticmethod
-    def create_dataloader(context: PipelineContext, dataset, hyper_params: Dict) -> DataLoader:
+    def create_dataloader(context: PipelineContext, dataset, hyper_params: Dict, finetuning: bool = False) -> DataLoader:
         # Create dataloader from dataset
+        if finetuning:
+            collate_fn = lambda batch: (
+            [x[0] for x in batch], [x[1] for x in batch], [x[2] for x in batch], [len(x[1]) for x in batch])
+        else:
+            collate_fn = get_embeddings_collate_function(context.config["protocol"])
         return DataLoader(
             dataset=dataset, batch_size=hyper_params["batch_size"], shuffle=hyper_params["shuffle"], drop_last=False,
-            collate_fn=get_collate_function(context.config["protocol"])
+            collate_fn=collate_fn
         )
 
     @staticmethod
@@ -49,10 +54,17 @@ class TrainingFactory:
     @staticmethod
     def create_model_loss_optimizer(context: PipelineContext,
                                     hyper_params: Dict[str, Any]) -> (
-    torch.nn.Module, torch.nn.Module, torch.nn.Module):
+            torch.nn.Module, torch.nn.Module, torch.nn.Module):
         # Initialize model
         model = get_model(n_classes=context.n_classes, n_features=context.n_features,
                           **hyper_params)
+
+        if "finetuning_config" in context.config:
+            model = FineTuningModel(embedding_service=context.embedding_service,
+                                    downstream_model=model,
+                                    collate_fn=get_embeddings_collate_function(context.config["protocol"]),
+                                    protocol=context.config["protocol"],
+                                    device=context.config["device"],)
 
         # Initialize loss function
         loss_function = get_loss(weight=context.class_weights, **hyper_params)
