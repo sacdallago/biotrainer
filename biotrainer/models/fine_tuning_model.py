@@ -1,8 +1,6 @@
-from typing import Iterator
-
 import torch
-import torch.nn as nn
 from torch.nn import Parameter
+from typing import Iterator, Tuple
 
 from .biotrainer_model import BiotrainerModel
 
@@ -38,7 +36,7 @@ class FineTuningModel(BiotrainerModel):
         self.downstream_model = self.downstream_model.train()
         return self
 
-    def forward(self, sequences, *args, **kwargs):
+    def forward(self, sequences, *args, **kwargs) -> Tuple:
         # Compute embeddings with gradients
         targets = kwargs.pop('targets', [])
 
