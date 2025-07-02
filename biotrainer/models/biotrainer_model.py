@@ -1,13 +1,13 @@
-from typing import Iterator
-
 import torch
 
 from torch import nn
 from torch.nn import Parameter
+from typing import Iterator, Union, Tuple
 
 
 class BiotrainerModel(nn.Module):
-    def forward(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, *args, **kwargs) -> Union[torch.Tensor, Tuple]:
+        """Returns downstream model predictions (and padded targets for finetuning model)"""
         raise NotImplementedError
 
     def parameters(self, recurse: bool = True) -> Iterator[Parameter]:
