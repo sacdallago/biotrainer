@@ -31,13 +31,13 @@ class FNN(BiotrainerModel):
         return Yhat
 
 
-class DeeperFNN(FNN):
+class DeeperFNN(BiotrainerModel):
     def __init__(
             self, n_classes: int, n_features: int,
             bottleneck_dim: int = 128, dropout_rate: float = 0.25,
             **kwargs
     ):
-        super(FNN, self).__init__()
+        super(DeeperFNN, self).__init__()
 
         self.classifier = nn.Sequential(
             nn.Linear(n_features, bottleneck_dim),  # n_features x 128 (for default)
@@ -51,3 +51,14 @@ class DeeperFNN(FNN):
             nn.Dropout(dropout_rate),
             nn.Linear(int(bottleneck_dim / 4), n_classes)  # 32 x n_classes (for default)
         )
+
+    def forward(self, x, *args, **kwargs):
+        """
+            L = protein length
+            B = batch-size
+            F = number of features (1024 for embeddings)
+            N = number of classes (e.g. 9 for conservation)
+        """
+        # IN: X = (B x L x F)
+        Yhat = self.classifier(x)  # OUT: Yhat_consurf = (B x L x N)
+        return Yhat
