@@ -119,7 +119,7 @@ class Solver(ABC):
                 self.output_manager.add_training_iteration(split_name=self.split_name, epoch_metrics=epoch_metrics)
 
             if self._early_stop(current_loss=epoch_metrics.validation['loss'], epoch=epoch):
-                logger.info(f"Early stopping triggered! (Best epoch: {self._best_epoch})")
+                logger.info(f"Early stopping triggered - patience limit is reached! (Best epoch: {self._best_epoch})")
                 return epoch_iterations
 
         return epoch_iterations
