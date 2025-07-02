@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 from .biotrainer_model import BiotrainerModel
@@ -11,7 +12,7 @@ class LogReg(BiotrainerModel):
             nn.Linear(n_features, n_classes),  # 7x32
         )
 
-    def forward(self, x, *args, **kwargs):
+    def forward(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         """
             L = protein length
             B = batch-size

@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import biotrainer.utilities as utils
 
@@ -19,7 +20,7 @@ class CNN(BiotrainerModel):
         self.dropout = nn.Dropout(dropout_rate)
         self.conv2 = nn.Conv2d(bottleneck_dim, n_classes, kernel_size=(7, 1), padding=(3, 0))
 
-    def forward(self, x, *args, **kwargs):
+    def forward(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         """
             L = protein length
             B = batch-size

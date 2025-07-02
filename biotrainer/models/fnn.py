@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 from .biotrainer_model import BiotrainerModel
@@ -19,7 +20,7 @@ class FNN(BiotrainerModel):
             nn.Linear(bottleneck_dim, n_classes)
         )
 
-    def forward(self, x, *args, **kwargs):
+    def forward(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         """
             L = protein length
             B = batch-size
@@ -52,7 +53,7 @@ class DeeperFNN(BiotrainerModel):
             nn.Linear(int(bottleneck_dim / 4), n_classes)  # 32 x n_classes (for default)
         )
 
-    def forward(self, x, *args, **kwargs):
+    def forward(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         """
             L = protein length
             B = batch-size
