@@ -23,6 +23,7 @@ customization
 stored in the h5 file after computation. Experiments show that this is about as efficient as the old batching approach,
 while allowing for better code readability.
 * Adding PyPi release
+* Adding official macOS support
 
 ## Breaking
 * Refactoring file input to a single `input_file`. 
