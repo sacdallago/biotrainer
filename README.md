@@ -5,7 +5,7 @@
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/sacdallago/biotrainer)](https://github.com/sacdallago/biotrainer/releases)
 
 <p align="center">
-  <img width="25%" height="20%" alt="biocentral logo" src="biotrainer_logo.svg" />
+  <img width="25%" height="20%" alt="biotrainer logo" src="biotrainer_logo.svg" />
 <br />
 Biological prediction models made simple. 
 </p>
@@ -21,14 +21,17 @@ It provides:
 ## Quick Start
 
 ### 1. Installation
-Installation using [uv](https://github.com/astral-sh/uv) (recommended):
-```bash
-#First, install uv if you haven't already:
-pip install uv
+
+Install using pip:
+```shell
+pip install biotrainer
 ```
 
-Then install biotrainer:
-```bash
+Manual installation using [uv](https://github.com/astral-sh/uv):
+```shell
+# First, install uv if you haven't already:
+pip install uv
+
 # Create and activate a virtual environment
 uv venv
 source .venv/bin/activate  # On Unix/macOS
@@ -55,7 +58,7 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 ```
 
 ### 2. Basic Usage
-```bash
+```shell
 # Training
 biotrainer train --config config.yml
 
@@ -111,7 +114,7 @@ embedder_name: Rostlab/prot_t5_xl_uniref50
 ```
 
 ## Docker Support
-```bash
+```shell
 # Run using pre-built image
 docker run --gpus all --rm \
     -v "$(pwd)/examples/docker":/mnt \
