@@ -8,5 +8,5 @@ acid sequences and the `TARGET=0/1` to indicate, if they interact or not. Split 
 
 Execute the example (from the base directory):
 ```bash
-poetry run python3 run-biotrainer.py examples/protein_protein_interaction/config.yml
+biotrainer train --config examples/protein_protein_interaction/config.yml
 ```

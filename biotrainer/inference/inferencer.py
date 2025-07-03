@@ -398,7 +398,8 @@ class Inferencer:
         try:
             import onnxruntime
         except ImportError:
-            raise Exception("No onnxruntime in current environment found! Please install one via poetry extras first!")
+            raise Exception("No onnxruntime in current environment found! Please install one first, e.g. "
+                            "uv pip install -e '.[onnx-cpu]'!")
 
         if isinstance(embeddings, Dict):
             embeddings_dict = embeddings

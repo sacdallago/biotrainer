@@ -1,82 +1,78 @@
-[tool.poetry]
+[project]
 name = "biotrainer"
 version = "0.9.8"
-description = "Biotrainers for embeddings"
+description = "Biological prediction models made simple."
 authors = [
-    "Christian Dallago <christian.dallago@tum.de>",
-    "Sebastian Franz <sebastian.franz@tum.de>",
-    "Joaquin Gomez Sanchez <joaquin.gomez@tum.de>",
-    "Michael Heinzinger <mheinzinger@rostlab.org>"
+    {name = "Christian Dallago", email = "christian.dallago@tum.de"},
+    {name = "Sebastian Franz", email = "sebastian.franz@tum.de"},
+    {name = "Joaquin Gomez Sanchez", email = "joaquin.gomez@tum.de"},
+    {name = "Michael Heinzinger", email = "mheinzinger@rostlab.org"}
 ]
-license = "AFL v3.0"
+license = {text = "AFL v3.0"}
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: AFL License",
+    "License :: OSI Approved :: Academic Free License (AFL)",
     "Operating System :: OS Independent",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization"
 ]
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "accelerate>=1.1.1",
+    "h5py>=3.8.0,<4.0.0",
+    "pip-audit>=2.9.0",
+    "protobuf>=5.29.1",
+    "numpy==2.2.5",
+    "ruamel.yaml>=0.17.40,<0.18.0",
+    "sentencepiece>=0.2.0",
+    "scipy==1.15.2",
+    "scikit-learn>=1.5.1",
+    "tensorboard>=2.18.0",
+    "torch==2.6.0",
+    "tqdm>=4.67.0",
+    "transformers>=4.51.1",
+    "torchmetrics>=1.7.1",
+    "safetensors>=0.4.4",
+    "onnx==1.16.1",
+    "onnxscript>=0.2.5",
+    "pandas>=2.2.3",
+    "datasets>=3.5.1",
+    "umap-learn>=0.5.7",
+    "llvmlite>=0.44.0",
+    "cyclopts>=3.16.0",
+    "appdirs>=1.4.4",
+    "peft>=0.15.2",
+]
 
-[tool.poetry.scripts]
-biotrainer = 'biotrainer.utilities.cli:main'
+[project.optional-dependencies]
+jupyter = [
+    "jupyter>=1.1.1",
+    "notebook>=7.4.0",
+]
+onnx-cpu = ["onnxruntime>=1.21.0"]
+onnx-gpu = ["onnxruntime-gpu>=1.21.0"]
+onnx-mac = ["onnxruntime-coreml>=1.13.1"]
 
-[tool.poetry.urls]
+[project.urls]
 Issues = "https://github.com/sacdallago/biotrainer/issues"
 Repository = "https://github.com/sacdallago/biotrainer"
 
-[tool.poetry.dependencies]
-python = ">=3.11,<3.13"
-
-accelerate = "^1.1.1"
-h5py = ">=3.8.0,<4.0.0"
-pip-audit = "^2.9.0"
-protobuf = "^5.29.1"
-numpy = "2.2.5"
-"ruamel.yaml" = ">=0.17.40,<0.18.0"
-sentencepiece = "^0.2.0"
-scipy = "1.15.2"
-scikit-learn = "^1.5.1"
-tensorboard = "^2.18.0"
-torch = "2.6.0"
-tqdm = "^4.67.0"
-transformers = "^4.51.1"
-torchmetrics = "^1.7.1"
-safetensors = "^0.4.4"
-onnx = "1.16.1"  # Latest version 1.17.0 has issues currently  https://github.com/sacdallago/biotrainer/issues/111
-onnxscript = "^0.2.5"
-pandas = "^2.2.3"
-datasets = "^3.5.1"
-umap-learn = "^0.5.7"
-llvmlite = "^0.44.0"
-cyclopts = "^3.16.0"
-appdirs = "^1.4.4"
-peft = "^0.15.2"
-
-# Optional
-jupyter = { version = "^1.1.1", optional = true }
-notebook = { version = "^7.4.0", optional = true }
-onnxruntime = { version = "^1.21.0", optional = true }
-onnxruntime-gpu = { version = "^1.21.0", optional = true}
-onnxruntime-coreml = { version = "^1.13.1", optional = true}
-
-
-[tool.poetry.extras]
-jupyter = ["jupyter", "notebook"]
-onnx-cpu = ["onnxruntime"]
-onnx-gpu = ["onnxruntime-gpu"]
-onnx-mac = ["onnxruntime-coreml"]
-
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
-build = "^1.2.2"
+[project.scripts]
+biotrainer = "biotrainer.utilities.cli:app"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["biotrainer"]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "pytest>=8.3.4",
+    "build>=1.2.2",
+]

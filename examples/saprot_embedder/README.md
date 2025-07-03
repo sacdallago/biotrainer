@@ -12,5 +12,5 @@ you can find, how these structure-aware sequences are created.
 
 Execute the example (from the base directory):
 ```bash
-poetry run python3 run-biotrainer.py examples/saprot_embedder/config.yml
+biotrainer train --config examples/saprot_embedder/config.yml
 ```

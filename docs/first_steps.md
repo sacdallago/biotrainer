@@ -16,16 +16,18 @@ Thus, our problem belongs to the [residue_to_class protocol](data_standardizatio
 
 ## Installation of biotrainer
 
-Make sure you have [poetry](https://python-poetry.org/) installed.
+Make sure you have [uv](https://github.com/astral-sh/uv) installed.
 
-Now you can [install](../README.md#installation) *biotrainer* via `poetry`:
+Now you can [install](../README.md) *biotrainer* via `uv`:
 ```shell
-poetry install
-```
+# Create and activate a virtual environment
+uv venv
+source .venv/bin/activate  # On Unix/macOS
+# OR
+.venv\Scripts\activate  # On Windows
 
-If you do not want to use `poetry`, you can also install *biotrainer* via `pip`:
-```shell
-pip install . # In the root directory of this repository
+# Basic installation of biotrainer
+uv pip install -e .
 ```
 
 ## The Dataset
@@ -88,11 +90,6 @@ require a lot of memory and GPU power to compute.
 We are finally able to train our model! Execute the following command, using the directory you created:
 ```shell
 biotrainer train --config your-directory/config.yaml
-```
-
-If the `biotrainer` command cannot be found directly, you can also try to run it via `poetry`:
-```bash
-poetry run python3 run-biotrainer.py --config your-directory/config.yaml
 ```
 
 After a while, the training should be finished. You can find the best model checkpoint and a summary *out.yaml*

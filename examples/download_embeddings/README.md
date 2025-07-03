@@ -6,5 +6,5 @@ Embeddings are downloaded and saved in the directory of this example with a "dow
 
 Execute the example (from the base directory):
 ```bash
-poetry run python3 run-biotrainer.py examples/download_embeddings/config.yml
+biotrainer train --config examples/download_embeddings/config.yml
 ```

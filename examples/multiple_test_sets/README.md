@@ -43,6 +43,6 @@ PRTEINNNNNN
 Execute the example (from the base directory):
 
 ```shell
-poetry run python3 run-biotrainer.py examples/multiple_test_sets/sequence_to_class/config.yml
-poetry run python3 run-biotrainer.py examples/multiple_test_sets/residue_to_class/config.yml
+biotrainer train --config examples/multiple_test_sets/sequence_to_class/config.yml
+biotrainer train --config examples/multiple_test_sets/residue_to_class/config.yml
 ```
