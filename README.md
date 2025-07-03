@@ -5,7 +5,7 @@
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/sacdallago/biotrainer)](https://github.com/sacdallago/biotrainer/releases)
 
 <p align="center">
-  <img width="250" height="200" alt="biocentral logo" src="biotrainer_logo.svg" />
+  <img width="25%" height="20%" alt="biocentral logo" src="biotrainer_logo.svg" />
 <br />
 Biological prediction models made simple. 
 </p>
