@@ -12,14 +12,18 @@ def merge_protein_interactions(seq_records: List[BiotrainerSequenceRecord]) -> D
     """
     result = {}
 
+    seq_id_to_hash = {seq_record.seq_id: seq_record.get_hash() for seq_record in seq_records}
+
     for seq_record in seq_records:
         seq_id = seq_record.seq_id
+        seq_hash = seq_record.get_hash()
         interactor = seq_record.get_ppi()
+        interactor_hash = seq_id_to_hash[interactor]
         if not interactor:
             raise ValueError(f"Sequence {seq_id} does not have a valid interactor!")
 
-        interaction_id = f"{seq_id}{INTERACTION_INDICATOR}{interactor}"
-        interaction_id_flipped = f"{interactor}{INTERACTION_INDICATOR}{seq_id}"
+        interaction_id = f"{seq_hash}{INTERACTION_INDICATOR}{interactor_hash}"
+        interaction_id_flipped = f"{interactor_hash}{INTERACTION_INDICATOR}{seq_hash}"
 
         # Check that target annotations and sets are consistent:
         for int_id in [interaction_id, interaction_id_flipped]:
