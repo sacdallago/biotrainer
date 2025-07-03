@@ -87,7 +87,8 @@ class OnnxEmbedder(EmbedderWithFallback):
             self._onnxruntime = ort
             self._check_onnxruntime_gpu()
         except ImportError:
-            raise Exception("No onnxruntime in current environment found! Please install one via poetry extras first!")
+            raise Exception("No onnxruntime in current environment found! Please install one first, e.g. "
+                            "uv pip install -e '.[onnx-cpu]'!")
 
         self.name = f"onnx-{onnx_path.name.replace('.onnx', '')}"
         self._onnx_path = onnx_path
@@ -102,11 +103,11 @@ class OnnxEmbedder(EmbedderWithFallback):
         if torch.cuda.is_available():
             if 'CUDAExecutionProvider' not in self._onnxruntime.get_available_providers():
                 logger.info("CUDA is available but onnxruntime-gpu is not installed. "
-                      "Install it with: poetry install -E onnx-gpu")
+                      "You can install it with: uv pip install -e '.[onnx-gpu]'")
         if torch.mps.is_available():
             if 'CoreMLExecutionProvider' not in self._onnxruntime.get_available_providers():
                 logger.info("MPS is available but onnxruntime-coreml is not installed. "
-                      "Install it with: poetry install -E onnx-mac")
+                      "You can install it with: uv pip install -e '.[onnx-mac]'")
 
     def _load_model(self) -> OrtSessionWrapper:
         # Create ONNX Runtime session

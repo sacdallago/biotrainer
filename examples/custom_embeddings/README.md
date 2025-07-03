@@ -13,9 +13,9 @@ All used files for the examples can be found in *example_files*.
 
 ## Installation
 
-Make sure you have a poetry environment installed with the *jupyter* extra:
+Make sure you have a virtual environment installed with the *jupyter* extra:
 ```bash
-poetry install -E jupyter
+uv pip install -e ".[jupyter]"
 ```
 
 ## Examples

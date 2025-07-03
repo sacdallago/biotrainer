@@ -7,5 +7,5 @@ a numerical value for every sequence provided. Note that this protocol must use
 
 Execute the example (from the base directory):
 ```bash
-poetry run python3 run-biotrainer.py examples/residues_to_value/config.yml
+biotrainer train --config examples/residues_to_value/config.yml
 ```

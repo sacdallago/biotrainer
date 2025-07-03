@@ -18,5 +18,5 @@ auto_resume: False
 
 Execute the example (from the base directory):
 ```bash
-poetry run python3 run-biotrainer.py examples/no_auto_resume_training/config.yml
+biotrainer train --config examples/no_auto_resume_training/config.yml
 ```

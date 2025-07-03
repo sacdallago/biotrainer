@@ -19,7 +19,7 @@ class _NotebookLogHandler(logging.Handler):
             '''))
         except ImportError as e:
             raise ImportError("You are running in a notebook environment, but missing required dependencies. "
-                            "Please install them via `poetry install --all-extras`.") from e
+                            "Please install them via `uv pip install -e '.[jupyter]'") from e
 
     def emit(self, record):
         self.display(self.HTML(f'''

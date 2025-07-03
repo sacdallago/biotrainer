@@ -26,7 +26,7 @@ a `ConfigurationException` will occur.
 Run the example with:
 
 ```bash
-poetry run biotrainer examples/hf_dataset/config.yml
+biotrainer train --config examples/hf_dataset/config.yml
 ```
 
 **Notes**
