@@ -5,6 +5,7 @@ from typing import Union, Optional, List, Tuple, Dict, Any
 from transformers import AutoTokenizer, T5Tokenizer, T5EncoderModel, EsmTokenizer, EsmModel
 
 from .onnx_embedder import OnnxEmbedder
+from .random_embedder import RandomEmbedder
 from .custom_tokenizer import CustomTokenizer
 from .embedder_interfaces import EmbedderInterface
 from .one_hot_encoding_embedder import OneHotEncodingEmbedder
@@ -14,7 +15,8 @@ from .huggingface_transformer_embedder import HuggingfaceTransformerEmbedder
 from ..utilities import is_device_cpu, get_logger
 
 __PREDEFINED_EMBEDDERS = {
-    "one_hot_encoding": OneHotEncodingEmbedder
+    "one_hot_encoding": OneHotEncodingEmbedder,
+    "random_embedder": RandomEmbedder,
 }
 
 logger = get_logger(__name__)
