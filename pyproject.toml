@@ -24,7 +24,6 @@ requires-python = ">=3.11,<3.13"
 dependencies = [
     "accelerate>=1.1.1",
     "h5py>=3.8.0,<4.0.0",
-    "pip-audit>=2.9.0",
     "protobuf>=5.29.1",
     "numpy==2.2.5",
     "ruamel.yaml>=0.17.40,<0.18.0",
@@ -56,6 +55,11 @@ jupyter = [
 onnx-cpu = ["onnxruntime>=1.21.0"]
 onnx-gpu = ["onnxruntime-gpu>=1.21.0"]
 onnx-mac = ["onnxruntime-coreml>=1.13.1"]
+dev = [
+    "pytest>=8.3.4",
+    "build>=1.2.2",
+    "pip-audit>=2.9.0",
+]
 
 [project.urls]
 Issues = "https://github.com/sacdallago/biotrainer/issues"
