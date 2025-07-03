@@ -11,5 +11,5 @@ mask_file: mask.fasta
 
 Execute the example (from the base directory):
 ```bash
-poetry run python3 run-biotrainer.py examples/residue_to_class_masked/config.yml
+biotrainer train --config examples/residue_to_class_masked/config.yml
 ```

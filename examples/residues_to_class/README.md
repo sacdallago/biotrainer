@@ -7,5 +7,5 @@ level. It employs the
 
 Execute the example (from the base directory):
 ```bash
-poetry run python3 run-biotrainer.py examples/residues_to_class/config.yml
+biotrainer train --config examples/residues_to_class/config.yml
 ```

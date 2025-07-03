@@ -9,5 +9,5 @@ which can also be used to get a quick overview about the class distribution in y
 
 Execute the example (from the base directory):
 ```bash
-poetry run python3 run-biotrainer.py examples/sequence_to_class_dim_reduction/config.yml
+biotrainer train --config examples/sequence_to_class_dim_reduction/config.yml
 ```

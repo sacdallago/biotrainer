@@ -17,6 +17,6 @@ pretrained_model: output/FNN/one_hot_encoding/sample_checkpoint.pt
 
 Execute the example (from the base directory):
 ```bash
-poetry run python3 run-biotrainer.py examples/continue_model_training/config.yml
+biotrainer train --config examples/continue_model_training/config.yml
 ```
 

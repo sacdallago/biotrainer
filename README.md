@@ -15,15 +15,33 @@ It provides:
 ## Quick Start
 
 ### 1. Installation
+Installation using [uv](https://github.com/astral-sh/uv) (recommended):
 ```bash
-# Install using poetry (recommended)
-poetry install
-# Installing with jupyter notebook extra (if required):
-poetry install -E jupyter
-# Installing with onnxruntime extra (for onnx embedders and inference):
-poetry install -E onnx-cpu
-poetry install -E onnx-gpu  # CUDA
-poetry install -E onnx-mac  # CoreML
+#First, install uv if you haven't already:
+pip install uv
+```
+
+Then install biotrainer:
+```bash
+# Create and activate a virtual environment
+uv venv
+source .venv/bin/activate  # On Unix/macOS
+# OR
+.venv\Scripts\activate  # On Windows
+
+# Basic installation
+uv pip install -e .
+
+# Installing with jupyter notebook support:
+uv pip install -e ".[jupyter]"
+
+# Installing with onnxruntime support (for onnx embedders and inference):
+uv pip install -e ".[onnx-cpu]"    # CPU version
+uv pip install -e ".[onnx-gpu]"    # CUDA version
+uv pip install -e ".[onnx-mac]"    # CoreML version (for Apple Silicon)
+
+# You can also combine extras:
+uv pip install -e ".[jupyter,onnx-cpu]"
 
 # For Windows users with CUDA support:
 # Visit https://pytorch.org/get-started/locally/ and follow GPU-specific installation, e.g.:
@@ -33,12 +51,12 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 ### 2. Basic Usage
 ```bash
 # Training
-poetry run biotrainer config.yml
+biotrainer train --config config.yml
 
 # Inference
 python3
 >>> from biotrainer.inference import Inferencer
->>> inferencer, out_file = Inferencer.create_from_out_file('output/out.yml')
+>>> inferencer, _ = Inferencer.create_from_out_file('output/out.yml')
 >>> predictions = inferencer.from_embeddings(your_embeddings)
 ```
 
@@ -52,7 +70,7 @@ python3
 - **Sequence-level regression** (`sequence_to_value`)
 
 ### Built-in Capabilities
-- Multiple embedding methods (ProtT5, ESM, ONNX, etc.)
+- Multiple embedding methods (ProtT5, ESM-2, ONNX, etc.)
 - Various neural network architectures
 - Cross-validation and model evaluation
 - Performance metrics and visualization

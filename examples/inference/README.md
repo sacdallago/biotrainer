@@ -9,5 +9,5 @@ Please also refer to the `cli` [predict command](../docs/cli.md).
 
 Note that you need to have `jupyter` installed for the notebook:
 ```shell
-poetry install -E jupyter
+uv pip install -e ".[jupyter]"
 ```
