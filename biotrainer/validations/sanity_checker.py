@@ -1,7 +1,7 @@
 import torch
-from typing import Dict, List, Any
 
 from scipy.stats import pearsonr
+from typing import Dict, List, Any
 from torch.utils.data import DataLoader
 
 from .bootstrapper import Bootstrapper
@@ -11,7 +11,7 @@ from ..models import get_model
 from ..protocols import Protocol
 from ..optimizers import get_optimizer
 from ..solvers import MetricsCalculator, get_solver
-from ..utilities import EmbeddingDatasetSample, INTERACTION_INDICATOR, get_logger
+from ..utilities import INTERACTION_INDICATOR, get_logger
 
 logger = get_logger(__name__)
 

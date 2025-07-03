@@ -235,7 +235,6 @@ def process_hf_dataset_to_fasta(
     Loads a HuggingFace dataset, splits it according to the protocol, and writes the data to FASTA files.
 
     Args:
-        protocol (Protocol): The selected protocol determining how the dataset should be processed.
         hf_storage_path (Path): Path to the HuggingFace storage directory.
         hf_map (Dict): A mapping of HuggingFace dataset option names to their respective ConfigOption instances.
 

@@ -1,9 +1,7 @@
 import unittest
-import tempfile
 
 from pathlib import Path
 from copy import deepcopy
-
 from biotrainer.config import Configurator, ConfigurationException
 
 configurations = {
