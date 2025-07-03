@@ -31,5 +31,5 @@ def test_cross_validation(cv_config: dict):
             assert os.path.exists(f"{tmp_dir_name}/out.yml"), "No output file generated, run failed!"
         except ConfigurationException:
             assert False, "A ConfigurationException was thrown although it shouldn't have."
-        except Exception as e:
+        except Exception:
             assert False, "An exception was thrown although it shouldn't have."

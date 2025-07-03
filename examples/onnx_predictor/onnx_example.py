@@ -7,7 +7,7 @@ from biotrainer.protocols import Protocol
 def onnx_save():
     out_file_path_res = '../residue_to_class/output/out.yml'
 
-    inferencer, out_file = Inferencer.create_from_out_file(out_file_path=out_file_path_res, allow_torch_pt_loading=True)
+    inferencer, out_file = Inferencer.create_from_out_file(out_file_path=out_file_path_res)
     converted_checkpoint_paths = inferencer.convert_to_onnx()
     return converted_checkpoint_paths
 
@@ -29,7 +29,7 @@ def onnx_load(model_path: str):
 
     # Double check against inferencer predictions
     out_file_path_res = '../residue_to_class/output/out.yml'
-    inferencer, out_file = Inferencer.create_from_out_file(out_file_path=out_file_path_res, allow_torch_pt_loading=True)
+    inferencer, out_file = Inferencer.create_from_out_file(out_file_path=out_file_path_res)
     print(inferencer.from_embeddings(embeddings=embeddings, include_probabilities=True))
 
 

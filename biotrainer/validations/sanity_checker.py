@@ -207,11 +207,11 @@ class SanityChecker:
             # 2. Calculate dataset bias
             dataset_bias = pearsonr(list(positive_counts.values()), list(negative_counts.values()))
 
-            def bias_predictor(interactor1, interactor2):
-                pos_occurrences_total = positive_counts[interactor1]
-                pos_occurrences_total += positive_counts[interactor2]
-                neg_occurrences_total = negative_counts[interactor1]
-                neg_occurrences_total += negative_counts[interactor2]
+            def bias_predictor(int1, int2):
+                pos_occurrences_total = positive_counts[int1]
+                pos_occurrences_total += positive_counts[int2]
+                neg_occurrences_total = negative_counts[int1]
+                neg_occurrences_total += negative_counts[int2]
 
                 return 0 if neg_occurrences_total >= pos_occurrences_total else 1
 

@@ -18,7 +18,7 @@ class PostProcessStep(PipelineStep):
     def _onnx_export(context: PipelineContext):
         try:
             context.best_split.solver.save_as_onnx(embedding_dimension=context.n_features)
-        except Exception as e:
+        except Exception:
             logger.error("Could not save model as ONNX!")
 
     @staticmethod
