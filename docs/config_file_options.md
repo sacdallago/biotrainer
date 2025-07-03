@@ -139,7 +139,7 @@ use_half_precision: True | False # Default: False
 To compute baselines, there are also predefined embedders directly included in *biotrainer*:
 
 ```yaml
-embedder_name: one_hot_encoding
+embedder_name: one_hot_encoding | random_embedder
 ```
 
 If you want to use your own embedder directly in *biotrainer*, you can provide it as an onnx file. Usually, you will
