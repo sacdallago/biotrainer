@@ -4,7 +4,7 @@ These examples show how to use multiple distinct test sets and the prediction da
 
 ## Per-Sequence Tasks
 
-Just add your sequences to the sequence.fasta file:
+Just add your sequences to the input.fasta file:
 ```fasta
 >Seq1 TARGET=Glob SET=train
 SEQWENCE
@@ -24,39 +24,21 @@ PRRRRTSEQQQ
 
 ## Per-Residue Tasks
 
-You need to add your sequences and labels (and masks) to the respective files, set annotations must be done in the
-labels fasta file. For the prediction set, you currently need to add a label to the value as well (although it will
-be ignored of course during inference):
+Similarly, add your targets, masks and sets to the input file:
 
 *Sequence file*:
 ```fasta
->Seq1
+>Seq1 TARGET=DVCDVVDD SET=train
 SEQWENCE
->Seq2
+>Seq2 TARGET=DDDDDD SET=val
 PRTEIN
->Seq3
+>Seq3 TARGET=DDDDDDFFEEEDDD SET=test
 SEQVENCEPROTEI
->Seq4
+>Seq4 TARGET=DDDEEEFFEEEDFF SET=test2
 QQQVVVCEPROTEI
->Seq5
+>Seq5 TARGET=DDDDDDDDDDD SET=pred # TARGET is ignored during inference
 PRTEINNNNNN
 ```
-
-*Labels file*:
-```fasta
->Seq1 SET=train
-DVCDVVDD
->Seq2 SET=val
-DDDDDD
->Seq3 Inhibitor of nuclear factor kappa-B kinase subunit beta OS=Homo sapiens OX=9606 GN=IKBKB PE=1 SV=1 SET=test
-DDDDDDFFEEEDDD
->Seq4 SET=test2
-DDDEEEFFEEEDFF
->Seq5 SET=pred
-DDDEEEFFEEE  # This is ignored during inference
-```
-
-This behaviour will be improved in a future release of biotrainer.
 
 Execute the example (from the base directory):
 
