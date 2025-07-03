@@ -14,7 +14,7 @@ def get_mean_and_confidence_range(values: torch.Tensor, dimension: int, confiden
     :return: Tuple: Tensor with mean over values and confidence range for each value
     """
     if not 0 < confidence_level < 1:
-        raise Exception(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
+        raise ValueError(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
 
     std_dev, mean = torch.std_mean(values, dim=dimension, unbiased=True)
     # Use normal distribution for critical value (z_score)

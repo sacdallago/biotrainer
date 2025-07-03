@@ -372,4 +372,4 @@ class TargetManager:
                                f"for the following classes: {missing_classes}!")
             return torch.FloatTensor(class_weights)
         else:
-            raise Exception(f"Class weights can only be calculated for classification tasks!")
+            raise ValueError(f"Class weights can only be calculated for classification tasks!")
