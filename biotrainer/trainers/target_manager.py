@@ -22,7 +22,7 @@ class TargetManager:
     # This will be 1 for regression tasks, 2 for binary classification tasks, and N>2 for everything else
     number_of_outputs: int = 1
 
-    # Optional, must be set in _calculate_targets()
+    # Optional for classification tasks, must be set in _calculate_targets()
     class_str2int: Optional[Dict[str, int]] = None
     class_int2str: Optional[Dict[int, str]] = None
     _class_labels: Optional[List[str]] = None
@@ -159,7 +159,7 @@ class TargetManager:
             # embeddings < # labels --> Fail, unless self._ignore_file_inconsistencies (=> drop labels).
         2. Check that lengths of embeddings == length of provided labels, if not --> Fail. (only residue_to_x)
         """
-        invalid_sequence_lengths = []
+        invalid_embeddings_lengths = []
         embeddings_without_labels = []
         labels_without_embeddings = []
         if self._interaction:
@@ -180,7 +180,7 @@ class TargetManager:
                 embeddings_without_labels.append(seq_hash)
             # Make sure the length of the sequences in the embeddings match the length of the seqs in the labels
             elif self.protocol in Protocol.per_residue_protocols() and len(embd) != self._id2target[seq_hash].size()[0]:
-                invalid_sequence_lengths.append((seq_hash, len(embd), self._id2target[seq_hash].size()))
+                invalid_embeddings_lengths.append((seq_hash, len(embd), self._id2target[seq_hash].size()))
 
         for seq_hash in all_hashes_with_target:
             # Check that all labels have a corresponding embedding
@@ -229,11 +229,12 @@ class TargetManager:
                     exception_message += f"Sequence - ID(s): {self._input_ids.get(seq_hash, 'N/A')} - Hash: {seq_hash}\n"
                 raise ValueError(exception_message[:-1])  # Discard last \n
 
-        if len(invalid_sequence_lengths) > 0:
-            exception_message = f"Length mismatch for {len(invalid_sequence_lengths)} sequence(s)!\n"
-            for seq_hash, seq_len, target_len in invalid_sequence_lengths:
-                exception_message += (f"Sequence - ID(s): {self._input_ids.get(seq_hash, 'N/A')} - Hash: {seq_hash} - "
-                                      f"Sequence_Length={seq_len} vs. Labels_Length={self._id2target[seq_hash].size}\n")
+        if len(invalid_embeddings_lengths) > 0:
+            exception_message = f"Length mismatch for {len(invalid_embeddings_lengths)} embedding(s)!\n"
+            for seq_hash, seq_len, target_len in invalid_embeddings_lengths:
+                exception_message += (
+                    f"Embedding - ID(s): {self._input_ids.get(seq_hash, 'N/A')} - Sequence Hash: {seq_hash} - "
+                    f"Embedding_Length={seq_len} vs. Labels_Length={self._id2target[seq_hash].size}\n")
             raise ValueError(exception_message[:-1])  # Discard last \n
 
     @staticmethod
