@@ -64,8 +64,8 @@ def _get_embedder(embedder_name: Optional[str],
                   custom_tokenizer_config: Optional[str],
                   use_half_precision: Optional[bool],
                   device: Optional[Union[str, torch.device]]) -> EmbedderInterface:
-    if embedder_name is None:
-        raise Exception("No embedder name provided!")
+    if embedder_name is None or embedder_name == "":
+        raise ValueError("No embedder name provided!")
 
     # Predefined Embedders
     if embedder_name in __PREDEFINED_EMBEDDERS.keys():
@@ -74,7 +74,7 @@ def _get_embedder(embedder_name: Optional[str],
 
     # Custom Embedders
     if embedder_name.endswith(".py"):  # Check that file ends on .py => Python script
-        raise Exception(f"Custom embedders from script have been replaced with onnx models in v0.9.7!")
+        raise ValueError(f"Custom embedders from script have been replaced with onnx models in v0.9.7!")
 
     # ONNX Embedders
     if embedder_name.endswith(".onnx"):
@@ -89,7 +89,7 @@ def _get_embedder(embedder_name: Optional[str],
 
     # Huggingface Transformer Embedders
     if use_half_precision and is_device_cpu(device):
-        raise Exception(f"use_half_precision mode is not compatible with embedding "
+        raise ValueError(f"use_half_precision mode is not compatible with embedding "
                         f"on the CPU. (See: https://github.com/huggingface/transformers/issues/11546)")
 
     torch_dtype = torch.float16 if use_half_precision else torch.float32
