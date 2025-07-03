@@ -237,7 +237,7 @@ class TargetManager:
             for seq_hash, seq_len, target_len in invalid_embeddings_lengths:
                 exception_message += (
                     f"Embedding - ID(s): {self._input_ids.get(seq_hash, 'N/A')} - Sequence Hash: {seq_hash} - "
-                    f"Embedding_Length={seq_len} vs. Labels_Length={self._id2target[seq_hash].size}\n")
+                    f"Embedding_Length={seq_len} vs. Labels_Length={self._id2target[seq_hash].size()[0]}\n")
             raise ValueError(exception_message[:-1])  # Discard last \n
 
     @staticmethod
