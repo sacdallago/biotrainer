@@ -221,7 +221,7 @@ def _load_and_split_hf_dataset(hf_map: Dict) -> Tuple[List[str], List[Any], List
                 masks.extend([None] * len(current_sequences))
 
     else:
-        raise Exception(
+        raise ValueError(
             f"Expected at least 3 subsets (TRAIN, VAL, TEST) in the dataset at path '{path}'. Found: {subset_names}."
         )
 

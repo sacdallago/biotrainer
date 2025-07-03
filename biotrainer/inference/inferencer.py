@@ -140,7 +140,7 @@ class Inferencer:
     def _load_solver_and_dataloader(self, embeddings: Union[Iterable, Dict],
                                     split_name, targets: Optional[List] = None):
         if split_name not in self.solvers_and_loaders_by_split.keys():
-            raise Exception(f"Unknown split_name {split_name} for given configuration!")
+            raise ValueError(f"Unknown split_name {split_name} for given configuration!")
 
         if isinstance(embeddings, Dict):
             embeddings_dict = embeddings

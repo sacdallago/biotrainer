@@ -170,7 +170,7 @@ class Solver(ABC):
                 if m.p > 0.0:
                     number_dropout_layers += 1
         if not number_dropout_layers > 0:
-            raise Exception("Trying to do monte carlo dropout inference on model without dropout!")
+            raise ValueError("Trying to do monte carlo dropout inference on model without dropout!")
 
     def _do_dropout_iterations(self, X, lengths, n_forward_passes):
         dropout_iterations = []
