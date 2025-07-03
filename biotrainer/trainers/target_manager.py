@@ -72,7 +72,11 @@ class TargetManager:
                == len(self._id2sets.keys()), f"Length mismatch after reading input file!"
 
         if self._interaction:
-            self._id2target = merge_protein_interactions(input_records)
+            merged_interactions_dict = merge_protein_interactions(input_records)
+            self._id2target = {int_id: int_dict["TARGET"] for int_id, int_dict in
+                               merged_interactions_dict.items()}
+            self._id2sets = {int_id: int_dict["SET"] for int_id, int_dict in
+                               merged_interactions_dict.items()}
 
         # Remove None targets from pred set
         self._id2target = {seq_hash: target for seq_hash, target in self._id2target.items() if target is not None}
