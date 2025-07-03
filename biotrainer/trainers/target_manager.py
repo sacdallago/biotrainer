@@ -1,15 +1,14 @@
 import torch
 import itertools
-import numpy as np
 
 from pathlib import Path
 from collections import Counter
 from typing import Dict, Any, Tuple, Optional, List, Union
 
 from ..protocols import Protocol
+from ..input_files import BiotrainerSequenceRecord, merge_protein_interactions, get_split_lists, read_FASTA
 from ..utilities import MASK_AND_LABELS_PAD_VALUE, INTERACTION_INDICATOR, EmbeddingDatasetSample, get_logger, \
     SequenceDatasetSample
-from ..input_files import BiotrainerSequenceRecord, merge_protein_interactions, get_split_lists, read_FASTA
 
 logger = get_logger(__name__)
 
