@@ -4,6 +4,12 @@
 [![Documentation](https://img.shields.io/badge/docs-biocentral-blue)](https://biocentral.cloud/docs/biotrainer/config_file_options)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/sacdallago/biotrainer)](https://github.com/sacdallago/biotrainer/releases)
 
+<p align="center">
+  <img width="250" height="200" alt="biocentral logo" src="biotrainer_logo.svg" />
+<br />
+Biological prediction models made simple. 
+</p>
+
 ## Overview
 *Biotrainer* is an open-source framework that simplifies machine learning model development for protein analysis. 
 It provides:
