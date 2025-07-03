@@ -10,12 +10,7 @@ def inference():
 
     out_file_path = '../residue_to_class/output/out.yml'
 
-    inferencer, out_file = Inferencer.create_from_out_file(out_file_path=out_file_path, allow_torch_pt_loading=True)
-
-    print(f"For the {out_file['model_choice']}, the metrics on the test set are:")
-    for metric in out_file['test_iterations_results']['metrics']:
-        print(f"\t{metric} : {out_file['test_iterations_results']['metrics'][metric]}")
-
+    inferencer, iom = Inferencer.create_from_out_file(out_file_path=out_file_path)
 
     embedder = OneHotEncodingEmbedder()
     embeddings = list(embedder.embed_many(sequences))
