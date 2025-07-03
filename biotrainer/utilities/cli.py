@@ -94,11 +94,13 @@ def convert(sequence_file: str,
             labels_file: Optional[str] = None,
             masks_file: Optional[str] = None,
             converted_file: Optional[str] = "converted.fasta",
+            skip_inconsistencies: Optional[bool] = False,
             target_format: Optional[str] = "fasta"):
     convert_deprecated_fastas(result_file=converted_file,
                               sequence_file=sequence_file,
                               labels_file=labels_file,
-                              masks_file=masks_file)
+                              masks_file=masks_file,
+                              skip_sequence_on_failed_merge=skip_inconsistencies)
 
 
 @app.command
