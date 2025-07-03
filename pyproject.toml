@@ -1,10 +1,10 @@
 [project]
 name = "biotrainer"
-version = "0.9.8"
+version = "1.0.0"
 description = "Biological prediction models made simple."
 authors = [
-    {name = "Christian Dallago", email = "christian.dallago@tum.de"},
     {name = "Sebastian Franz", email = "sebastian.franz@tum.de"},
+    {name = "Christian Dallago", email = "christian.dallago@tum.de"},
     {name = "Joaquin Gomez Sanchez", email = "joaquin.gomez@tum.de"},
     {name = "Michael Heinzinger", email = "mheinzinger@rostlab.org"}
 ]
