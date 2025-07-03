@@ -58,8 +58,17 @@ jobs:
           source .venv/bin/activate
           uv pip install -e ".[dev]"
 
-      - name: Test with pytest
+      - name: Test with pytest (Unix)
+        if: matrix.os != 'windows-latest'
         run: |
+          source .venv/bin/activate
+          cd tests
+          pytest --disable-warnings
+
+      - name: Test with pytest (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          .\.venv\Scripts\activate
           cd tests
           pytest --disable-warnings
 
