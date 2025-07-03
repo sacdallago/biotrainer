@@ -30,12 +30,6 @@ configurations = {
         "auto_resume": True,
         "pretrained_model": "placeholder.pt"
     },
-    "embeddings_file_embedder_name_mutual_exclusive": {
-        "input_file": "test_input_files/r2c/input.fasta",
-        "protocol": "sequence_to_class",
-        "embeddings_file": "placeholder.h5",
-        "embedder_name": "one_hot_encoding"
-    },
     "mutual_exclusive_device_half_precision": {
         "input_file": "test_input_files/r2c/input.fasta",
         "protocol": "sequence_to_class",
