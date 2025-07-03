@@ -351,8 +351,6 @@ class InferencerTests(unittest.TestCase):
         if "win" in platform.lower():
             return  # Disable this test on Windows for now, because of ONNX stability issues
 
-        embedding_dimension_one_hot = 21
-
         for inferencer in self.inferencer_list:
             with tempfile.TemporaryDirectory() as tmp_dir_name:
                 # Convert

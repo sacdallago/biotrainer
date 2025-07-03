@@ -66,5 +66,5 @@ def test_protocol_config(protocol: str, model: str, embedder_name: str, should_f
             assert os.path.exists(f"{tmp_dir_name}/out.yml"), "No output file generated, run failed!"
         except ConfigurationException:
             assert should_fail, "A ConfigurationException was thrown although it shouldn't have."
-        except Exception as e:
+        except Exception:
             assert should_fail, "An exception was thrown although it shouldn't have."

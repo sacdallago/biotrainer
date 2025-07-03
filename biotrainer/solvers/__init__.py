@@ -38,13 +38,13 @@ def get_solver(protocol: Protocol, name: str,
                log_dir: Optional = None, n_classes: Optional[int] = 0,
                **kwargs
                ) -> Solver:
-    solver = __SOLVERS.get(protocol)
+    solver_class = __SOLVERS.get(protocol)
     metrics_calc = get_metrics_calculator(protocol=protocol, device=device, n_classes=n_classes)
 
-    if not solver:
+    if not solver_class:
         raise NotImplementedError
     else:
-        return solver(
+        return solver_class(
             split_name=name, protocol=protocol,
             network=network, optimizer=optimizer, loss_function=loss_function, metrics_calculator=metrics_calc,
             device=device, number_of_epochs=number_of_epochs,
