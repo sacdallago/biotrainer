@@ -30,7 +30,7 @@ def _framework_factory(framework: str):
 
 
 def _validate_input(framework: str, min_seq_length: int, max_seq_length: int) -> None:
-    if framework not in available_frameworks():
+    if framework.lower() not in available_frameworks():
         raise ValueError(f"Unsupported framework: {framework}")
 
     if min_seq_length >= max_seq_length:
