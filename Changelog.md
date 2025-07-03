@@ -1,5 +1,42 @@
 # Biotrainer Changelog
 
+## 03.07.2025 - Version 1.0.0
+
+## Feature
+* Adding an `OutputManager` class that can be customized by adding observers for easier integration with external
+tools such as MLFlow, WanB and tensorboard (the latter is already supported)
+* Adding the `autoeval` module to biotrainer that enables evaluating protein language models on downstream tasks.
+Currently, a curated subset of the [FLIP](https://github.com/J-SNACKKB/FLIP) datasets is supported.
+* Adding an improved CLI, including `train`, `predict`, `convert` (deprecated files) and `autoeval` commands
+* Adding an `InputValidator` and `InputValidationStep` that validates the given `input_file`. Can be
+deactivated by setting `validate_input` to `False` in the config file.
+* Adding **LoRA** finetuning via `finetuning_config`. Implementation is currently in beta state 
+(some modes like auto_resume and ppi are not supported), but finetuning can already be applied for all protocols.
+* Adding a `random_embedder` to calculate random embeddings as a baseline for predefined embedders.
+
+## Maintenance
+* Replaced biopython dependency with custom read, write and filter functions
+* Refactored the large trainer class into a pipeline with distinct steps for better readability, maintainability and
+customization
+* Enforced bootstrapping for sanity checks
+* Refactoring embedding_service to allow embedding computation as generator function. Embeddings are now directly 
+stored in the h5 file after computation. Experiments show that this is about as efficient as the old batching approach,
+while allowing for better code readability.
+* Adding PyPi release
+
+## Breaking
+* Refactoring file input to a single `input_file`. 
+`sequence_file`, `labels_file` and `mask_file` are no longer supported.
+* Naming changes in the output file, documented in this issue: https://github.com/sacdallago/biotrainer/issues/137
+* `embedder_name` and `embeddings_file` are no longer mutually exclusive. If an `embeddings_file` is provided,
+it will be used instead of calculating the embeddings
+* Embeddings are now stored by hash in the result h5 file. The behaviour can be turned off for special use-cases
+in the `compute_embeddings` function by setting the `store_by_hash` flag to `False`. In that case, the original
+sequence id is now used (over a running integer) as h5 index. The sequence id also always saved in the `original_id`
+attribute of the h5 dataset.
+* Ending support for Python 3.10, adding support for Python 3.12
+* Migrating build and dependency system from `poetry` to `uv` for better performance
+
 ## 05.05.2025 - Version 0.9.8
 
 ### Features
