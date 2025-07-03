@@ -353,7 +353,7 @@ class TargetManager:
                 training_targets = list(itertools.chain.
                                         from_iterable([list(targets) for targets in training_targets]))
                 # Ignore unresolved residues for class weights
-                training_targets = [target for target in training_targets if target != MASK_AND_LABELS_PAD_VALUE]
+                training_targets = [target.item() for target in training_targets if target != MASK_AND_LABELS_PAD_VALUE]
 
                 counter = Counter(training_targets)
             else:  # Per-sequence
