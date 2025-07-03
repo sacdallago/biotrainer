@@ -43,7 +43,7 @@ The `convert` command helps to convert the deprecated three-way biotrainer files
 the new single file (`input_file`) input:
 
 ```shell
-biotrainer convert --sequence-file sequences.fasta [--labels-file labels.txt] [--masks-file masks.txt] [--converted-file output.fasta] [--target-format fasta]
+biotrainer convert --sequence-file sequences.fasta [--labels-file labels.txt] [--masks-file masks.txt] [--converted-file output.fasta] [--target-format fasta] [--skip_inconsistencies]
 ```
 
 ### Parameters:
@@ -53,6 +53,7 @@ biotrainer convert --sequence-file sequences.fasta [--labels-file labels.txt] [-
 - `--masks-file`: Optional file containing masks
 - `--converted-file`: Output file name (Default: "converted.fasta")
 - `--target-format`: Target format for conversion (Default: "fasta", "csv" is planned but not currently supported)
+- `--skip_inconsistencies`: Whether to skip inconsistent sequences from multiple files (e.g. no label for a sequence, Default: False)
 
 ## Auto-Evaluation
 
