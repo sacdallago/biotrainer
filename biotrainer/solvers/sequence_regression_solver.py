@@ -1,8 +1,5 @@
 import torch
 
-from typing import Dict, Union, Optional
-from torchmetrics import SpearmanCorrCoef, MeanSquaredError
-
 from .solver import Solver
 
 

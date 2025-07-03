@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from sklearn.model_selection import KFold, StratifiedKFold, RepeatedStratifiedKFold, RepeatedKFold, LeavePOut
 
 from ..protocols import Protocol
-from ..utilities import Split, EmbeddingDatasetSample, get_logger
+from ..utilities import Split, get_logger
 
 logger = get_logger(__name__)
 

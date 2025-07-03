@@ -1,7 +1,7 @@
 import re
 
 from pathlib import Path
-from typing import Dict, Union, List, Callable
+from typing import Union, List, Callable
 
 from .biotrainer_seq_record import BiotrainerSequenceRecord
 
