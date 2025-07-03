@@ -48,7 +48,7 @@ splits have been generated randomly, with a distribution of about 90% train, 5% 
 
 We combine the two files to our input file:
 ```shell
-biotrainer convert --sequence-file sequences.fasta --labels-file sampled.fasta
+biotrainer convert --sequence-file sequences.fasta --labels-file sampled.fasta --skip_inconsistencies
 ```
 
 ## Creating the configuration file
@@ -87,12 +87,12 @@ require a lot of memory and GPU power to compute.
 
 We are finally able to train our model! Execute the following command, using the directory you created:
 ```shell
-biotrainer your-directory/config.yaml
+biotrainer train --config your-directory/config.yaml
 ```
 
 If the `biotrainer` command cannot be found directly, you can also try to run it via `poetry`:
 ```bash
-poetry run python3 run-biotrainer.py your-directory/config.yaml
+poetry run python3 run-biotrainer.py --config your-directory/config.yaml
 ```
 
 After a while, the training should be finished. You can find the best model checkpoint and a summary *out.yaml*
