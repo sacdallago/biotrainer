@@ -49,6 +49,7 @@ def setup_config(protocol: str, model_choice: str, embedder_name: str, tmp_confi
         config["model_choice"] = model_choice
         config["embedder_name"] = embedder_name
         config["output_dir"] = tmp_config_dir
+        config["device"] = "cpu"  # Only use cpu for testing
         return config
 
 

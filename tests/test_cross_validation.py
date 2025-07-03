@@ -23,6 +23,7 @@ def test_cross_validation(cv_config: dict):
         base_config["cross_validation_config"] = cv_config
         base_config["input_file"] = str(Path("test_input_files/cv_s2v/meltome_cv_test.fasta").absolute())
         base_config["output_dir"] = tmp_dir_name
+        base_config["device"] = "cpu"
         with open(tmp_config_path, "w") as tmp_config_file:
             tmp_config_file.write(yaml.dump(base_config))
 
