@@ -1,4 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# This workflow will install Python dependencies, run tests and lint with multiple versions of Python
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
 name: Python Tests
@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
         python-version: [ '3.11', '3.12' ]
 
     steps:
@@ -50,6 +50,13 @@ jobs:
           .\.venv\Scripts\activate
           uv pip install -e ".[dev,onnx-cpu]"
           pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+      - name: Install dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e ".[dev,onnx-mac]"
 
       - name: Test with pytest
         run: |
