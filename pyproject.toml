@@ -31,7 +31,7 @@ Issues = "https://github.com/sacdallago/biotrainer/issues"
 Repository = "https://github.com/sacdallago/biotrainer"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.11,<3.13"
 
 accelerate = "^1.1.1"
 h5py = ">=3.8.0,<4.0.0"
