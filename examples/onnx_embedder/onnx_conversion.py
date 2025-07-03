@@ -160,7 +160,7 @@ def test_models(pytorch_model, tokenizer, onnx_path="model.onnx"):
             'input_ids': input_ids.numpy(),
             'attention_mask': attention_mask.numpy()
         }
-        print("ONNX model inputs:", [input.name for input in ort_session.get_inputs()])
+        print("ONNX model inputs:", [i.name for i in ort_session.get_inputs()])
         ort_output = ort_session.run(None, ort_inputs)[0]
 
         # Compare outputs

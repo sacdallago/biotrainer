@@ -5,7 +5,6 @@ from itertools import product
 from biotrainer.protocols import Protocol
 from biotrainer.models import get_available_models_dict, get_available_models_set
 
-
 protocols = set([protocol.name for protocol in Protocol.all()])
 models = get_available_models_set()
 embedder_names = ["one_hot_encoding"]
@@ -31,7 +30,8 @@ def generate_tests_protocols(metafunc):
             all_params["test_protocol_config"]["values"].append([protocol, "CNN", "one_hot_encoding", True])
             continue
         for model in models:
-            should_fail = True if model not in get_available_models_dict().get(Protocol[protocol]) else False
+            should_fail = True if model not in get_available_models_dict().get(
+                Protocol.from_string(protocol)) else False
             for embedder_name in embedder_names:
                 all_params["test_protocol_config"]["values"].append([protocol, model, embedder_name, should_fail])
 
