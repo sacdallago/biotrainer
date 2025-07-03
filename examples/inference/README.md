@@ -5,6 +5,8 @@ These examples show how to use a model trained with *biotrainer* for inference. 
 in the [residue_to_class example](../residue_to_class/). The notebook shows how to use them to predict per-residue
 classes for any new sequences.
 
+Please also refer to the `cli` [predict command](../docs/cli.md).
+
 Note that you need to have `jupyter` installed for the notebook:
 ```shell
 poetry install -E jupyter
