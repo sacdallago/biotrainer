@@ -47,11 +47,27 @@ def convert_deprecated_fastas(result_file: str,
                 print(f"OVERWRITING mask file mask for sequence {seq_id}!")
             merged_mask = mask_file_mask
 
+        # VALIDATE
         if merged_target is None:
             if skip_sequence_on_failed_merge:
                 print(f"Could not merge target for seq_id {seq_id}, skipping sequence!")
                 continue
             raise ValueError(f"Could not merge target for seq_id {seq_id}!")
+
+        if labels_file and len(merged_target) != len(seq_record.seq):
+            if skip_sequence_on_failed_merge:
+                print(f"Sequence {seq_id} has incorrect target length, skipping sequence!")
+                continue
+            raise ValueError(f"Sequence {seq_id} has incorrect target length: "
+                             f"{len(merged_target)} != {len(seq_record.seq)}!")
+
+        if masks_file and merged_mask is not None and (len(merged_mask) != len(merged_target)):
+            if skip_sequence_on_failed_merge:
+                print(f"Sequence {seq_id} has incorrect mask length, skipping sequence!")
+                continue
+            raise ValueError(f"Sequence {seq_id} has incorrect mask length: "
+                             f"{len(merged_mask)} != {len(merged_target)}!")
+
         if merged_set is None:
             if skip_sequence_on_failed_merge:
                 print(f"Could not merge set for seq_id {seq_id}, skipping sequence!")
