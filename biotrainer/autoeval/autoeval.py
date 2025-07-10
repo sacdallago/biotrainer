@@ -43,7 +43,7 @@ def _validate_input(framework: str, min_seq_length: int, max_seq_length: int) ->
 def get_unique_framework_sequences(framework: str,
                                    min_seq_length: int,
                                    max_seq_length: int,
-                                   custom_framework_storage_path: Optional[str] = None,
+                                   custom_storage_path: Optional[str] = None,
                                    ) -> (List[Tuple[AutoEvalTask, Dict[str, Any]]],
                                          Dict[str, BiotrainerSequenceRecord],
                                          Dict[str, BiotrainerSequenceRecord]
@@ -54,7 +54,7 @@ def get_unique_framework_sequences(framework: str,
     auto_eval_tasks = _setup_pipeline(data_handler=data_handler,
                                       min_seq_length=min_seq_length,
                                       max_seq_length=max_seq_length,
-                                      custom_framework_storage_path=custom_framework_storage_path)
+                                      custom_storage_path=custom_storage_path)
     task_config_tuples = []
     for task in auto_eval_tasks:
         config = config_bank.get_task_config(task=task)
@@ -83,10 +83,10 @@ BiotrainerSequenceRecord], Dict[str, BiotrainerSequenceRecord]]:
 def _setup_pipeline(data_handler: AutoEvalDataHandler,
                     min_seq_length: int,
                     max_seq_length: int,
-                    custom_framework_storage_path: Optional[str] = None,
+                    custom_storage_path: Optional[str] = None,
                     ) -> List[AutoEvalTask]:
     framework_base_path = data_handler.get_framework_base_path(
-        custom_framework_storage_path=custom_framework_storage_path)
+        custom_storage_path=custom_storage_path)
 
     if not os.path.exists(framework_base_path):
         os.makedirs(framework_base_path, exist_ok=True)
@@ -110,13 +110,13 @@ def _run_pipeline(embedder_name: str,
                   min_seq_length: int,
                   max_seq_length: int,
                   custom_pipeline: Optional[Pipeline] = None,
-                  custom_framework_storage_path: Optional[str] = None,
+                  custom_storage_path: Optional[str] = None,
                   custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
                   ) -> Generator[AutoEvalProgress, None, None]:
     task_config_tuples, unique_per_residue, unique_per_sequence = get_unique_framework_sequences(framework=framework,
                                                                                                  min_seq_length=min_seq_length,
                                                                                                  max_seq_length=max_seq_length,
-                                                                                                 custom_framework_storage_path=custom_framework_storage_path)
+                                                                                                 custom_storage_path=custom_storage_path)
     # Embed if no custom pipeline provided - that must handle the embedding step independently
     embeddings_file_per_residue = None
     embeddings_file_per_sequence = None
@@ -279,7 +279,7 @@ def autoeval_pipeline(embedder_name: str,
                           Callable[[Iterable[str]], Generator[Tuple[str, np.ndarray], None, None]]] = None,
                       custom_embedding_function_per_sequence: Optional[
                           Callable[[Iterable[str]], Generator[Tuple[str, np.ndarray], None, None]]] = None,
-                      custom_framework_storage_path: Optional[Union[Path, str]] = None,
+                      custom_storage_path: Optional[Union[Path, str]] = None,
                       custom_output_observers: List[BiotrainerOutputObserver] = None,
                       ) -> Generator[AutoEvalProgress, None, None]:
     """
@@ -303,7 +303,7 @@ def autoeval_pipeline(embedder_name: str,
         Custom per-sequence embedding function that is used instead
         of the biotrainer embedding service if provided.
         Takes an iterable of sequence strings as input and must provide the per-sequence embeddings as a generator.
-    :param custom_framework_storage_path: Optional path where to store the framework datasets if not downloaded yet.
+    :param custom_storage_path: Optional path where to store the framework datasets if not downloaded yet.
     :param custom_output_observers: Optional list of custom training output observers.
     :return: A dictionary containing the autoeval pipeline results. Each task result is a biotrainer model output dict.
     """
@@ -339,13 +339,13 @@ def autoeval_pipeline(embedder_name: str,
         custom_embedding_function_per_sequence=custom_embedding_function_per_sequence)
 
     yield from _run_pipeline(embedder_name=embedder_name,
-                         framework=framework,
-                         embedding_function_per_residue=embedding_function_per_residue,
-                         embedding_function_per_sequence=embedding_function_per_sequence,
-                         output_dir=output_dir,
-                         min_seq_length=min_seq_length,
-                         max_seq_length=max_seq_length,
-                         custom_pipeline=custom_pipeline,
-                         custom_framework_storage_path=custom_framework_storage_path,
-                         custom_output_observers=custom_output_observers
-                         )
+                             framework=framework,
+                             embedding_function_per_residue=embedding_function_per_residue,
+                             embedding_function_per_sequence=embedding_function_per_sequence,
+                             output_dir=output_dir,
+                             min_seq_length=min_seq_length,
+                             max_seq_length=max_seq_length,
+                             custom_pipeline=custom_pipeline,
+                             custom_storage_path=custom_storage_path,
+                             custom_output_observers=custom_output_observers
+                             )
