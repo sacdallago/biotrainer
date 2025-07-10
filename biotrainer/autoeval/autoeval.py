@@ -311,7 +311,7 @@ def autoeval_pipeline(embedder_name: str,
 
     if custom_pipeline is not None and any([v is not None for v in [custom_tokenizer_config,
                                                                     custom_embedding_function_per_residue,
-                                                                    custom_framework_storage_path]]):
+                                                                    custom_embedding_function_per_sequence]]):
         raise ValueError(f"You must either provide a custom_pipeline or custom embedding functions and configurations!")
 
     if (custom_embedding_function_per_residue is None) ^ (custom_embedding_function_per_sequence is None):
