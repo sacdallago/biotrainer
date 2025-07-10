@@ -78,9 +78,9 @@ class AutoEvalDataHandler(ABC):
     def get_framework_name():
         raise NotImplementedError
 
-    def get_framework_base_path(self, custom_framework_storage_path: Optional[Union[str, Path]] = None) -> Path:
-        if custom_framework_storage_path:
-            return Path(custom_framework_storage_path)
+    def get_framework_base_path(self, custom_storage_path: Optional[Union[str, Path]] = None) -> Path:
+        if custom_storage_path:
+            return Path(custom_storage_path) / self.get_framework_name()
         return Path(user_cache_dir('biotrainer')) / "autoeval" / self.get_framework_name()
 
     @staticmethod
