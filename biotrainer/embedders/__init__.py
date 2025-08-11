@@ -8,6 +8,7 @@ from .onnx_embedder import OnnxEmbedder
 from .random_embedder import RandomEmbedder
 from .custom_tokenizer import CustomTokenizer
 from .embedder_interfaces import EmbedderInterface
+from .aa_ontology_embedder import AAOntologyEmbedder
 from .one_hot_encoding_embedder import OneHotEncodingEmbedder
 from .embedding_service import EmbeddingService, FineTuningEmbeddingService
 from .huggingface_transformer_embedder import HuggingfaceTransformerEmbedder
@@ -17,6 +18,7 @@ from ..utilities import is_device_cpu, get_logger
 __PREDEFINED_EMBEDDERS = {
     "one_hot_encoding": OneHotEncodingEmbedder,
     "random_embedder": RandomEmbedder,
+    "AAOntology": AAOntologyEmbedder,
 }
 
 logger = get_logger(__name__)
@@ -127,6 +129,8 @@ def get_predefined_embedder_names() -> List[str]:
 __all__ = [
     "EmbeddingService",
     "OneHotEncodingEmbedder",
+    "RandomEmbedder",
+    "AAOntologyEmbedder",
     "get_embedding_service",
     "get_predefined_embedder_names"
 ]
