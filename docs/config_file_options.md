@@ -139,8 +139,12 @@ use_half_precision: True | False # Default: False
 To compute baselines, there are also predefined embedders directly included in *biotrainer*:
 
 ```yaml
-embedder_name: one_hot_encoding | random_embedder
+embedder_name: one_hot_encoding | random_embedder | AAOntology
 ```
+
+* `one_hot_encoding`: Creates one hot encodings based on the amino acid sequence
+* `random_embedder`: Generates random 128xsequence_length embedding vectors
+* `AAOntology`: Uses amino-acid associated feature scales from AAOntology: https://doi.org/10.1016/j.jmb.2024.168717
 
 If you want to use your own embedder directly in *biotrainer*, you can provide it as an onnx file. Usually, you will
 also need to provide a custom tokenizer config (see below).
