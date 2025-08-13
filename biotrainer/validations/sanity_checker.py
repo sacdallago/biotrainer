@@ -22,7 +22,8 @@ class SanityChecker:
                  n_classes: int,
                  n_features: int,
                  metrics_calculator: MetricsCalculator,
-                 train_val_dataset: List,
+                 train_dataset: List,
+                 val_dataset: List,
                  test_dataset: List,
                  test_loader: DataLoader,
                  test_results_dict: Dict[str, Any],
@@ -39,7 +40,8 @@ class SanityChecker:
             self.bootstrapping_iterations = 30  # Always use bootstrapping for sanity checks with default 30 iterations
         self.metrics_calculator = metrics_calculator
 
-        self.train_val_dataset = train_val_dataset
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
         self.test_dataset = test_dataset
         self.test_loader = test_loader
         self.test_results_dict = test_results_dict
@@ -131,12 +133,12 @@ class SanityChecker:
 
     def _mean_only_baseline(self):
         """
-        Predicts the mean of the test set for every sample in the test set. (Only for regression)
+        Predicts the mean of the train set for every sample in the test set. (Only for regression)
         """
         if self.protocol in Protocol.regression_protocols():
-            test_set_targets = torch.tensor([sample.target for sample in self.test_dataset])
-            test_set_mean = torch.mean(test_set_targets).item()
-            mean_only_baseline = self._value_only_baseline(value=test_set_mean)
+            train_set_targets = torch.tensor([sample.target for sample in self.train_dataset])
+            train_set_mean = torch.mean(train_set_targets).item()
+            mean_only_baseline = self._value_only_baseline(value=train_set_mean)
             logger.info(f"Mean-Only Baseline: {mean_only_baseline}")
             return mean_only_baseline
 
@@ -188,7 +190,7 @@ class SanityChecker:
             positive_counts = {}
             negative_counts = {}
 
-            for sample in (self.train_val_dataset + self.test_dataset):
+            for sample in (self.train_dataset + self.val_dataset + self.test_dataset):
                 interactor1 = sample.seq_id.split(INTERACTION_INDICATOR)[0]
                 interactor2 = sample.seq_id.split(INTERACTION_INDICATOR)[1]
                 for count_dict in [positive_counts, negative_counts]:
