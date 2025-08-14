@@ -20,7 +20,7 @@ Quick description of each task, you can find more information in the [split desc
   * *low_vs_high*: Training on low fitness values, testing on high fitness values
   * *two_vs_many*: Training on two mutations max, testing on many mutations
 * **bind**: Predict binding sites of ligands for protein residues.
-  * from_publication: Dataset split used in [this]() publication
+  * from_publication: Dataset split used in [this](https://doi.org/10.1038/s41598-021-03431-4) publication
 * **gb1**: Predict a binding score for each variant of the GB1 protein.
   * *low_vs_high*: Training on low fitness values, testing on high fitness values
   * *two_vs_many*: Training on two mutations max, testing on others
@@ -110,7 +110,7 @@ Example:
   "min_seq_len": 0, // Minimum sequence length
   "max_seq_len": 2000,  // Maximum sequence length
   "results": {
-    "aav-two_vs_many": {
+    "FLIP-aav-two_vs_many": {
       "config": {
       },
       "database_type": "Protein",

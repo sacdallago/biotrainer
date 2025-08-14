@@ -106,11 +106,16 @@ class AutoEvalDataHandler(ABC):
 
     @abstractmethod
     def get_tasks(self, base_path: Path, min_seq_length: int, max_seq_length: int) -> List[AutoEvalTask]:
+        """
+        Get tasks to execute in the autoeval pipeline via biotrainer.
+
+        This is the core method of the framework data handler.
+        """
         raise NotImplementedError
 
 
 @dataclass
 class AutoEvalTask:
-    name: str
+    name: str  # usually {FRAMEWORK_NAME}-{DATASET}-{optional: SPLIT_NAME}
     input_file: Path
     type: str
