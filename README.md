@@ -60,7 +60,7 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 ### 2. Basic Usage
 ```shell
 # Training
-biotrainer train --config config.yml
+biotrainer train --config examples/sequence_to_class/config.yml
 
 # Inference
 python3
@@ -68,6 +68,15 @@ python3
 >>> inferencer, _ = Inferencer.create_from_out_file('output/out.yml')
 >>> predictions = inferencer.from_embeddings(your_embeddings)
 ```
+
+### 3. Quick Start Datasets
+- **Secondary Structure Prediction** 
+  - *Protocol*: `residue_to_class`
+  - [Citations](https://github.com/J-SNACKKB/FLIP/tree/main/splits/secondary_structure) - [Download](https://nextcloud.cit.tum.de/index.php/s/sak5HAZ7NbtYMwT/download)
+- **Subcellular Localization Prediction**
+  - *Protocol*: `sequence_to_class`/`residues_to_class`
+  - [Citations](https://github.com/J-SNACKKB/FLIP/tree/main/splits/scl) - [Download](https://nextcloud.cit.tum.de/index.php/s/JzFPcQojktQHPT9/download)
+
 
 ## Features
 
