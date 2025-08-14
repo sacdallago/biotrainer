@@ -85,8 +85,8 @@ class FLIPConfigBank(AutoEvalConfigBank):
                 }
             case "scl":
                 return {
-                    "protocol": "residues_to_class",
-                    "model_choice": "LightAttention",
+                    "protocol": "sequence_to_class",
+                    "model_choice": "FNN",
                     "optimizer_choice": "adam",
                     "loss_choice": "cross_entropy_loss",
                     "num_epochs": 20,
