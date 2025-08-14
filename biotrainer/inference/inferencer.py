@@ -15,7 +15,7 @@ from ..protocols import Protocol
 from ..optimizers import get_optimizer
 from ..output_files import InferenceOutputManager
 from ..datasets import get_dataset, get_embeddings_collate_function
-from ..solvers import get_solver, get_mean_and_confidence_range, MetricsCalculator
+from ..solvers import get_solver, get_mean_and_confidence_bounds, MetricsCalculator
 from ..utilities import seed_all, EmbeddingDatasetSample, MASK_AND_LABELS_PAD_VALUE, revert_mappings
 
 
@@ -320,12 +320,12 @@ class Inferencer:
         result_dict = {}
         for metric in metrics:
             all_metric_values = torch.tensor([res[metric] for res in iteration_results], dtype=torch.float16)
-            mean, confidence_range = get_mean_and_confidence_range(
+            mean, lower_bound, upper_bound = get_mean_and_confidence_bounds(
                 values=all_metric_values,
                 dimension=0,
                 confidence_level=confidence_level
             )
-            result_dict[metric] = {"mean": mean.item(), "error": confidence_range.item()}
+            result_dict[metric] = {"mean": mean.item(), "lower": lower_bound.item(), "upper": upper_bound.item()}
 
         return result_dict
 
