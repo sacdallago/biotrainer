@@ -1,7 +1,7 @@
 from typing import Optional
 
 from .solver import Solver
-from .solver_utils import get_mean_and_confidence_range
+from .solver_utils import get_mean_and_confidence_bounds
 from .residues_regression_solver import ResiduesRegressionSolver
 from .sequence_regression_solver import SequenceRegressionSolver
 from .residue_classification_solver import ResidueClassificationSolver
@@ -67,5 +67,5 @@ __all__ = [
     'MetricsCalculator',
     'get_solver',
     'get_metrics_calculator',
-    'get_mean_and_confidence_range'
+    'get_mean_and_confidence_bounds'
 ]

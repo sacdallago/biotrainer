@@ -5,7 +5,7 @@ from contextlib import nullcontext as _nullcontext
 from typing import Dict, Union, Optional, Callable, List
 
 from .solver import Solver
-from .solver_utils import get_mean_and_confidence_range
+from .solver_utils import get_mean_and_confidence_bounds
 
 
 class ResidueClassificationSolver(Solver):
@@ -59,9 +59,9 @@ class ResidueClassificationSolver(Solver):
             for seq_id, dropout_residues in class_probabilities_by_sequence.items():
                 stacked_residues_tensor = torch.stack([torch.tensor(by_class) for by_class in dropout_residues], dim=1)
 
-                dropout_mean, confidence_range = get_mean_and_confidence_range(values=stacked_residues_tensor,
-                                                                               dimension=1,
-                                                                               confidence_level=confidence_level)
+                dropout_mean, lower_bound, upper_bound = get_mean_and_confidence_bounds(values=stacked_residues_tensor,
+                                                                                dimension=1,
+                                                                                confidence_level=confidence_level)
                 _, prediction_by_mean = torch.max(dropout_mean, dim=0)
 
                 # Create dict with seq_id: prediction
@@ -73,10 +73,9 @@ class ResidueClassificationSolver(Solver):
                                              dropout_iteration in dropout_iterations],
                          "mcd_mean": dropout_mean.T[residue_idx],
                          "mcd_lower_bound": (
-                                 dropout_mean.T[residue_idx] - confidence_range.T[residue_idx]),
+                                 lower_bound.T[residue_idx]),
                          "mcd_upper_bound": (
-                                 dropout_mean.T[residue_idx] + confidence_range.T[residue_idx]),
-                         "confidence_range": confidence_range.T[residue_idx],
+                                 upper_bound.T[residue_idx]),
                          })
 
                 seq_idx += 1
