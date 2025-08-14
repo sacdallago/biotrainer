@@ -13,7 +13,7 @@ from safetensors.torch import load_file, save_file
 from typing import Callable, Optional, Union, Dict, List, Any
 
 from .metrics_calculator import MetricsCalculator
-from .solver_utils import get_mean_and_confidence_range
+from .solver_utils import get_mean_and_confidence_bounds
 
 from ..models import BiotrainerModel
 from ..output_files import OutputManager
@@ -203,9 +203,9 @@ class Solver(ABC):
             dropout_raw_values = torch.stack([torch.tensor(dropout_iteration["probabilities"])
                                               for dropout_iteration in dropout_iterations], dim=1)
 
-            dropout_mean, confidence_range = get_mean_and_confidence_range(values=dropout_raw_values,
-                                                                           dimension=1,
-                                                                           confidence_level=confidence_level)
+            dropout_mean, lower_bound, upper_bound = get_mean_and_confidence_bounds(values=dropout_raw_values,
+                                                                            dimension=1,
+                                                                            confidence_level=confidence_level)
             prediction_by_mean = self._probabilities_to_predictions(dropout_mean)
 
             # Create dict with seq_id: prediction
@@ -215,10 +215,9 @@ class Solver(ABC):
                                                                         dropout_iteration in dropout_iterations],
                                                     "mcd_mean": dropout_mean[idx],
                                                     "mcd_lower_bound": (
-                                                            dropout_mean[idx] - confidence_range[idx]),
+                                                            lower_bound[idx]),
                                                     "mcd_upper_bound": (
-                                                            dropout_mean[idx] + confidence_range[idx]),
-                                                    "confidence_range": confidence_range[idx]
+                                                            upper_bound[idx]),
                                                     }
 
         return {
