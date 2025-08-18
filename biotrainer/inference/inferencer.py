@@ -155,7 +155,7 @@ class Inferencer:
             EmbeddingDatasetSample(seq_id, torch.tensor(np.array(embedding)),
                                    torch.empty(1) if not targets else torch.tensor(np.array(targets[idx])))
             for idx, (seq_id, embedding) in enumerate(embeddings_dict.items())
-        ], finetuning=False)
+        ], finetuning=False, random_masking=False, mask_token=None, class_str2int=None)
         dataloader = loader(dataset)
         return solver, dataloader
 

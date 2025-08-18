@@ -20,6 +20,17 @@ def finetuning_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]
             ),
         ),
         ConfigOption(
+            name="random_masking",
+            description=f"If true, random masking of input sequences for masked language modeling is applied.",
+            category=finetuning_category,
+            required=False,
+            default=False,
+            constraints=ConfigConstraints(
+                type=bool,
+                allowed_values=[True, False],
+            ),
+        ),
+        ConfigOption(
             name="lora_r",
             category=finetuning_category,
             description="Set the lora attention dimension (rank)",
