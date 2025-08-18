@@ -73,7 +73,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
     def _get_mask_token_id(self) -> int:
         tokenized_seqs, _ = self._tokenize([f"P {self.get_mask_token()} T"])
-        return tokenized_seqs[0][1]
+        return tokenized_seqs[0][1].item()
 
     def _get_custom_indices_to_remove(self) -> List[int]:
         """
