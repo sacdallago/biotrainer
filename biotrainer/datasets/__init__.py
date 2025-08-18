@@ -1,10 +1,9 @@
-from typing import List
+from typing import List, Dict, Optional
 
 from .collate_functions import pad_sequence_embeddings, pad_residue_embeddings, pad_residues_embeddings
-from .embeddings_dataset import SequenceDataset, EmbeddingsDataset, BiotrainerDataset
+from .embeddings_dataset import SequenceDataset, EmbeddingsDataset, BiotrainerDataset, SequenceDatasetWithRandomMasking
 
 from ..protocols import Protocol
-
 
 __COLLATE_FUNCTIONS = {
     Protocol.residue_to_class: pad_residue_embeddings,
@@ -15,8 +14,12 @@ __COLLATE_FUNCTIONS = {
 }
 
 
-def get_dataset(samples: List, finetuning: bool):
+def get_dataset(samples: List, finetuning: bool, random_masking: bool, mask_token: Optional[str],
+                class_str2int: Optional[Dict[str, int]], ):
     if finetuning:
+        if random_masking:
+            return SequenceDatasetWithRandomMasking(samples=samples, mask_token=mask_token, class_str2int=class_str2int)
+
         return SequenceDataset(samples=samples)
 
     return EmbeddingsDataset(samples=samples)

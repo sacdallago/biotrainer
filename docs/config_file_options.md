@@ -483,6 +483,7 @@ For LoRA finetuning, the following parameters can be configured:
 ```yaml
 finetuning:
   method: lora
+  random_masking: True | False  # Default: False, if True, random_masking will be applied for masked language modeling.
   lora_r: 8  # Default: 8, The rank of the LoRA adaptation matrices
   lora_alpha: 16  # Default: 16, scaling factor for LoRA
   lora_dropout: 0.05  # Default: 0.05, dropout probability for LoRA layers (must be between 0 and 1)
@@ -492,6 +493,9 @@ finetuning:
 
 The `lora_target_modules` parameter can be either a list of module names or a regex string to match module names. 
 ESM works with the default values, ProtT5 could use ["q", "k", "v", "o"] for example.
+
+If `random_masking` is set to `True`, masked language modeling (MLM) in [BERT-style](https://arxiv.org/abs/1810.04805) 
+will be applied as a finetuning task. 
 
 After training, the LoRA adapter weights will be saved separately from the base model, allowing for efficient storage
 and deployment of the finetuned model.

@@ -25,6 +25,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         self._device = device
         self._preprocessing_strategy = self._find_preprocessing_strategy()
         self._custom_indices_to_remove = self._get_custom_indices_to_remove()
+        self._mask_token_id: int = self._get_mask_token_id()
         self._set_model_precision()
 
     def _find_preprocessing_strategy(self):
@@ -40,7 +41,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         strategies = [preprocess_sequences_without_whitespaces, preprocess_sequences_with_whitespaces]
 
         for strategy in strategies:
-            preprocessed = strategy(dummy_sequence)
+            preprocessed = strategy(dummy_sequence, self.get_mask_token())
             tokenized, _ = self._tokenize(preprocessed)
             input_ids = tokenized[0].cpu().numpy()
 
@@ -63,6 +64,16 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
         logger.warning("Could not determine correct sequence pre-processing strategy, defaulting to no whitespace.")
         return preprocess_sequences_without_whitespaces
+
+    def get_mask_token(self) -> str:
+        mask_token = "[MASK]"
+        if "T5" in self._tokenizer.__class__.__name__:
+            mask_token = "<extra_id_0>"
+        return mask_token
+
+    def _get_mask_token_id(self) -> int:
+        tokenized_seqs, _ = self._tokenize([f"P {self.get_mask_token()} T"])
+        return tokenized_seqs[0][1]
 
     def _get_custom_indices_to_remove(self) -> List[int]:
         """
@@ -117,7 +128,9 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         :return: The embedding with special token indices removed
         """
         special_tokens_mask = self._tokenizer.get_special_tokens_mask(input_id, already_has_special_tokens=True)
-        indices_to_remove = [index for index, mask in enumerate(special_tokens_mask) if mask != 0]
+        # Replace all special tokens but the mask token for MLM
+        indices_to_remove = [index for index, mask in enumerate(special_tokens_mask)
+                             if mask != 0 and input_id[index] != self._mask_token_id]
         indices_to_remove += self._custom_indices_to_remove
         indices_to_remove = list(set(indices_to_remove))
         return np.delete(embedding, indices_to_remove, axis=0)

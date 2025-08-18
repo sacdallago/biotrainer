@@ -23,7 +23,7 @@ class EmbedderInterface(abc.ABC):
     name: str
     _model: Optional[Any] = None
     _device: Union[None, str, torch.device] = None
-    _preprocessing_strategy: Callable = lambda self, sequences: preprocess_sequences_without_whitespaces(sequences)
+    _preprocessing_strategy: Callable = lambda self, sequences, mask_token: preprocess_sequences_without_whitespaces(sequences, mask_token)
 
     @abc.abstractmethod
     def _embed_single(self, sequence: str) -> ndarray:
@@ -36,8 +36,12 @@ class EmbedderInterface(abc.ABC):
 
         raise NotImplementedError
 
+
+    def get_mask_token(self) -> Optional[str]:
+        return None
+
     def _preprocess_sequences(self, sequences: Iterable[str]) -> List[str]:
-        return self._preprocessing_strategy(sequences)
+        return self._preprocessing_strategy(sequences, self.get_mask_token())
 
     def _embed_batch(self, batch: List[str]) -> Generator[ndarray, None, None]:
         """Computes the embeddings from all sequences in the batch

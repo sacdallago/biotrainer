@@ -29,6 +29,7 @@ class PipelineContext:
         self.target_manager = None
         self.n_features = None
         self.n_classes = None
+        self.class_str2int: Optional[Dict[str, int]] = None  # Used to apply random_masking
         self.train_dataset = None
         self.val_dataset = None
         self.test_datasets = None

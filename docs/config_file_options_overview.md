@@ -70,6 +70,7 @@ limited_sample_size: 100  # Default: -1 (all options)
 # Finetuning
 finetuning_config:
   method: lora  # Only lora supported at the moment
+  random_masking: True | False  # Default: False, if True, random_masking will be applied for masked language modeling.
   lora_r: 8  # Lora Rank
   lora_alpha: 16  # Lora Alpha
   lora_dropout: 0.05  # Lora dropout probability

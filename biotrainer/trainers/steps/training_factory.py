@@ -25,14 +25,22 @@ class TrainingFactory:
             logger.info(f"Using limited sample size of {limited_sample_size} for training dataset")
             split = random.sample(split,
                                   k=min(limited_sample_size, len(split)))
-        return get_dataset(samples=split, finetuning=finetuning)
+
+        random_masking = context.config.get("finetuning_config", {}).get("random_masking", False)
+        return get_dataset(samples=split,
+                           finetuning=finetuning,
+                           random_masking=random_masking,
+                           mask_token=context.embedding_service._embedder.get_mask_token(),
+                           class_str2int=context.class_str2int
+                           )
 
     @staticmethod
-    def create_dataloader(context: PipelineContext, dataset, hyper_params: Dict, finetuning: bool = False) -> DataLoader:
+    def create_dataloader(context: PipelineContext, dataset, hyper_params: Dict,
+                          finetuning: bool = False) -> DataLoader:
         # Create dataloader from dataset
         if finetuning:
             collate_fn = lambda batch: (
-            [x[0] for x in batch], [x[1] for x in batch], [x[2] for x in batch], [len(x[1]) for x in batch])
+                [x[0] for x in batch], [x[1] for x in batch], [x[2] for x in batch], [len(x[1]) for x in batch])
         else:
             collate_fn = get_embeddings_collate_function(context.config["protocol"])
         return DataLoader(
@@ -64,7 +72,7 @@ class TrainingFactory:
                                     downstream_model=model,
                                     collate_fn=get_embeddings_collate_function(context.config["protocol"]),
                                     protocol=context.config["protocol"],
-                                    device=context.config["device"],)
+                                    device=context.config["device"], )
 
         # Initialize loss function
         loss_function = get_loss(weight=context.class_weights, **hyper_params)
