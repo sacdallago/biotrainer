@@ -31,6 +31,8 @@ class DataLoadingStep(PipelineStep):
                 {'class_int2str': target_manager.class_int2str,
                  'class_str2int': target_manager.class_str2int}
             )
+            context.class_str2int = target_manager.class_str2int
+
             # Compute class weights to pass as bias to model if option is set
             class_weights = target_manager.compute_class_weights()
             if class_weights is not None:
@@ -59,6 +61,9 @@ class DataLoadingStep(PipelineStep):
                 EmbeddingDatasetSample(seq_id=data_point.seq_id, embedding=context.id2emb[data_point.seq_id],
                                        target=data_point.target) for data_point in test_data] for test_name, test_data
                                       in test_datasets.items()}
+            random_masking = context.config.get("finetuning_config", {}).get("random_masking", False)
+            if random_masking:
+                logger.info("Random masking is enabled. All targets will be overwritten with masked sequence targets.")
         else:
             train_dataset, val_dataset, test_datasets, prediction_dataset = target_manager.get_embedding_datasets(
                 context.id2emb)
