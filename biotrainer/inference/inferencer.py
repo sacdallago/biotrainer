@@ -62,7 +62,7 @@ class Inferencer:
         splits = iom.training_results().keys()
         log_dir = iom.log_dir()
         split_checkpoints = {file.split("_checkpoint.")[0]: file for file in os.listdir(log_dir) if
-                             (Path(log_dir) / Path(file)).is_file()}
+                             (Path(log_dir) / Path(file)).is_file() and file.endswith(".safetensors")}
         for split_name in splits:
             # Ignore average or best result
             if "average" in split_name or "best" in split_name:
