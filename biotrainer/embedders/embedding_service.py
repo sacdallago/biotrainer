@@ -328,10 +328,14 @@ class FineTuningEmbeddingService(EmbeddingService):
         from peft import LoraConfig, PeftModel
 
         # Extract LoRA parameters from config
+        target_modules = self._finetuning_config.get("lora_target_modules", "auto")
+        if target_modules == "auto":
+            target_modules = self._get_default_target_modules_by_embedder()
+
         lora_config = LoraConfig(
             r=self._finetuning_config.get("lora_r", 8),
             lora_alpha=self._finetuning_config.get("lora_alpha", 16),
-            target_modules=self._finetuning_config.get("lora_target_modules", ["query", "key", "value"]),
+            target_modules=target_modules,
             lora_dropout=self._finetuning_config.get("lora_dropout", 0.05),
             bias=self._finetuning_config.get("lora_bias", "none"),
         )
@@ -346,6 +350,16 @@ class FineTuningEmbeddingService(EmbeddingService):
         self._embedder.model = peft_model
 
         self._lora_model = peft_model
+
+    def _get_default_target_modules_by_embedder(self):
+        embedder_name = self._embedder.name.lower()
+        if "t5" in embedder_name:
+            return ["q", "k", "v", "o"]
+        elif "esm" in embedder_name:
+            return ["query", "key", "value"]
+        elif "bert" in embedder_name:
+            return ["query", "key", "value", "dense"]
+        return ["query", "key", "value"]
 
     def _embeddings_generator(self,
                               seq_records: List[BiotrainerSequenceRecord],
