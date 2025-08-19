@@ -142,7 +142,7 @@ class InferenceOutputManager(OutputManager):
         log_dir_path = Path(log_dir)
         if not log_dir_path.exists():
             # Expect checkpoints to be in output/model_choice/embedder_name
-            checkpoints_path = Path(self._input_config["model_choice"]) / self._input_config["embedder_name"]
+            checkpoints_path = Path(self._input_config["model_choice"]) / self._input_config["embedder_name"].split("/")[-1]
             # Split the output file path and reconstruct without the last component
             output_dir = Path(*output_file_path.parts[:-1])
 
