@@ -74,7 +74,7 @@ finetuning_config:
   lora_r: 8  # Lora Rank
   lora_alpha: 16  # Lora Alpha
   lora_dropout: 0.05  # Lora dropout probability
-  lora_target_modules: ["query", "key", "value"]  # Names of target modules for lora (ESM), ProtT5: ["q", "k", "v", "o"]
+  lora_target_modules: auto | ["query", "key", "value"]  # Names of target modules for lora (ESM), ProtT5: ["q", "k", "v", "o"], Auto: Infer automatically from model name
   lora_bias: none | all | lora_only  # Bias type for lora
 
 # HuggingFace Dataset Integration

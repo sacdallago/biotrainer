@@ -487,12 +487,12 @@ finetuning:
   lora_r: 8  # Default: 8, The rank of the LoRA adaptation matrices
   lora_alpha: 16  # Default: 16, scaling factor for LoRA
   lora_dropout: 0.05  # Default: 0.05, dropout probability for LoRA layers (must be between 0 and 1)
-  lora_target_modules: ["query", "key", "value"]  # Default: ["query", "key", "value"], Modules to apply LoRA to
+  lora_target_modules: auto | ["query", "key", "value"] | ["q", "k", "v", "o"] | ... # Default: auto - infer automatically from model name, Modules to apply LoRA to
   lora_bias: none | all | lora_only  # Default: none, Type of bias to use in LoRA
 ```
 
 The `lora_target_modules` parameter can be either a list of module names or a regex string to match module names. 
-ESM works with the default values, ProtT5 could use ["q", "k", "v", "o"] for example.
+If set to `auto`, target modules are inferred from the embedder name automatically.
 
 If `random_masking` is set to `True`, masked language modeling (MLM) in [BERT-style](https://arxiv.org/abs/1810.04805) 
 will be applied as a finetuning task. 

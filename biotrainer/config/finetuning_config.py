@@ -70,7 +70,7 @@ def finetuning_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]
             description="Set the names of the modules to apply the adapter to. "
                         "Can be a list of module names or a regex string.",
             required=False,
-            default=["query", "key", "value"],
+            default="auto",
         ),
         ConfigOption(
             name="lora_bias",
