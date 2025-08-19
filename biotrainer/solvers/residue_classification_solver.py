@@ -10,7 +10,13 @@ from .solver_utils import get_mean_and_confidence_bounds
 
 class ResidueClassificationSolver(Solver):
     def _transform_network_output(self, network_output: torch.Tensor) -> torch.Tensor:
-        network_type = type(self.network.get_downstream_model()).__name__
+        # TODO [Refactoring] Optimize transform detection, maybe put into model class itself
+        downstream_network = self.network.get_downstream_model()
+
+        if isinstance(downstream_network, torch._dynamo.eval_frame.OptimizedModule):
+            network_type = type(downstream_network._orig_mod).__name__
+        else:
+            network_type = type(downstream_network).__name__
 
         if network_type in ["FNN", "DeeperFNN", "LogReg"]:
             # (Batch_size x protein_Length x Number_classes) => (B x N x L)
