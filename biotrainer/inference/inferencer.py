@@ -89,7 +89,8 @@ class Inferencer:
             solver = get_solver(name=split_name, network=model, optimizer=optimizer,
                                 loss_function=loss_function,
                                 **split_config)
-            solver.load_checkpoint(checkpoint_path=checkpoint_path, resume_training=False)
+            solver.load_checkpoint(checkpoint_path=checkpoint_path, resume_training=False,
+                                   torch_compile=not iom.disable_pytorch_compile())
 
             def dataloader_function(dataset):
                 return DataLoader(dataset=dataset, batch_size=split_config["batch_size"],

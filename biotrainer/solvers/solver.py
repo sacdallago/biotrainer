@@ -257,7 +257,7 @@ class Solver(ABC):
                     f"Training new model from scratch!")
         return train_wrapper(self)
 
-    def load_checkpoint(self, checkpoint_path: Path = None, resume_training: bool = False):
+    def load_checkpoint(self, checkpoint_path: Path = None, resume_training: bool = False, torch_compile: bool = False):
         if checkpoint_path:
             checkpoint_file = checkpoint_path
             self.checkpoint_type = checkpoint_path.suffix
@@ -277,7 +277,11 @@ class Solver(ABC):
             # Load PyTorch checkpoint is deprecated since v1.0.0
             raise Exception("Cannot load pt checkpoint because torch_pt_loading is not allowed since v1.0.0!")
         try:
-            self.network.get_downstream_model().load_state_dict(state['state_dict'])
+            downstream_model = self.network.get_downstream_model()
+            if torch_compile:
+                downstream_model = torch.compile(downstream_model, backend="aot_eager")
+            downstream_model.load_state_dict(state['state_dict'])
+
             if resume_training:
                 self.start_epoch = state['epoch'] + 1
                 if self.start_epoch == self.number_of_epochs:
