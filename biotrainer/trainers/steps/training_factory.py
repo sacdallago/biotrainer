@@ -27,10 +27,11 @@ class TrainingFactory:
                                   k=min(limited_sample_size, len(split)))
 
         random_masking = context.config.get("finetuning_config", {}).get("random_masking", False)
+        mask_token = context.embedding_service._embedder.get_mask_token() if context.embedding_service is not None else None
         return get_dataset(samples=split,
                            finetuning=finetuning,
                            random_masking=random_masking,
-                           mask_token=context.embedding_service._embedder.get_mask_token(),
+                           mask_token=mask_token,
                            class_str2int=context.class_str2int
                            )
 
