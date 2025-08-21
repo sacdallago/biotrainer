@@ -10,6 +10,9 @@ __LOSSES = {
     Protocol.residue_to_class: {
         'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
+    Protocol.residue_to_value: {
+        'mean_squared_error': lambda **kwargs: nn.MSELoss(**kwargs)
+    },
     Protocol.residues_to_class: {
         'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },

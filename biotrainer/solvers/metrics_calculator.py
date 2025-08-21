@@ -162,7 +162,17 @@ class SequenceRegressionMetricsCalculator(RegressionMetricsCalculator):
     pass
 
 class ResidueRegressionMetricsCalculator(RegressionMetricsCalculator):
-    pass
+    def compute_metrics(
+            self, predicted: Optional[torch.Tensor] = None,
+            labels: Optional[torch.Tensor] = None) -> Dict[str, Union[int, float]]:
+        predicted_flattened = predicted.flatten() if predicted is not None else None
+        labels_flattened = labels.flatten() if labels is not None else None
+        return {
+            'mse': self._compute_metric(self.mse, predicted, labels).item(),
+            'rmse': self._compute_metric(self.rmse, predicted, labels).item(),
+            'spearmans-corr-coeff': self._compute_metric(self.scc, predicted_flattened, labels_flattened).item()
+        }
+
 
 class ResiduesRegressionMetricsCalculator(RegressionMetricsCalculator):
     pass

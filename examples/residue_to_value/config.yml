@@ -1,0 +1,14 @@
+input_file: input.fasta
+protocol: residue_to_value
+model_choice: CNN
+device: cpu
+dropout_rate: 0.25
+optimizer_choice: adam
+loss_choice: mean_squared_error
+num_epochs: 200
+learning_rate: 1e-3
+batch_size: 128
+ignore_file_inconsistencies: False
+embedder_name: one_hot_encoding
+cross_validation_config:
+  method: hold_out

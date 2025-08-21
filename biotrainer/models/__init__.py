@@ -24,6 +24,12 @@ __MODELS = {
         'DeeperFNN': DeeperFNN,
         'LogReg': LogReg,
     },
+    Protocol.residue_to_value: {
+        'CNN': CNN,
+        'FNN': FNN,
+        'DeeperFNN': DeeperFNN,
+        'LogReg': LogReg,
+    },
     Protocol.residues_to_class: {
         'LightAttention': LightAttention,
     },
