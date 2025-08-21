@@ -2,7 +2,7 @@ import torch
 
 from pathlib import Path
 from typing import Union, Optional, List, Tuple, Dict, Any
-from transformers import AutoTokenizer, T5Tokenizer, T5EncoderModel, EsmTokenizer, EsmModel
+from transformers import AutoTokenizer, T5Tokenizer, T5EncoderModel, EsmTokenizer, EsmModel, BertTokenizer, BertForMaskedLM
 
 from .onnx_embedder import OnnxEmbedder
 from .random_embedder import RandomEmbedder
@@ -59,6 +59,8 @@ def _determine_tokenizer_and_model(embedder_name: str) -> Tuple:
         return T5Tokenizer, T5EncoderModel
     elif "esm" in embedder_class.lower():
         return EsmTokenizer, EsmModel
+    elif "bert" in embedder_class.lower():
+        return BertTokenizer, BertForMaskedLM
 
     # Use T5 as default
     return T5Tokenizer, T5EncoderModel
