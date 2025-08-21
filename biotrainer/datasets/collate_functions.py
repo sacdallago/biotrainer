@@ -50,7 +50,7 @@ def pad_residue_embeddings(
 
     padded_sequences = pad_sequence(sequences, batch_first=batch_first, padding_value=SEQUENCE_PAD_VALUE)
 
-    # Also need to store the length of each sequence
+    # Also need to store the original length of each sequence
     # This is later needed in order to unpad the sequences
     lengths = torch.LongTensor([len(x) for x in sequences])
 
