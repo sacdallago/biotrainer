@@ -1,10 +1,9 @@
 # Inspired by bio_embeddings embed module (https://github.com/sacdallago/bio_embeddings/tree/develop/bio_embeddings/embed)
-
 import torch
 import numpy as np
 
-from typing import List, Generator, Any, Union, Tuple
-from numpy import ndarray
+from peft import PeftModel
+from typing import List, Generator, Any, Union, Tuple, Dict
 
 from .embedder_interfaces import EmbedderWithFallback
 from .preprocessing_strategies import preprocess_sequences_with_whitespaces, preprocess_sequences_without_whitespaces, \
@@ -72,8 +71,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         return mask_token
 
     def _get_mask_token_id(self) -> int:
-        tokenized_seqs, _ = self._tokenize([f"P {self.get_mask_token()} T"])
-        return tokenized_seqs[0][1].item()
+        return self._tokenizer.added_tokens_encoder[self.get_mask_token()]
 
     def _get_custom_indices_to_remove(self) -> List[int]:
         """
@@ -95,6 +93,11 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
                 self._model = self._model.half()
             except AttributeError:
                 raise NotImplementedError(f"Given model {self.name} does not support half_precision mode!")
+
+    def _get_gradient_context(self):
+        if isinstance(self._model, PeftModel) and self._model.training:
+            return torch.enable_grad()  # Finetuning
+        return torch.no_grad()  # Usual embeddings inference
 
     def _get_fallback_model(self):
         """ Returns the CPU model """
@@ -143,7 +146,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
     def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[torch.tensor, None, None]:
         tokenized_sequences, attention_mask = self._tokenize(batch)
 
-        with torch.no_grad():
+        with self._get_gradient_context():
             embeddings = model(
                 input_ids=tokenized_sequences,
                 attention_mask=attention_mask,
