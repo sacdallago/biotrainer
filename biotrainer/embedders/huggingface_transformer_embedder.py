@@ -106,7 +106,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
             )
         return self._model.to("cpu")
 
-    def _embed_single(self, sequence: str) -> ndarray:
+    def _embed_single(self, sequence: str) -> torch.tensor:
         [embedding] = self._embed_batch([sequence])
         return embedding
 
@@ -119,7 +119,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         attention_mask = torch.tensor(ids["attention_mask"]).to(self._model.device)
         return tokenized_sequences, attention_mask
 
-    def _remove_special_tokens(self, embedding: ndarray, input_id: ndarray) -> ndarray:
+    def _remove_special_tokens(self, embedding: torch.tensor, input_id: torch.tensor) -> torch.tensor:
         """
         Remove special tokens from the embedding.
 
@@ -133,9 +133,14 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
                              if mask != 0 and input_id[index] != self._mask_token_id]
         indices_to_remove += self._custom_indices_to_remove
         indices_to_remove = list(set(indices_to_remove))
-        return np.delete(embedding, indices_to_remove, axis=0)
 
-    def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[ndarray, None, None]:
+        # Create a boolean mask for indices to keep
+        keep_mask = torch.ones(embedding.size(0), dtype=torch.bool, device=embedding.device)
+        keep_mask[indices_to_remove] = False
+
+        return embedding[keep_mask]
+
+    def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[torch.tensor, None, None]:
         tokenized_sequences, attention_mask = self._tokenize(batch)
 
         with torch.no_grad():
@@ -144,8 +149,8 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
                 attention_mask=attention_mask,
             )
 
-        embeddings = embeddings[0].cpu().numpy()
+        embeddings = embeddings[0]
         for seq_num in range(len(embeddings)):
-            input_id = tokenized_sequences[seq_num].cpu().numpy()
+            input_id = tokenized_sequences[seq_num]
             embedding = self._remove_special_tokens(embeddings[seq_num], input_id)
             yield embedding

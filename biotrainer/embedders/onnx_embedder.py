@@ -138,7 +138,7 @@ class OnnxEmbedder(EmbedderWithFallback):
         [embedding] = self._embed_batch([sequence])
         return embedding
 
-    def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[ndarray, None, None]:
+    def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[torch.tensor, None, None]:
         # Tokenize the batch
         encoded = self._tokenizer.batch_encode_plus(
             batch,
@@ -180,4 +180,4 @@ class OnnxEmbedder(EmbedderWithFallback):
             else:
                 embedding = embeddings[seq_num]
 
-            yield embedding
+            yield torch.tensor(embedding)

@@ -102,7 +102,7 @@ class EmbedderInterface(abc.ABC):
                 yield self._embed_single(seq)
 
     @staticmethod
-    def reduce_per_protein(embedding: ndarray) -> ndarray:
+    def reduce_per_protein(embedding: torch.tensor) -> torch.tensor:
         """
         For a variable size embedding, returns a fixed size embedding encoding all information of a sequence.
 
@@ -120,7 +120,7 @@ class EmbedderWithFallback(EmbedderInterface, abc.ABC):
     @abc.abstractmethod
     def _embed_batch_implementation(
             self, batch: List[str], model: Any
-    ) -> Generator[ndarray, None, None]:
+    ) -> Generator[torch.tensor, None, None]:
         ...
 
     @abc.abstractmethod
@@ -132,7 +132,7 @@ class EmbedderWithFallback(EmbedderInterface, abc.ABC):
         """
         ...
 
-    def _embed_batch(self, batch: List[str]) -> Generator[ndarray, None, None]:
+    def _embed_batch(self, batch: List[str]) -> Generator[torch.tensor, None, None]:
         """Tries to get the embeddings in this order:
           * Full batch GPU
           * Single Sequence GPU
