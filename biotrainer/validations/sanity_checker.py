@@ -108,7 +108,8 @@ class SanityChecker:
                 if self.interaction:
                     baseline_dict["bias_predictions"] = self._bias_interaction_baseline()
 
-        elif self.protocol in Protocol.regression_protocols():
+        # TODO residue_to_value
+        elif self.protocol in Protocol.regression_protocols() and not self.protocol == Protocol.residue_to_value:
             baseline_dict["mean_only"] = self._mean_only_baseline()
 
         return baseline_dict

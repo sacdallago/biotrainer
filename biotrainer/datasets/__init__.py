@@ -7,6 +7,7 @@ from ..protocols import Protocol
 
 __COLLATE_FUNCTIONS = {
     Protocol.residue_to_class: pad_residue_embeddings,
+    Protocol.residue_to_value: pad_residue_embeddings,
     Protocol.residues_to_class: pad_residues_embeddings,
     Protocol.residues_to_value: pad_residues_embeddings,
     Protocol.sequence_to_class: pad_sequence_embeddings,

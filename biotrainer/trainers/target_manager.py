@@ -119,6 +119,10 @@ class TargetManager:
                                                          index, value in enumerate(unmasked_target)]).long()
                         self._id2target[seq_hash] = target_with_mask
             # b) Value output
+            elif self.protocol in Protocol.regression_protocols():
+                self._id2target = {seq_hash: torch.tensor(res_val).float()
+                                   for seq_hash, res_val in self._id2target.items()}
+                self.number_of_outputs = 1
             else:
                 raise NotImplementedError
 

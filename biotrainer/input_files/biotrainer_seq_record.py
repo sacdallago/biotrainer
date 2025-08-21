@@ -3,7 +3,7 @@ import numpy as np
 
 from typing import Dict, Any, Union, Optional, List
 
-from ..utilities import calculate_sequence_hash
+from ..utilities import calculate_sequence_hash, RESIDUE_TO_VALUE_TARGET_DELIMITER
 
 
 class BiotrainerSequenceRecord:
@@ -47,14 +47,26 @@ class BiotrainerSequenceRecord:
                                         attributes=self.attributes, embedding=embedding)
 
     @staticmethod
+    def _convert_regression_target_if_necessary(target: str):
+        if RESIDUE_TO_VALUE_TARGET_DELIMITER in target:
+            targets = target.split(RESIDUE_TO_VALUE_TARGET_DELIMITER)
+            return list(map(float, targets))
+        return target
+
+    @staticmethod
     def get_dicts(input_records: List[BiotrainerSequenceRecord]) -> (dict, dict, dict):
         id2targets = {}
         id2masks = {}
         id2sets = {}
         for seq_record in input_records:
             seq_hash = seq_record.get_hash()
-            id2targets[seq_hash] = seq_record.get_target()
+
+            target = seq_record.get_target()
+            target = BiotrainerSequenceRecord._convert_regression_target_if_necessary(target)
+            id2targets[seq_hash] = target
+
             mask = seq_record.get_mask()
             id2masks[seq_hash] = np.array([int(mask_value) for mask_value in mask]) if mask else None
+
             id2sets[seq_hash] = seq_record.get_set()
         return id2targets, id2masks, id2sets
