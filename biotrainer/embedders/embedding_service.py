@@ -4,7 +4,6 @@ import os
 import time
 import h5py
 import torch
-import numpy as np
 
 from tqdm import tqdm
 from pathlib import Path
@@ -126,13 +125,13 @@ class EmbeddingService:
     @staticmethod
     def store_embedding(embeddings_file_handle, seq_record, embedding, store_by_hash: bool = True):
         h5_index = seq_record.get_hash() if store_by_hash else seq_record.seq_id
-        embeddings_file_handle.create_dataset(h5_index, data=embedding, compression="gzip", chunks=True)
+        embeddings_file_handle.create_dataset(h5_index, data=embedding.cpu().numpy(), compression="gzip", chunks=True)
         embeddings_file_handle[h5_index].attrs["original_id"] = seq_record.seq_id
 
     def generate_embeddings(self,
                             input_data: Union[str, Path, List[str], List[BiotrainerSequenceRecord], Dict[
                                 str, BiotrainerSequenceRecord]],
-                            reduce: bool) -> Generator[Tuple[BiotrainerSequenceRecord, np.ndarray], None, None]:
+                            reduce: bool) -> Generator[Tuple[BiotrainerSequenceRecord, torch.tensor], None, None]:
         """
         Generator function that yields embeddings as they are computed.
 
@@ -141,7 +140,7 @@ class EmbeddingService:
             reduce: If True, embeddings will be reduced to per-sequence embeddings.
 
         Yields:
-            Tuple[BiotrainerSequenceRecord, np.ndarray]: Tuple of (BiotrainerSequenceRecord, embedding)
+            Tuple[BiotrainerSequenceRecord, torch.tensor]: Tuple of (BiotrainerSequenceRecord, embedding)
         """
 
         # Process input data
@@ -178,7 +177,7 @@ class EmbeddingService:
     def _embeddings_generator(self,
                               seq_records: List[BiotrainerSequenceRecord],
                               use_reduced_embeddings: bool) \
-            -> Generator[Tuple[BiotrainerSequenceRecord, np.ndarray], None, None]:
+            -> Generator[Tuple[BiotrainerSequenceRecord, torch.tensor], None, None]:
         """
         Core embedding computation logic that can be used by both save and generate methods
 
@@ -187,7 +186,7 @@ class EmbeddingService:
             use_reduced_embeddings: Whether to reduce embeddings to per-protein
 
         Yields:
-            Tuple[BiotrainerSequenceRecord, np.ndarray]: Tuple of (BiotrainerSequenceRecord, embedding)
+            Tuple[BiotrainerSequenceRecord, torch.tensor]: Tuple of (BiotrainerSequenceRecord, embedding)
         """
         sequences = [seq_record.seq for seq_record in seq_records]
         embedding_iter = self._embedder.embed_many(sequences)
@@ -300,7 +299,7 @@ class EmbeddingService:
         embeddings_file = h5py.File(embeddings_file_path, 'r')
 
         # Sequence hash from embeddings file -> Embedding
-        id2emb = {idx: torch.tensor(np.array(embedding)) for (idx, embedding) in embeddings_file.items()}
+        id2emb = {idx: torch.tensor(embedding) for (idx, embedding) in embeddings_file.items()}
 
         # Logging
         logger.info(f"Read {len(id2emb)} entries.")
