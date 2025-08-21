@@ -23,6 +23,13 @@ class FineTuningModel(BiotrainerModel):
         params = list(self.embedding_service._embedder._model.parameters()) + list(self.downstream_model.parameters())
         return params
 
+    def named_parameters(
+        self, prefix: str = "", recurse: bool = True, remove_duplicate: bool = True
+    ) -> Iterator[tuple[str, Parameter]]:
+        assert self.embedding_service._embedder._model, f"Trying to get parameters of non-existing embedder model!"
+        params = list(self.embedding_service._embedder._model.named_parameters(prefix, recurse, remove_duplicate)) + list(self.downstream_model.named_parameters(prefix, recurse, remove_duplicate))
+        return params
+
     def get_downstream_model(self):
         return self.downstream_model
 
