@@ -13,7 +13,7 @@ def read_FASTA(path: Union[str, Path]) -> List[BiotrainerSequenceRecord]:
     :param path: path to a valid FASTA file
     :return: a list of BiotrainerSequenceRecord objects
     """
-    attributes_pattern = re.compile(r"([A-Z_]+)=(-?[A-z0-9]+-?[A-z0-9]*[.0-9]*)")
+    attributes_pattern = re.compile(r"([A-Z_]+)=([^ ]+)")  # Allow any combination of ATTRIBUTE_NAME=VALUE
 
     records = []
     try:

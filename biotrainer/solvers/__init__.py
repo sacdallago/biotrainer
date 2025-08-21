@@ -2,6 +2,7 @@ from typing import Optional
 
 from .solver import Solver
 from .solver_utils import get_mean_and_confidence_bounds
+from .residue_regression_solver import ResidueRegressionSolver
 from .residues_regression_solver import ResiduesRegressionSolver
 from .sequence_regression_solver import SequenceRegressionSolver
 from .residue_classification_solver import ResidueClassificationSolver
@@ -16,6 +17,7 @@ from ..protocols import Protocol
 
 __SOLVERS = {
     Protocol.residue_to_class: ResidueClassificationSolver,
+    Protocol.residue_to_value: ResidueRegressionSolver,
     Protocol.residues_to_class: ResiduesClassificationSolver,
     Protocol.residues_to_value: ResiduesRegressionSolver,
     Protocol.sequence_to_class: SequenceClassificationSolver,
@@ -24,6 +26,7 @@ __SOLVERS = {
 
 __METRICS_CALCULATORS = {
     Protocol.residue_to_class: ResidueClassificationMetricsCalculator,
+    Protocol.residue_to_value: ResidueRegressionMetricsCalculator,
     Protocol.residues_to_class: ResiduesClassificationMetricsCalculator,
     Protocol.residues_to_value: ResiduesRegressionMetricsCalculator,
     Protocol.sequence_to_class: SequenceClassificationMetricsCalculator,

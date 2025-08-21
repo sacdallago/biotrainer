@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Union, List
 
 from ..protocols import Protocol
+from ..utilities import RESIDUE_TO_VALUE_TARGET_DELIMITER
 from ..input_files import BiotrainerSequenceRecord, read_FASTA
 
 
@@ -63,7 +64,19 @@ class InputValidator:
                 return f"No target found for sequence {seq_record.seq_id}!"
             if self.protocol in Protocol.regression_protocols():
                 try:
-                    float(target)
+                    targets = [target]
+
+                    # r2v
+                    if RESIDUE_TO_VALUE_TARGET_DELIMITER in target:
+                        if self.protocol != Protocol.residue_to_value:
+                            return (f"Found {RESIDUE_TO_VALUE_TARGET_DELIMITER} in {target} for "
+                                    f"sequence {seq_record.seq_id} - "
+                                    f"but protocol is not {Protocol.residue_to_value.name}!")
+                        targets = target.split(RESIDUE_TO_VALUE_TARGET_DELIMITER)
+
+                    for target in targets:
+                        float(target)
+
                 except ValueError:
                     return f"Invalid regression target {target} for sequence {seq_record.seq_id}!"
 

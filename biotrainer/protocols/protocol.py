@@ -7,6 +7,7 @@ from typing import List
 
 
 class Protocol(Enum):
+    residue_to_value = 0,
     residue_to_class = 1,
     residues_to_class = 2,
     residues_to_value = 3,
@@ -16,6 +17,7 @@ class Protocol(Enum):
     @staticmethod
     def all() -> List[Protocol]:
         return [Protocol.residue_to_class,
+                Protocol.residue_to_value,
                 Protocol.residues_to_class,
                 Protocol.residues_to_value,
                 Protocol.sequence_to_class,
@@ -27,7 +29,7 @@ class Protocol(Enum):
 
     @staticmethod
     def regression_protocols() -> List[Protocol]:
-        return [Protocol.residues_to_value, Protocol.sequence_to_value]
+        return [Protocol.residue_to_value, Protocol.residues_to_value, Protocol.sequence_to_value]
 
     @staticmethod
     def per_sequence_protocols() -> List[Protocol]:
@@ -36,11 +38,12 @@ class Protocol(Enum):
 
     @staticmethod
     def per_residue_protocols() -> List[Protocol]:
-        return [Protocol.residue_to_class]
+        return [Protocol.residue_to_class, Protocol.residue_to_value]
 
     @staticmethod
     def using_per_residue_embeddings() -> List[Protocol]:
-        return [Protocol.residue_to_class, Protocol.residues_to_class, Protocol.residues_to_value]
+        return [Protocol.residue_to_class, Protocol.residue_to_value,
+                Protocol.residues_to_class, Protocol.residues_to_value]
 
     @staticmethod
     def using_per_sequence_embeddings() -> List[Protocol]:
