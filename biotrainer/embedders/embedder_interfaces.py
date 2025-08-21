@@ -155,24 +155,24 @@ class EmbedderWithFallback(EmbedderInterface, abc.ABC):
         except RuntimeError as e:
             if len(batch) == 1:
                 logger.warning(
-                    f"RuntimeError for sequence with {len(batch[0])} residues: {e}. "
-                    f"This most likely means that you don't have enough GPU RAM to embed a protein this long. "
-                    f"Embedding on the CPU instead, which is very slow"
+                    f"RuntimeError for sequence with {len(batch[0])} residues - falling back to CPU.. "
+                    f"The error most likely means that you don't have enough "
+                    f"GPU RAM to embed a protein this long on the GPU. Full error: {e}"
                 )
                 yield from self._embed_batch_implementation(batch, self._get_fallback_model())
             else:
                 logger.warning(
-                    f"Error processing batch of {len(batch)} sequences: {e}. "
+                    f"RuntimeError processing batch of {len(batch)} sequences. "
                     f"You might want to consider adjusting the `batch_size` parameter. "
-                    f"Will try to embed each sequence in the set individually on the GPU."
+                    f"Will try to embed each sequence in the batch individually on the GPU. Full error: {e}"
                 )
                 for sequence in batch:
                     try:
                         yield from self._embed_batch_implementation([sequence], self._model.to(self._device))
                     except RuntimeError as e:
                         logger.warning(
-                            f"RuntimeError for sequence with {len(sequence)} residues: {e}. "
-                            f"This most likely means that you don't have enough GPU RAM to embed a protein this long. "
-                            f"Embedding on the CPU instead, which is very slow"
+                            f"RuntimeError for sequence with {len(sequence)} residues - falling back to CPU.. "
+                            f"The error most likely means that you don't have enough "
+                            f"GPU RAM to embed a protein this long on the GPU. Full error: {e}"
                         )
                         yield from self._embed_batch_implementation([sequence], self._get_fallback_model())
