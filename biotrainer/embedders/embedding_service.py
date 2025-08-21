@@ -45,7 +45,7 @@ class EmbeddingService:
             adapter_path
         )
 
-        self._embedder._model = model
+        self._embedder._model = model.eval()
 
         print(f"Added fine-tuned adapter to {self._embedder.name}: {adapter_path}")
         return self
@@ -309,22 +309,28 @@ class EmbeddingService:
 
 
 class FineTuningEmbeddingService(EmbeddingService):
+    _lora_applied = False
+
     def __init__(self, embedder: EmbedderInterface = None, use_half_precision: bool = False,
                  finetuning_config: Dict[str, Any] = None):
         super().__init__(embedder, use_half_precision)
         self._finetuning_config = finetuning_config
-        self._lora_model = None
+        self._lora_applied = self._apply_lora()
 
     def save_embedder(self, output_dir: Path):
         logger.info(f"Saving fine-tuned embedder to {output_dir}")
-        self._lora_model.save_pretrained(output_dir)
+        assert self._lora_applied, f"LoRA adapter was not applied before saving it!"
+
+        from peft import PeftModel
+        assert isinstance(self._embedder._model, PeftModel), f"{self.__class__.__name__} is not a PeftModel!"
+
+        self._embedder._model.save_pretrained(output_dir)
 
     def _apply_lora(self):
         """Apply LoRA adapters to the underlying model"""
-        if self._lora_model:
-            return
+        assert not self._lora_applied, "Tried to apply lora adapter multiple times for the same model!"
 
-        from peft import LoraConfig, PeftModel
+        from peft import LoraConfig, get_peft_model
 
         # Extract LoRA parameters from config
         target_modules = self._finetuning_config.get("lora_target_modules", "auto")
@@ -337,6 +343,7 @@ class FineTuningEmbeddingService(EmbeddingService):
             target_modules=target_modules,
             lora_dropout=self._finetuning_config.get("lora_dropout", 0.05),
             bias=self._finetuning_config.get("lora_bias", "none"),
+            inference_mode=False,
         )
 
         # Apply LoRA adapters to the embedder model
@@ -344,11 +351,15 @@ class FineTuningEmbeddingService(EmbeddingService):
         if model is None:
             raise ValueError(f"{self._embedder.name} does not provide a model for finetuning!")
 
-        peft_model = PeftModel(model=model, peft_config=lora_config)
+        peft_model = get_peft_model(model=model, peft_config=lora_config)
+        peft_model = peft_model.train()
 
-        self._embedder.model = peft_model
+        self._embedder._model = peft_model
 
-        self._lora_model = peft_model
+        logger.info("Successfully applied lora config to embedder model! Trainable parameters:")
+        self._embedder._model.print_trainable_parameters()
+
+        return True
 
     def _get_default_target_modules_by_embedder(self):
         embedder_name = self._embedder.name.lower()
@@ -359,9 +370,3 @@ class FineTuningEmbeddingService(EmbeddingService):
         elif "bert" in embedder_name:
             return ["query", "key", "value", "dense"]
         return ["query", "key", "value"]
-
-    def _embeddings_generator(self,
-                              seq_records: List[BiotrainerSequenceRecord],
-                              use_reduced_embeddings: bool) -> Generator[Tuple[BiotrainerSequenceRecord, np.ndarray], None, None]:
-        self._apply_lora()
-        yield from super()._embeddings_generator(seq_records, use_reduced_embeddings)
