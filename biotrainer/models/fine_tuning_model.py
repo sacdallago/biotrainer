@@ -43,7 +43,7 @@ class FineTuningModel(BiotrainerModel):
         embeddings = self.embedding_service.generate_embeddings(input_data=sequences,
                                                                 reduce=self.reduced_embeddings)
 
-        downstream_batch = [(seq_record.seq_id, torch.tensor(embedding), targets[idx]) for idx, (seq_record, embedding)
+        downstream_batch = [(seq_record.seq_id, embedding, targets[idx]) for idx, (seq_record, embedding)
                             in
                             enumerate(embeddings)]
         _, downstream_embeddings, targets, lengths = self.collate_fn(downstream_batch)
