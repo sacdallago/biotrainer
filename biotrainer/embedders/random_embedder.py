@@ -1,6 +1,5 @@
+import torch
 import numpy as np
-
-from numpy import ndarray
 
 from .embedder_interfaces import EmbedderInterface
 
@@ -18,10 +17,10 @@ class RandomEmbedder(EmbedderInterface):
     def __init__(self):
         self.rng = np.random.default_rng()
 
-    def _embed_single(self, sequence: str) -> ndarray:
-        return self.rng.random((len(sequence), self.embedding_dimension), dtype=np.float32)
+    def _embed_single(self, sequence: str) -> torch.tensor:
+        return torch.tensor(self.rng.random((len(sequence), self.embedding_dimension), dtype=np.float32))
 
     @staticmethod
-    def reduce_per_protein(embedding: ndarray) -> ndarray:
+    def reduce_per_protein(embedding: torch.tensor) -> torch.tensor:
         """Reduce via mean"""
         return embedding.mean(axis=0)

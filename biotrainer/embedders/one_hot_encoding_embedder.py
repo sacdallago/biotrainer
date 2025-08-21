@@ -1,6 +1,6 @@
+import torch
 import numpy as np
 
-from numpy import ndarray
 from .embedder_interfaces import EmbedderInterface
 
 # Create a mapping of amino acids to their index
@@ -20,14 +20,14 @@ class OneHotEncodingEmbedder(EmbedderInterface):
     def __init__(self):
         self.eye_matrix = np.eye(self.embedding_dimension, dtype=np.float32)
 
-    def _embed_single(self, sequence: str) -> ndarray:
+    def _embed_single(self, sequence: str) -> torch.tensor:
         # Convert sequence to indices
         indices = np.fromiter((AA_TO_INDEX.get(aa, -1) for aa in sequence), dtype=np.int8)
 
         # Use advanced indexing of identity matrix to create one-hot encoding
-        return self.eye_matrix[indices]
+        return torch.tensor(self.eye_matrix[indices])
 
     @staticmethod
-    def reduce_per_protein(embedding: ndarray) -> ndarray:
+    def reduce_per_protein(embedding: torch.tensor) -> torch.tensor:
         """This returns the amino acid composition of the sequence as vector"""
         return embedding.mean(axis=0)

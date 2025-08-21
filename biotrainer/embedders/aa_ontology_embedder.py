@@ -1,5 +1,6 @@
+import torch
 import numpy as np
-from numpy import ndarray
+
 from .embedder_interfaces import EmbedderInterface
 
 
@@ -37,7 +38,7 @@ class AAOntologyEmbedder(EmbedderInterface):
             if aa in scales.index:
                 self.lookup_matrix[i] = scales.loc[aa].values.astype(np.float32)
 
-    def _embed_single(self, sequence: str) -> ndarray:
+    def _embed_single(self, sequence: str) -> torch.tensor:
         """Convert sequence to scale-based embedding"""
         indices = np.fromiter(
             (self.aa_to_index.get(aa, self.aa_to_index['X']) for aa in sequence),
@@ -45,9 +46,9 @@ class AAOntologyEmbedder(EmbedderInterface):
         )
 
         # Use advanced indexing to get scale values for each position
-        return self.lookup_matrix[indices]
+        return torch.tensor(self.lookup_matrix[indices])
 
     @staticmethod
-    def reduce_per_protein(embedding: ndarray) -> ndarray:
+    def reduce_per_protein(embedding: torch.tensor) -> torch.tensor:
         """Returns the mean of all scale values across the sequence"""
         return embedding.mean(axis=0)
