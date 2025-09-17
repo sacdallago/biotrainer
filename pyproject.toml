@@ -55,7 +55,7 @@ jupyter = [
 ]
 onnx-cpu = ["onnxruntime>=1.21.0"]
 onnx-gpu = ["onnxruntime-gpu>=1.21.0"]
-onnx-mac = ["onnxruntime-coreml>=1.13.1"]
+onnx-mac = ["onnxruntime-coreml>=1.13.1"]  # Replace with cpu ["onnxruntime>=1.21.0"] if coreml doesn't work on your Mac
 dev = [
     "pytest>=8.3.4",
     "build>=1.2.2",
