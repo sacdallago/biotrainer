@@ -20,7 +20,7 @@ external_writer: tensorboard | none  # Default: tensorboard, none deactivates it
 input_file: path/to/input_file.fasta  # Required for all protocols (unless huggingface dataset is used)
 
 # Embeddings
-embedder_name: Rostlab/prot_t5_xl_uniref50 | ElnaggarLab/ankh-large | user/your-hf-model | your_model.onnx | one_hot_encoding | random_embedder | AAOntology
+embedder_name: Rostlab/prot_t5_xl_uniref50 | ElnaggarLab/ankh-large | user/your-hf-model | your_model.onnx | one_hot_encoding | random_embedder | AAOntology | blosum62
 use_half_precision: True | False  # Default: False
 embeddings_file: path/to/embeddings.h5  # Optional pre-computed embeddings file
 dimension_reduction_method: umap | tsne  # Default: None, only possible for per-sequence embeddings

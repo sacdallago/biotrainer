@@ -9,7 +9,7 @@ from .onnx import OnnxEmbedder
 from .huggingface import HuggingfaceTransformerEmbedder
 from .interfaces import EmbedderInterface, CustomTokenizer
 from .services import EmbeddingService, PeftEmbeddingService
-from .predefined_embedders import RandomEmbedder, AAOntologyEmbedder, OneHotEncodingEmbedder
+from .predefined_embedders import RandomEmbedder, AAOntologyEmbedder, OneHotEncodingEmbedder, Blosum62Embedder
 
 from ..utilities import is_device_cpu, get_logger
 
@@ -17,6 +17,7 @@ __PREDEFINED_EMBEDDERS = {
     "one_hot_encoding": OneHotEncodingEmbedder,
     "random_embedder": RandomEmbedder,
     "AAOntology": AAOntologyEmbedder,
+    "blosum62": Blosum62Embedder,
 }
 
 logger = get_logger(__name__)
