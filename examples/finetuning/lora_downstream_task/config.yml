@@ -1,0 +1,22 @@
+input_file: sequences.fasta
+protocol: sequence_to_class
+model_choice: FNN
+optimizer_choice: adam
+loss_choice: cross_entropy_loss
+num_epochs: 10
+use_class_weights: True
+learning_rate: 1e-3
+batch_size: 128
+save_split_ids: False
+device: cuda
+disable_pytorch_compile: True
+bootstrapping_iterations: 30
+external_writer: none
+finetuning_config:
+  method: lora
+  lora_r: 8  # Lora Rank
+  lora_alpha: 16  # Lora Alpha
+  lora_dropout: 0.05  # Lora dropout probability
+  lora_target_modules: auto
+  lora_bias: lora_only  # Bias type for lora
+embedder_name: Rostlab/prot_bert
