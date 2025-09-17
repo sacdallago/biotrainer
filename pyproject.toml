@@ -45,7 +45,8 @@ dependencies = [
     "cyclopts>=3.16.0",
     "appdirs>=1.4.4",
     "peft>=0.15.2",
-    "aaanalysis>=1.0.2"
+    "aaanalysis>=1.0.2",
+    "blosum>=2.0.3",
 ]
 
 [project.optional-dependencies]
@@ -55,7 +56,7 @@ jupyter = [
 ]
 onnx-cpu = ["onnxruntime>=1.21.0"]
 onnx-gpu = ["onnxruntime-gpu>=1.21.0"]
-onnx-mac = ["onnxruntime-coreml>=1.13.1"]  # Replace with cpu ["onnxruntime>=1.21.0"] if coreml doesn't work on your Mac
+onnx-mac = ["onnxruntime>=1.21.0"]  # Replace with cpu ["onnxruntime>=1.21.0"] if coreml doesn't work on your Mac
 dev = [
     "pytest>=8.3.4",
     "build>=1.2.2",
