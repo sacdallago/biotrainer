@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from .embedder_interfaces import EmbedderInterface
+from ..interfaces import EmbedderInterface
 
 # Create a mapping of amino acids to their index
 AA_TO_INDEX = {aa: i for i, aa in enumerate("ACDEFGHIKLMNPQRSTVWXY")}

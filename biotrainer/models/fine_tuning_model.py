@@ -5,11 +5,11 @@ from typing import Iterator, Tuple
 from .biotrainer_model import BiotrainerModel
 
 from ..protocols import Protocol
-from ..embedders import FineTuningEmbeddingService
+from ..embedders import PeftEmbeddingService
 
 
 class FineTuningModel(BiotrainerModel):
-    def __init__(self, embedding_service: FineTuningEmbeddingService, downstream_model, collate_fn, protocol, device):
+    def __init__(self, embedding_service: PeftEmbeddingService, downstream_model, collate_fn, protocol, device):
         super().__init__()
         self.embedding_service = embedding_service
         self.downstream_model = downstream_model

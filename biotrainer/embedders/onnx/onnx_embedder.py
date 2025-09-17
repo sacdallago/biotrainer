@@ -7,10 +7,9 @@ from numpy import ndarray
 from transformers import PreTrainedTokenizer
 from typing import Union, List, Any, Generator
 
-from .custom_tokenizer import CustomTokenizer
-from .embedder_interfaces import EmbedderWithFallback
+from ..interfaces import CustomTokenizer, EmbedderWithFallback
 
-from ..utilities import is_device_cuda, is_device_mps, get_device_memory, get_logger
+from ...utilities import is_device_cuda, is_device_mps, get_device_memory, get_logger
 
 logger = get_logger(__name__)
 
