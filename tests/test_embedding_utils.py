@@ -1,6 +1,6 @@
 import unittest
 
-from biotrainer.embedders.preprocessing_strategies import preprocess_sequences_with_whitespaces, preprocess_sequences_without_whitespaces
+from biotrainer.embedders.interfaces import preprocess_sequences_with_whitespaces, preprocess_sequences_without_whitespaces
 
 
 class EmbeddingUtilsTests(unittest.TestCase):

@@ -14,7 +14,7 @@ from typing import List, Generator, Optional, Iterable, Any, Union, Callable
 
 from .preprocessing_strategies import preprocess_sequences_without_whitespaces
 
-from ..utilities import get_logger, get_device_memory
+from ...utilities import get_logger, get_device_memory
 
 logger = get_logger(__name__)
 
