@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from .embedder_interfaces import EmbedderInterface
+from ..interfaces import EmbedderInterface
 
 
 class RandomEmbedder(EmbedderInterface):

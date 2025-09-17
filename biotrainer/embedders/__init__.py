@@ -2,16 +2,14 @@ import torch
 
 from pathlib import Path
 from typing import Union, Optional, List, Tuple, Dict, Any
-from transformers import AutoTokenizer, T5Tokenizer, T5EncoderModel, EsmTokenizer, EsmModel, BertTokenizer, BertForMaskedLM
+from transformers import AutoTokenizer, T5Tokenizer, T5EncoderModel, EsmTokenizer, EsmModel, BertTokenizer, \
+    BertForMaskedLM
 
-from .onnx_embedder import OnnxEmbedder
-from .random_embedder import RandomEmbedder
-from .custom_tokenizer import CustomTokenizer
-from .embedder_interfaces import EmbedderInterface
-from .aa_ontology_embedder import AAOntologyEmbedder
-from .one_hot_encoding_embedder import OneHotEncodingEmbedder
-from .embedding_service import EmbeddingService, FineTuningEmbeddingService
-from .huggingface_transformer_embedder import HuggingfaceTransformerEmbedder
+from .onnx import OnnxEmbedder
+from .huggingface import HuggingfaceTransformerEmbedder
+from .interfaces import EmbedderInterface, CustomTokenizer
+from .services import EmbeddingService, PeftEmbeddingService
+from .predefined_embedders import RandomEmbedder, AAOntologyEmbedder, OneHotEncodingEmbedder
 
 from ..utilities import is_device_cpu, get_logger
 
@@ -29,14 +27,14 @@ def get_embedding_service(embedder_name: str,
                           use_half_precision: Optional[bool] = False,
                           device: Optional[Union[str, torch.device]] = None,
                           finetuning_config: Optional[Dict[str, Any]] = None) -> Union[
-    EmbeddingService, FineTuningEmbeddingService]:
+    EmbeddingService, PeftEmbeddingService]:
     embedder: EmbedderInterface = _get_embedder(embedder_name=embedder_name,
                                                 custom_tokenizer_config=custom_tokenizer_config,
                                                 use_half_precision=use_half_precision,
                                                 device=device)
     if finetuning_config:
-        return FineTuningEmbeddingService(embedder=embedder, use_half_precision=use_half_precision,
-                                          finetuning_config=finetuning_config)
+        return PeftEmbeddingService(embedder=embedder, use_half_precision=use_half_precision,
+                                    finetuning_config=finetuning_config)
 
     return EmbeddingService(embedder=embedder, use_half_precision=use_half_precision)
 
@@ -96,7 +94,7 @@ def _get_embedder(embedder_name: Optional[str],
     # Huggingface Transformer Embedders
     if use_half_precision and is_device_cpu(device):
         raise ValueError(f"use_half_precision mode is not compatible with embedding "
-                        f"on the CPU. (See: https://github.com/huggingface/transformers/issues/11546)")
+                         f"on the CPU. (See: https://github.com/huggingface/transformers/issues/11546)")
 
     torch_dtype = torch.float16 if use_half_precision else torch.float32
 
@@ -130,9 +128,11 @@ def get_predefined_embedder_names() -> List[str]:
 
 __all__ = [
     "EmbeddingService",
+    "PeftEmbeddingService",
     "OneHotEncodingEmbedder",
     "RandomEmbedder",
     "AAOntologyEmbedder",
     "get_embedding_service",
     "get_predefined_embedder_names"
 ]
+

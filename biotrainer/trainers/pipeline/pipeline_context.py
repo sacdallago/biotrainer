@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Dict, Any, Union, List, Optional
 
 from ...output_files import OutputManager
-from ...embedders import FineTuningEmbeddingService
+from ...embedders import PeftEmbeddingService
 from ...input_files import BiotrainerSequenceRecord
 
 
@@ -24,7 +24,7 @@ class PipelineContext:
         self.input_data: Optional[Union[Path, List[BiotrainerSequenceRecord]]] = None
         # Embedding + Projection
         self.id2emb = None
-        self.embedding_service: Optional[FineTuningEmbeddingService] = None  # For fine-tuning only
+        self.embedding_service: Optional[PeftEmbeddingService] = None  # For fine-tuning only
         # Data Loading
         self.target_manager = None
         self.n_features = None
