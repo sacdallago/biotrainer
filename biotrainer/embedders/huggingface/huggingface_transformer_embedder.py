@@ -66,12 +66,32 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
     def get_mask_token(self) -> str:
         mask_token = "[MASK]"
-        if "T5" in self._tokenizer.__class__.__name__:
+        tokenizer_class_name = self._tokenizer.__class__.__name__.lower()
+        if "t5" in tokenizer_class_name:
             mask_token = "<extra_id_0>"
+        if "esm" in tokenizer_class_name:
+            mask_token = "<mask>"
         return mask_token
 
     def _get_mask_token_id(self) -> int:
         return self._tokenizer.added_tokens_encoder[self.get_mask_token()]
+
+    def _get_aa_token_id(self, amino_acid: str) -> int:
+        """Get token ID for a single amino acid."""
+        # Handle the preprocessing - some models might need whitespace
+        if self._preprocessing_strategy == preprocess_sequences_with_whitespaces:
+            test_seq = f"A {amino_acid} A"  # Embed in context
+            tokenized = self._tokenizer.encode(test_seq, add_special_tokens=False)
+            # The amino acid should be the middle token
+            if len(tokenized) >= 3:
+                return tokenized[1]
+
+        # Fallback: direct tokenization
+        tokenized = self._tokenizer.encode(amino_acid, add_special_tokens=False)
+        if len(tokenized) > 0:
+            return tokenized[0]
+
+        raise ValueError(f"Could not tokenize amino acid: {amino_acid}")
 
     def _get_custom_indices_to_remove(self) -> List[int]:
         """
@@ -160,7 +180,9 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
     def get_position_probabilities(self, sequence: str, position: int) -> Dict[str, float]:
         """
-        Get probability distribution over all amino acids at a specific position.
+        [BETA]
+        Get probability distribution over all amino acids at a specific position. This only works if the model
+        provides logits in the output, like BERT models do (e.g. Rostlab/prot_bert)
 
         Args:
             sequence: The protein sequence
@@ -180,11 +202,11 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
         # Find the mask token position in tokenized sequence
         mask_position_in_tokens = self._find_mask_position_in_tokens(
-            tokenized_sequences[0], position, sequence
+            tokenized_sequences[0]
         )
 
         if mask_position_in_tokens is None:
-            raise ValueError(f"Could not find mask token at position {position}")
+            raise ValueError(f"Could not find mask token")
 
         # Get logits
         with torch.no_grad():
@@ -208,8 +230,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
         return aa_probabilities
 
-    def _find_mask_position_in_tokens(self, tokenized_sequence: torch.Tensor, original_position: int,
-                                      original_sequence: str) -> Union[int, None]:
+    def _find_mask_position_in_tokens(self, tokenized_sequence: torch.tensor) -> Union[int, None]:
         """
         Find the position of the mask token in the tokenized sequence.
         This accounts for special tokens and preprocessing strategy.
@@ -226,23 +247,5 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
             return int(mask_positions[0])
 
         # If multiple masks (shouldn't happen in our case), return the first one
-        logger.warning(f"Found multiple mask tokens, using the first one")
+        logger.warning(f"Found multiple mask tokens, using the first one..")
         return int(mask_positions[0])
-
-
-    def _get_aa_token_id(self, amino_acid: str) -> int:
-        """Get token ID for a single amino acid."""
-        # Handle the preprocessing - some models might need whitespace
-        if self._preprocessing_strategy == preprocess_sequences_with_whitespaces:
-            test_seq = f"A {amino_acid} A"  # Embed in context
-            tokenized = self._tokenizer.encode(test_seq, add_special_tokens=False)
-            # The amino acid should be the middle token
-            if len(tokenized) >= 3:
-                return tokenized[1]
-
-        # Fallback: direct tokenization
-        tokenized = self._tokenizer.encode(amino_acid, add_special_tokens=False)
-        if len(tokenized) > 0:
-            return tokenized[0]
-
-        raise ValueError(f"Could not tokenize amino acid: {amino_acid}")
