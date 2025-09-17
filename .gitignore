@@ -15,6 +15,7 @@ webcrawling/__pycache__/*
 .ipynb_checkpoints/
 *.pyc
 /poetry.lock
+uv.lock
 
 
 # Project files
