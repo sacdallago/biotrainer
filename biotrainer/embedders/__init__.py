@@ -87,7 +87,7 @@ def _get_embedder(embedder_name: Optional[str],
             tokenizer = CustomTokenizer.from_config(config_path=Path(custom_tokenizer_config))
             logger.info(f"Using custom tokenizer (vocab size: {tokenizer.vocab_size})!")
         else:
-            tokenizer = T5Tokenizer.from_pretrained(embedder_name, torch_dtype=torch.float32)
+            tokenizer = T5Tokenizer.from_pretrained(embedder_name, dtype=torch.float32)
         onnx_model = OnnxEmbedder(onnx_path=Path(embedder_name), tokenizer=tokenizer, device=device)
         logger.info(f"Using onnx embedder: {onnx_model.name}")
         return onnx_model
@@ -97,19 +97,19 @@ def _get_embedder(embedder_name: Optional[str],
         raise ValueError(f"use_half_precision mode is not compatible with embedding "
                          f"on the CPU. (See: https://github.com/huggingface/transformers/issues/11546)")
 
-    torch_dtype = torch.float16 if use_half_precision else torch.float32
+    dtype = torch.float16 if use_half_precision else torch.float32
 
     tokenizer_class, model_class = _determine_tokenizer_and_model(embedder_name)
     logger.info(f"Loading embedder model {embedder_name}..")
     try:
-        tokenizer = tokenizer_class.from_pretrained(embedder_name, torch_dtype=torch_dtype)
-        model = model_class.from_pretrained(embedder_name, torch_dtype=torch_dtype)
+        tokenizer = tokenizer_class.from_pretrained(embedder_name, dtype=dtype)
+        model = model_class.from_pretrained(embedder_name, dtype=dtype)
     except OSError as os_error:
         raise Exception(f"{embedder_name} could not be found!") from os_error
     except Exception:
         try:
-            tokenizer = AutoTokenizer.from_pretrained(embedder_name, torch_dtype=torch_dtype)
-            model = T5EncoderModel.from_pretrained(embedder_name, torch_dtype=torch_dtype)
+            tokenizer = AutoTokenizer.from_pretrained(embedder_name, dtype=dtype)
+            model = T5EncoderModel.from_pretrained(embedder_name, dtype=dtype)
         except Exception as e:
             raise Exception(f"Loading {embedder_name} automatically and as {tokenizer_class.__class__.__name__} failed!"
                             f" Please provide a custom_embedder script for your use-case.") from e
