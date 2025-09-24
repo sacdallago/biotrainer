@@ -76,7 +76,7 @@ class TargetManager:
             self._id2target = {int_id: int_dict["TARGET"] for int_id, int_dict in
                                merged_interactions_dict.items()}
             self._id2sets = {int_id: int_dict["SET"] for int_id, int_dict in
-                               merged_interactions_dict.items()}
+                             merged_interactions_dict.items()}
 
         # Remove None targets from pred set
         self._id2target = {seq_hash: target for seq_hash, target in self._id2target.items() if target is not None}
@@ -105,24 +105,13 @@ class TargetManager:
                                    for identifier, labels in self._id2target.items()}  # classes idxs (zero-based)
 
                 # MASKS
-                # Validate masks (each mask must contain at least one resolved (1) value)
-                for seq_hash, mask in id2masks.items():
-                    if mask is not None and 1 not in mask:
-                        raise ValueError(f"{self._input_ids[seq_hash]} does not have a valid mask as it does "
-                                         f"not contain at least one resolved (1) value!")
-
-                # Replace labels with masking value
-                for seq_hash, unmasked_target in self._id2target.items():
-                    mask = id2masks[seq_hash]
-                    if mask is not None:
-                        target_with_mask = torch.tensor([value if mask[index] == 1 else MASK_AND_LABELS_PAD_VALUE for
-                                                         index, value in enumerate(unmasked_target)]).long()
-                        self._id2target[seq_hash] = target_with_mask
+                self._apply_masks(id2masks=id2masks)
             # b) Value output
             elif self.protocol in Protocol.regression_protocols():
                 self._id2target = {seq_hash: torch.tensor(res_val).float()
                                    for seq_hash, res_val in self._id2target.items()}
                 self.number_of_outputs = 1
+                self._apply_masks(id2masks=id2masks)
             else:
                 raise NotImplementedError
 
@@ -157,6 +146,23 @@ class TargetManager:
             assert self.number_of_outputs == 1, f"Number of outputs does not equal 1 for regression protocol!"
         if not self._id2target or len(self._id2target) == 0:
             raise ValueError("Prediction targets not found or could not be extracted!")
+
+    def _apply_masks(self, id2masks):
+        # Validate masks (each mask must contain at least one resolved (1) value)
+        for seq_hash, mask in id2masks.items():
+            if mask is not None and 1 not in mask:
+                raise ValueError(f"{self._input_ids[seq_hash]} does not have a valid mask as it does "
+                                 f"not contain at least one resolved (1) value!")
+
+        # Replace labels with masking value
+        for seq_hash, unmasked_target in self._id2target.items():
+            mask = id2masks[seq_hash]
+            if mask is not None:
+                target_with_mask = torch.tensor([value if mask[index] == 1 else MASK_AND_LABELS_PAD_VALUE for
+                                                 index, value in enumerate(unmasked_target)])
+                target_with_mask = target_with_mask.long() if self.protocol in Protocol.classification_protocols() \
+                    else target_with_mask.float()
+                self._id2target[seq_hash] = target_with_mask
 
     def _validate_targets(self, id2emb: Dict[str, torch.tensor]):
         """
