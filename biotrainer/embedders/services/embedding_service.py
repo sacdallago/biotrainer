@@ -299,7 +299,7 @@ class EmbeddingService:
         embeddings_file = h5py.File(embeddings_file_path, 'r')
 
         # Sequence hash from embeddings file -> Embedding
-        id2emb = {idx: torch.tensor(embedding) for (idx, embedding) in embeddings_file.items()}
+        id2emb = {idx: torch.tensor(embedding).float() for (idx, embedding) in embeddings_file.items()}
 
         # Logging
         logger.info(f"Read {len(id2emb)} entries.")
