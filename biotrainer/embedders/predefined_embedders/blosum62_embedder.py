@@ -4,6 +4,8 @@ import blosum as bl
 
 from ..interfaces import EmbedderInterface
 
+from ...utilities import AMINO_ACIDS
+
 
 class Blosum62Embedder(EmbedderInterface):
     """
@@ -24,20 +26,18 @@ class Blosum62Embedder(EmbedderInterface):
         # Load BLOSUM62 matrix
         matrix = bl.BLOSUM(62)
 
-        # Define amino acid order (BLOSUM supports X)
-        self.aa_order = "ACDEFGHIKLMNPQRSTVWYX"
-        self.embedding_dimension = len(self.aa_order)  # 21 amino acids including X
+        self.embedding_dimension = len(AMINO_ACIDS)  # 21 amino acids including X
 
         # Create mapping from amino acid to index
-        self.aa_to_index = {aa: i for i, aa in enumerate(self.aa_order)}
+        self.aa_to_index = {aa: i for i, aa in enumerate(AMINO_ACIDS)}
 
         # Create the lookup matrix: shape (21, 21) for all AAs including X
-        self.lookup_matrix = np.zeros((len(self.aa_order), self.embedding_dimension), dtype=np.float32)
+        self.lookup_matrix = np.zeros((len(AMINO_ACIDS), self.embedding_dimension), dtype=np.float32)
 
         # Fill the lookup matrix with BLOSUM values
-        for i, aa in enumerate(self.aa_order):
+        for i, aa in enumerate(AMINO_ACIDS):
             # Get the BLOSUM row for this amino acid in the correct order
-            blosum_row = [matrix[aa][target_aa] for target_aa in self.aa_order]
+            blosum_row = [matrix[aa][target_aa] for target_aa in AMINO_ACIDS]
             self.lookup_matrix[i] = np.array(blosum_row, dtype=np.float32)
 
     def _embed_single(self, sequence: str) -> torch.tensor:
