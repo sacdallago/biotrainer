@@ -5,7 +5,7 @@ For more details, please refer to the descriptions in [config_file_options](conf
 
 ```yaml
 # General Options
-protocol: residue_to_class | residues_to_class | residues_to_value | sequence_to_class | sequence_to_value
+protocol: residue_to_class | residue_to_value | residues_to_class | residues_to_value | sequence_to_class | sequence_to_value
 interaction: multiply | concat  # Default: None
 seed: 1234  # Default: 42
 device: cpu | cuda | cuda:0 | cuda:1  # Default: Uses cuda if available, otherwise cpu

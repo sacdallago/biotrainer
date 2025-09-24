@@ -9,7 +9,7 @@ and explains, which protocol needs which input files and which options are manda
 Choose a **protocol** that handles, how your provided data is interpreted:
 
 ```yaml
-protocol: residue_to_class | residues_to_class | residues_to_value | sequence_to_class | sequence_to_value
+protocol: residue_to_class | residue_to_value | residues_to_class | residues_to_value | sequence_to_class | sequence_to_value
 ```
 
 To use interactions for your sequences, you need to indicate how embeddings of interacting sequences should be
