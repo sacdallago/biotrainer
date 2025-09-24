@@ -3,6 +3,8 @@ import torch.nn as nn
 
 from typing import Optional, Union, Dict, Any, Set
 
+from .masked_mse_loss import MaskedMSELoss
+
 from ..protocols import Protocol
 from ..utilities import MASK_AND_LABELS_PAD_VALUE
 
@@ -11,7 +13,7 @@ __LOSSES = {
         'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
     Protocol.residue_to_value: {
-        'mean_squared_error': lambda **kwargs: nn.MSELoss(**kwargs)
+        'mean_squared_error': lambda **kwargs: MaskedMSELoss(ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
     Protocol.residues_to_class: {
         'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
