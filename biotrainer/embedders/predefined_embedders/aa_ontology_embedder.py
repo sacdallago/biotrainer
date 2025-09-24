@@ -3,6 +3,7 @@ import numpy as np
 
 from ..interfaces import EmbedderInterface
 
+from ...utilities import AMINO_ACIDS
 
 class AAOntologyEmbedder(EmbedderInterface):
     """
@@ -24,17 +25,19 @@ class AAOntologyEmbedder(EmbedderInterface):
         scales = aa.load_scales()
 
         # Define amino acid order (including X as placeholder)
-        self.aa_order = "ACDEFGHIKLMNPQRSTVWYX"
         self.embedding_dimension = len(scales.columns)  # Number of scales (586)
 
         # Create mapping from amino acid to index
-        self.aa_to_index = {aa: i for i, aa in enumerate(self.aa_order)}
+        self.aa_to_index = {aa: i for i, aa in enumerate(AMINO_ACIDS)}
 
         # Create the lookup matrix: shape (21, 586) for 20 AAs + X
-        self.lookup_matrix = np.zeros((len(self.aa_order), self.embedding_dimension), dtype=np.float32)
+        self.lookup_matrix = np.zeros((len(AMINO_ACIDS), self.embedding_dimension), dtype=np.float32)
 
         # Fill the lookup matrix with scale values
-        for i, aa in enumerate(self.aa_order[:-1]):  # Exclude X - only zeros
+        for i, aa in enumerate(AMINO_ACIDS):
+            # Exclude X - only zeros
+            if aa == "X":
+                continue
             if aa in scales.index:
                 self.lookup_matrix[i] = scales.loc[aa].values.astype(np.float32)
 

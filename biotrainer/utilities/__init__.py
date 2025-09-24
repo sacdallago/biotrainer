@@ -10,7 +10,8 @@ from .constants import (
     SEQUENCE_PAD_VALUE,
     MASK_AND_LABELS_PAD_VALUE,
     INTERACTION_INDICATOR,
-    METRICS_WITHOUT_REVERSED_SORTING
+    METRICS_WITHOUT_REVERSED_SORTING,
+    AMINO_ACIDS,
 )
 
 
@@ -30,6 +31,7 @@ __all__ = [
     'MASK_AND_LABELS_PAD_VALUE',
     'INTERACTION_INDICATOR',
     'METRICS_WITHOUT_REVERSED_SORTING',
+    'AMINO_ACIDS',
     'Split',
     'SplitResult',
     'EmbeddingDatasetSample',
