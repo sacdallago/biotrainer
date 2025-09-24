@@ -134,7 +134,7 @@ use_half_precision: True | False # Default: False
 ```
 
 *Note that use_half_precision mode is not compatible with embedding on the CPU
-([see this GitHub Issue](https://github.com/huggingface/transformers/issues/11546)).*
+([see this GitHub Issue](https://github.com/huggingface/transformers/issues/11546)). Downstream training is still performed in float32 precision mode for stability.*
 
 To compute baselines, there are also predefined embedders directly included in *biotrainer*:
 
