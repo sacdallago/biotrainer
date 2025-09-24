@@ -114,7 +114,9 @@ L=sequence dimension (e.g. 350)
 C=number of classes (e.g. 13)
 
 - residue_to_class --> Predict a class C for each residue encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxLx1
+- residue_to_value --> Predict a value V for each residue encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxLx1
 - residues_to_class --> Predict a class C for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output Bx1
+- residues_to_value --> Predict a value V for all residues encoded in D dimensions in a sequence of length L. Input BxLxD --> output Bx1
 - sequence_to_class --> Predict a class C for each sequence encoded in a fixed dimension D. Input BxD --> output Bx1
 - sequence_to_value --> Predict a value V for each sequence encoded in a fixed dimension D. Input BxD --> output Bx1
 ```
@@ -131,6 +133,21 @@ for each residue (amino acid) in the sequence a categorical property
 Example:
 ```fasta
 ```>Seq1 TARGET=DVCDVVDD SET=train
+SEQWENCE
+...
+```
+
+### residue_to_value
+```text
+Predict a value V for each residue encoded in D dimensions in a sequence of length L. Input BxLxD --> output BxLx1
+```
+
+You have an input protein sequence and want to predict 
+for each residue (amino acid) in the sequence a numerical property.
+
+Example:
+```fasta
+```>Seq1 TARGET=0.5;0.3;0.1;0.2;0.5;0.1;0.0;-1 SET=train MASK=11111110
 SEQWENCE
 ...
 ```
