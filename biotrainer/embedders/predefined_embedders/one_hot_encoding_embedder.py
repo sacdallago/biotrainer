@@ -3,8 +3,10 @@ import numpy as np
 
 from ..interfaces import EmbedderInterface
 
+from ...utilities import AMINO_ACIDS
+
 # Create a mapping of amino acids to their index
-AA_TO_INDEX = {aa: i for i, aa in enumerate("ACDEFGHIKLMNPQRSTVWXY")}
+AA_TO_INDEX = {aa: i for i, aa in enumerate(AMINO_ACIDS)}
 
 
 class OneHotEncodingEmbedder(EmbedderInterface):
