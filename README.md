@@ -82,10 +82,11 @@ python3
 
 ### Supported Prediction Tasks
 - **Residue-level classification** (`residue_to_class`)
-- **Residues-level classification** (`residues_to_class`, like sequence_to_class with per-residue embeddings)
+- **Residue-level regression** (`residue_to_value`) *[BETA]*
 - **Sequence-level classification** (`sequence_to_class`)
-- **Residues-level regression** (`residues_to_value`, like sequence_to_value with per-residue embeddings)
 - **Sequence-level regression** (`sequence_to_value`)
+- **Residues-level classification** (`residues_to_class`, like sequence_to_class with per-residue embeddings)
+- **Residues-level regression** (`residues_to_value`, like sequence_to_value with per-residue embeddings)
 
 ### Built-in Capabilities
 - Multiple embedding methods (ProtT5, ESM-2, ONNX, etc.)
