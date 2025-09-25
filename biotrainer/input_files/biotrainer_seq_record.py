@@ -48,6 +48,8 @@ class BiotrainerSequenceRecord:
 
     @staticmethod
     def _convert_regression_target_if_necessary(target: str):
+        if target is None:  # Can be the case for the predict dataset
+            return target
         if RESIDUE_TO_VALUE_TARGET_DELIMITER in target:
             targets = target.split(RESIDUE_TO_VALUE_TARGET_DELIMITER)
             return list(map(float, targets))
