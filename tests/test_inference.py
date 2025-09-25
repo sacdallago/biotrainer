@@ -218,6 +218,12 @@ class InferencerTests(unittest.TestCase):
             confidence_level=0.05,
             seed=42
         )
+        r2v_dict = self.inferencer_r2v.from_embeddings_with_monte_carlo_dropout(
+            self.per_residue_embeddings,
+            n_forward_passes=10,
+            confidence_level=0.05,
+            seed=42
+        )
         rs2c_dict = self.inferencer_rs2c.from_embeddings_with_monte_carlo_dropout(
             self.per_residue_embeddings,
             n_forward_passes=15,
@@ -247,6 +253,10 @@ class InferencerTests(unittest.TestCase):
         self.assertTrue(all([len(r2c_dict[seq]) == len(self._test_sequences[idx])
                              for idx, seq in enumerate(r2c_dict.keys())]),
                         msg="Missing predictions for r2c!")
+
+        self.assertTrue(all([len(r2v_dict[seq]) == len(self._test_sequences[idx])
+                             for idx, seq in enumerate(r2v_dict.keys())]),
+                        msg="Missing predictions for r2v!")
 
         # Check required keys exist
         required_keys = ["prediction", "all_predictions", "mcd_mean",
