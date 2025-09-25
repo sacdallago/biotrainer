@@ -72,6 +72,72 @@ class ResidueSolver(Solver):
 
             return result_dict
 
+    def inference_monte_carlo_dropout(self, dataloader: DataLoader,
+                                      n_forward_passes: int = 30,
+                                      confidence_level: float = 0.05):
+        """
+        Calculate inference results from existing models for given embeddings.
+        Adaption needed for residue_to_x tasks because of multiple predictions for each sequence
+
+            dataloader: Dataloader with embeddings
+            n_forward_passes: Times to repeat calculation with different dropout nodes enabled
+            confidence_level: Confidence level for result confidence intervals (0.05 => 95% percentile)
+        """
+        if not 0 < confidence_level < 1:
+            raise ValueError(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
+
+        mapped_predictions = {}
+        is_regression = isinstance(self, ResidueRegressionSolver)
+
+        for i, (seq_ids, X, y, lengths) in enumerate(dataloader):
+            dropout_iterations = self._do_dropout_iterations(X, lengths, n_forward_passes)
+
+            # Get outputs individually for each sequence
+            outputs_by_sequence = {}
+            for dropout_iteration in dropout_iterations:
+                dropout_outputs = dropout_iteration["probabilities"]  # This contains raw outputs for regression
+                for idx, outputs in enumerate(dropout_outputs):
+                    if seq_ids[idx] not in outputs_by_sequence.keys():
+                        outputs_by_sequence[seq_ids[idx]] = []
+                    outputs_by_sequence[seq_ids[idx]].append(outputs)
+
+            # Calculate dropout mean and confidence range for each residue in sequence
+            seq_idx = 0
+            for seq_id, dropout_residues in outputs_by_sequence.items():
+                stacked_residues_tensor = torch.stack([torch.tensor(outputs) for outputs in dropout_residues], dim=1)
+
+                dropout_mean, lower_bound, upper_bound = get_mean_and_confidence_bounds(
+                    values=stacked_residues_tensor,
+                    dimension=1,
+                    confidence_level=confidence_level
+                )
+
+                # Different prediction logic for classification vs regression
+                if is_regression:
+                    # For regression, the mean is the prediction
+                    predictions_by_mean = dropout_mean.squeeze()
+                else:
+                    # For classification, take argmax of mean probabilities
+                    _, predictions_by_mean = torch.max(dropout_mean, dim=0)
+
+                # Create dict with seq_id: prediction
+                mapped_predictions[seq_id] = []
+                for residue_idx, residue_prediction in enumerate(predictions_by_mean):
+                    mapped_predictions[seq_id].append({
+                        "prediction": residue_prediction.item(),
+                        "all_predictions": [dropout_iteration["prediction"][seq_idx][residue_idx] for
+                                            dropout_iteration in dropout_iterations],
+                        "mcd_mean": dropout_mean.T[residue_idx] if not is_regression else dropout_mean[residue_idx],
+                        "mcd_lower_bound": lower_bound.T[residue_idx] if not is_regression else lower_bound[
+                            residue_idx],
+                        "mcd_upper_bound": upper_bound.T[residue_idx] if not is_regression else upper_bound[
+                            residue_idx],
+                    })
+
+                seq_idx += 1
+
+        return {'mapped_predictions': mapped_predictions}
+
 
 class ResidueClassificationSolver(ResidueSolver):
 
@@ -83,147 +149,9 @@ class ResidueClassificationSolver(ResidueSolver):
 
         return predicted_classes
 
-    def inference_monte_carlo_dropout(self, dataloader: DataLoader,
-                                      n_forward_passes: int = 30,
-                                      confidence_level: float = 0.05):
-        """
-        Calculate inference results from existing models for given embeddings.
-        Adaption needed for residue_to_x tasks because of multiple predictions for each sequence
-
-            dataloader: Dataloader with embeddings
-            n_forward_passes: Times to repeat calculation with different dropout nodes enabled
-            confidence_level: Confidence level for result confidence intervals (0.05 => 95% percentile)
-        """
-        if not 0 < confidence_level < 1:
-            raise ValueError(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
-
-        mapped_predictions = {}
-
-        for i, (seq_ids, X, y, lengths) in enumerate(dataloader):
-            dropout_iterations = self._do_dropout_iterations(X, lengths, n_forward_passes)
-
-            # Get class probabilities individually for each sequence
-            class_probabilities_by_sequence = {}
-            for dropout_iteration in dropout_iterations:
-                dropout_probabilities = dropout_iteration["probabilities"]
-                for idx, class_probabilities in enumerate(dropout_probabilities):
-                    if seq_ids[idx] not in class_probabilities_by_sequence.keys():
-                        class_probabilities_by_sequence[seq_ids[idx]] = []
-                    class_probabilities_by_sequence[seq_ids[idx]].append(class_probabilities)
-
-            # Calculate dropout mean and confidence range for each residue in sequence
-            seq_idx = 0
-            for seq_id, dropout_residues in class_probabilities_by_sequence.items():
-                stacked_residues_tensor = torch.stack([torch.tensor(by_class) for by_class in dropout_residues], dim=1)
-
-                dropout_mean, lower_bound, upper_bound = get_mean_and_confidence_bounds(values=stacked_residues_tensor,
-                                                                                        dimension=1,
-                                                                                        confidence_level=confidence_level)
-                _, prediction_by_mean = torch.max(dropout_mean, dim=0)
-
-                # Create dict with seq_id: prediction
-                mapped_predictions[seq_id] = []
-                for residue_idx, residue_prediction in enumerate(prediction_by_mean):
-                    mapped_predictions[seq_id].append(
-                        {"prediction": residue_prediction.item(),
-                         "all_predictions": [dropout_iteration["prediction"][seq_idx][residue_idx] for
-                                             dropout_iteration in dropout_iterations],
-                         "mcd_mean": dropout_mean.T[residue_idx],
-                         "mcd_lower_bound": (
-                             lower_bound.T[residue_idx]),
-                         "mcd_upper_bound": (
-                             upper_bound.T[residue_idx]),
-                         })
-
-                seq_idx += 1
-            return {
-                'mapped_predictions': mapped_predictions
-            }
-
-
-
 
 class ResidueRegressionSolver(ResidueSolver):
-    # TODO Check if it is possible to merge entirely with residue_classification_solver
-
     def _transform_network_output(self, network_output: torch.Tensor) -> torch.Tensor:
         network_output = super()._transform_network_output(network_output)
         network_output = network_output.squeeze(1)
         return network_output
-
-    def inference_monte_carlo_dropout(self, dataloader: DataLoader,
-                                      n_forward_passes: int = 30,
-                                      confidence_level: float = 0.05):
-        """
-        Calculate inference results from existing models for given embeddings.
-        Adaption needed for residue_to_x tasks because of multiple predictions for each sequence
-
-            dataloader: Dataloader with embeddings
-            n_forward_passes: Times to repeat calculation with different dropout nodes enabled
-            confidence_level: Confidence level for result confidence intervals (0.05 => 95% percentile)
-        """
-        if not 0 < confidence_level < 1:
-            raise ValueError(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
-
-        mapped_predictions = {}
-
-        for i, (seq_ids, X, y, lengths) in enumerate(dataloader):
-            dropout_iterations = self._do_dropout_iterations(X, lengths, n_forward_passes)
-
-            # Get class probabilities individually for each sequence
-            class_probabilities_by_sequence = {}
-            for dropout_iteration in dropout_iterations:
-                dropout_probabilities = dropout_iteration["probabilities"]
-                for idx, class_probabilities in enumerate(dropout_probabilities):
-                    if seq_ids[idx] not in class_probabilities_by_sequence.keys():
-                        class_probabilities_by_sequence[seq_ids[idx]] = []
-                    class_probabilities_by_sequence[seq_ids[idx]].append(class_probabilities)
-
-            # Calculate dropout mean and confidence range for each residue in sequence
-            seq_idx = 0
-            for seq_id, dropout_residues in class_probabilities_by_sequence.items():
-                stacked_residues_tensor = torch.stack([torch.tensor(by_class) for by_class in dropout_residues], dim=1)
-
-                dropout_mean, lower_bound, upper_bound = get_mean_and_confidence_bounds(values=stacked_residues_tensor,
-                                                                                        dimension=1,
-                                                                                        confidence_level=confidence_level)
-                _, prediction_by_mean = torch.max(dropout_mean, dim=0)
-
-                # Create dict with seq_id: prediction
-                mapped_predictions[seq_id] = []
-                for residue_idx, residue_prediction in enumerate(prediction_by_mean):
-                    mapped_predictions[seq_id].append(
-                        {"prediction": residue_prediction.item(),
-                         "all_predictions": [dropout_iteration["prediction"][seq_idx][residue_idx] for
-                                             dropout_iteration in dropout_iterations],
-                         "mcd_mean": dropout_mean.T[residue_idx],
-                         "mcd_lower_bound": (
-                             lower_bound.T[residue_idx]),
-                         "mcd_upper_bound": (
-                             upper_bound.T[residue_idx]),
-                         })
-
-                seq_idx += 1
-            return {
-                'mapped_predictions': mapped_predictions
-            }
-
-    # Gets overwritten to shorten prediction lengths if necessary
-    #def _prediction_iteration(self, x: torch.Tensor, lengths: Optional[torch.LongTensor] = None) -> Dict[str, List]:
-    #    result_dict = super()._prediction_iteration(x, lengths)
-    #    with torch.no_grad():
-    #        predictions = result_dict['prediction']
-    #        probabilities = result_dict['probabilities']
-    #        # If lengths is defined, we need to shorten the residue predictions and probabilities to the length
-    #        if lengths is not None:
-    #            shortened_predictions = []
-    #            shortened_probabilities = []
-    #            for original_prediction, original_probability, length_to_shorten in zip(predictions, probabilities,
-    #                                                                                    lengths):
-    #                shortened_predictions.append(original_prediction[:length_to_shorten])
-    #                shortened_probabilities.append(original_prediction[:length_to_shorten])
-#
-    #            result_dict['prediction'] = shortened_predictions
-    #            result_dict['probabilities'] = shortened_probabilities
-#
-    #        return result_dict
