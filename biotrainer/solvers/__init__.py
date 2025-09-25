@@ -2,12 +2,9 @@ from typing import Optional
 
 from .solver import Solver
 from .solver_utils import get_mean_and_confidence_bounds
-from .residue_regression_solver import ResidueRegressionSolver
-from .residues_regression_solver import ResiduesRegressionSolver
-from .sequence_regression_solver import SequenceRegressionSolver
-from .residue_classification_solver import ResidueClassificationSolver
-from .residues_classification_solver import ResiduesClassificationSolver
-from .sequence_classification_solver import SequenceClassificationSolver
+from .residue_solvers import ResidueClassificationSolver, ResidueRegressionSolver
+from .residues_solvers import ResiduesClassificationSolver, ResiduesRegressionSolver
+from .sequence_solvers import SequenceClassificationSolver, SequenceRegressionSolver
 
 from .metrics_calculator import MetricsCalculator, SequenceClassificationMetricsCalculator, \
     ResidueClassificationMetricsCalculator, ResiduesClassificationMetricsCalculator, \
