@@ -21,3 +21,8 @@ class BiotrainerModel(nn.Module):
 
     def train(self, mode: bool = True):
         return super().train(mode)
+
+    def compile(self):
+        # Using TensorFloat32 tensor cores is suggested when using a compiled model:
+        torch.set_float32_matmul_precision('high')
+        super().compile(backend="aot_eager")

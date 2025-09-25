@@ -90,7 +90,7 @@ class Inferencer:
                                 loss_function=loss_function,
                                 **split_config)
             solver.load_checkpoint(checkpoint_path=checkpoint_path, resume_training=False,
-                                   torch_compile=not iom.disable_pytorch_compile())
+                                   disable_pytorch_compile=iom.disable_pytorch_compile())
 
             def dataloader_function(dataset):
                 return DataLoader(dataset=dataset, batch_size=split_config["batch_size"],

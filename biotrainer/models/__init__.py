@@ -94,9 +94,7 @@ def get_model(protocol: Protocol, model_choice: str, n_classes: int, n_features:
         # Disable option for backwards compatibility with older models or if there emerge problems during training
         if not disable_pytorch_compile:
             logger.info(f"Using pytorch model compile mode!")
-            # Using TensorFloat32 tensor cores is suggested when using a compiled model:
-            torch.set_float32_matmul_precision('high')
-            return torch.compile(model, backend="aot_eager")
+            model.compile()
         return model
 
 
