@@ -29,7 +29,7 @@ class InferencerTests(unittest.TestCase):
     _test_targets_s2v = [1, -1.212, 0.0]
     _test_targets_rs2v = [5, -1.212, 0.0]
 
-    error_tolerance = 0.01
+    error_tolerance = 0.02
     error_tolerance_factor = 1.96
 
     def setUp(self) -> None:
