@@ -17,6 +17,8 @@ protocol_to_input = {
     'residue_to_class-error2': {'input_file': "test_input_files/r2c_error2/sequences.fasta",
                                 # Sequence and labels length mismatch
                                 'loss_choice': "cross_entropy_loss"},
+    'residue_to_value': {'input_file': "test_input_files/r2v/input.fasta",
+                         'loss_choice': "mean_squared_error"},
     'residues_to_class': {'input_file': "test_input_files/s2c/sequences.fasta",
                           'loss_choice': "cross_entropy_loss"},
     'residues_to_value': {'input_file': "test_input_files/s2v/sequences.fasta",
