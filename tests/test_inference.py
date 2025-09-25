@@ -18,6 +18,9 @@ class InferencerTests(unittest.TestCase):
     _test_targets_r2c = ["CDEVVCCCDDDDD",
                          "DDDDDDDD",
                          "CDEVVV"]
+    _test_targets_r2v = [[0.05, 1.0, 2, 1.1, -1.2, 1.11, 5.4, 33, 0.12, -1.0, 0.0, 12, 14.131],
+                         [1, 2, 3, 4, 5, 6, 7, 8],
+                         [-1, 0, -0, 5.5, 1.01, 12.0001]]
     _test_targets_rs2c = ["TM", "TMSP", "Glob"]
     _test_targets_s2c = ["TM", "TMSP", "Glob"]
     _test_classes_r2c = ["C", "D", "E", "F", "V"]
@@ -34,6 +37,7 @@ class InferencerTests(unittest.TestCase):
         torch._dynamo.config.suppress_errors = True
 
         self.inferencer_r2c, _ = Inferencer.create_from_out_file("test_input_files/test_models/r2c/out.yml")
+        self.inferencer_r2v, _ = Inferencer.create_from_out_file("test_input_files/test_models/r2v/out.yml")
         self.inferencer_rs2c, _ = Inferencer.create_from_out_file("test_input_files/test_models/rs2c/out.yml")
         self.inferencer_s2c, _ = Inferencer.create_from_out_file("test_input_files/test_models/s2c/out.yml")
         self.inferencer_s2v, _ = Inferencer.create_from_out_file("test_input_files/test_models/s2v/out.yml")
@@ -74,18 +78,24 @@ class InferencerTests(unittest.TestCase):
 
     def test_from_embeddings(self):
         r2c_dict = self.inferencer_r2c.from_embeddings(self.per_residue_embeddings)
+        r2v_dict = self.inferencer_r2v.from_embeddings(self.per_residue_embeddings)
         rs2c_dict = self.inferencer_rs2c.from_embeddings(self.per_residue_embeddings)
         s2c_dict = self.inferencer_s2c.from_embeddings(self.per_sequence_embeddings)
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings)
         rs2v_dict = self.inferencer_rs2v.from_embeddings(self.per_residue_embeddings)
 
-        self.assertTrue("metrics" in r2c_dict.keys() and "metrics" in s2c_dict.keys() and "metrics" in s2v_dict.keys(),
-                        "Missing metrics key!")
+        self.assertTrue(
+            "metrics" in r2c_dict.keys() and "metrics" in r2v_dict.keys() and
+            "metrics" in s2c_dict.keys() and "metrics" in s2v_dict.keys(),
+            "Missing metrics key!")
         self.assertTrue("mapped_predictions" in r2c_dict.keys() and "mapped_predictions" in s2v_dict.keys(),
                         "Missing predictions key!")
 
         self.assertTrue(all([pred_class in self._test_classes_r2c for pred_class in
                              "".join(r2c_dict["mapped_predictions"].values())]),
+                        "Inferencer predicted a non-existing class!")
+        self.assertTrue(all([type(value) for value in
+                             [v for v in (vs for vs in r2v_dict["mapped_predictions"].values())]]),
                         "Inferencer predicted a non-existing class!")
         self.assertTrue(all([pred_class in self._test_classes_rs2c
                              for pred_class in rs2c_dict["mapped_predictions"].values()]),
@@ -100,6 +110,7 @@ class InferencerTests(unittest.TestCase):
 
     def test_from_embeddings_with_targets(self):
         r2c_dict = self.inferencer_r2c.from_embeddings(self.per_residue_embeddings, self._test_targets_r2c)
+        r2v_dict = self.inferencer_r2v.from_embeddings(self.per_residue_embeddings, self._test_targets_r2v)
         rs2c_dict = self.inferencer_rs2c.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2c)
         s2c_dict = self.inferencer_s2c.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2c)
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2v)
@@ -107,6 +118,8 @@ class InferencerTests(unittest.TestCase):
 
         self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 1.8236459493637085, delta=self.error_tolerance,
                                msg="Loss not as expected for r2c!")
+        self.assertAlmostEqual(r2v_dict["metrics"]["loss"], 66.42302047378135, delta=self.error_tolerance,
+                               msg="Loss not as expected for r2v!")
         self.assertAlmostEqual(rs2c_dict["metrics"]["loss"], 1.7416267395019531, delta=self.error_tolerance,
                                msg="Loss not as expected for rs2c!")
         self.assertAlmostEqual(s2c_dict["metrics"]["loss"], 1.3706077337265015, delta=self.error_tolerance,
