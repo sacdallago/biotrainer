@@ -12,3 +12,8 @@ class SequenceClassificationSolver(Solver):
         _, predicted_classes = torch.max(probabilities, dim=1)
 
         return predicted_classes
+
+
+class SequenceRegressionSolver(Solver):
+    def _transform_network_output(self, network_output: torch.Tensor) -> torch.Tensor:
+        return network_output.flatten().float()
