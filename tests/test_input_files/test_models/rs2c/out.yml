@@ -56,19 +56,19 @@ derived_values:
   n_classes: 4
   n_features: 21
   n_testing_ids: 2
-  pipeline_elapsed_time: 3.058310143000199
-  pipeline_end_time: '2025-07-02T18:24:06.799292'
-  pipeline_start_time: '2025-07-02T18:24:03.740982'
-  training_elapsed_time: 1.8828521840005124
+  pipeline_elapsed_time: 2.8639391579999938
+  pipeline_end_time: '2025-09-24T14:13:34.652015'
+  pipeline_start_time: '2025-09-24T14:13:31.788076'
+  training_elapsed_time: 2.299069148999479
 training_results:
   hold_out:
     n_training_ids: 2
     n_validation_ids: 2
     split_hyper_params: {}
     n_free_parameters: 9552
-    start_time: '2025-07-02T18:24:03.930615'
-    end_time: '2025-07-02T18:24:05.793565'
-    elapsed_time: 1.8629392169987113
+    start_time: '2025-09-24T14:13:32.237031'
+    end_time: '2025-09-24T14:13:34.294881'
+    elapsed_time: 2.057836353998937
     best_training_epoch_metrics:
       epoch: 10
       training:
@@ -192,67 +192,88 @@ test_results:
       results:
         accuracy:
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         macro-precision:
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         micro-precision:
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- precision class 0':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- precision class 1':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- precision class 2':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- precision class 3':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         macro-recall:
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         micro-recall:
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- recall class 0':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- recall class 1':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- recall class 2':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- recall class 3':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         macro-f1_score:
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         micro-f1_score:
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- f1_score class 0':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- f1_score class 1':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- f1_score class 2':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         '- f1_score class 3':
           mean: 0.0
-          error: 0.0
+          lower: 0.0
+          upper: 0.0
         spearmans-corr-coeff:
-          mean: -0.433349609375
-          error: 0.98779296875
+          mean: -0.4333333373069763
+          lower: -1.0
+          upper: 0.0
         matthews-corr-coeff:
-          mean: -0.2166748046875
-          error: 0.493896484375
+          mean: -0.21666666865348816
+          lower: -0.5
+          upper: 0.0
       iterations: 30
       sample_size: 2
       confidence_level: 0.05
@@ -261,67 +282,88 @@ test_results:
         results:
           accuracy:
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           macro-precision:
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           micro-precision:
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- precision class 0':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- precision class 1':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- precision class 2':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- precision class 3':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           macro-recall:
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           micro-recall:
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- recall class 0':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- recall class 1':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- recall class 2':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- recall class 3':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           macro-f1_score:
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           micro-f1_score:
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- f1_score class 0':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- f1_score class 1':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- f1_score class 2':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           '- f1_score class 3':
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           spearmans-corr-coeff:
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
           matthews-corr-coeff:
             mean: 0.0
-            error: 0.0
+            lower: 0.0
+            upper: 0.0
         iterations: 30
         sample_size: 2
         confidence_level: 0.05
