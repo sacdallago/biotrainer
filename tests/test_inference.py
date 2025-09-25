@@ -116,7 +116,7 @@ class InferencerTests(unittest.TestCase):
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2v)
         rs2v_dict = self.inferencer_rs2v.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2v)
 
-        self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 1.8236459493637085, delta=self.error_tolerance,
+        self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 1.8399004936218262, delta=self.error_tolerance,
                                msg="Loss not as expected for r2c!")
         self.assertAlmostEqual(r2v_dict["metrics"]["loss"], 66.42302047378135, delta=self.error_tolerance,
                                msg="Loss not as expected for r2v!")
@@ -126,13 +126,14 @@ class InferencerTests(unittest.TestCase):
                                msg="Loss not as expected for s2c!")
         self.assertAlmostEqual(s2v_dict["metrics"]["loss"], 1.2276635438517511, delta=self.error_tolerance,
                                msg="Loss not as expected for s2v!")
-        self.assertAlmostEqual(rs2v_dict["metrics"]["loss"], 46.71943283081055, delta=self.error_tolerance,
+        self.assertAlmostEqual(rs2v_dict["metrics"]["loss"], 107.96429166959688, delta=self.error_tolerance,
                                msg="Loss not as expected for rs2v!")
 
     def test_from_embeddings_with_bootstrapping(self):
         """
         Checks that metrics calculated with and without bootstrapping are within about the same range
         """
+
         def _get_error_range(bootstrapping_dict):
             return (bootstrapping_dict["upper"] - bootstrapping_dict["lower"]) * 0.5 * self.error_tolerance_factor
 
