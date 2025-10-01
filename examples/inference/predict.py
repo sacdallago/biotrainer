@@ -15,7 +15,7 @@ def inference():
     embedder = OneHotEncodingEmbedder()
     embeddings = list(embedder.embed_many(sequences))
     # Note that for per-sequence embeddings, you would have to reduce the embeddings now:
-    # embeddings = [[embedder.reduce_per_protein(embedding)] for embedding in embeddings]
+    # embeddings = [embedder.reduce_per_protein(embedding) for embedding in embeddings]
     predictions = inferencer.from_embeddings(embeddings, split_name="hold_out")
     for sequence, prediction in zip(sequences, predictions["mapped_predictions"].values()):
         print(sequence)
