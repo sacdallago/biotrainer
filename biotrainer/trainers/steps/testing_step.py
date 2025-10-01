@@ -117,6 +117,7 @@ class TestingStep(PipelineStep):
                                                test_loader=baseline_test_loader,
                                                metrics_calculator=metrics_calculator,
                                                test_results_dict=test_results,
+                                               class_weights=context.class_weights,
                                                mode="warn")
                 baseline_results, warnings = sanity_checker.check_test_results(test_set_id=test_set_id)
                 if baseline_results is not None and len(baseline_results) > 0:

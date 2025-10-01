@@ -116,7 +116,7 @@ class InferencerTests(unittest.TestCase):
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2v)
         rs2v_dict = self.inferencer_rs2v.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2v)
 
-        self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 1.8399004936218262, delta=self.error_tolerance,
+        self.assertAlmostEqual(r2c_dict["metrics"]["loss"], 2.13, delta=self.error_tolerance,
                                msg="Loss not as expected for r2c!")
         self.assertAlmostEqual(r2v_dict["metrics"]["loss"], 66.42302047378135, delta=self.error_tolerance,
                                msg="Loss not as expected for r2v!")

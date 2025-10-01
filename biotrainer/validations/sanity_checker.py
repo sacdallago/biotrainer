@@ -1,7 +1,7 @@
 import torch
 
 from scipy.stats import pearsonr
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from torch.utils.data import DataLoader
 
 from .bootstrapper import Bootstrapper
@@ -27,6 +27,7 @@ class SanityChecker:
                  test_dataset: List,
                  test_loader: DataLoader,
                  test_results_dict: Dict[str, Any],
+                 class_weights: Optional[torch.tensor] = None,
                  mode: str = "warn"):
         self.training_config = training_config
         self.protocol = self.training_config.get("protocol")
@@ -46,6 +47,7 @@ class SanityChecker:
         self.test_loader = test_loader
         self.test_results_dict = test_results_dict
 
+        self.class_weights = class_weights
         self.mode = mode
 
         self._warnings = []
@@ -161,7 +163,7 @@ class SanityChecker:
                                   learning_rate=0.01,  # Model not trained, so parameter is not relevant
                                   optimizer_choice='adam',
                                   **{})
-        loss = get_loss(**self.training_config)
+        loss = get_loss(weight=self.class_weights, **self.training_config)
         solver = get_solver(name="random_init_model", network=model,
                             optimizer=optimizer, loss_function=loss,
                             n_classes=self.n_classes, **self.training_config)

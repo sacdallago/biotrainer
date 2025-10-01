@@ -31,16 +31,19 @@ __LOSSES = {
 
 
 def get_loss(protocol: Protocol, loss_choice: str, device: Union[str, torch.device],
-             weight: Optional[torch.Tensor] = None, **kwargs):
+             weight: Optional[torch.Tensor] = None,
+             use_class_weights: Optional[bool] = False,
+             **kwargs):
     loss = __LOSSES.get(protocol).get(loss_choice)
 
     if not loss:
         raise NotImplementedError
+
+    if use_class_weights:
+        assert weight is not None, "Weight must be provided when using class weights"
+        return loss(weight=weight).to(device)
     else:
-        if weight is not None:
-            return loss(weight=weight).to(device)
-        else:
-            return loss().to(device)
+        return loss().to(device)
 
 
 def get_available_losses_dict() -> Dict[Protocol, Dict[str, Any]]:

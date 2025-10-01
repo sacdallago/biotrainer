@@ -198,6 +198,13 @@ class InferenceOutputManager(OutputManager):
                 return finetuning_path
         return None
 
+    def class_weights(self):
+        class_weights = self._derived_values.get("computed_class_weights", None)
+        # Restore sorting of class weights (are sorted by ascending index from class_int2str)
+        if class_weights is not None:
+            class_weights = torch.tensor([class_weights[idx] for idx in range(len(class_weights))])
+        return class_weights
+
 """ 
 TODO Is removing split ids still necessary?
 #with tempfile.TemporaryDirectory() as tmp_dir_name:

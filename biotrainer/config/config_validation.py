@@ -58,7 +58,8 @@ def validate_config_options(protocol: Protocol,
 
             # Protocol constraints
             if constraints.allowed_protocols and protocol not in constraints.allowed_protocols:
-                raise ConfigurationException(f"Option {full_option_name} not valid for protocol {protocol}")
+                if bool(value):  # Fail if value is not False (this can be ignored)
+                    raise ConfigurationException(f"Option {full_option_name} not valid for protocol {protocol}")
 
             if constraints.allowed_formats and not any(
                     [str(value).endswith(allowed_format) for allowed_format in constraints.allowed_formats]):

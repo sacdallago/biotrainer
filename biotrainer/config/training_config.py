@@ -60,6 +60,7 @@ def training_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]:
             allow_hyperparameter_optimization=True,
             constraints=ConfigConstraints(
                 type=bool,
+                allowed_protocols=Protocol.classification_protocols(),
             )
         ),
         ConfigOption(
