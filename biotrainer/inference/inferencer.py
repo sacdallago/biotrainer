@@ -81,7 +81,7 @@ class Inferencer:
             checkpoint_path = Path(log_dir) / Path(split_checkpoints[split_name])
 
             model = get_model(**split_config)
-            loss_function = get_loss(**split_config)
+            loss_function = get_loss(weight=iom.class_weights(), **split_config)
             optimizer = get_optimizer(model_parameters=model.parameters(),
                                       **split_config
                                       )
