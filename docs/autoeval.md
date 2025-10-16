@@ -1,36 +1,51 @@
 # Autoeval Module
 
-The biotrainer `autoeval` module allows to automatically evaluate an embedder model on downstream prediction tasks.
+The biotrainer `autoeval` module allows automatically evaluating an embedder model on downstream prediction tasks.
 This can give a better impression of the model performance, and if it is actually creating useful embeddings.
 
 ## Downstream Tasks
 
-All relevant files for the downstream tasks are downloaded before the evaluation to 
+All relevant files for the downstream tasks are downloaded before the evaluation to
 `/{user_cache_dir}/biotrainer/autoeval`.
+
+### DWT
+
+The `autoeval` module provides direct support of the [DWT](https://github.com/Rostlab/dwt) framework, namely for the
+supervised tasks.
+
+Quick description of each task, you can find more information in the [DWT Readme](https://github.com/Rostlab/dwt):
+
+* **scl**: Predict protein subcellular localization for mixed human and non-human proteins.
+* **secondary_structure**: Predict secondary structure of proteins (includes multiple test sets from CASP and the ProtT5
+  paper).
 
 ### FLIP
 
-The `autoeval` module provides a curated subset of datasets in [FLIP](https://github.com/J-SNACKKB/FLIP). 
-The tasks have been chosen to be as hard as possible for a prediction model. 
+**WARNING: FLIP datasets are currently still supported but not actively maintained.
+Please refer to the [DWT](https://github.com/Rostlab/dwt) framework instead.**
+
+The `autoeval` module provides a curated subset of datasets in [FLIP](https://github.com/J-SNACKKB/FLIP).
+The tasks have been chosen to be as hard as possible for a prediction model.
 We provide a `flip_conversion_script.py` in the module that shows, how the datasets have been preprocessed
 and curated.
 
-Quick description of each task, you can find more information in the [split descriptions](https://github.com/J-SNACKKB/FLIP/tree/main/splits):
-* **aav**: Predict adeno-associated virus fitness.
-  * *low_vs_high*: Training on low fitness values, testing on high fitness values
-  * *two_vs_many*: Training on two mutations max, testing on many mutations
-* **bind**: Predict binding sites of ligands for protein residues.
-  * from_publication: Dataset split used in [this](https://doi.org/10.1038/s41598-021-03431-4) publication
-* **gb1**: Predict a binding score for each variant of the GB1 protein.
-  * *low_vs_high*: Training on low fitness values, testing on high fitness values
-  * *two_vs_many*: Training on two mutations max, testing on others
-* **meltome**: Predict meltome temperature of proteins.
-  * *mixed_split*: Mixed human and non-human proteins
-* **scl**: Predict protein subcellular localization.
-  * *mixed_hard*: Mixed human and non-human proteins
-* **secondary_structure**: Predict secondary structure of proteins
-  * *sampled*: Only available FLIP split 
+Quick description of each task, you can find more information in
+the [split descriptions](https://github.com/J-SNACKKB/FLIP/tree/main/splits):
 
+* **aav**: Predict adeno-associated virus fitness.
+    * *low_vs_high*: Training on low fitness values, testing on high fitness values
+    * *two_vs_many*: Training on two mutations max, testing on many mutations
+* **bind**: Predict binding sites of ligands for protein residues.
+    * from_publication: Dataset split used in [this](https://doi.org/10.1038/s41598-021-03431-4) publication
+* **gb1**: Predict a binding score for each variant of the GB1 protein.
+    * *low_vs_high*: Training on low fitness values, testing on high fitness values
+    * *two_vs_many*: Training on two mutations max, testing on others
+* **meltome**: Predict meltome temperature of proteins.
+    * *mixed_split*: Mixed human and non-human proteins
+* **scl**: Predict protein subcellular localization.
+    * *mixed_hard*: Mixed human and non-human proteins
+* **secondary_structure**: Predict secondary structure of proteins
+    * *sampled*: Only available FLIP split
 
 ## How to use
 
@@ -49,6 +64,7 @@ You can also integrate `autoeval` into your scripts or training pipelines:
 ```python
 from typing import Iterator
 
+import torch
 import numpy as np
 from tqdm import tqdm
 
@@ -66,13 +82,13 @@ class ExampleRandomEmbedder:
         for sequence in tqdm(sequences):
             # Generate all embeddings at once using rng
             embedding = self.rng.random((len(sequence), self.embedding_dim), dtype=np.float32)
-            yield sequence, embedding
+            yield sequence, torch.tensor(embedding)
 
     def embed_per_sequence(self, sequences: Iterator[str]):
         for sequence in tqdm(sequences):
             # Generate single embedding using rng
             embedding = self.rng.random(self.embedding_dim, dtype=np.float32)
-            yield sequence, embedding
+            yield sequence, torch.tensor(embedding)
 
 
 seed_all(42)
@@ -90,11 +106,12 @@ for progress in autoeval_pipeline(embedder_name="your_embedder",
 ```
 
 Some deeper explanations:
+
 * The `autoeval_pipeline` function is a generator function that yields `AutoEvalProgress` objects to track progress.
-Therefore, you must "do something" with the pipeline return values, in order to execute the pipeline. Simply calling
-`autoeval_pipeline(...)` will not run the pipeline, see [python generators](https://wiki.python.org/moin/Generators).
+  Therefore, you must "do something" with the pipeline return values, in order to execute the pipeline. Simply calling
+  `autoeval_pipeline(...)` will not run the pipeline, see [python generators](https://wiki.python.org/moin/Generators).
 * The custom embedding functions take an iterable of sequences as strings and need to yield a sequence and the according
-embedding. This is to make sure that the correct embedding is assigned to the respective sequence.
+  embedding. This is to make sure that the correct embedding is assigned to the respective sequence.
 * All embeddings are calculated at once at the beginning of the training, to avoid duplicated embedding.
 
 ## Report
@@ -103,12 +120,17 @@ After all tasks have been successfully finished, a report is created in the outp
 model results are tracked there.
 
 Example:
+
 ```json
 {
-  "embedder_name": "your_embedder_name", // Embedder name
-  "training_date": "2025-07-02", // Training date
-  "min_seq_len": 0, // Minimum sequence length
-  "max_seq_len": 2000,  // Maximum sequence length
+  "embedder_name": "your_embedder_name",
+  // Embedder name
+  "training_date": "2025-07-02",
+  // Training date
+  "min_seq_len": 0,
+  // Minimum sequence length
+  "max_seq_len": 2000,
+  // Maximum sequence length
   "results": {
     "FLIP-aav-two_vs_many": {
       "config": {
@@ -150,7 +172,7 @@ Example:
           "predictions": {}
         }
       }
-    },
+    }
     // OTHER TASKS
   }
 }
@@ -158,5 +180,5 @@ Example:
 
 ### Visualization and Leaderboard
 
-You can visualize your results and compare against other embedder 
+You can visualize your results and compare against other embedder
 models using [biocentral](https://app.biocentral.cloud). Simply load the report from file in the pLM Evaluation module.
