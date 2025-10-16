@@ -188,14 +188,28 @@ def _setup_embedding_functions(embedder_name,
                                output_dir,
                                use_half_precision: Optional[bool] = False,
                                custom_pipeline: Optional[Pipeline] = None,
+                               precomputed_per_residue_embeddings: Optional[Path] = None,
+                               precomputed_per_sequence_embeddings: Optional[Path] = None,
                                custom_tokenizer_config: Optional[dict] = None,
                                custom_embedding_function_per_residue: Optional[
                                    Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None,
                                custom_embedding_function_per_sequence: Optional[
-                                   Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None, ):
+                                   Callable[
+                                       [Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None, ):
     # Custom Pipeline -> Embedding calculation handled inside of pipeline
     if custom_pipeline:
         return None, None
+
+    # Precomputed Embeddings -> Return paths
+    assert (precomputed_per_residue_embeddings is None) == (precomputed_per_sequence_embeddings is None)
+    if precomputed_per_residue_embeddings and precomputed_per_sequence_embeddings:
+        def precomputed_per_res(seqs):
+            print(f"Using precomputed per-residue embeddings: {precomputed_per_residue_embeddings}")
+            return precomputed_per_residue_embeddings
+        def precomputed_per_seq(seqs):
+            print(f"Using precomputed per-sequence embeddings: {precomputed_per_sequence_embeddings}")
+            return precomputed_per_sequence_embeddings
+        return precomputed_per_res, precomputed_per_seq
 
     # No custom embedding functions -> Biotrainer Embedding Service
     assert (custom_embedding_function_per_residue is None) == (custom_embedding_function_per_sequence is None)
@@ -278,6 +292,8 @@ def autoeval_pipeline(embedder_name: str,
                       max_seq_length: Optional[int] = 2000,
                       custom_pipeline: Optional[Pipeline] = None,
                       custom_tokenizer_config: Optional[dict] = None,
+                      precomputed_per_residue_embeddings: Optional[Path] = None,
+                      precomputed_per_sequence_embeddings: Optional[Path] = None,
                       custom_embedding_function_per_residue: Optional[
                           Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None,
                       custom_embedding_function_per_sequence: Optional[
@@ -298,6 +314,8 @@ def autoeval_pipeline(embedder_name: str,
         If a custom pipeline is specified, no other custom parameters for embedding must be provided. The pipeline
         must handle embeddings on its own.
     :param custom_tokenizer_config: Custom tokenizer configuration dictionary for onnx models.
+    :param precomputed_per_residue_embeddings: Optional path to precomputed per-residue embeddings. Must be provided together with per-sequence embeddings path.
+    :param precomputed_per_sequence_embeddings: Optional path to precomputed per-sequence embeddings. Must be provided together with per-residue embeddings path.
     :param custom_embedding_function_per_residue:
         Custom per-residue embedding function that is used instead
         of the biotrainer embedding service if provided.
@@ -313,13 +331,25 @@ def autoeval_pipeline(embedder_name: str,
     _validate_input(framework, min_seq_length, max_seq_length)
 
     if custom_pipeline is not None and any([v is not None for v in [custom_tokenizer_config,
+                                                                    precomputed_per_residue_embeddings,
+                                                                    precomputed_per_sequence_embeddings,
                                                                     custom_embedding_function_per_residue,
                                                                     custom_embedding_function_per_sequence]]):
         raise ValueError(f"You must either provide a custom_pipeline or custom embedding functions and configurations!")
 
+    if (precomputed_per_residue_embeddings is None) ^ (precomputed_per_sequence_embeddings is None):
+        raise ValueError(f"You must provide either paths to both precomputed per-sequence and per-residue embeddings "
+                         f"or no precomputed path at all!")
+    using_precomputed_embeddings = precomputed_per_residue_embeddings is not None and precomputed_per_sequence_embeddings is not None
+
     if (custom_embedding_function_per_residue is None) ^ (custom_embedding_function_per_sequence is None):
         raise ValueError(f"You must provide either a custom embedding function for per-sequence and per-residue or no "
                          f"custom function at all!")
+
+    using_custom_embedding_functions = custom_embedding_function_per_residue is not None and custom_embedding_function_per_sequence is not None
+
+    if using_precomputed_embeddings and using_custom_embedding_functions:
+        raise ValueError(f"You must either provide precomputed embeddings or custom embedding functions, not both!")
 
     # Setup
     embedder_dir_name = embedder_name
@@ -338,6 +368,8 @@ def autoeval_pipeline(embedder_name: str,
         use_half_precision=use_half_precision,
         custom_pipeline=custom_pipeline,
         custom_tokenizer_config=custom_tokenizer_config,
+        precomputed_per_residue_embeddings=precomputed_per_residue_embeddings,
+        precomputed_per_sequence_embeddings=precomputed_per_sequence_embeddings,
         custom_embedding_function_per_residue=custom_embedding_function_per_residue,
         custom_embedding_function_per_sequence=custom_embedding_function_per_sequence)
 
