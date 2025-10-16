@@ -1,6 +1,6 @@
 import os
 import h5py
-import numpy as np
+import torch
 
 from pathlib import Path
 from datetime import datetime
@@ -187,9 +187,9 @@ def _setup_embedding_functions(embedder_name,
                                custom_pipeline: Optional[Pipeline] = None,
                                custom_tokenizer_config: Optional[dict] = None,
                                custom_embedding_function_per_residue: Optional[
-                                   Callable[[Iterable[str]], Generator[Tuple[str, np.ndarray], None, None]]] = None,
+                                   Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None,
                                custom_embedding_function_per_sequence: Optional[
-                                   Callable[[Iterable[str]], Generator[Tuple[str, np.ndarray], None, None]]] = None, ):
+                                   Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None, ):
     # Custom Pipeline -> Embedding calculation handled inside of pipeline
     if custom_pipeline:
         return None, None
@@ -250,7 +250,7 @@ def _setup_embedding_functions(embedder_name,
 
 
 def _wrap_custom_embedding_function(
-        custom_embedding_function: Callable[[Iterable[str]], Generator[Tuple[str, np.ndarray], None, None]],
+        custom_embedding_function: Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]],
         embeddings_file_path: Path,
         sequences: Iterable[str],
 ):
@@ -276,9 +276,9 @@ def autoeval_pipeline(embedder_name: str,
                       custom_pipeline: Optional[Pipeline] = None,
                       custom_tokenizer_config: Optional[dict] = None,
                       custom_embedding_function_per_residue: Optional[
-                          Callable[[Iterable[str]], Generator[Tuple[str, np.ndarray], None, None]]] = None,
+                          Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None,
                       custom_embedding_function_per_sequence: Optional[
-                          Callable[[Iterable[str]], Generator[Tuple[str, np.ndarray], None, None]]] = None,
+                          Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None,
                       custom_storage_path: Optional[Union[Path, str]] = None,
                       custom_output_observers: List[BiotrainerOutputObserver] = None,
                       ) -> Generator[AutoEvalProgress, None, None]:
