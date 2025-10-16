@@ -172,7 +172,7 @@ def _run_pipeline(embedder_name: str,
         completed_tasks += 1
         print(f"Finished task {current_task_name}!")
 
-    report = report_manager.write(output_dir=output_dir)
+    report = report_manager.write(output_dir=output_dir.parent)
 
     print(f"Autoeval pipeline for {embedder_name} finished successfully!")
     yield AutoEvalProgress(completed_tasks=total_tasks, total_tasks=total_tasks,
@@ -323,7 +323,7 @@ def autoeval_pipeline(embedder_name: str,
     if "/" in embedder_dir_name:  # Huggingface
         embedder_dir_name = embedder_dir_name.replace("/", "-")
 
-    output_dir = Path(output_dir) / embedder_dir_name
+    output_dir = Path(output_dir) / embedder_dir_name / framework
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
