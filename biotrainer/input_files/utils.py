@@ -49,13 +49,11 @@ def get_split_lists(id2sets: dict) -> Tuple[List[str], List[str], Dict[str, List
     prediction_ids = []
 
     incorrect_sets_exception = lambda idx, split: ValueError(f"FASTA header must contain SET. "
-                                                             f"SET must be either 'train', "
-                                                             f"'val', 'test'/'test{{nr}}' or 'pred'. "
                                                              f"Id: {idx}; SET={split}")
 
     for idx, split in id2sets.items():
         split = split.lower() if split else ""
-        if split == "" or (split.lower() not in ["train", "val", "pred"] and "test" not in split.lower()):
+        if split == "":
             raise incorrect_sets_exception(idx, split)
         match split:
             case "train":
@@ -64,12 +62,14 @@ def get_split_lists(id2sets: dict) -> Tuple[List[str], List[str], Dict[str, List
                 validation_ids.append(idx)
             case "pred":
                 prediction_ids.append(idx)
-            case _:
-                if "test" in split:
-                    if split not in testing_ids:
-                        testing_ids[split] = []
-                    testing_ids[split].append(idx)
-                else:
-                    raise incorrect_sets_exception(idx, split)
+            case _:  # Treat all other sets as testing sets
+                if split not in testing_ids:
+                    testing_ids[split] = []
+                testing_ids[split].append(idx)
+
+    if len(training_ids) == 0:
+        raise ValueError("No training sequences found in input file!")
+    if len(testing_ids) == 0:
+        raise ValueError("No test sets and sequences found in input file!")
 
     return training_ids, validation_ids, testing_ids, prediction_ids
