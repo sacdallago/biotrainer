@@ -2,7 +2,7 @@ from typing import Optional, Any, Dict
 
 from .pipeline import Pipeline, PipelineStep
 from .steps import SetupStep, EmbeddingStep, FineTuningEmbeddingStep, ProjectionStep, DataLoadingStep, TrainingStep, \
-    TestingStep, PostProcessStep, InputValidationStep
+    TestingStep, PostProcessStep, InputValidationStep, DatasetCreationStep
 
 
 class DefaultPipeline:
@@ -18,8 +18,9 @@ class DefaultPipeline:
                 .add_step(SetupStep())
                 .add_step(InputValidationStep())
                 .add_step(EmbeddingStep())
-                .add_step(ProjectionStep())
                 .add_step(DataLoadingStep())
+                .add_step(ProjectionStep())
+                .add_step(DatasetCreationStep())
                 .add_step(TrainingStep())
                 .add_step(TestingStep())
                 .add_step(PostProcessStep())
@@ -32,6 +33,7 @@ class DefaultPipeline:
                 .add_step(InputValidationStep())
                 .add_step(FineTuningEmbeddingStep())
                 .add_step(DataLoadingStep())
+                .add_step(DatasetCreationStep())
                 .add_step(TrainingStep())
                 .add_step(TestingStep())
                 .add_step(PostProcessStep())
@@ -41,8 +43,9 @@ class DefaultPipeline:
                           custom_setup_step: Optional[PipelineStep] = None,
                           custom_input_validation_step: Optional[PipelineStep] = None,
                           custom_embedding_step: Optional[PipelineStep] = None,
-                          custom_projection_step: Optional[PipelineStep] = None,
                           custom_data_loading_step: Optional[PipelineStep] = None,
+                          custom_projection_step: Optional[PipelineStep] = None,
+                          custom_dataset_creation_step: Optional[PipelineStep] = None,
                           custom_training_step: Optional[PipelineStep] = None,
                           custom_testing_step: Optional[PipelineStep] = None,
                           custom_postprocess_step: Optional[PipelineStep] = None):
@@ -51,8 +54,9 @@ class DefaultPipeline:
             custom_setup_step,
             custom_input_validation_step,
             custom_embedding_step,
-            custom_projection_step,
             custom_data_loading_step,
+            custom_projection_step,
+            custom_dataset_creation_step,
             custom_training_step,
             custom_testing_step,
             custom_postprocess_step

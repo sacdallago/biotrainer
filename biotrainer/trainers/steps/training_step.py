@@ -230,6 +230,9 @@ class TrainingStep(PipelineStep):
             context.output_manager.add_derived_values({'average_outer_split_results': average_dict})
 
     def process(self, context: PipelineContext) -> PipelineContext:
+        del context.id2emb  # No longer required and should not be used later in the routine
+        context.id2emb = None
+
         # CREATE SPLITS: (TODO Might be possible to refactor this to get all splits before training)
         cross_validation_config = context.config["cross_validation_config"]
         cross_validation_splitter = CrossValidationSplitter(context.config["protocol"],

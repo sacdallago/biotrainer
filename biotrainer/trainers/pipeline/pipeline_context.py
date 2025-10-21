@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict, Any, Union, List, Optional
 
 from ...output_files import OutputManager
+from ..target_manager import TargetManager
 from ...embedders import PeftEmbeddingService
 from ...input_files import BiotrainerSequenceRecord
 
@@ -26,7 +27,7 @@ class PipelineContext:
         self.id2emb = None
         self.embedding_service: Optional[PeftEmbeddingService] = None  # For fine-tuning only
         # Data Loading
-        self.target_manager = None
+        self.target_manager: Optional[TargetManager] = None
         self.n_features = None
         self.n_classes = None
         self.class_str2int: Optional[Dict[str, int]] = None  # Used to apply random_masking
