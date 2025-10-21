@@ -142,7 +142,8 @@ class InferenceOutputManager(OutputManager):
         log_dir_path = Path(log_dir)
         if not log_dir_path.exists():
             # Expect checkpoints to be in output/model_choice/embedder_name
-            checkpoints_path = Path(self._input_config["model_choice"]) / self._input_config["embedder_name"].split("/")[-1]
+            checkpoints_path = Path(self._input_config["model_choice"]) / \
+                               self._input_config["embedder_name"].split("/")[-1]
             # Split the output file path and reconstruct without the last component
             output_dir = Path(*output_file_path.parts[:-1])
 
@@ -170,6 +171,12 @@ class InferenceOutputManager(OutputManager):
 
     def device(self):
         return get_device(self._input_config["device"])
+
+    def dimension_reduction_method(self):
+        return self._input_config.get("dimension_reduction_method", None)
+
+    def n_reduced_components(self):
+        return self._input_config.get("n_reduced_components", None)
 
     def disable_pytorch_compile(self):
         return self._input_config["disable_pytorch_compile"]
@@ -204,6 +211,7 @@ class InferenceOutputManager(OutputManager):
         if class_weights is not None:
             class_weights = torch.tensor([class_weights[idx] for idx in range(len(class_weights))])
         return class_weights
+
 
 """ 
 TODO Is removing split ids still necessary?
