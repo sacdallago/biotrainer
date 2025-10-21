@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import pickle
+
 import torch
 import onnx
 import numpy as np
@@ -13,6 +15,7 @@ from ..losses import get_loss
 from ..models import get_model
 from ..protocols import Protocol
 from ..optimizers import get_optimizer
+from ..embedders import EmbeddingService
 from ..output_files import InferenceOutputManager
 from ..datasets import get_dataset, get_embeddings_collate_function
 from ..solvers import get_solver, get_mean_and_confidence_bounds, MetricsCalculator
@@ -36,6 +39,7 @@ class Inferencer:
         self.solvers_and_loaders_by_split = self._create_solvers_and_loaders_by_split(iom)
         print(f"Got {len(self.solvers_and_loaders_by_split.keys())} split(s): "
               f"{', '.join(self.solvers_and_loaders_by_split.keys())}")
+        self.iom = iom
 
     @classmethod
     def create_from_out_file(cls, out_file_path: str,
@@ -148,6 +152,9 @@ class Inferencer:
         else:
             embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
 
+        # Apply dimensionality reduction if configured
+        embeddings_dict = self._apply_saved_reduction_transform(embeddings_dict)
+
         if targets and self.protocol in Protocol.classification_protocols():
             targets = [self._convert_class_str2int(target) for target in targets]
 
@@ -182,6 +189,34 @@ class Inferencer:
             onnx_save_path = solver.save_as_onnx(embedding_dimension=self.embedding_dimension, output_dir=output_dir)
             result_file_paths.append(onnx_save_path)
         return result_file_paths
+
+    def _apply_saved_reduction_transform(self, embeddings: Dict[str, torch.tensor]) -> Dict[str, torch.tensor]:
+        log_dir = self.iom.log_dir()
+        dimension_reduction_method = self.iom.dimension_reduction_method()
+        n_reduced_components = self.iom.n_reduced_components()
+        if dimension_reduction_method is None != n_reduced_components is None:
+            raise Exception(f"Config must have specified both "
+                            f"dimension_reduction_method and n_reduced_components or none of them!")
+        if dimension_reduction_method is None:
+            return embeddings
+
+        first_embedding = next(iter(embeddings.values()))
+        embedding_shape = first_embedding.shape[0]
+        if embedding_shape <= n_reduced_components:
+            print("Embeddings already seem to have been reduced before - skipping dimensionality reduction.")
+            return embeddings
+
+        transform_file_name = f"{dimension_reduction_method}_{n_reduced_components}_transform.pkl"
+        transform_file_path = Path(log_dir) / transform_file_name
+        if not transform_file_path.exists():
+            raise Exception(f"Could not find saved transform file at {transform_file_path}!")
+        with open(transform_file_path, "rb") as f:
+            loaded_transform = pickle.load(f)
+        reduced_embeddings, _ = EmbeddingService.embeddings_dimensionality_reduction(embeddings=embeddings,
+                                                                                     dimension_reduction_method=dimension_reduction_method,
+                                                                                     n_reduced_components=n_reduced_components,
+                                                                                     fitted_transform=loaded_transform)
+        return reduced_embeddings
 
     def from_embeddings(self, embeddings: Union[Iterable, Dict], targets: Optional[List] = None,
                         split_name: str = "hold_out",
