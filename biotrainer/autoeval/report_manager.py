@@ -25,7 +25,7 @@ class ReportManager:
             "max_seq_len": self.max_seq_len,
             "results": self.results
         }
-        report_name = output_dir / f'autoeval_report_{self.embedder_name}.json'
+        report_name = output_dir / f'autoeval_report_{self.embedder_name.replace("/", "-")}.json'
 
         print(f'Writing autoeval report to: {report_name}')
         with open(report_name, 'w') as report_file:
