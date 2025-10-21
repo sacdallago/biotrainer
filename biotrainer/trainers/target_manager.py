@@ -47,6 +47,28 @@ class TargetManager:
         self._ignore_file_inconsistencies = ignore_file_inconsistencies
         self._cross_validation_method = cross_validation_method
         self._interaction = interaction
+        self._loaded = False
+
+    def load(self):
+        self._calculate_targets()
+
+        # Get dataset splits from file
+        self.training_ids, self.validation_ids, self.testing_ids, self.prediction_ids = get_split_lists(self._id2sets)
+
+        # Check dataset splits are not empty
+        def except_on_empty(split_ids: List[str], name: str):
+            if len(split_ids) == 0:
+                raise ValueError(f"The provided {name} set is empty! Please provide at least one sequence for "
+                                 f"the {name} set.")
+
+        if not self._ignore_file_inconsistencies:
+            except_on_empty(split_ids=self.training_ids, name="training")
+            if self._cross_validation_method == "hold_out":
+                except_on_empty(split_ids=self.validation_ids, name="validation")
+            for test_set in self.testing_ids.values():
+                except_on_empty(split_ids=test_set, name="test")
+
+        self._loaded = True
 
     def _calculate_targets(self):
         # Parse FASTA protein sequences if not done yet
@@ -261,26 +283,8 @@ class TargetManager:
     def get_embedding_datasets(self, id2emb: Dict[str, Any]) -> \
             Tuple[List[EmbeddingDatasetSample], List[EmbeddingDatasetSample], Dict[str, List[EmbeddingDatasetSample]],
             List[EmbeddingDatasetSample]]:
-        self._calculate_targets()
-
-        # Get dataset splits from file
-        self.training_ids, self.validation_ids, self.testing_ids, self.prediction_ids = get_split_lists(self._id2sets)
-
+        assert self._loaded, f"Dataset creation called before loading!"
         self._validate_targets(id2emb)
-
-        # Check dataset splits are not empty
-        def except_on_empty(split_ids: List[str], name: str):
-            if len(split_ids) == 0:
-                raise ValueError(f"The provided {name} set is empty! Please provide at least one sequence for "
-                                 f"the {name} set.")
-
-        if not self._ignore_file_inconsistencies:
-            except_on_empty(split_ids=self.training_ids, name="training")
-            if self._cross_validation_method == "hold_out":
-                except_on_empty(split_ids=self.validation_ids, name="validation")
-            for test_set in self.testing_ids.values():
-                except_on_empty(split_ids=test_set, name="test")
-
         # Combine embeddings for protein_protein_interaction
         if self._interaction:
             interaction_operation = self.interaction_operations.get(self._interaction)
@@ -320,25 +324,7 @@ class TargetManager:
         return train_dataset, val_dataset, test_datasets, pred_dataset
 
     def get_sequence_datasets(self):
-        self._calculate_targets()
-
-        # Get dataset splits from file
-        self.training_ids, self.validation_ids, self.testing_ids, self.prediction_ids = get_split_lists(self._id2sets)
-
-        # TODO DUPLICATED CODE
-        # Check dataset splits are not empty
-        def except_on_empty(split_ids: List[str], name: str):
-            if len(split_ids) == 0:
-                raise ValueError(f"The provided {name} set is empty! Please provide at least one sequence for "
-                                 f"the {name} set.")
-
-        if not self._ignore_file_inconsistencies:
-            except_on_empty(split_ids=self.training_ids, name="training")
-            if self._cross_validation_method == "hold_out":
-                except_on_empty(split_ids=self.validation_ids, name="validation")
-            for test_set in self.testing_ids.values():
-                except_on_empty(split_ids=test_set, name="test")
-
+        assert self._loaded, f"Dataset creation called before loading!"
         # Create datasets
         train_dataset = [SequenceDatasetSample(idx, self._input_records[idx], self._id2target[idx])
                          for idx in self.training_ids]

@@ -7,7 +7,6 @@ import torch
 
 from tqdm import tqdm
 from pathlib import Path
-from sklearn.manifold import TSNE
 from typing import Dict, List, Union, Optional, Generator, Tuple, Any
 
 from ..interfaces import EmbedderInterface
@@ -241,43 +240,54 @@ class EmbeddingService:
     def embeddings_dimensionality_reduction(
             embeddings: Dict[str, torch.tensor],
             dimension_reduction_method: str,
-            n_reduced_components: int) -> Dict[str, torch.tensor]:
+            n_reduced_components: int,
+            fitted_transform: Optional[Any] = None) -> Tuple[Dict[str, torch.tensor], Any]:
         """Reduces the dimension of per-protein embeddings using one of the
         dimensionality reduction methods
 
         Args:
             embeddings (Dict[str, torch.tensor]): Dictionary of embeddings.
             dimension_reduction_method (str): The method used to reduce
-            the dimensionality of embeddings. Options are 'umap' or 'tsne'.
+            the dimensionality of embeddings. Options are 'umap' or 'pca'.
             n_reduced_components (int): The target number of dimensions for
             the reduced embeddings.
+            fitted_transform (Any): Existing fitted transform object. If provided, the given transform is applied to
+                the embeddings instead of calculating a new transform.
 
         Returns:
             Dict[str, torch.tensor]: Dictionary of embeddings with reduced dimensions.
         """
         from umap import UMAP
+        from sklearn.decomposition import PCA
 
         sorted_keys = sorted(list(embeddings.keys()))
+        first_embedding = embeddings[sorted_keys[0]]
+        dtype_embedding = first_embedding.dtype
         all_embeddings = torch.stack([embeddings[k] for k in sorted_keys], dim=0)
-        max_dim_dict = {
-            "umap": all_embeddings.shape[0] - 2,
-            "tsne": all_embeddings.shape[0] - 1
-        }
-        n_reduced_components = min([
-            n_reduced_components,
-            max_dim_dict[dimension_reduction_method],
-            all_embeddings.shape[1]])
-        dimension_reduction_method_dict = {
-            "umap": UMAP(n_components=n_reduced_components),
-            "tsne": TSNE(
-                n_components=n_reduced_components,
-                perplexity=min(30, n_reduced_components))
-        }
-        logger.info(f"Starting embeddings dimensionality reduction via method {dimension_reduction_method}")
-        embeddings_reduced_dimensions = dimension_reduction_method_dict[
-            dimension_reduction_method].fit_transform(all_embeddings)
-        logger.info(f"Finished embeddings dimensionality reduction!")
-        return {sorted_keys[i]: torch.tensor(embeddings_reduced_dimensions[i]) for i in range(len(sorted_keys))}
+        if fitted_transform is None:
+            max_dim_dict = {
+                "umap": all_embeddings.shape[0] - 2,
+                "pca": min(all_embeddings.shape[0], all_embeddings.shape[1])
+            }
+            n_reduced_components = min([
+                n_reduced_components,
+                max_dim_dict[dimension_reduction_method],
+                all_embeddings.shape[1]]
+            )
+            dimension_reduction_method_dict = {
+                "umap": UMAP(n_components=n_reduced_components),
+                "pca": PCA(n_components=n_reduced_components)
+            }
+            logger.info(f"Starting embeddings dimensionality reduction via method {dimension_reduction_method}")
+            fitted_transform = dimension_reduction_method_dict[dimension_reduction_method]
+            embeddings_reduced_dimensions = fitted_transform.fit_transform(all_embeddings)
+        else:
+            embeddings_reduced_dimensions = fitted_transform.transform(all_embeddings)
+
+        reduced_embeddings = {sorted_keys[i]: torch.tensor(embeddings_reduced_dimensions[i], dtype=dtype_embedding)
+                              for i in range(len(sorted_keys))}
+
+        return reduced_embeddings, fitted_transform
 
     @staticmethod
     def load_embeddings(embeddings_file_path: str) -> Dict[str, torch.tensor]:
