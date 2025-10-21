@@ -12,5 +12,5 @@ use_half_precision: True
 device: cuda
 disable_pytorch_compile: True
 embedder_name: Rostlab/prot_t5_xl_uniref50
-dimension_reduction_method: umap
-n_reduced_components: 3
+dimension_reduction_method: pca
+n_reduced_components: 30

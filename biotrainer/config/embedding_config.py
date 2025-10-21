@@ -65,7 +65,7 @@ def embedding_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]
             constraints=ConfigConstraints(
                 type=str,
                 allowed_protocols=Protocol.using_per_sequence_embeddings(),
-                allowed_values=["umap", "tsne"] if protocol in Protocol.using_per_sequence_embeddings() else []
+                allowed_values=["umap", "pca"] if protocol in Protocol.using_per_sequence_embeddings() else []
             )
         ),
         ConfigOption(
