@@ -1,5 +1,27 @@
 # Biotrainer Changelog
 
+## 29.10.2025 - Version 1.2.0
+
+## Feature
+  - Added autoeval framework PBC and example notebook.
+  - Introduced autoeval_pipeline parameters for loading precomputed embeddings.
+  - Added automatic dimensionality reduction to the inferencer.
+
+## Fixes
+  - Replaced t-SNE with PCA for embeddings reduction (because t-SNE cannot be retroactively applied).
+  - Fixed embedding functions compatibility with class_weights and classification protocols.
+  - Updated dataset links to point to the PBC repository.
+  - Corrected issues in autoeval tutorial notebooks and inference test configurations.
+
+## Refactors
+  - Added support for Python 3.13 [BETA].
+  - Enhanced flexibility for test set naming and output paths.
+  - Centralized shared functionality of data handler in the base class.
+
+## Tests
+  - Added unit tests for autoeval pipeline and class weight training validation.
+
+
 ## 25.09.2025 - Version 1.1.0
 
 ## Feature
