@@ -10,29 +10,26 @@ from biotrainer.config import ConfigurationException
 
 protocol_to_input = {
     'residue_to_class': {'input_file': "test_input_files/r2c/input.fasta",
-                         'loss_choice': "cross_entropy_loss"},
+                         },
     'residue_to_class-error1': {'input_file': "test_input_files/r2c_error1/sequences.fasta",
                                 # Missing target in input file
-                                'loss_choice': "cross_entropy_loss"},
+                                },
     'residue_to_class-error2': {'input_file': "test_input_files/r2c_error2/sequences.fasta",
                                 # Sequence and labels length mismatch
-                                'loss_choice': "cross_entropy_loss"},
+                                },
     'residue_to_value': {'input_file': "test_input_files/r2v/input.fasta",
-                         'loss_choice': "mean_squared_error"},
+                         },
     'residues_to_class': {'input_file': "test_input_files/s2c/sequences.fasta",
-                          'loss_choice': "cross_entropy_loss"},
+                          },
     'residues_to_value': {'input_file': "test_input_files/s2v/sequences.fasta",
-                          'loss_choice': "mean_squared_error"},
+                          },
     'sequence_to_class': {'input_file': "test_input_files/s2c/sequences.fasta",
-                          'loss_choice': "cross_entropy_loss"},
+                          },
     'sequence_to_class-interactionmultiply': {'input_file': "test_input_files/ppi/interactions.fasta",
-                                              'loss_choice': "cross_entropy_loss",
                                               'interaction': "multiply"},
     'sequence_to_class-interactionconcat': {'input_file': "test_input_files/ppi/interactions.fasta",
-                                            'loss_choice': "cross_entropy_loss",
                                             'interaction': "concat"},
-    'sequence_to_value': {'input_file': "test_input_files/s2v/sequences.fasta",
-                          'loss_choice': "mean_squared_error"},
+    'sequence_to_value': {'input_file': "test_input_files/s2v/sequences.fasta", },
 
 }
 
@@ -43,7 +40,6 @@ def setup_config(protocol: str, model_choice: str, embedder_name: str, tmp_confi
         config: dict = yaml.load(config_file, Loader=yaml.Loader)
         input_path_absolute = str(Path(protocol_to_input[protocol]["input_file"]).absolute())
         config["input_file"] = input_path_absolute
-        config["loss_choice"] = protocol_to_input[protocol]["loss_choice"]
         actual_protocol = protocol.split("-")[0]
         if len(protocol.split("-")) > 1 and "interaction" in protocol.split("-")[1]:
             config["interaction"] = protocol_to_input[protocol]["interaction"]
