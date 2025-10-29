@@ -8,3 +8,4 @@ use_class_weights: false
 learning_rate: 1e-3
 batch_size: 128
 embedder_name: one_hot_encoding
+external_writer: none
