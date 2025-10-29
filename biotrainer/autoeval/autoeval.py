@@ -8,7 +8,7 @@ from typing import Optional, Callable, Dict, Tuple, List, Any, Union, Iterable, 
 
 from .report_manager import ReportManager
 from .config_bank import AutoEvalConfigBank
-from .dwt import DWTDataHandler, DWTConfigBank
+from .pbc import PBCDataHandler, PBCConfigBank
 from .autoeval_progress import AutoEvalProgress
 from .flip import FLIPDataHandler, FLIPConfigBank
 from .data_handler import AutoEvalDataHandler, AutoEvalTask
@@ -24,7 +24,7 @@ from ..utilities.executer import parse_config_file_and_execute_run
 
 def available_frameworks() -> Dict[str, Tuple[AutoEvalDataHandler, AutoEvalConfigBank]]:
     return {"flip": (FLIPDataHandler(), FLIPConfigBank()),
-            "dwt": (DWTDataHandler(), DWTConfigBank())
+            "pbc": (PBCDataHandler(), PBCConfigBank())
             }
 
 

@@ -39,7 +39,7 @@ class FLIPDataHandler(AutoEvalDataHandler):
 
     def get_tasks(self, base_path: Path, min_seq_length: int, max_seq_length: int) -> List[AutoEvalTask]:
         """Build tasks for all FLIP datasets"""
-        print("WARNING: FLIP dataset support is currently deprecated in biotrainer - please refer to the DWT datasets "
+        print("WARNING: FLIP dataset support is currently deprecated in biotrainer - please refer to the PBC datasets "
               "instead!")
 
         tasks = []
