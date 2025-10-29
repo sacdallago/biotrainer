@@ -70,12 +70,12 @@ python3
 ```
 
 ### 3. Quick Start Datasets
-- **Secondary Structure Prediction** 
-  - *Protocol*: `residue_to_class`
-  - [Citations](https://github.com/J-SNACKKB/FLIP/tree/main/splits/secondary_structure) - [Download](https://nextcloud.cit.tum.de/index.php/s/sak5HAZ7NbtYMwT/download)
 - **Subcellular Localization Prediction**
   - *Protocol*: `sequence_to_class`/`residues_to_class`
-  - [Citations](https://github.com/J-SNACKKB/FLIP/tree/main/splits/scl) - [Download](https://nextcloud.cit.tum.de/index.php/s/JzFPcQojktQHPT9/download)
+  - [Citations and Download](https://github.com/Rostlab/pbc/tree/main/supervised/scl)
+- **Secondary Structure Prediction** 
+  - *Protocol*: `residue_to_class`
+  - [Citations and Download](https://github.com/Rostlab/pbc/tree/main/supervised/secondary_structure)
 
 
 ## Features
