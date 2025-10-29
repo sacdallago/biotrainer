@@ -8,12 +8,12 @@ This can give a better impression of the model performance, and if it is actuall
 All relevant files for the downstream tasks are downloaded before the evaluation to
 `/{user_cache_dir}/biotrainer/autoeval`.
 
-### DWT
+### PBC
 
-The `autoeval` module provides direct support of the [DWT](https://github.com/Rostlab/dwt) framework, namely for the
+The `autoeval` module provides direct support of the [PBC](https://github.com/Rostlab/pbc) framework, namely for the
 supervised tasks.
 
-Quick description of each task, you can find more information in the [DWT Readme](https://github.com/Rostlab/dwt):
+Quick description of each task, you can find more information in the [PBC Readme](https://github.com/Rostlab/pbc):
 
 * **scl**: Predict protein subcellular localization for mixed human and non-human proteins.
 * **secondary_structure**: Predict secondary structure of proteins (includes multiple test sets from CASP and the ProtT5
@@ -22,7 +22,7 @@ Quick description of each task, you can find more information in the [DWT Readme
 ### FLIP
 
 **WARNING: FLIP datasets are currently still supported but not actively maintained.
-Please refer to the [DWT](https://github.com/Rostlab/dwt) framework instead.**
+Please refer to the [PBC](https://github.com/Rostlab/pbc) framework instead.**
 
 The `autoeval` module provides a curated subset of datasets in [FLIP](https://github.com/J-SNACKKB/FLIP).
 The tasks have been chosen to be as hard as possible for a prediction model.
@@ -95,8 +95,8 @@ seed_all(42)
 
 embedder = ExampleRandomEmbedder()
 
-for progress in autoeval_pipeline(embedder_name="your_embedder",
-                                  framework="flip",
+for progress in autoeval_pipeline(embedder_name="example_random_embedder",
+                                  framework="pbc",
                                   custom_embedding_function_per_residue=lambda seqs: embedder.embed_per_residue(
                                       seqs),
                                   custom_embedding_function_per_sequence=lambda

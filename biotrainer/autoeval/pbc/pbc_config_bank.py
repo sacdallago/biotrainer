@@ -3,12 +3,12 @@ from typing import Dict, Any
 from ..data_handler import AutoEvalTask
 from ..config_bank import AutoEvalConfigBank
 
-class DWTConfigBank(AutoEvalConfigBank):
+class PBCConfigBank(AutoEvalConfigBank):
 
     def get_task_config(self, task: AutoEvalTask) -> Dict[str, Any]:
-        # DWT configs are per dataset, so only first part of task name is relevant
+        # PBC configs are per dataset, so only first part of task name is relevant
         dataset_name = task.name.split("-")[1]
-        assert len(dataset_name) > 0, f"DWT dataset name is empty for task: {task}"
+        assert len(dataset_name) > 0, f"PBC dataset name is empty for task: {task}"
 
         match dataset_name:
             case "scl":
