@@ -2,6 +2,8 @@ import unittest
 import tempfile
 
 from copy import deepcopy
+
+from biotrainer.input_files import BiotrainerSequenceRecord
 from biotrainer.utilities.cli import train
 
 s2c_config = {'protocol': 'sequence_to_class',
@@ -34,3 +36,21 @@ class TrainingTests(unittest.TestCase):
 
         self.assertNotEqual(self._get_best_training_loss_from_result(result_with_weights),
                             self._get_best_training_loss_from_result(result_without_weights))
+
+    def test_direct_input_data(self):
+        input_data = [
+            BiotrainerSequenceRecord(seq_id="Seq1", seq="MMALSLALM", attributes={"TARGET": "Membrane", "SET": "train"}),
+            BiotrainerSequenceRecord(seq_id="Seq2", seq="PRTEIN", attributes={"TARGET": "Membrane", "SET": "train"}),
+            BiotrainerSequenceRecord(seq_id="Seq3", seq="PRT", attributes={"TARGET": "Soluble", "SET": "train"}),
+            BiotrainerSequenceRecord(seq_id="Seq4", seq="SEQWENCE", attributes={"TARGET": "Membrane", "SET": "val"}),
+            BiotrainerSequenceRecord(seq_id="Seq5", seq="PRTE", attributes={"TARGET": "Soluble", "SET": "val"}),
+            BiotrainerSequenceRecord(seq_id="Seq6", seq="MMALSM", attributes={"TARGET": "Membrane", "SET": "test"}),
+            BiotrainerSequenceRecord(seq_id="Seq7", seq="PRSEQ", attributes={"TARGET": "Soluble", "SET": "test"}),
+        ]
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            config = deepcopy(s2c_config)
+            config.pop("input_file")
+            config["input_data"] = input_data
+            result = train(config=config)
+            self.assertEqual(result['config']['input_data'], len(input_data))
+

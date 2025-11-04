@@ -35,7 +35,9 @@ class OutputManager:
                 logger.error(f"Error in observer during output event: {str(e)}")
 
     @staticmethod
-    def _convert_config_value(value: Any) -> Any:
+    def _convert_config_value(key: str, value: Any) -> Any:
+        if key == "input_data":
+            return len(value)
         if isinstance(value, torch.device):
             return str(value)
         if isinstance(value, Protocol):
@@ -45,7 +47,8 @@ class OutputManager:
         return value
 
     def add_config(self, config: Dict[str, Any]) -> None:
-        self._input_config = {str(k): self._convert_config_value(v) for k, v in config.items()}
+        self._input_config = {str(k): self._convert_config_value(k, v) for k, v in
+                              config.items()}
 
         self._notify_observers(data=OutputData(config=self._input_config))
 

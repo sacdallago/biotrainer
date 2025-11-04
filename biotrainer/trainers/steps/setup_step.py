@@ -44,7 +44,8 @@ class SetupStep(PipelineStep):
         context.config["device"] = device
 
         # Set input data
-        context.input_data = context.config["input_file"]
+        context.input_data = context.config.get("input_file", None) or context.config.get("input_data", None)
+        assert context.input_data is not None, "input_file or input_data must be provided in the config!"
 
     def process(self, context: PipelineContext) -> PipelineContext:
         context.pipeline_start_time = time.perf_counter()
