@@ -14,6 +14,8 @@ class HyperParameterManager:
         self._constant_params = {}
         self._params_to_optimize = {}
         for key, value in kwargs.items():
+            if key == "input_data":
+                continue
             if "range" in str(value):
                 try:
                     compiled_range = compile(source=value, filename='<range>', mode='eval')

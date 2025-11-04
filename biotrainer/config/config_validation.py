@@ -97,13 +97,14 @@ def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_d
     # Input files
     if not ignore_file_checks:
         if "hf_dataset" in config_dict:
-            if any([file_key in config_dict for file_key in ["sequence_file", "labels_file", "mask_file"]]):
+            if "input_file" in config_dict or "input_data" in config_dict:
                 raise ConfigurationException("If you want to use a dataset from HuggingFace, "
-                                             "do not provide any other input file "
-                                             "(sequence_file/labels_file/mask_file)!")
+                                             "do not provide any other input source!")
         else:
-            if "input_file" not in config_dict:
-                raise ConfigurationException("No huggingface dataset or input_file provided!")
+            if "input_file" in config_dict and "input_data" in config_dict:
+                raise ConfigurationException("Only provide one of input_file and input_data!")
+            if ("input_file" not in config_dict) and ("input_data" not in config_dict):
+                raise ConfigurationException("No huggingface dataset or input_file/input_data provided!")
 
     # Mutual Exclusive
     if "auto_resume" in config_dict and "pretrained_model" in config_dict:
@@ -145,7 +146,8 @@ def validate_config_rules(protocol: Protocol, ignore_file_checks: bool, config_d
         if (cv_config["method"] == "hold_out" or cv_config["method"] == "leave_p_out") and len(cv_config) > 2:
             raise ConfigurationException("Cross validation config contains unnecessary values!")
 
-        any_list_options_in_config_dict = any([is_list_option(value) for value in config_dict.values()])
+        any_list_options_in_config_dict = any([is_list_option(value) for key, value in config_dict.items()
+                                               if key != "input_data"])
         if "nested" in cv_config:
             if cv_config["nested"] and ("nested_k" not in cv_config or "search_method" not in cv_config):
                 raise ConfigurationException(f"Nested cross validation needs nested_k and search_method to be set!")
