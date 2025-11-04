@@ -1,18 +1,22 @@
 from __future__ import annotations
 import numpy as np
 
+from pydantic import BaseModel, Field, model_validator
 from typing import Dict, Any, Union, Optional, List
 
 from ..utilities import calculate_sequence_hash, RESIDUE_TO_VALUE_TARGET_DELIMITER
 
 
-class BiotrainerSequenceRecord:
-    def __init__(self, seq_id: str, seq: str, attributes: Optional[Dict[str, Any]] = None,
-                 embedding: Optional[np.ndarray] = None):
-        self.seq_id = seq_id
-        self.seq = seq
-        self.attributes = {k.upper(): v for k, v in attributes.items()} if attributes else {}
-        self.embedding = embedding
+class BiotrainerSequenceRecord(BaseModel):
+    seq_id: str = Field(description="Sequence id", min_length=1)
+    seq: str = Field(description="Sequence")
+    attributes: Optional[Dict[str, Any]] = Field(default=None, description="Attributes such as TARGET, SET or MASK")
+    embedding: Optional[Any] = Field(default=None, description="Embedding")
+
+    @model_validator(mode="after")
+    def validate_attributes(self):
+        self.attributes = {k.upper(): v for k, v in self.attributes.items()} if self.attributes else {}
+        return self
 
     def get_target(self) -> Union[None, str, float]:
         return self.attributes.get("TARGET")
@@ -56,7 +60,7 @@ class BiotrainerSequenceRecord:
         return target
 
     @staticmethod
-    def get_dicts(input_records: List[BiotrainerSequenceRecord]) -> (dict, dict, dict):
+    def get_dicts(input_records: List[BiotrainerSequenceRecord]) -> (Dict[str, Any], Dict[str, Any], Dict[str, Any]):
         id2targets = {}
         id2masks = {}
         id2sets = {}
