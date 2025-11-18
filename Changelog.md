@@ -1,39 +1,57 @@
 # Biotrainer Changelog
 
+## 18.11.2025 - Version 1.2.1
+
+## Fixes
+
+- Added additional verifications for h5 files and embeddings calculation to improve reliability in `autoeval_pipeline`.
+- Fixed issues with example embedding functions in the `plm_eval` Jupyter notebook for accurate demonstrations.
+- Using Pydantic for `BiotrainerSeqRecord` class for validation and consistency.
+- Exported `OutputData` in the `output_files` module for better modularity.
+
+## Features
+
+- Introduced a new `input_data` configuration option, allowing sequence records to be directly provided in code for
+  flexibility.
+
 ## 29.10.2025 - Version 1.2.0
 
 ## Feature
-  - Added autoeval framework PBC and example notebook.
-  - Introduced autoeval_pipeline parameters for loading precomputed embeddings.
-  - Added automatic dimensionality reduction to the inferencer.
+
+- Added autoeval framework PBC and example notebook.
+- Introduced autoeval_pipeline parameters for loading precomputed embeddings.
+- Added automatic dimensionality reduction to the inferencer.
 
 ## Fixes
-  - Replaced t-SNE with PCA for embeddings reduction (because t-SNE cannot be retroactively applied).
-  - Fixed embedding functions compatibility with class_weights and classification protocols.
-  - Updated dataset links to point to the PBC repository.
-  - Corrected issues in autoeval tutorial notebooks and inference test configurations.
+
+- Replaced t-SNE with PCA for embeddings reduction (because t-SNE cannot be retroactively applied).
+- Fixed embedding functions compatibility with class_weights and classification protocols.
+- Updated dataset links to point to the PBC repository.
+- Corrected issues in autoeval tutorial notebooks and inference test configurations.
 
 ## Refactors
-  - Added support for Python 3.13 [BETA].
-  - Enhanced flexibility for test set naming and output paths.
-  - Centralized shared functionality of data handler in the base class.
+
+- Added support for Python 3.13 [BETA].
+- Enhanced flexibility for test set naming and output paths.
+- Centralized shared functionality of data handler in the base class.
 
 ## Tests
-  - Added unit tests for autoeval pipeline and class weight training validation.
 
+- Added unit tests for autoeval pipeline and class weight training validation.
 
 ## 25.09.2025 - Version 1.1.0
 
 ## Feature
 
-* Adding **blosum62** predefined embedder via the `blosum` python package using the blosum substitution matrix as embeddings
+* Adding **blosum62** predefined embedder via the `blosum` python package using the blosum substitution matrix as
+  embeddings
 * Adding **AAOntology** predefined embedder from https://doi.org/10.1016/j.jmb.2024.168717 using amino acid feature
   scales
 * Adding biotrainer-ready quickstart
   datasets ([subcellular location](https://github.com/J-SNACKKB/FLIP/tree/main/splits/scl)
   and [secondary structure](https://github.com/J-SNACKKB/FLIP/tree/main/splits/secondary_structure)) in the `README.md`
-* Adding masked language modeling (MLM) task via residue_to_class protocol, CNN decoder and `random_masking` option in 
-finetuning config
+* Adding masked language modeling (MLM) task via residue_to_class protocol, CNN decoder and `random_masking` option in
+  finetuning config
 * Adding lora examples for MLM and downstream tasks
 * [BETA] Adding `residue_to_value` protocol
 
