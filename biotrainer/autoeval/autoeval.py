@@ -105,6 +105,18 @@ def _setup_pipeline(data_handler: AutoEvalDataHandler,
     return auto_eval_tasks
 
 
+def _check_h5_file(name: str, h5_path: Optional[Path], expected_length: int) -> None:
+    if h5_path is None:
+        raise Exception(f"Did not find embeddings file for {name} after embedding calculation!")
+    try:
+        with h5py.File(h5_path, "r") as h5_file:
+            actual_length = len(h5_file.keys())
+            if actual_length != expected_length:
+                raise ValueError(f"Expected {expected_length} entries in {name} h5 file but found {actual_length}!")
+    except (OSError, IOError) as e:
+        raise Exception(f"Could not read {name} h5 file: {str(e)}")
+
+
 def _run_pipeline(embedder_name: str,
                   framework: str,
                   embedding_function_per_residue: Optional[Callable[[Iterable[str]], Path]],
@@ -134,7 +146,10 @@ def _run_pipeline(embedder_name: str,
             [seq_record.seq for _, seq_record in unique_per_sequence.items()]
         )
 
-        print("Calculated embeddings successfully!")
+    _check_h5_file(name="per-residue", h5_path=embeddings_file_per_residue, expected_length=len(unique_per_residue))
+    _check_h5_file(name="per-sequence", h5_path=embeddings_file_per_sequence, expected_length=len(unique_per_sequence))
+
+    print("Calculated embeddings successfully!")
 
     report_manager = ReportManager(embedder_name=embedder_name,
                                    training_date=str(datetime.now().date().isoformat()),
@@ -274,6 +289,9 @@ def _wrap_custom_embedding_function(
     with h5py.File(embeddings_file_path, "a") as embeddings_file:
         idx = 0
         for sequence, embedding in custom_embedding_function(sequences):
+            if len(embedding.shape) > 1 and embedding.shape[0] != len(sequence):
+                raise Exception(f"Per-residue embedding shape does not match sequence length - "
+                                f"Embedding Shape: {embedding.shape}, Sequence Length: {len(sequence)}!")
             seq_record = BiotrainerSequenceRecord(seq_id=f"Seq{idx}", seq=sequence)
             EmbeddingService.store_embedding(embeddings_file_handle=embeddings_file,
                                              seq_record=seq_record,
