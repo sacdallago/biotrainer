@@ -37,6 +37,21 @@ class TrainingTests(unittest.TestCase):
         self.assertNotEqual(self._get_best_training_loss_from_result(result_with_weights),
                             self._get_best_training_loss_from_result(result_without_weights))
 
+    def test_train_with_and_without_feature_scaling_per_sequence(self):
+        """ Checks that training with and without scaling results in different models"""
+        results = []
+        for method in FeatureScaler.methods().keys():
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                config = deepcopy(s2c_config)
+                config["output_dir"] = tmp_dir_name
+                config["scaling_method"] = str(method)
+                result = train(config=config)
+                self.assertEqual(result['config']['scaling_method'], method,
+                                 f"Scaling method {method} not saved in output config!")
+                results.append(self._get_best_training_loss_from_result(result))
+        # Check all results are different
+        self.assertTrue(len(set(results)) == len(results))
+
     def test_direct_input_data(self):
         input_data = [
             BiotrainerSequenceRecord(seq_id="Seq1", seq="MMALSLALM", attributes={"TARGET": "Membrane", "SET": "train"}),
