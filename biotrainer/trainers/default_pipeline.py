@@ -1,8 +1,8 @@
 from typing import Optional, Any, Dict
 
 from .pipeline import Pipeline, PipelineStep
-from .steps import SetupStep, EmbeddingStep, FineTuningEmbeddingStep, ProjectionStep, DataLoadingStep, TrainingStep, \
-    TestingStep, PostProcessStep, InputValidationStep, DatasetCreationStep
+from .steps import SetupStep, ScalingStep, EmbeddingStep, FineTuningEmbeddingStep, ProjectionStep, DataLoadingStep, \
+    TrainingStep, TestingStep, PostProcessStep, InputValidationStep, DatasetCreationStep
 
 
 class DefaultPipeline:
@@ -19,6 +19,7 @@ class DefaultPipeline:
                 .add_step(InputValidationStep())
                 .add_step(EmbeddingStep())
                 .add_step(DataLoadingStep())
+                .add_step(ScalingStep())
                 .add_step(ProjectionStep())
                 .add_step(DatasetCreationStep())
                 .add_step(TrainingStep())

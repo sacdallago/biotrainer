@@ -77,11 +77,11 @@ class ProjectionStep(PipelineStep):
             transform_save_name = f"{dimension_reduction_method}_{n_reduced_components}_transform.pkl"
             with open(Path(save_dir) / transform_save_name, "wb") as f:
                 pickle.dump(fitted_transform, f)
+            logger.info(f"Fitted dimensionality reduction {dimension_reduction_method} with {n_reduced_components}!")
         else:
             logger.info(f"No dimension reduction performed (as configured).")
 
         assert old_n_embeddings == len(id2emb), f"The number of embeddings changed during dimensionality reduction!"
         context.id2emb = id2emb
 
-        logger.info(f"Finished embeddings dimensionality reduction!")
         return context

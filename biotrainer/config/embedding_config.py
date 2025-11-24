@@ -3,6 +3,7 @@ from typing import List, Tuple
 from .config_option import ConfigOption, ConfigConstraints, ConfigKey
 
 from ..protocols import Protocol
+from ..utilities import FeatureScaler
 from ..embedders import get_predefined_embedder_names
 
 
@@ -79,5 +80,17 @@ def embedding_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]
                 allowed_protocols=Protocol.using_per_sequence_embeddings(),
                 gt=0
             )
-        )
+        ),
+        ConfigOption(
+            name="scaling_method",
+            description="Choose an optional method to scale input embeddings.",
+            category=embedding_category,
+            required=False,
+            default=None,
+            constraints=ConfigConstraints(
+                type=str,
+                allowed_protocols=Protocol.using_per_sequence_embeddings(),
+                allowed_values=list(FeatureScaler.methods().keys())
+            )
+        ),
     ]
