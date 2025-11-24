@@ -1,5 +1,6 @@
 from .seeder import seed_all
 from .version import __version__
+from .feature_scaler import FeatureScaler
 from .revert_mappings import revert_mappings
 from .logging import get_logger, setup_logging
 from .execution_environment import is_running_in_notebook
@@ -40,5 +41,6 @@ __all__ = [
     'SequenceDatasetSample',
     'EpochMetrics',
     'revert_mappings',
+    'FeatureScaler',
     '__version__'
 ]

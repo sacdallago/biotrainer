@@ -456,3 +456,24 @@ class ConfigurationVerificationTests(unittest.TestCase):
 
         with self.assertRaises(ConfigurationException) as context:
             configurator.get_verified_config()
+
+    def test_scaling_method(self):
+        config_dict = deepcopy(configurations["minimal"])
+        config_dict["scaling_method"] = "standard"
+        configurator = Configurator.from_config_dict(config_dict)
+        self.assertTrue(configurator.get_verified_config(), "Standard scaling method does not work!")
+
+        config_dict["scaling_method"] = "minmax"
+        configurator = Configurator.from_config_dict(config_dict)
+        self.assertTrue(configurator.get_verified_config(), "MinMax scaling method does not work!")
+
+        config_dict["scaling_method"] = "bla"
+        configurator = Configurator.from_config_dict(config_dict)
+        with self.assertRaises(ConfigurationException) as context:
+            configurator.get_verified_config()
+
+        config_dict["scaling_method"] = "standard"
+        config_dict["protocol"] = "residue_to_class"
+        configurator = Configurator.from_config_dict(config_dict)
+        with self.assertRaises(ConfigurationException) as context:
+            configurator.get_verified_config()

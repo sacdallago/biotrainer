@@ -184,6 +184,14 @@ The file will be downloaded and stored in the path of your config file with pref
 **Note that *embedder_name* and *embeddings_file* are mutually exclusive. In case you provide your own embeddings,
 the experiment directory will be called *custom_embeddings*.**
 
+For custom input features, you might want to perform feature scaling (only per-sequence embeddings at the moment):
+
+```yaml
+scaling_method: standard | minmax | none # Default: none
+```
+This is usually not necessary for plm embeddings, as their outputs are usually normalized via layer normalization,
+but can be useful for other inputs.
+
 To perform dimensionality reduction on the embeddings, specify the dimension reduction method to be used:
 
 ```yaml

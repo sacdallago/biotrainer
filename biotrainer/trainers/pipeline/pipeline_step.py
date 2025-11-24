@@ -8,6 +8,7 @@ class PipelineStepType(Enum):
     SETUP = "setup"
     INPUT_VALIDATION = "input_validation"
     EMBEDDING = "embedding"
+    SCALING = "scaling"
     DATA_LOADING = "data_loading"
     PROJECTION = "projection"
     DATASET_CREATION = "dataset_creation"
