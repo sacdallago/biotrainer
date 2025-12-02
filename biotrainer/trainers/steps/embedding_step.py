@@ -1,9 +1,13 @@
 import gc
 
 from pathlib import Path
+from typing import Dict, Optional
+
+import torch
 
 from ..pipeline import PipelineContext, PipelineStep
 from ..pipeline.pipeline_step import PipelineStepType
+from ...input_files import BiotrainerSequenceRecord
 
 from ...utilities import get_logger
 from ...embedders import get_embedding_service, EmbeddingService
@@ -16,7 +20,8 @@ class EmbeddingStep(PipelineStep):
     def get_step_type(self) -> PipelineStepType:
         return PipelineStepType.EMBEDDING
 
-    def process(self, context: PipelineContext) -> PipelineContext:
+    @staticmethod
+    def _do_embed(context: PipelineContext) -> PipelineContext:
         # Generate embeddings if necessary, otherwise use existing embeddings
         embeddings_file = context.config.get("embeddings_file", None)
 
@@ -55,6 +60,27 @@ class EmbeddingStep(PipelineStep):
         context.id2emb = id2emb
         return context
 
+    @staticmethod
+    def _extract_embeddings(context: PipelineContext) -> Optional[Dict[str, torch.tensor]]:
+        input_data = context.input_data
+        if isinstance(input_data, list):
+            first_value = input_data[0]
+            if isinstance(first_value, BiotrainerSequenceRecord):
+                first_embedding = first_value.embedding
+                if first_embedding is not None:
+                    id2emb = {seq_record.get_hash(): seq_record.embedding for seq_record in input_data}
+                    return id2emb
+        return None
+
+    def process(self, context: PipelineContext) -> PipelineContext:
+        assert context.input_data is not None, f"Input data cannot be None at the embedding step!"
+
+        maybe_id2emb = self._extract_embeddings(context)
+        if maybe_id2emb is not None:
+            context.id2emb = maybe_id2emb
+            return context
+        else:
+            return self._do_embed(context)
 
 class FineTuningEmbeddingStep(EmbeddingStep):
     def process(self, context: PipelineContext) -> PipelineContext:
