@@ -3,7 +3,7 @@ import torch
 import numpy as np
 
 from typing import Dict, Any, Union, Optional, List
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, field_validator, ValidationInfo
 
 from ..utilities import calculate_sequence_hash, RESIDUE_TO_VALUE_TARGET_DELIMITER
 
@@ -13,6 +13,17 @@ class BiotrainerSequenceRecord(BaseModel):
     seq: str = Field(description="Sequence")
     attributes: Optional[Dict[str, Any]] = Field(default=None, description="Attributes such as TARGET, SET or MASK")
     embedding: Optional[Any] = Field(default=None, description="Embedding")
+
+    @field_validator("embedding")
+    @classmethod
+    def validate_embedding(cls, v, info: ValidationInfo):
+        if v is None:
+            return v
+        if isinstance(v, torch.Tensor):
+            return v.float()
+        if isinstance(v, list) or isinstance(v, np.ndarray):
+            return torch.tensor(v, dtype=torch.float)
+        raise ValueError(f"Invalid embedding type: {type(v)}")
 
     @model_validator(mode="after")
     def validate_attributes(self):
