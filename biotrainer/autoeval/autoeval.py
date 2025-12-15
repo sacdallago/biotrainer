@@ -47,6 +47,7 @@ def get_unique_framework_sequences(framework: str,
                                    min_seq_length: int,
                                    max_seq_length: int,
                                    custom_storage_path: Optional[str] = None,
+                                   force_download: Optional[bool] = False
                                    ) -> (List[Tuple[AutoEvalTask, Dict[str, Any]]],
                                          Dict[str, BiotrainerSequenceRecord],
                                          Dict[str, BiotrainerSequenceRecord]
@@ -57,7 +58,8 @@ def get_unique_framework_sequences(framework: str,
     auto_eval_tasks = _setup_pipeline(data_handler=data_handler,
                                       min_seq_length=min_seq_length,
                                       max_seq_length=max_seq_length,
-                                      custom_storage_path=custom_storage_path)
+                                      custom_storage_path=custom_storage_path,
+                                      force_download=force_download)
     task_config_tuples = []
     for task in auto_eval_tasks:
         config = config_bank.get_task_config(task=task)
@@ -87,12 +89,16 @@ def _setup_pipeline(data_handler: AutoEvalDataHandler,
                     min_seq_length: int,
                     max_seq_length: int,
                     custom_storage_path: Optional[str] = None,
+                    force_download: Optional[bool] = False,
                     ) -> List[AutoEvalTask]:
     framework_base_path = data_handler.get_framework_base_path(
         custom_storage_path=custom_storage_path)
 
     if not os.path.exists(framework_base_path):
         os.makedirs(framework_base_path, exist_ok=True)
+
+    if force_download:
+        data_handler.clear_autoeval_cache()
 
     if data_handler.is_download_necessary(framework_base_path):
         data_handler.download_data(data_dir=framework_base_path)
@@ -127,11 +133,13 @@ def _run_pipeline(embedder_name: str,
                   custom_pipeline: Optional[Pipeline] = None,
                   custom_storage_path: Optional[str] = None,
                   custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
+                  force_download: Optional[bool] = False,
                   ) -> Generator[AutoEvalProgress, None, None]:
     task_config_tuples, unique_per_residue, unique_per_sequence = get_unique_framework_sequences(framework=framework,
                                                                                                  min_seq_length=min_seq_length,
                                                                                                  max_seq_length=max_seq_length,
-                                                                                                 custom_storage_path=custom_storage_path)
+                                                                                                 custom_storage_path=custom_storage_path,
+                                                                                                 force_download=force_download)
     # Embed if no custom pipeline provided - that must handle the embedding step independently
     embeddings_file_per_residue = None
     embeddings_file_per_sequence = None
@@ -221,9 +229,11 @@ def _setup_embedding_functions(embedder_name,
         def precomputed_per_res(seqs):
             print(f"Using precomputed per-residue embeddings: {precomputed_per_residue_embeddings}")
             return precomputed_per_residue_embeddings
+
         def precomputed_per_seq(seqs):
             print(f"Using precomputed per-sequence embeddings: {precomputed_per_sequence_embeddings}")
             return precomputed_per_sequence_embeddings
+
         return precomputed_per_res, precomputed_per_seq
 
     # No custom embedding functions -> Biotrainer Embedding Service
@@ -305,6 +315,7 @@ def _wrap_custom_embedding_function(
 def autoeval_pipeline(embedder_name: str,
                       framework: str,
                       output_dir: Optional[Union[Path, str]] = "autoeval_output",
+                      force_download: Optional[bool] = False,
                       use_half_precision: Optional[bool] = False,
                       min_seq_length: Optional[int] = 0,
                       max_seq_length: Optional[int] = 2000,
@@ -325,6 +336,7 @@ def autoeval_pipeline(embedder_name: str,
     :param embedder_name: The name of the embedder. Usually a huggingface pretrained embedder in format org/embed_name.
     :param framework: The framework to be evaluated. Currently, only FLIP is available.
     :param output_dir: The directory to save the output to, defaults to "autoeval_output".
+    :param force_download: Flag to determine whether to force re-downloading the framework datasets, defaults to False.
     :param use_half_precision: Flag to determine whether to use a half-precision floating point for the embedder or not.
     :param min_seq_length: The minimum sequence length to pre-filter the framework datasets, defaults to 0.
     :param max_seq_length: The maximum sequence length to pre-filter the framework datasets, defaults to 2000.
@@ -347,6 +359,12 @@ def autoeval_pipeline(embedder_name: str,
     :return: A dictionary containing the autoeval pipeline results. Each task result is a biotrainer model output dict.
     """
     _validate_input(framework, min_seq_length, max_seq_length)
+
+    if force_download and custom_storage_path:
+        raise ValueError(f"Cannot force download and use custom storage path at the same time!"
+                         f"force_download only clears the cache directory, "
+                         f"so it is not necessary when using custom_storage_path, "
+                         f"just make sure that that is up-to-date.")
 
     if custom_pipeline is not None and any([v is not None for v in [custom_tokenizer_config,
                                                                     precomputed_per_residue_embeddings,
@@ -400,5 +418,6 @@ def autoeval_pipeline(embedder_name: str,
                              max_seq_length=max_seq_length,
                              custom_pipeline=custom_pipeline,
                              custom_storage_path=custom_storage_path,
-                             custom_output_observers=custom_output_observers
+                             custom_output_observers=custom_output_observers,
+                             force_download=force_download
                              )
