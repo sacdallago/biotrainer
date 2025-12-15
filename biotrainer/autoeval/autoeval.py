@@ -94,11 +94,11 @@ def _setup_pipeline(data_handler: AutoEvalDataHandler,
     framework_base_path = data_handler.get_framework_base_path(
         custom_storage_path=custom_storage_path)
 
-    if not os.path.exists(framework_base_path):
-        os.makedirs(framework_base_path, exist_ok=True)
-
     if force_download:
         data_handler.clear_autoeval_cache()
+
+    if not os.path.exists(framework_base_path):
+        os.makedirs(framework_base_path, exist_ok=True)
 
     if data_handler.is_download_necessary(framework_base_path):
         data_handler.download_data(data_dir=framework_base_path)
