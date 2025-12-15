@@ -165,12 +165,28 @@ class ResidueRegressionMetricsCalculator(RegressionMetricsCalculator):
     def compute_metrics(
             self, predicted: Optional[torch.Tensor] = None,
             labels: Optional[torch.Tensor] = None) -> Dict[str, Union[int, float]]:
-        predicted_flattened = predicted.flatten() if predicted is not None else None
-        labels_flattened = labels.flatten() if labels is not None else None
+        # If no tensors are provided, return the accumulated per-epoch metrics
+        if predicted is None and labels is None:
+            return super().compute_metrics(predicted=None, labels=None)
+
+        # Mask out padded residues and compute metrics only on valid positions
+        # Labels use MASK_AND_LABELS_PAD_VALUE to indicate padding
+        masks = labels != MASK_AND_LABELS_PAD_VALUE
+
+        # Ensure mask is boolean and same device as inputs
+        masks = masks.to(dtype=torch.bool, device=labels.device)
+
+        masked_predicted = torch.masked_select(predicted, masks)
+        masked_labels = torch.masked_select(labels, masks)
+
+        # Flatten to 1D vectors for torchmetrics (safe if already 1D)
+        masked_predicted = masked_predicted.flatten()
+        masked_labels = masked_labels.flatten()
+
         return {
-            'mse': self._compute_metric(self.mse, predicted, labels).item(),
-            'rmse': self._compute_metric(self.rmse, predicted, labels).item(),
-            'spearmans-corr-coeff': self._compute_metric(self.scc, predicted_flattened, labels_flattened).item()
+            'mse': self._compute_metric(self.mse, masked_predicted, masked_labels).item(),
+            'rmse': self._compute_metric(self.rmse, masked_predicted, masked_labels).item(),
+            'spearmans-corr-coeff': self._compute_metric(self.scc, masked_predicted, masked_labels).item()
         }
 
 
