@@ -81,6 +81,10 @@ class AutoEvalDataHandler(ABC):
     def get_framework_name():
         raise NotImplementedError
 
+    @staticmethod
+    def clear_autoeval_cache():
+        shutil.rmtree(Path(user_cache_dir('biotrainer')) / "autoeval", ignore_errors=True)
+
     def get_framework_base_path(self, custom_storage_path: Optional[Union[str, Path]] = None) -> Path:
         if custom_storage_path:
             return Path(custom_storage_path) / self.get_framework_name()
