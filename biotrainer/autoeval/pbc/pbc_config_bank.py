@@ -21,7 +21,7 @@ class PBCConfigBank(AutoEvalConfigBank):
                     "use_class_weights": False,
                     "learning_rate": 1e-3,
                     "batch_size": 128,
-                    "ignore_file_inconsistencies": False,
+                    "ignore_file_inconsistencies": True,
                 }
             case "disorder":
                 return {
@@ -31,7 +31,7 @@ class PBCConfigBank(AutoEvalConfigBank):
                     "num_epochs": 39,
                     "learning_rate": 1e-3,
                     "batch_size": 64,
-                    "ignore_file_inconsistencies": False,
+                    "ignore_file_inconsistencies": True,
                 }
             case "scl":
                 return {
