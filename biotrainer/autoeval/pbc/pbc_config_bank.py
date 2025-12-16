@@ -33,6 +33,18 @@ class PBCConfigBank(AutoEvalConfigBank):
                     "batch_size": 64,
                     "ignore_file_inconsistencies": True,
                 }
+            case "membrane":
+                return {
+                    "protocol": "residue_to_class",
+                    "model_choice": "CNN",
+                    "optimizer_choice": "adam",
+                    "loss_choice": "cross_entropy_loss",
+                    "num_epochs": 20,
+                    "use_class_weights": False,
+                    "learning_rate": 1e-3,
+                    "batch_size": 128,
+                    "ignore_file_inconsistencies": True,
+                }
             case "scl":
                 return {
                     "protocol": "sequence_to_class",
