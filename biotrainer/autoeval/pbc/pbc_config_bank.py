@@ -28,7 +28,7 @@ class PBCConfigBank(AutoEvalConfigBank):
                     "protocol": "residue_to_value",
                     "model_choice": "CNN",
                     "optimizer_choice": "adam",
-                    "num_epochs": 50,
+                    "num_epochs": 200,
                     "learning_rate": 1e-3,
                     "batch_size": 64,
                     "ignore_file_inconsistencies": True,
