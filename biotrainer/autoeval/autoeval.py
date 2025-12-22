@@ -165,13 +165,13 @@ def _run_pipeline(embedder_name: str,
                                    max_seq_len=max_seq_length,
                                    )
     # Execute biotrainer
-    task_names = [task.name for task, _ in task_config_tuples]
+    task_names = [task.combined_name() for task, _ in task_config_tuples]
     print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
     completed_tasks = 0
     total_tasks = len(task_config_tuples)
     current_task_name = ""
     for task, config in task_config_tuples:
-        current_task_name = task.name
+        current_task_name = task.combined_name()
         print(f"Running task {current_task_name}...")
         yield AutoEvalProgress(completed_tasks=completed_tasks, total_tasks=total_tasks,
                                current_task_name=current_task_name,

@@ -73,6 +73,7 @@ class TargetManager:
     def _calculate_targets(self):
         # Parse FASTA protein sequences if not done yet
         if isinstance(self._input_data, str) or isinstance(self._input_data, Path):
+            # TODO Adapt to csv, change order of pipeline steps
             input_records: List[BiotrainerSequenceRecord] = read_FASTA(self._input_data)
         else:
             input_records: List[BiotrainerSequenceRecord] = self._input_data
