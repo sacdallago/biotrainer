@@ -15,7 +15,7 @@ class ReportManager:
         self.results = {}
 
     def add_result(self, task: AutoEvalTask, result_dict: Dict[str, Any]):
-        self.results[task.name] = result_dict
+        self.results[task.combined_name()] = result_dict
 
     def write(self, output_dir: Union[Path, str]) -> Dict[str, Any]:
         result_dict = {

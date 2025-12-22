@@ -7,7 +7,7 @@ class PBCConfigBank(AutoEvalConfigBank):
 
     def get_task_config(self, task: AutoEvalTask) -> Dict[str, Any]:
         # PBC configs are per dataset, so only first part of task name is relevant
-        dataset_name = task.name.split("-")[1]
+        dataset_name = task.dataset_name
         assert len(dataset_name) > 0, f"PBC dataset name is empty for task: {task}"
 
         # Common configuration options shared across most tasks
