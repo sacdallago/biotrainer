@@ -10,63 +10,46 @@ class PBCConfigBank(AutoEvalConfigBank):
         dataset_name = task.name.split("-")[1]
         assert len(dataset_name) > 0, f"PBC dataset name is empty for task: {task}"
 
-        match dataset_name:
-            case "conservation":
-                return {
-                    "protocol": "residue_to_class",
-                    "model_choice": "CNN",
-                    "optimizer_choice": "adam",
-                    "loss_choice": "cross_entropy_loss",
-                    "num_epochs": 50,
-                    "use_class_weights": False,
-                    "learning_rate": 1e-3,
-                    "batch_size": 128,
-                    "ignore_file_inconsistencies": True,
-                }
-            case "disorder":
-                return {
-                    "protocol": "residue_to_value",
-                    "model_choice": "CNN",
-                    "optimizer_choice": "adam",
-                    "num_epochs": 200,
-                    "learning_rate": 1e-3,
-                    "batch_size": 64,
-                    "ignore_file_inconsistencies": True,
-                }
-            case "membrane":
-                return {
-                    "protocol": "residue_to_class",
-                    "model_choice": "CNN",
-                    "optimizer_choice": "adam",
-                    "loss_choice": "cross_entropy_loss",
-                    "num_epochs": 50,
-                    "use_class_weights": False,
-                    "learning_rate": 1e-3,
-                    "batch_size": 128,
-                    "ignore_file_inconsistencies": True,
-                }
-            case "scl":
-                return {
-                    "protocol": "sequence_to_class",
-                    "model_choice": "FNN",
-                    "optimizer_choice": "adam",
-                    "loss_choice": "cross_entropy_loss",
-                    "num_epochs": 50,
-                    "use_class_weights": False,
-                    "learning_rate": 1e-3,
-                    "batch_size": 128,
-                    "ignore_file_inconsistencies": True,
-                }
-            case "secondary_structure":
-                return {
-                    "protocol": "residue_to_class",
-                    "model_choice": "CNN",
-                    "optimizer_choice": "adam",
-                    "loss_choice": "cross_entropy_loss",
-                    "num_epochs": 50,
-                    "use_class_weights": False,
-                    "learning_rate": 1e-3,
-                    "batch_size": 128,
-                    "ignore_file_inconsistencies": True,
-                }
-        raise ValueError(f"Unknown task in config bank: {task}")
+        # Common configuration options shared across most tasks
+        base_config = {
+            "model_choice": "LogReg",
+            "num_epochs": 50,
+            "learning_rate": 1e-3,
+            "batch_size": 64,
+            "ignore_file_inconsistencies": True,
+        }
+
+        # Task-specific configurations that override or extend base config
+        task_specific_configs = {
+            "binding": {
+                "protocol": "residue_to_class",
+                "use_class_weights": True,
+            },
+            "conservation": {
+                "protocol": "residue_to_class",
+                "use_class_weights": True,
+            },
+            "disorder": {
+                "protocol": "residue_to_value",
+            },
+            "membrane": {
+                "protocol": "residue_to_class",
+                "use_class_weights": True,
+            },
+            "scl": {
+                "protocol": "sequence_to_class",
+                "use_class_weights": True,
+            },
+            "secondary_structure": {
+                "protocol": "residue_to_class",
+                "use_class_weights": True,
+            },
+        }
+
+        if dataset_name not in task_specific_configs:
+            raise ValueError(f"Unknown task in config bank: {task}")
+
+        config = base_config.copy()
+        config.update(task_specific_configs[dataset_name])
+    
+        return config
