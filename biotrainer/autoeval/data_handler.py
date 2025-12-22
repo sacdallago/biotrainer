@@ -6,11 +6,10 @@ import requests
 
 from tqdm import tqdm
 from pathlib import Path
-from dataclasses import dataclass
 from appdirs import user_cache_dir
 from abc import ABC, abstractmethod
+from pydantic import BaseModel, Field
 from typing import List, Optional, Union
-
 
 from ..input_files import filter_FASTA
 
@@ -125,7 +124,7 @@ class AutoEvalDataHandler(ABC):
         """Get the appropriate input file path (preprocessed if available)"""
         raw_path = dataset_dir / f"{name}.fasta"
         preprocessed_dir_name = AutoEvalDataHandler.get_preprocessed_file_dir_name(min_seq_length=min_seq_length,
-                                                                               max_seq_length=max_seq_length)
+                                                                                   max_seq_length=max_seq_length)
         preprocessed_path = dataset_dir / preprocessed_dir_name / f"{name}.fasta"
 
         if preprocessed_path.exists():
@@ -137,7 +136,7 @@ class AutoEvalDataHandler(ABC):
         """Ensure a preprocessed version of the file exists and return its path"""
         download_path = dataset_dir / f"{name}.fasta"
         preprocessed_dir_name = AutoEvalDataHandler.get_preprocessed_file_dir_name(min_seq_length=min_seq_length,
-                                                                               max_seq_length=max_seq_length)
+                                                                                   max_seq_length=max_seq_length)
         preprocessed_path = dataset_dir / preprocessed_dir_name / f"{name}.fasta"
 
         # If preprocessed file already exists, return its path
@@ -162,8 +161,14 @@ class AutoEvalDataHandler(ABC):
               f"kept {n_kept}/{n_all} sequences")
         return preprocessed_path
 
-@dataclass
-class AutoEvalTask:
-    name: str  # usually {FRAMEWORK_NAME}-{DATASET}-{optional: SPLIT_NAME}
-    input_file: Path
-    type: str
+
+class AutoEvalTask(BaseModel):
+    framework_name: str = Field(description="Name of the framework of this task")
+    dataset_name: str = Field(description="Name of the dataset of this task")
+    split_name: Optional[str] = Field(description="Name of the split of this task (optional)")
+    input_file: Path = Field(description="Path to the input file of this task")
+    type: str = Field(description="Type of the task (e.g. protein/dna)")
+
+    def combined_name(self):
+        return f"{self.framework_name}-{self.dataset_name}-{self.split_name}" if self.split_name else \
+            f"{self.framework_name}-{self.dataset_name}"

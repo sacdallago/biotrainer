@@ -58,7 +58,10 @@ class FLIPDataHandler(AutoEvalDataHandler):
                     raise FileNotFoundError(f"Missing sequence file for {dataset}/{split_name}!")
 
                 tasks.append(
-                    AutoEvalTask(name=f"{self.get_framework_name()}-{dataset}-{split_name}", input_file=input_file,
+                    AutoEvalTask(framework_name=self.get_framework_name(),
+                                 dataset_name=dataset,
+                                 split_name=split_name,
+                                 input_file=input_file,
                                  type="Protein"))
 
         return tasks

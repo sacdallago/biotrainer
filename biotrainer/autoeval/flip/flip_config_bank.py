@@ -7,7 +7,7 @@ class FLIPConfigBank(AutoEvalConfigBank):
 
     def get_task_config(self, task: AutoEvalTask) -> Dict[str, Any]:
         # FLIP configs are per dataset, so only first part of task name is relevant
-        dataset_name = task.name.split("-")[1]
+        dataset_name = task.dataset_name
         assert len(dataset_name) > 0, f"FLIP dataset name is empty for task: {task}"
 
         match dataset_name:
