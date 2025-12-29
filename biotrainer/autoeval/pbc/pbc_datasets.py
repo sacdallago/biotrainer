@@ -4,7 +4,7 @@ PBC_DATASETS = {
     "binding": {
         "evaluation_metric": "matthews-corr-coeff",
         "protocol": Protocol.residue_to_class,
-        "subsplits": ["combined", "metal", "nuclear", "small"]
+        "splits": ["combined", "metal", "nuclear", "small"]
     },
     "conservation": {
         "evaluation_metric": "accuracy",
