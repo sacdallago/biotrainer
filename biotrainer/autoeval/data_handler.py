@@ -172,3 +172,9 @@ class AutoEvalTask(BaseModel):
     def combined_name(self):
         return f"{self.framework_name}-{self.dataset_name}-{self.split_name}" if self.split_name else \
             f"{self.framework_name}-{self.dataset_name}"
+
+    @staticmethod
+    def split_combined_name(combined_name: str) -> tuple[str, str, Optional[str]]:
+        vals = combined_name.split("-")
+        framework_name, dataset_name, split_name = vals[0], vals[1], vals[2] if len(vals) > 2 else None
+        return framework_name, dataset_name, split_name
