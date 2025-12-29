@@ -22,9 +22,9 @@ class PBCDataHandler(AutoEvalDataHandler):
     def _get_all_dataset_and_split_names():
         dataset_and_split_names = []
         for dataset, dataset_info in PBC_DATASETS.items():
-            subsplits = dataset_info.get("subsplits", None)
-            subsplits = [(dataset, subsplit) for subsplit in subsplits] if subsplits else [(dataset, None)]
-            dataset_and_split_names.extend(subsplits)
+            splits = dataset_info.get("splits", None)
+            splits = [(dataset, subsplit) for subsplit in splits] if splits else [(dataset, None)]
+            dataset_and_split_names.extend(splits)
         return dataset_and_split_names
 
     def preprocess(self, base_path: Path, min_seq_length: int, max_seq_length: int) -> None:
