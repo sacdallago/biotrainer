@@ -22,7 +22,7 @@ class OneHotEncodingEmbedder(EmbedderInterface):
     def __init__(self):
         self.eye_matrix = np.eye(self.embedding_dimension, dtype=np.float32)
 
-    def _embed_single(self, sequence: str) -> torch.tensor:
+    def _embed_single(self, sequence: str) -> torch.Tensor:
         # Convert sequence to indices
         indices = np.fromiter((AA_TO_INDEX.get(aa, -1) for aa in sequence), dtype=np.int8)
 
@@ -30,6 +30,6 @@ class OneHotEncodingEmbedder(EmbedderInterface):
         return torch.tensor(self.eye_matrix[indices])
 
     @staticmethod
-    def reduce_per_protein(embedding: torch.tensor) -> torch.tensor:
+    def reduce_per_protein(embedding: torch.Tensor) -> torch.Tensor:
         """This returns the amino acid composition of the sequence as vector"""
         return embedding.mean(axis=0)
