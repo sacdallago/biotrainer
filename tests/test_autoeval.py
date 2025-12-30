@@ -15,8 +15,8 @@ class AutoevalTests(unittest.TestCase):
             for progress in autoeval_pipeline(embedder_name="one_hot_encoding",
                                               framework="pbc",
                                               output_dir=tmp_dir_name,
-                                              min_seq_length=300,
-                                              max_seq_length=350,
+                                              min_seq_length=10,
+                                              max_seq_length=450,
                                               ):
                 print(progress)
                 self.assertTrue(progress.current_framework_name == "pbc")
@@ -24,4 +24,4 @@ class AutoevalTests(unittest.TestCase):
 
             self.assertIsNotNone(current_progress)
             self.assertTrue(current_progress.final_report is not None)
-            self.assertTrue(len(current_progress.final_report['results']) == current_progress.completed_tasks)
+            self.assertTrue(len(current_progress.final_report.results) == current_progress.completed_tasks)
