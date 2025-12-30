@@ -129,11 +129,11 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
             )
         return self._model.to("cpu")
 
-    def _embed_single(self, sequence: str) -> torch.tensor:
+    def _embed_single(self, sequence: str) -> torch.Tensor:
         [embedding] = self._embed_batch([sequence])
         return embedding
 
-    def _tokenize(self, batch: List[str]) -> Tuple[torch.tensor, torch.tensor]:
+    def _tokenize(self, batch: List[str]) -> Tuple[torch.Tensor, torch.Tensor]:
         ids = self._tokenizer.batch_encode_plus(batch, add_special_tokens=True,
                                                 is_split_into_words=False,
                                                 padding="longest")
@@ -142,7 +142,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         attention_mask = torch.tensor(ids["attention_mask"]).to(self._model.device)
         return tokenized_sequences, attention_mask
 
-    def _remove_special_tokens(self, embedding: torch.tensor, input_id: torch.tensor) -> torch.tensor:
+    def _remove_special_tokens(self, embedding: torch.Tensor, input_id: torch.Tensor) -> torch.Tensor:
         """
         Remove special tokens from the embedding.
 
@@ -164,7 +164,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         return embedding[keep_mask]
 
     def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[
-        torch.tensor, None, None]:
+        torch.Tensor, None, None]:
         tokenized_sequences, attention_mask = self._tokenize(batch)
 
         with self._get_gradient_context():
@@ -236,7 +236,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
         return aa_probabilities
 
-    def _find_mask_position_in_tokens(self, tokenized_sequence: torch.tensor) -> Union[int, None]:
+    def _find_mask_position_in_tokens(self, tokenized_sequence: torch.Tensor) -> Union[int, None]:
         """
         Find the position of the mask token in the tokenized sequence.
         This accounts for special tokens and preprocessing strategy.
