@@ -68,7 +68,6 @@ def get_device_memory(device: Union[None, str, torch.device] = None) -> float:
      used as a conservative default and 8 GB for mps """
     gb_factor = (1024 ** 3)
     conservative_default = 4
-    default_mps = 8  # TODO [Cross platform] Improve MacOS RAM estimation
 
     if device is None or isinstance(device, str):
         device = get_device()
@@ -79,5 +78,17 @@ def get_device_memory(device: Union[None, str, torch.device] = None) -> float:
         vm = psutil.virtual_memory()
         return vm.available / gb_factor
     if is_device_mps(device):
-        return default_mps
+        # Get recommended max working set size from Metal
+        recommended_max = torch.mps.recommended_max_memory()
+
+        # Get currently allocated memory by PyTorch tensors
+        current_allocated = torch.mps.current_allocated_memory()
+
+        # Calculate available memory
+        available_bytes = recommended_max - current_allocated
+        available_gb = available_bytes / gb_factor
+
+        # Ensure we return at least the conservative default
+        return max(available_gb, conservative_default)
+
     return conservative_default
