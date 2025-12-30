@@ -9,7 +9,6 @@ Original Authors:
 import abc
 import torch
 
-from numpy import ndarray
 from typing import List, Generator, Optional, Iterable, Any, Union, Callable
 
 from .preprocessing_strategies import preprocess_sequences_without_whitespaces
@@ -26,7 +25,7 @@ class EmbedderInterface(abc.ABC):
     _preprocessing_strategy: Callable = lambda self, sequences, mask_token: preprocess_sequences_without_whitespaces(sequences, mask_token)
 
     @abc.abstractmethod
-    def _embed_single(self, sequence: str) -> ndarray:
+    def _embed_single(self, sequence: str) -> torch.Tensor:
         """
         Returns embedding for one sequence.
 
@@ -43,7 +42,7 @@ class EmbedderInterface(abc.ABC):
     def _preprocess_sequences(self, sequences: Iterable[str]) -> List[str]:
         return self._preprocessing_strategy(sequences, self.get_mask_token())
 
-    def _embed_batch(self, batch: List[str]) -> Generator[ndarray, None, None]:
+    def _embed_batch(self, batch: List[str]) -> Generator[torch.Tensor, None, None]:
         """Computes the embeddings from all sequences in the batch
 
         The provided implementation is dummy implementation that should be
@@ -66,7 +65,7 @@ class EmbedderInterface(abc.ABC):
 
     def embed_many(
             self, sequences: Iterable[str], batch_size: Optional[int] = None
-    ) -> Generator[ndarray, None, None]:
+    ) -> Generator[torch.Tensor, None, None]:
         """
         Yields embedding for one sequence at a time.
 
@@ -102,7 +101,7 @@ class EmbedderInterface(abc.ABC):
                 yield self._embed_single(seq)
 
     @staticmethod
-    def reduce_per_protein(embedding: torch.tensor) -> torch.tensor:
+    def reduce_per_protein(embedding: torch.Tensor) -> torch.Tensor:
         """
         For a variable size embedding, returns a fixed size embedding encoding all information of a sequence.
 
@@ -120,7 +119,7 @@ class EmbedderWithFallback(EmbedderInterface, abc.ABC):
     @abc.abstractmethod
     def _embed_batch_implementation(
             self, batch: List[str], model: Any
-    ) -> Generator[torch.tensor, None, None]:
+    ) -> Generator[torch.Tensor, None, None]:
         ...
 
     @abc.abstractmethod
@@ -132,7 +131,7 @@ class EmbedderWithFallback(EmbedderInterface, abc.ABC):
         """
         ...
 
-    def _embed_batch(self, batch: List[str]) -> Generator[torch.tensor, None, None]:
+    def _embed_batch(self, batch: List[str]) -> Generator[torch.Tensor, None, None]:
         """Tries to get the embeddings in this order:
           * Full batch GPU
           * Single Sequence GPU

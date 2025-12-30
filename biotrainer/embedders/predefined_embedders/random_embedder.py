@@ -17,10 +17,10 @@ class RandomEmbedder(EmbedderInterface):
     def __init__(self):
         self.rng = np.random.default_rng()
 
-    def _embed_single(self, sequence: str) -> torch.tensor:
+    def _embed_single(self, sequence: str) -> torch.Tensor:
         return torch.tensor(self.rng.random((len(sequence), self.embedding_dimension), dtype=np.float32))
 
     @staticmethod
-    def reduce_per_protein(embedding: torch.tensor) -> torch.tensor:
+    def reduce_per_protein(embedding: torch.Tensor) -> torch.Tensor:
         """Reduce via mean"""
         return embedding.mean(axis=0)

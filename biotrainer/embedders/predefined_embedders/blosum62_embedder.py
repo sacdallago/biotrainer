@@ -40,7 +40,7 @@ class Blosum62Embedder(EmbedderInterface):
             blosum_row = [matrix[aa][target_aa] for target_aa in AMINO_ACIDS]
             self.lookup_matrix[i] = np.array(blosum_row, dtype=np.float32)
 
-    def _embed_single(self, sequence: str) -> torch.tensor:
+    def _embed_single(self, sequence: str) -> torch.Tensor:
         """Convert sequence to BLOSUM-based embedding"""
         indices = np.fromiter(
             (self.aa_to_index.get(aa, self.aa_to_index['X']) for aa in sequence),
@@ -51,6 +51,6 @@ class Blosum62Embedder(EmbedderInterface):
         return torch.tensor(self.lookup_matrix[indices])
 
     @staticmethod
-    def reduce_per_protein(embedding: torch.tensor) -> torch.tensor:
+    def reduce_per_protein(embedding: torch.Tensor) -> torch.Tensor:
         """Returns the average BLOSUM profile of the sequence"""
         return embedding.mean(axis=0)
