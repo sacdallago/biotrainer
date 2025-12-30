@@ -163,7 +163,8 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
 
         return embedding[keep_mask]
 
-    def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[torch.tensor, None, None]:
+    def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[
+        torch.tensor, None, None]:
         tokenized_sequences, attention_mask = self._tokenize(batch)
 
         with self._get_gradient_context():
@@ -173,10 +174,15 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
             )
 
         embeddings = embeddings[0]
+        # Process all sequences before yielding (keeps them on GPU longer)
+        processed_embeddings = []
         for seq_num in range(len(embeddings)):
             input_id = tokenized_sequences[seq_num]
             embedding = self._remove_special_tokens(embeddings[seq_num], input_id)
-            yield embedding
+            processed_embeddings.append(embedding)
+
+        # Yield all at once
+        yield from processed_embeddings
 
     def get_position_probabilities(self, sequence: str, position: int) -> Dict[str, float]:
         """
