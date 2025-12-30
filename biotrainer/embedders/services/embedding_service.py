@@ -130,7 +130,7 @@ class EmbeddingService:
     def generate_embeddings(self,
                             input_data: Union[str, Path, List[str], List[BiotrainerSequenceRecord], Dict[
                                 str, BiotrainerSequenceRecord]],
-                            reduce: bool) -> Generator[Tuple[BiotrainerSequenceRecord, torch.tensor], None, None]:
+                            reduce: bool) -> Generator[Tuple[BiotrainerSequenceRecord, torch.Tensor], None, None]:
         """
         Generator function that yields embeddings as they are computed.
 
@@ -185,7 +185,7 @@ class EmbeddingService:
             use_reduced_embeddings: Whether to reduce embeddings to per-protein
 
         Yields:
-            Tuple[BiotrainerSequenceRecord, torch.tensor]: Tuple of (BiotrainerSequenceRecord, embedding)
+            Tuple[BiotrainerSequenceRecord, torch.Tensor]: Tuple of (BiotrainerSequenceRecord, embedding)
         """
         sequences = [seq_record.seq for seq_record in seq_records]
         embedding_iter = self._embedder.embed_many(sequences)
@@ -238,15 +238,15 @@ class EmbeddingService:
 
     @staticmethod
     def embeddings_dimensionality_reduction(
-            embeddings: Dict[str, torch.tensor],
+            embeddings: Dict[str, torch.Tensor],
             dimension_reduction_method: str,
             n_reduced_components: int,
-            fitted_transform: Optional[Any] = None) -> Tuple[Dict[str, torch.tensor], Any]:
+            fitted_transform: Optional[Any] = None) -> Tuple[Dict[str, torch.Tensor], Any]:
         """Reduces the dimension of per-protein embeddings using one of the
         dimensionality reduction methods
 
         Args:
-            embeddings (Dict[str, torch.tensor]): Dictionary of embeddings.
+            embeddings (Dict[str, torch.Tensor]): Dictionary of embeddings.
             dimension_reduction_method (str): The method used to reduce
             the dimensionality of embeddings. Options are 'umap' or 'pca'.
             n_reduced_components (int): The target number of dimensions for
@@ -255,7 +255,7 @@ class EmbeddingService:
                 the embeddings instead of calculating a new transform.
 
         Returns:
-            Dict[str, torch.tensor]: Dictionary of embeddings with reduced dimensions.
+            Dict[str, torch.Tensor]: Dictionary of embeddings with reduced dimensions.
         """
         from umap import UMAP
         from sklearn.decomposition import PCA
@@ -290,7 +290,7 @@ class EmbeddingService:
         return reduced_embeddings, fitted_transform
 
     @staticmethod
-    def load_embeddings(embeddings_file_path: str) -> Dict[str, torch.tensor]:
+    def load_embeddings(embeddings_file_path: str) -> Dict[str, torch.Tensor]:
         """
         Loads precomputed embeddings from a file.
 
@@ -298,7 +298,7 @@ class EmbeddingService:
             embeddings_file_path (str): Path to the embeddings file.
 
         Returns:
-            out (Dict[str, torch.tensor]): Dictionary mapping sequence hashes to embeddings.
+            out (Dict[str, torch.Tensor]): Dictionary mapping sequence hashes to embeddings.
         """
         # Load computed embeddings in .h5 file format
         logger.info(f"Loading embeddings from: {embeddings_file_path}")
