@@ -6,9 +6,9 @@ from transformers import AutoTokenizer, T5Tokenizer, T5EncoderModel, EsmTokenize
     BertForMaskedLM
 
 from .onnx import OnnxEmbedder
-from .huggingface import HuggingfaceTransformerEmbedder
 from .interfaces import EmbedderInterface, CustomTokenizer
 from .services import EmbeddingService, PeftEmbeddingService
+from .huggingface import HuggingfaceTransformerEmbedder, ProtT5
 from .predefined_embedders import RandomEmbedder, AAOntologyEmbedder, OneHotEncodingEmbedder, Blosum62Embedder
 
 from ..utilities import is_device_cpu, get_logger
@@ -19,6 +19,10 @@ __PREDEFINED_EMBEDDERS = {
     "AAOntology": AAOntologyEmbedder,
     "blosum62": Blosum62Embedder,
 }
+
+__OPTIMIZED_EMBEDDERS = [
+    ProtT5
+]
 
 logger = get_logger(__name__)
 
@@ -38,6 +42,16 @@ def get_embedding_service(embedder_name: str,
                                     finetuning_config=finetuning_config)
 
     return EmbeddingService(embedder=embedder, use_half_precision=use_half_precision)
+
+
+def _determine_optimized_embedder(embedder_name: str, use_half_precision: bool, dtype: torch.dtype,
+                                  device: torch.device) -> Optional:
+    for embedder_class in __OPTIMIZED_EMBEDDERS:
+        optimized_model = embedder_class.detect(embedder_name=embedder_name, use_half_precision=use_half_precision,
+                                                dtype=dtype, device=device)
+        if optimized_model is not None:
+            return optimized_model
+    return None
 
 
 def _determine_tokenizer_and_model(embedder_name: str) -> Tuple:
@@ -99,6 +113,13 @@ def _get_embedder(embedder_name: Optional[str],
 
     dtype = torch.float16 if use_half_precision else torch.float32
 
+    # Check for optimized embedder
+    optimized_model = _determine_optimized_embedder(embedder_name=embedder_name, use_half_precision=use_half_precision,
+                                                    dtype=dtype, device=device)
+    if optimized_model is not None:
+        return optimized_model
+
+    # Fall back to default huggingface implementations (might be slower)
     tokenizer_class, model_class = _determine_tokenizer_and_model(embedder_name)
     logger.info(f"Loading embedder model {embedder_name}..")
     try:
@@ -136,4 +157,3 @@ __all__ = [
     "get_embedding_service",
     "get_predefined_embedder_names"
 ]
-
