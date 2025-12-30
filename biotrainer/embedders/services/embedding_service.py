@@ -4,6 +4,7 @@ import os
 import time
 import h5py
 import torch
+import multiprocessing as mp
 
 from tqdm import tqdm
 from pathlib import Path
@@ -103,28 +104,81 @@ class EmbeddingService:
 
         start_time = time.time()
 
-        # Open the h5 file once and write embeddings as they're generated
-        with h5py.File(embeddings_file_path, "a") as embeddings_file:
-            for seq_record, embedding in tqdm(
-                    self._embeddings_generator(seq_records, use_reduced_embeddings),
-                    total=len(seq_records),
-                    desc="Computing Embeddings",
-                    disable=is_running_in_notebook()
-            ):
-                self.store_embedding(embeddings_file_handle=embeddings_file,
-                                     seq_record=seq_record,
-                                     embedding=embedding,
-                                     store_by_hash=store_by_hash)
+        self._compute_embeddings_parallel(
+            seq_records=seq_records,
+            embeddings_file_path=embeddings_file_path,
+            use_reduced_embeddings=use_reduced_embeddings,
+            store_by_hash=store_by_hash,
+        )
 
         end_time = time.time()
         logger.info(f"Time elapsed for computing embeddings: {end_time - start_time:.2f}[s]")
 
         return str(embeddings_file_path)
 
+    def _compute_embeddings_parallel(self,
+                                         seq_records: List[BiotrainerSequenceRecord],
+                                         embeddings_file_path: Path,
+                                         use_reduced_embeddings: bool,
+                                         store_by_hash: bool):
+        """
+        Use separate process for I/O and run embedding on main process/GPU.
+        """
+        # Use manager for shared queue
+        with mp.Manager() as manager:
+            embedding_queue = manager.Queue(maxsize=30)
+
+            def io_worker_process(queue, file_path, store_by_hash):
+                with h5py.File(file_path, "a") as embeddings_file:
+                    while True:
+                        item = queue.get()
+                        if item is None:
+                            break
+
+                        seq_record, embedding_np = item
+                        self.store_embedding(embeddings_file, seq_record, embedding_np, store_by_hash)
+
+            # Start single I/O worker
+            io_process = mp.Process(
+                target=io_worker_process,
+                args=(embedding_queue, embeddings_file_path, store_by_hash)
+            )
+            io_process.start()
+
+            try:
+                for seq_record, embedding in tqdm(
+                        self._embeddings_generator(seq_records, use_reduced_embeddings),
+                        total=len(seq_records),
+                        desc="Computing Embeddings",
+                        disable=is_running_in_notebook()
+                ):
+                    h5_index = seq_record.get_hash() if store_by_hash else seq_record.seq_id
+
+                    # Convert to numpy and move to CPU before putting in queue
+                    embedding_np = embedding.cpu().numpy()
+
+                    embedding_queue.put((
+                        seq_record,
+                        embedding_np,
+                    ))
+
+                # Signal worker to stop after embeddings are computed
+                embedding_queue.put(None)
+
+            finally:
+                io_process.join()
+
     @staticmethod
     def store_embedding(embeddings_file_handle, seq_record, embedding, store_by_hash: bool = True):
         h5_index = seq_record.get_hash() if store_by_hash else seq_record.seq_id
-        embeddings_file_handle.create_dataset(h5_index, data=embedding.cpu().numpy(), compression="gzip", chunks=True)
+
+        # Handle both torch tensors and numpy arrays
+        if isinstance(embedding, torch.Tensor):
+            embedding_data = embedding.cpu().numpy()
+        else:
+            embedding_data = embedding
+
+        embeddings_file_handle.create_dataset(h5_index, data=embedding_data, compression="gzip", chunks=True)
         embeddings_file_handle[h5_index].attrs["original_id"] = seq_record.seq_id
 
     def generate_embeddings(self,
