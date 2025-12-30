@@ -17,32 +17,37 @@ class PBCConfigBank(AutoEvalConfigBank):
             "learning_rate": 1e-3,
             "batch_size": 64,
             "ignore_file_inconsistencies": True,
+            "seed": 42,
+            "dropout_rate": 0.0,
+            "shuffle": True,
+            "patience": 10,
+            "epsilon": 1e-3,
         }
 
         # Task-specific configurations that override or extend base config
         task_specific_configs = {
             "binding": {
                 "protocol": "residue_to_class",
-                "use_class_weights": True,
+                "use_class_weights": False,
             },
             "conservation": {
                 "protocol": "residue_to_class",
-                "use_class_weights": True,
+                "use_class_weights": False,
             },
             "disorder": {
                 "protocol": "residue_to_value",
             },
             "membrane": {
                 "protocol": "residue_to_class",
-                "use_class_weights": True,
+                "use_class_weights": False,
             },
             "scl": {
                 "protocol": "sequence_to_class",
-                "use_class_weights": True,
+                "use_class_weights": False,
             },
             "secondary_structure": {
                 "protocol": "residue_to_class",
-                "use_class_weights": True,
+                "use_class_weights": False,
             },
         }
 
