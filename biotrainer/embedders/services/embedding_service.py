@@ -19,6 +19,19 @@ from ...input_files import read_FASTA, BiotrainerSequenceRecord
 logger = get_logger(__name__)
 
 
+def _io_worker_process(queue: mp.Queue, file_path: Path, store_by_hash: bool):
+    """ Parallel process to store embeddings to h5 file while computing embeddings """
+    import h5py  # local import to ensure availability in spawned process
+
+    with h5py.File(file_path, "a") as embeddings_file:
+        # Iterate over items from the queue until the sentinel None is received
+        for item in iter(queue.get, None):
+            seq_record, embedding_np = item
+            EmbeddingService.store_embedding(
+                embeddings_file, seq_record, embedding_np, store_by_hash
+            )
+
+
 class EmbeddingService:
     """
     A service class for computing embeddings using a provided embedder.
@@ -117,10 +130,10 @@ class EmbeddingService:
         return str(embeddings_file_path)
 
     def _compute_embeddings_parallel(self,
-                                         seq_records: List[BiotrainerSequenceRecord],
-                                         embeddings_file_path: Path,
-                                         use_reduced_embeddings: bool,
-                                         store_by_hash: bool):
+                                     seq_records: List[BiotrainerSequenceRecord],
+                                     embeddings_file_path: Path,
+                                     use_reduced_embeddings: bool,
+                                     store_by_hash: bool):
         """
         Use separate process for I/O and run embedding on main process/GPU.
         """
@@ -128,19 +141,9 @@ class EmbeddingService:
         with mp.Manager() as manager:
             embedding_queue = manager.Queue(maxsize=30)
 
-            def io_worker_process(queue, file_path, store_by_hash):
-                with h5py.File(file_path, "a") as embeddings_file:
-                    while True:
-                        item = queue.get()
-                        if item is None:
-                            break
-
-                        seq_record, embedding_np = item
-                        self.store_embedding(embeddings_file, seq_record, embedding_np, store_by_hash)
-
             # Start single I/O worker
             io_process = mp.Process(
-                target=io_worker_process,
+                target=_io_worker_process,
                 args=(embedding_queue, embeddings_file_path, store_by_hash)
             )
             io_process.start()
