@@ -1,8 +1,9 @@
 from __future__ import annotations
+import torch
 import numpy as np
 
-from pydantic import BaseModel, Field, model_validator
 from typing import Dict, Any, Union, Optional, List
+from pydantic import BaseModel, Field, model_validator
 
 from ..utilities import calculate_sequence_hash, RESIDUE_TO_VALUE_TARGET_DELIMITER
 
@@ -45,7 +46,7 @@ class BiotrainerSequenceRecord(BaseModel):
     def get_hash(self) -> str:
         return calculate_sequence_hash(self.seq)
 
-    def copy_with_embedding(self, embedding: np.ndarray) -> BiotrainerSequenceRecord:
+    def copy_with_embedding(self, embedding: torch.Tensor) -> BiotrainerSequenceRecord:
         """ Set the embedding for this sequence record and return sequence record """
         return BiotrainerSequenceRecord(seq_id=self.seq_id, seq=self.seq,
                                         attributes=self.attributes, embedding=embedding)
