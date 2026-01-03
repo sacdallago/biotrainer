@@ -1,3 +1,4 @@
+import ast
 import numpy as np
 
 from typing import Any, Dict, List, Optional
@@ -21,7 +22,7 @@ class CrossValidationSplitter:
         if cross_validation_config["method"] == "k_fold":
             k = int(cross_validation_config["k"])
             if "stratified" in cross_validation_config.keys():
-                stratified = eval(str(cross_validation_config["stratified"]).capitalize())
+                stratified = ast.literal_eval(str(cross_validation_config["stratified"]).capitalize())
             else:
                 stratified = False
             if "repeat" in cross_validation_config.keys():
