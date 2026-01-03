@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import ast
 import torch
 import numpy as np
 
@@ -46,7 +48,7 @@ class BiotrainerSequenceRecord(BaseModel):
         if set_name.lower() == "train":
             val = self.attributes.get("VALIDATION")
             if val is not None:
-                val = eval(val)
+                val = ast.literal_eval(val)
                 set_name = "val" if val else "train"
         return set_name
 
