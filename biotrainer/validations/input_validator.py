@@ -25,7 +25,8 @@ class InputValidator:
 
         for error in (self._validate_unique_sequences(input_data),
                       self._validate_sequences(input_data),
-                      self._validate_targets(input_data)):
+                      self._validate_targets(input_data),
+                      self._validate_embeddings(input_data)):
             if error != "":
                 raise ValueError(error)
 
@@ -38,7 +39,7 @@ class InputValidator:
         len_unique = len(unique_sequence_data)
         if len_data != len_unique:
             affected_seqs = [seq_record.seq for seq_record in input_data
-                            if seq_record not in unique_sequence_data.values()]
+                             if seq_record not in unique_sequence_data.values()]
             return (f"There are {len_data - len_unique} duplicated sequences in the input file!\n"
                     f"Affected sequences: {affected_seqs}")
         return ""
@@ -80,4 +81,15 @@ class InputValidator:
                 except ValueError:
                     return f"Invalid regression target {target} for sequence {seq_record.seq_id}!"
 
+        return ""
+
+    @staticmethod
+    def _validate_embeddings(input_data: List[BiotrainerSequenceRecord]) -> str:
+        """ If any embeddings are already present, all records must have embeddings """
+        any_embeddings = any([record.embedding is not None for record in input_data])
+        if any_embeddings:
+            for seq_record in input_data:
+                if seq_record.embedding is None:
+                    return (f"No embedding found for sequence {seq_record.seq_id} - "
+                            f"but embeddings are present for other sequences!")
         return ""
