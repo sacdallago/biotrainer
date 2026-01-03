@@ -1,3 +1,4 @@
+import ast
 import random
 import itertools
 
@@ -18,8 +19,9 @@ class HyperParameterManager:
                 continue
             if "range" in str(value):
                 try:
-                    compiled_range = compile(source=value, filename='<range>', mode='eval')
-                    range_obj = eval(compiled_range, locals())
+                    # Try to parse as range
+                    range_match = re.match(r'range\s*\(\s*(.+)\s*\)', value.strip())
+                    range_obj = HyperParameterManager._parse_range(range_match.group(1))
                     assert range_obj, "Range could not be compiled from input!"
                     self._params_to_optimize[key] = range_obj
                 except Exception as e:
@@ -29,8 +31,7 @@ class HyperParameterManager:
                 self._params_to_optimize[key] = list(set(value))
             elif type(value) is str and "[" in value and "]" in value:
                 try:
-                    compiled_list = compile(source=value, filename='<list>', mode='eval')
-                    list_obj = eval(compiled_list, locals())
+                    list_obj = ast.literal_eval(value)
                     assert list_obj, "List could not be compiled from input!"
                     self._params_to_optimize[key] = list_obj
                 except Exception as e:
@@ -47,6 +48,36 @@ class HyperParameterManager:
         if len(self._params_to_optimize.keys()) > 0 and \
                 self._constant_params["cross_validation_config"]["method"] != "k_fold":
             raise ConfigurationException(f"Parameter search only supported for nested k_fold cross validation!")
+
+    @staticmethod
+    def _parse_range(args_str: str) -> range:
+        """
+        Safely parse range arguments from string.
+        Examples:
+          "10" -> range(10)
+          "1, 10" -> range(1, 10)
+          "1, 10, 2" -> range(1, 10, 2)
+        """
+        try:
+            # Parse arguments using ast.literal_eval (safe for numbers)
+            args_str = f"({args_str})"  # Make it a tuple
+            args = ast.literal_eval(args_str)
+
+            # Handle single argument vs tuple
+            if isinstance(args, tuple):
+                if len(args) == 1:
+                    return range(args[0])
+                elif len(args) == 2:
+                    return range(args[0], args[1])
+                elif len(args) == 3:
+                    return range(args[0], args[1], args[2])
+                else:
+                    raise ValueError(f"range() takes 1-3 arguments, got {len(args)}")
+            else:
+                # Single integer
+                return range(args)
+        except Exception as e:
+            raise ValueError(f"Invalid range specification: range({args_str})") from e
 
     def search(self, mode="no_search") -> \
             Generator[Dict[str, Any], None, Union[None, Generator[Dict[str, Any], None, None]]]:
