@@ -5,7 +5,6 @@ import numpy as np
 
 from copy import deepcopy
 
-
 from biotrainer.utilities.cli import train
 from biotrainer.input_files import BiotrainerSequenceRecord
 from biotrainer.utilities import FeatureScaler
@@ -16,9 +15,9 @@ s2c_config = {'protocol': 'sequence_to_class',
               'input_file': "test_input_files/scl_subset/scl_rand.fasta"}
 
 rs2c_config = {'protocol': 'residues_to_class',
-              'model_choice': 'LightAttention',
-              'embedder_name': 'one_hot_encoding',
-              'input_file': "test_input_files/scl_subset/scl_rand.fasta"}
+               'model_choice': 'LightAttention',
+               'embedder_name': 'one_hot_encoding',
+               'input_file': "test_input_files/scl_subset/scl_rand.fasta"}
 
 
 class TrainingTests(unittest.TestCase):
@@ -79,6 +78,7 @@ class TrainingTests(unittest.TestCase):
             self.assertEqual(result['config']['input_data'], len(input_data))
 
     def test_direct_input_data_with_embeddings(self):
+        # Success
         input_data = [
             BiotrainerSequenceRecord(seq_id="Seq1", seq="MMALSLALM", attributes={"TARGET": "Membrane", "SET": "train"},
                                      embedding=[1, 2, 3]),
@@ -102,3 +102,14 @@ class TrainingTests(unittest.TestCase):
             result = train(config=config)
             self.assertEqual(result['config']['input_data'], len(input_data))
 
+        # Errors
+        # Missing embedding
+        input_data[0] = BiotrainerSequenceRecord(seq_id="Seq1", seq="MMALSLALM",
+                                                 attributes={"TARGET": "Membrane", "SET": "train"})
+
+        with self.assertRaises(ValueError):
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                config = deepcopy(s2c_config)
+                config.pop("input_file")
+                config["input_data"] = input_data
+                result = train(config=config)
