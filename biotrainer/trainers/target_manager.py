@@ -230,7 +230,7 @@ class TargetManager:
 
                 logger.warning(f"Found {len(embeddings_without_labels)} embedding(s) without a corresponding "
                                f"entry in the labels file! Because ignore_file_inconsistencies flag is set, "
-                               f"these sequences are dropped for training. "
+                               f"these sequences are dropped for training. This is expected for autoeval. "
                                f"Data loss: {(len(embeddings_without_labels) / len(id2emb.keys())) * 100:.2f}%")
                 for seq_hash in embeddings_without_labels:
                     id2emb.pop(seq_hash)  # Remove redundant sequences
@@ -248,7 +248,7 @@ class TargetManager:
             if self._ignore_file_inconsistencies:
                 logger.warning(f"Found {len(labels_without_embeddings)} label(s) without a corresponding "
                                f"entry in the embeddings file! Because ignore_file_inconsistencies flag is set, "
-                               f"these labels are dropped for training. "
+                               f"these labels are dropped for training. This is expected for autoeval. "
                                f"Data loss: {(len(labels_without_embeddings) / len(id2emb.keys())) * 100:.2f}%")
                 for seq_hash in labels_without_embeddings:
                     self._id2target.pop(seq_hash)  # Remove redundant labels
