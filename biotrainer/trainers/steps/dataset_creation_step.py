@@ -49,6 +49,8 @@ class DatasetCreationStep(PipelineStep):
         # TARGETS => DATASETS
         target_manager = context.target_manager
         first_embedding = next(iter(context.id2emb.values()))
+        assert isinstance(first_embedding, torch.Tensor), \
+            f"id2emb must contain embeddings of type torch.Tensor in DatasetCreationStep!"
 
         finetuning = "finetuning_config" in context.config
         if finetuning:
