@@ -91,5 +91,6 @@ class InputValidator:
             for seq_record in input_data:
                 if seq_record.embedding is None:
                     return (f"No embedding found for sequence {seq_record.seq_id} - "
-                            f"but embeddings are present for other sequences!")
+                            f"but embeddings are present for other sequences! "
+                            f"Please provide embeddings for all or none of the input data.")
         return ""

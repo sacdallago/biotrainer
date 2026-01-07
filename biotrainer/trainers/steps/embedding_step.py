@@ -77,10 +77,16 @@ class EmbeddingStep(PipelineStep):
 
         maybe_id2emb = self._extract_embeddings(context)
         if maybe_id2emb is not None:
+            assert len(maybe_id2emb) == len(
+                context.input_data), (f"Number of embeddings ({len(maybe_id2emb)}) "
+                                      f"!= number of input data ({len(context.input_data)})!"
+                                      f"This should have been caught in the validator earlier.")
             context.id2emb = maybe_id2emb
+            logger.info(f"Embeddings were extracted from input data, proceeding...")
             return context
         else:
             return self._do_embed(context)
+
 
 class FineTuningEmbeddingStep(EmbeddingStep):
     def process(self, context: PipelineContext) -> PipelineContext:
