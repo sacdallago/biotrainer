@@ -281,9 +281,10 @@ class TargetManager:
             raise ValueError(f"Embeddings dimensions differ between sequences, but all must be equal!\n"
                              f"Found: {shapes}")
 
-    def get_embedding_datasets(self, id2emb: Dict[str, Any]) -> \
+    def get_embedding_datasets(self, id2emb: Dict[str, torch.Tensor]) -> \
             Tuple[List[EmbeddingDatasetSample], List[EmbeddingDatasetSample], Dict[str, List[EmbeddingDatasetSample]],
             List[EmbeddingDatasetSample]]:
+        """ Embedding datasets for transfer learning on pLMs. """
         assert self._loaded, f"Dataset creation called before loading!"
         self._validate_targets(id2emb)
         # Combine embeddings for protein_protein_interaction
@@ -307,15 +308,15 @@ class TargetManager:
 
         # Create datasets
         train_dataset = [
-            EmbeddingDatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.training_ids
+            EmbeddingDatasetSample(idx, id2emb[idx], self._id2target[idx]) for idx in self.training_ids
         ]
         val_dataset = [
-            EmbeddingDatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx])) for idx in self.validation_ids
+            EmbeddingDatasetSample(idx, id2emb[idx], self._id2target[idx]) for idx in self.validation_ids
         ]
 
         test_datasets = {}
         for test_set_id, test_set in self.testing_ids.items():
-            test_datasets[test_set_id] = [EmbeddingDatasetSample(idx, id2emb[idx], torch.tensor(self._id2target[idx]))
+            test_datasets[test_set_id] = [EmbeddingDatasetSample(idx, id2emb[idx], self._id2target[idx])
                                           for idx in test_set]
 
         pred_dataset = [
@@ -325,6 +326,7 @@ class TargetManager:
         return train_dataset, val_dataset, test_datasets, pred_dataset
 
     def get_sequence_datasets(self):
+        """ Sequence datasets for fine-tuning pLMs. """
         assert self._loaded, f"Dataset creation called before loading!"
         # Create datasets
         train_dataset = [SequenceDatasetSample(idx, self._input_records[idx], self._id2target[idx])
