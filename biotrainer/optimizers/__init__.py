@@ -5,27 +5,27 @@ from ..protocols import Protocol
 
 __OPTIMIZERS = {
     Protocol.residue_to_class: {
-        'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True),
+        'adam': lambda **kwargs: torch.optim.AdamW(**kwargs, amsgrad=True, weight_decay=1e-2),
         'sgd': lambda **kwargs: torch.optim.SGD(**kwargs, momentum=0.9)
     },
     Protocol.residue_to_value: {
-        'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True),
+        'adam': lambda **kwargs: torch.optim.AdamW(**kwargs, amsgrad=True, weight_decay=1e-2),
         'sgd': lambda **kwargs: torch.optim.SGD(**kwargs, momentum=0.9)
     },
     Protocol.residues_to_class: {
-        'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True),
+        'adam': lambda **kwargs: torch.optim.AdamW(**kwargs, amsgrad=True, weight_decay=1e-2),
         'sgd': lambda **kwargs: torch.optim.SGD(**kwargs, momentum=0.9)
     },
     Protocol.residues_to_value: {
-        'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True),
+        'adam': lambda **kwargs: torch.optim.AdamW(**kwargs, amsgrad=True, weight_decay=1e-2),
         'sgd': lambda **kwargs: torch.optim.SGD(**kwargs, momentum=0.9)
     },
     Protocol.sequence_to_class: {
-        'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True),
+        'adam': lambda **kwargs: torch.optim.AdamW(**kwargs, amsgrad=True, weight_decay=1e-2),
         'sgd': lambda **kwargs: torch.optim.SGD(**kwargs, momentum=0.9),
     },
     Protocol.sequence_to_value: {
-        'adam': lambda **kwargs: torch.optim.Adam(**kwargs, amsgrad=True),
+        'adam': lambda **kwargs: torch.optim.AdamW(**kwargs, amsgrad=True, weight_decay=1e-2),
         'sgd': lambda **kwargs: torch.optim.SGD(**kwargs, momentum=0.9)
     },
 }
