@@ -347,13 +347,13 @@ class EmbeddingService:
         return reduced_embeddings, fitted_transform
 
     @staticmethod
-    def load_embeddings(embeddings_file_path: str) -> Dict[str, torch.Tensor]:
+    def load_embeddings(embeddings_file_path: str, ids_to_load: Optional[List[str]] = None) -> Dict[str, torch.Tensor]:
         """
         Loads precomputed embeddings from a file.
 
         Parameters:
             embeddings_file_path (str): Path to the embeddings file.
-
+            ids_to_load (Optional[List[str]]): List of sequence hashes to load. If None, all sequences are loaded.
         Returns:
             out (Dict[str, torch.Tensor]): Dictionary mapping sequence hashes to embeddings.
         """
@@ -363,10 +363,18 @@ class EmbeddingService:
 
         # Old version see:
         # https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
-        embeddings_file = h5py.File(embeddings_file_path, 'r')
-
         # Sequence hash from embeddings file -> Embedding
-        id2emb = {idx: torch.tensor(embedding).float() for (idx, embedding) in embeddings_file.items()}
+        id2emb = {}
+        with h5py.File(embeddings_file_path, 'r') as embeddings_file:
+            if ids_to_load is None:
+                # Load all sequences
+                id2emb = {idx: torch.tensor(embedding).float() for (idx, embedding) in embeddings_file.items()}
+            else:
+                for idx in ids_to_load:
+                    if idx in embeddings_file:
+                        id2emb[idx] = torch.tensor(embeddings_file[idx][:]).float()
+                    else:
+                        raise ValueError(f"Sequence hash {idx} not found in embeddings file!")
 
         # Logging
         logger.info(f"Read {len(id2emb)} entries.")
