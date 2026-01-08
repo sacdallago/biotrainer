@@ -470,8 +470,8 @@ class Solver(ABC):
 
             return {
                 'loss': loss.item(),
-                'prediction': prediction.tolist(),
-                'probabilities': probabilities
+                'prediction': prediction.cpu().tolist(),
+                'probabilities': probabilities.cpu().tolist(),
             }
 
     def _prediction_iteration(self, x: torch.Tensor, lengths: Optional[torch.LongTensor] = None) -> \
@@ -492,5 +492,5 @@ class Solver(ABC):
             probabilities = self._logits_to_probabilities(logits)
             # Discretize predictions if necessary
             prediction = self._probabilities_to_predictions(probabilities)
-            return {"prediction": prediction.tolist(),
-                    "probabilities": probabilities.tolist()}
+            return {"prediction": prediction.cpu().tolist(),
+                    "probabilities": probabilities.cpu().tolist()}
