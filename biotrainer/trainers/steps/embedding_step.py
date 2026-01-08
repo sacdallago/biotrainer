@@ -55,7 +55,14 @@ class EmbeddingStep(PipelineStep):
         context.output_manager.add_derived_values({'embeddings_file': str(embeddings_file)})
 
         # Mapping from id to embeddings
-        id2emb = EmbeddingService.load_embeddings(embeddings_file_path=str(embeddings_file))
+        ids_to_load = [seq_record.get_hash() for seq_record in context.input_data]
+        id2emb = EmbeddingService.load_embeddings(embeddings_file_path=str(embeddings_file),
+                                                  ids_to_load=ids_to_load)
+
+        if len(ids_to_load) != len(id2emb):
+            raise ValueError(f"Number of embeddings ({len(id2emb)}) != number of input data ({len(ids_to_load)})!")
+
+        assert len(id2emb) > 0, f"No embeddings loaded from embeddings file {embeddings_file}!"
 
         context.id2emb = id2emb
         return context
