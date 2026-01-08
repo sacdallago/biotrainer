@@ -191,9 +191,15 @@ def _run_pipeline(embedder_name: str,
                                                                 input_file=task.input_file,
                                                                 output_dir=task_output_dir,
                                                                 )
-        result = parse_config_file_and_execute_run(config=config,
-                                                   custom_pipeline=custom_pipeline,
-                                                   custom_output_observers=custom_output_observers)
+        # Check if result already exists -> skip (Run was interrupted)
+        maybe_result = report_manager.maybe_load_existing_result(task_output_dir=task_output_dir)
+        if maybe_result:
+            result = maybe_result
+            print(f"Loaded existing result for task {current_task_name}, skipping execution..")
+        else:
+            result = parse_config_file_and_execute_run(config=config,
+                                                       custom_pipeline=custom_pipeline,
+                                                       custom_output_observers=custom_output_observers)
 
         report_manager.add_result(task=task, result_dict=result)
 

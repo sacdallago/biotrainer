@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from ruamel import yaml
 from pathlib import Path
 from typing import Dict, Any, Union
 from pydantic import BaseModel, Field
@@ -56,6 +57,19 @@ class ReportManager:
         self.min_seq_len = min_seq_len
         self.max_seq_len = max_seq_len
         self.results = {}
+
+    def maybe_load_existing_result(self, task_output_dir: Path):
+        task_out_file_path = task_output_dir / "out.yml"
+        if not task_out_file_path.exists():
+            return None
+        try:
+            with (open(task_out_file_path, 'r') as output_file):
+                task_output = yaml.load(output_file, Loader=yaml.RoundTripLoader)
+                if task_output["config"]["embedder_name"] == self.embedder_name and "test_results" in task_output:
+                    return task_output
+                return None  # File does not seem to be valid
+        except Exception:
+            return None
 
     def add_result(self, task: AutoEvalTask, result_dict: Dict[str, Any]):
         self.results[task.combined_name()] = result_dict
