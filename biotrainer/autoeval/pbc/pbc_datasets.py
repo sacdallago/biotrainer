@@ -2,7 +2,7 @@ from ...protocols import Protocol
 
 PBC_DATASETS = {
     "binding": {
-        "evaluation_metric": "matthews-corr-coeff",
+        "evaluation_metric": "f1_score",
         "protocol": Protocol.residue_to_class,
         "splits": ["combined", "metal", "nuclear", "small"]
     },
