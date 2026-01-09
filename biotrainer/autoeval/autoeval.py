@@ -400,7 +400,8 @@ def autoeval_pipeline(embedder_name: str,
     if "/" in embedder_dir_name:  # Huggingface
         embedder_dir_name = embedder_dir_name.replace("/", "-")
 
-    output_dir = Path(output_dir) / embedder_dir_name / framework
+    framework_dir = f"{framework}_{min_seq_length}_{max_seq_length}"
+    output_dir = Path(output_dir) / embedder_dir_name / framework_dir
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
