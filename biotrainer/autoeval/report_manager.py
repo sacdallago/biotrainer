@@ -85,6 +85,6 @@ class ReportManager:
 
         print(f'Writing autoeval report to: {report_name}')
         with open(report_name, 'w') as report_file:
-            report_file.write(json.dumps(report.model_dump_json(indent=4)))
+            report_file.write(report.model_dump_json(indent=4))
 
         return report
