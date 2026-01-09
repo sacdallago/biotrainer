@@ -1,3 +1,4 @@
+import re
 import ast
 import random
 import itertools
