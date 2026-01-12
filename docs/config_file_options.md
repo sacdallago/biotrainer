@@ -369,13 +369,13 @@ The `stratified` option can also be used for regression tasks. In this case, the
 to bins to calculate the stratified splits.
 
 To use **nested** k-fold cross validation, hyperparameters which should be optimized with the nested splits must
-be specified in the config file. This can be done by using lists explicitly, using pythonic list comprehensions
-or a range expression. The latter two have to be provided as string literals.
+be specified in the config file. This can be done by using lists explicitly, even using a range expression. 
+The latter has to be provided as a string.
 The following example shows all three options:
 
 ```yaml
 use_class_weights: [ True, False ]  # Explicit list
-learning_rate: "[10**-x for x in [2, 3, 4]]"  # List comprehension
+learning_rate: "[0.01, 0.001]"  # Can also be a string
 batch_size: "range(8, 132, 4)"  # Range expression
 ```
 
