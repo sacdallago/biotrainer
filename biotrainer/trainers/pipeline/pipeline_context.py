@@ -28,7 +28,7 @@ class PipelineContext:
         self.embedding_service: Optional[PeftEmbeddingService] = None  # For fine-tuning only
         # Data Loading
         self.target_manager: Optional[TargetManager] = None
-        self.n_features = None
+        self.n_features = None  # Embedding shape
         self.n_classes = None
         self.class_str2int: Optional[Dict[str, int]] = None  # Used to apply random_masking
         self.train_dataset = None

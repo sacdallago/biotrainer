@@ -71,7 +71,7 @@ class DatasetCreationStep(PipelineStep):
         context.n_features = first_embedding.shape[-1]  # Last position in shape is always embedding dim
         context.n_classes = target_manager.number_of_outputs
 
-        logger.info(f"Number of features: {context.n_features}")
+        logger.info(f"Number of features (i.e. embedding dimension): {context.n_features}")
         logger.info(f"Number of outputs (i.e. classes, equals 1 for regression): {context.n_classes}")
 
         context.output_manager.add_derived_values({
