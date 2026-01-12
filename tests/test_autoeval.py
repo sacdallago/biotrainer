@@ -1,3 +1,4 @@
+import os
 import unittest
 import tempfile
 
@@ -6,6 +7,7 @@ from biotrainer.autoeval import autoeval_pipeline
 
 class AutoevalTests(unittest.TestCase):
 
+    @unittest.skipUnless(os.getenv('CI'), "Slow test - only run in CI")
     def test_autoeval_ohe(self):
         """ Checks that autoeval pipeline runs correctly with one hot encoding """
         with tempfile.TemporaryDirectory() as tmp_dir_name:
