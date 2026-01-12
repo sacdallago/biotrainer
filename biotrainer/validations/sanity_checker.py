@@ -12,7 +12,7 @@ from ..models import get_model
 from ..protocols import Protocol
 from ..optimizers import get_optimizer
 from ..solvers import MetricsCalculator, get_solver
-from ..utilities import INTERACTION_INDICATOR, get_logger
+from ..utilities import INTERACTION_INDICATOR, get_logger, MASK_AND_LABELS_PAD_VALUE
 
 logger = get_logger(__name__)
 
@@ -52,6 +52,7 @@ class SanityChecker:
         self.mode = mode
 
         self._warnings = []
+        self._train_set_targets = None  # Calculated later
 
     def _handle_sanity_check_warning(self, warning: str):
         self._warnings.append(warning)
@@ -60,6 +61,22 @@ class SanityChecker:
         elif self.mode == "error":
             #  Might be useful for integration tests later
             raise SanityException(warning)
+
+    def __calculate_train_set_targets(self) -> torch.Tensor:
+        if self._train_set_targets is not None:
+            return self._train_set_targets
+
+        if self.protocol in Protocol.per_residue_protocols():
+            all_residue_targets = []
+            for sample in self.train_dataset:
+                all_residue_targets.extend(
+                    [t for t in sample.target.flatten().tolist() if t != MASK_AND_LABELS_PAD_VALUE])
+            self._train_set_targets = torch.tensor(all_residue_targets)
+        else:  # per_sequence protocols
+            self._train_set_targets = torch.tensor([sample.target for sample in self.train_dataset])
+
+        return self._train_set_targets
+
 
     def check_test_results(self, test_set_id) -> (Dict[str, Any], List[str]):
         logger.info(f"Running sanity checks on test set results ({test_set_id}) ..")
@@ -123,7 +140,7 @@ class SanityChecker:
         """
         assert self.protocol in Protocol.classification_protocols()
 
-        one_only_baseline = self._value_only_baseline(value=1)
+        one_only_baseline = self.__value_only_baseline(value=1)
         logger.info(f"One-Only Baseline: {one_only_baseline}")
         return one_only_baseline
 
@@ -133,7 +150,7 @@ class SanityChecker:
         """
         assert self.protocol in Protocol.classification_protocols()
 
-        zero_only_baseline = self._value_only_baseline(value=0)
+        zero_only_baseline = self.__value_only_baseline(value=0)
         logger.info(f"Zero-Only Baseline: {zero_only_baseline}")
         return zero_only_baseline
 
@@ -144,20 +161,18 @@ class SanityChecker:
         assert self.protocol in Protocol.regression_protocols()
 
         if self.protocol in Protocol.per_residue_protocols():
-            all_residue_targets = []
-            for sample in self.train_dataset:
-                all_residue_targets.extend(sample.target.flatten().tolist())
+            train_set_targets = self.__calculate_train_set_targets()
             # Grand mean over all residues
-            train_set_mean = torch.tensor(all_residue_targets).mean().item()
+            train_set_mean = train_set_targets.mean().item()
         else:  # per-sequence protocols
-            train_set_targets = torch.tensor([sample.target for sample in self.train_dataset])
+            train_set_targets = self.__calculate_train_set_targets()
             train_set_mean = torch.mean(train_set_targets).item()
 
-        mean_only_baseline = self._value_only_baseline(value=train_set_mean)
+        mean_only_baseline = self.__value_only_baseline(value=train_set_mean)
         logger.info(f"Mean-Only Baseline: {mean_only_baseline}")
         return mean_only_baseline
 
-    def _value_only_baseline(self, value: float):
+    def __value_only_baseline(self, value: float):
         """ Calculates the value-only baselines (1, 0, mean, ...) """
         if self.protocol in Protocol.per_residue_protocols():
             test_set_value_predictions = {sample.seq_id: [value] * len(sample.target) for sample in self.test_dataset}
@@ -207,27 +222,18 @@ class SanityChecker:
         test_set_value_predictions = None
 
         if self.protocol in Protocol.regression_protocols():
+            # Calculate min and max value from train set
+            train_set_targets = self.__calculate_train_set_targets()
+            min_target = torch.min(train_set_targets).item()
+            max_target = torch.max(train_set_targets).item()
+
             if self.protocol in Protocol.per_residue_protocols():
-                # Flatten all residue targets from training set
-                all_residue_targets = []
-                for sample in self.train_dataset:
-                    all_residue_targets.extend(sample.target.flatten().tolist())
-
-                # Calculate min and max value from all residues
-                min_target = min(all_residue_targets)
-                max_target = max(all_residue_targets)
-
                 # Random sampling (uniform) between min and max for each residue
                 test_set_value_predictions = {
                     sample.seq_id: [random.uniform(min_target, max_target) for _ in range(len(sample.target))]
                     for sample in self.test_dataset
                 }
             else:  # per_sequence protocols
-                # Calculate min and max value from train set
-                train_set_targets = torch.tensor([sample.target for sample in self.train_dataset])
-                min_target = torch.min(train_set_targets).item()
-                max_target = torch.max(train_set_targets).item()
-
                 # Random sampling (uniform) between min and max value
                 test_set_value_predictions = {
                     sample.seq_id: random.uniform(min_target, max_target)
@@ -235,19 +241,12 @@ class SanityChecker:
                 }
 
         elif self.protocol in Protocol.classification_protocols():
+            # Calculate class distribution from train set
+            train_set_targets = self.__calculate_train_set_targets()
+
+            class_counts = torch.bincount(train_set_targets)
+            class_probabilities = class_counts.float() / len(train_set_targets)
             if self.protocol in Protocol.per_residue_protocols():
-                # Flatten all residue targets from training set
-                all_residue_targets = []
-                for sample in self.train_dataset:
-                    if torch.is_tensor(sample.target):
-                        all_residue_targets.extend(sample.target.flatten().tolist())
-                    else:
-                        all_residue_targets.extend(sample.target)
-
-                # Calculate class distribution from all residues
-                class_counts = torch.bincount(torch.tensor(all_residue_targets, dtype=torch.long))
-                class_probabilities = class_counts.float() / len(all_residue_targets)
-
                 # Random sampling based on class distribution for each residue
                 test_set_value_predictions = {
                     sample.seq_id: [int(torch.multinomial(class_probabilities, 1).item())
@@ -255,11 +254,6 @@ class SanityChecker:
                     for sample in self.test_dataset
                 }
             else:  # per_sequence protocols
-                # Calculate class distribution from train set
-                train_set_targets = [sample.target for sample in self.train_dataset]
-                class_counts = torch.bincount(torch.tensor(train_set_targets))
-                class_probabilities = class_counts.float() / len(train_set_targets)
-
                 # Random sampling based on class distribution
                 test_set_value_predictions = {
                     sample.seq_id: int(torch.multinomial(class_probabilities, 1).item())
@@ -278,7 +272,6 @@ class SanityChecker:
         )
         logger.info(f"Random-Sampling Baseline: {random_sampling_baseline}")
         return random_sampling_baseline
-
 
     def _bias_interaction_baseline(self):
         """
