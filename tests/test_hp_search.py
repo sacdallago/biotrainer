@@ -24,7 +24,7 @@ class HyperParameterSearchTests(unittest.TestCase):
                                                    if val != "adam" and type(val) != dict]))
         self.assertTrue(len(list(hps._grid_search())) == number_all_combinations)
 
-        # Range and list comprehension
+        # Range
         param_dict = {
             "cross_validation_config": {
                 "method": "k_fold",
@@ -33,7 +33,7 @@ class HyperParameterSearchTests(unittest.TestCase):
             "optimizer_choice": "adam",
             "use_class_weights": [True, False],
             "batch_size": "range(0, 10, 1)",
-            "learning_rate": "[10**-x for x in [3,4,5]]"
+            "learning_rate": "[1e-3, 1e-4, 1e-5]"
         }
         hps = hp_manager.HyperParameterManager(**param_dict)
         number_all_combinations = reduce(lambda l1, l2: l1 * l2, map(len, [[True, False], list(range(0, 10, 1)),
@@ -51,7 +51,7 @@ class HyperParameterSearchTests(unittest.TestCase):
             },
             "use_class_weights": [True, False],
             "batch_size": "range(0, 10, 1)",
-            "learning_rate": "[10**-x for x in [3,4,5]]"
+            "learning_rate": "[1e-3, 1e-4, 1e-5]"
         }
         hps = hp_manager.HyperParameterManager(**param_dict)
         hyper_params_returned = []
