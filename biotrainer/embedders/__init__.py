@@ -8,7 +8,7 @@ from transformers import AutoTokenizer, T5Tokenizer, T5EncoderModel, EsmTokenize
 from .onnx import OnnxEmbedder
 from .interfaces import EmbedderInterface, CustomTokenizer
 from .services import EmbeddingService, PeftEmbeddingService
-from .huggingface import HuggingfaceTransformerEmbedder, ProtT5
+from .huggingface import HuggingfaceTransformerEmbedder, ProtT5, ProstT5, ESM2
 from .predefined_embedders import RandomEmbedder, AAOntologyEmbedder, OneHotEncodingEmbedder, Blosum62Embedder
 
 from ..utilities import is_device_cpu, get_logger
@@ -21,7 +21,9 @@ __PREDEFINED_EMBEDDERS = {
 }
 
 __OPTIMIZED_EMBEDDERS = [
-    ProtT5
+    ProtT5,
+    ProstT5,
+    ESM2
 ]
 
 logger = get_logger(__name__)
