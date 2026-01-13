@@ -1,5 +1,28 @@
 # Biotrainer Changelog
 
+## 13.11.2024 - Version 1.3.0
+
+## Features
+
+* Adding additional pbc tasks (binding, conservation, disorder, membrane)
+* Adding direct input of embeddings via input_data config option
+* Adding improved autoeval report API (Including a summary function)
+* Adding a random-sampling baseline based on training set distributions
+* Adding optimized huggingface embedder models for ProtT5, ProstT5 and the ESM-2 family
+* Optimizing async embeddings saving to speed up embeddings calcultion
+* Improving memory estimation for embedding batch sizes on MacOS
+* Adding an optional scaling step and option to scale input features if required (`scaling_method`)
+
+## Fixes
+
+* Adding a link to the config bank in plm_eval jupyter notebook and adapting to improved report api
+
+## Breaking
+
+* Replacing eval() with ast.literal_eval (Breaking: Removes support for list comprehensions in cross validation
+  parameters)
+* Optimized autoeval pbc config bank
+
 ## 18.11.2025 - Version 1.2.1
 
 ## Fixes
