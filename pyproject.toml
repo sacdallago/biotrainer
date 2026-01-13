@@ -1,6 +1,6 @@
 [project]
 name = "biotrainer"
-version = "1.2.1"
+version = "1.3.0"
 description = "Biological prediction models made simple."
 authors = [
     {name = "Sebastian Franz", email = "sebastian.franz@tum.de"},
