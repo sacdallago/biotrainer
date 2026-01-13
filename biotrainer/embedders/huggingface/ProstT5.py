@@ -3,20 +3,22 @@ import torch
 from typing import List, Any, Generator
 from transformers import T5Tokenizer, T5EncoderModel
 
-from .huggingface_transformer_embedder import HuggingfaceTransformerEmbedder
+from.huggingface_transformer_embedder import HuggingfaceTransformerEmbedder
 
-from ..interfaces import BioOptEmbedder, preprocess_sequences_with_whitespaces
+from ..interfaces import BioOptEmbedder, preprocess_sequences_for_prostt5
 
 from ...utilities import get_logger
 
 logger = get_logger(__name__)
 
 
-class ProtT5(HuggingfaceTransformerEmbedder, BioOptEmbedder):
+class ProstT5(HuggingfaceTransformerEmbedder, BioOptEmbedder):
+    """ ProstT5 (Rostlab/ProstT5) uses the same tokenizer and model as ProtT5 (Rostlab/prot_t5_xl_uniref50)"""
+
     @classmethod
     def detect(cls, embedder_name: str, use_half_precision: bool, dtype: torch.dtype, device: torch.device):
-        prott5_names = ['Rostlab/prot_t5_xl_half_uniref50-enc', 'Rostlab/prot_t5_xl_uniref50']
-        if embedder_name in prott5_names:
+        prostt5_names = ["Rostlab/ProstT5"]
+        if embedder_name in prostt5_names:
             # Load the tokenizer
             tokenizer = T5Tokenizer.from_pretrained(embedder_name, do_lower_case=False, dtype=dtype)
             # Load the model
@@ -29,7 +31,7 @@ class ProtT5(HuggingfaceTransformerEmbedder, BioOptEmbedder):
         return 1024
 
     def _find_preprocessing_strategy(self):
-        strategy = preprocess_sequences_with_whitespaces
+        strategy = preprocess_sequences_for_prostt5
         logger.info(f"Chosen sequence pre-processing strategy: {strategy.__name__}")
         return strategy
 
@@ -38,10 +40,10 @@ class ProtT5(HuggingfaceTransformerEmbedder, BioOptEmbedder):
         """
         Optimized ProtT5 implementation using attention masks for post-processing.
 
-        ProtT5 sequences after tokenization look like:
-        [AA1, AA2, AA3, ..., AAn, EOS, PAD, PAD, ...]
+        ProstT5 sequences after tokenization look like:
+        [BOS, AA1, AA2, AA3, ..., AAn, EOS, PAD, PAD, ...]
 
-        The embedding is only [AA1, AA2, AA3, ..., AAn] (no EOS, no padding).
+        The embedding is only [AA1, AA2, AA3, ..., AAn] (no BOS/EOS, no padding).
         """
         tokenized_sequences, attention_mask = self._tokenize(batch)
 
@@ -59,9 +61,9 @@ class ProtT5(HuggingfaceTransformerEmbedder, BioOptEmbedder):
             # Count non-padding tokens using attention mask (includes EOS)
             num_real_tokens = attention_mask[seq_num].sum().item()
 
-            # Extract embeddings: skip EOS (last real token) and all padding
-            # This gets: [AA1, AA2, ..., AAn] from [AA1, AA2, ..., AAn, EOS, PAD, PAD]
-            embedding = embeddings[seq_num, :num_real_tokens - 1]
+            # Extract embeddings: skip BOS (first token) and EOS (last real token) and all padding
+            # From [BOS, AA1, AA2, ..., AAn, EOS, PAD, PAD] -> [AA1, AA2, ..., AAn]
+            embedding = embeddings[seq_num, 1:num_real_tokens - 1]
             processed_embeddings.append(embedding)
 
         # Yield all at once
