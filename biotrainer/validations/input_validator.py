@@ -61,8 +61,12 @@ class InputValidator:
         # Expect float or int for regression
         for seq_record in input_data:
             target = seq_record.get_target()
-            if target is None and seq_record.get_set().lower() != "pred":
+            is_pred_set = seq_record.get_set().lower() == "pred"
+            if target is None and not is_pred_set:
                 return f"No target found for sequence {seq_record.seq_id}!"
+            if is_pred_set:
+                continue
+
             if self.protocol in Protocol.regression_protocols():
                 try:
                     targets = [target]
