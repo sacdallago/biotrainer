@@ -10,8 +10,8 @@ from ..output_files import OutputManager, output_observer_factory, BiotrainerOut
 
 def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
                                       custom_pipeline: Optional[Pipeline] = None,
-                                      custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None) \
-        -> Dict[str, Any]:
+                                      custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
+                                      write_to_file: Optional[bool] = True) -> Dict[str, Any]:
     # Verify config via configurator
     configurator = None
     if isinstance(config, str):
@@ -46,7 +46,10 @@ def parse_config_file_and_execute_run(config: Union[str, Path, Dict[str, Any]],
     output_manager = trainer.run()
 
     # Save output_variables in out.yml
-    output_result = output_manager.write_to_file(output_dir=output_dir)
+    if write_to_file:
+        output_result = output_manager.write_to_file(output_dir=output_dir)
+    else:
+        output_result = output_manager.to_dict()
 
     clear_logging()
 
