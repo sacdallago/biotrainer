@@ -6,6 +6,7 @@ from typing import Dict, Set, Any, Optional
 
 from .cnn import CNN
 from .log_reg import LogReg
+from .gp import GPModelAdapter
 from .fnn import FNN, DeeperFNN
 from .model_params import count_parameters
 from .light_attention import LightAttention
@@ -39,12 +40,14 @@ __MODELS = {
     Protocol.sequence_to_class: {
         'FNN': FNN,
         'DeeperFNN': DeeperFNN,
-        'LogReg': LogReg
+        'LogReg': LogReg,
+        'GP': GPModelAdapter,
     },
     Protocol.sequence_to_value: {
         'FNN': FNN,
         'DeeperFNN': DeeperFNN,
-        'LogReg': LogReg
+        'LogReg': LogReg,
+        'GP': GPModelAdapter,
     },
 }
 
