@@ -1,10 +1,13 @@
+from typing import List
+
 from .training_factory import TrainingFactory
 
 from ..pipeline import PipelineContext, PipelineStep
 from ..pipeline.pipeline_step import PipelineStepType
 
+from ...protocols import Protocol
 from ...solvers import get_metrics_calculator
-from ...utilities import get_logger, revert_mappings
+from ...utilities import get_logger, revert_mappings, BiotrainerSequencePrediction
 from ...validations import SanityChecker, Bootstrapper
 
 logger = get_logger(__name__)
@@ -37,17 +40,31 @@ class TestingStep(PipelineStep):
 
     @staticmethod
     def _do_and_log_prediction(context: PipelineContext, solver, pred_loader):
+        protocol = context.config["protocol"]
+        class_int2str = context.target_manager.class_int2str
         # re-initialize the model to avoid any undesired information leakage and only load checkpoint weights
         solver.load_checkpoint(resume_training=False)
-        pred_results = solver.inference(pred_loader, calculate_test_metrics=False)
 
-        predictions = revert_mappings(protocol=context.config["protocol"],
-                                      test_predictions=pred_results['mapped_predictions'],
-                                      class_int2str=context.target_manager.class_int2str)
+        # Monte Carlo Dropout Prediction Output only enabled for per-sequence protocols at the moment
+        if protocol in Protocol.per_sequence_protocols() and solver.model_has_dropout():
+            mcd_results: List[BiotrainerSequencePrediction] = solver.inference_monte_carlo_dropout(pred_loader,
+                                                                                                   n_forward_passes=30)
+            mcd_results = [result.revert_mappings(protocol=protocol, class_int2str=class_int2str) for result in
+                           mcd_results]
+            predictions = {
+                result.seq_id: {"prediction": result.prediction, "mcd_mean": result.mcd_mean, "mcd_std": result.mcd_std}
+                for result in mcd_results}
+        else:
+            pred_results = solver.inference(pred_loader, calculate_test_metrics=False)
+            predictions = revert_mappings(protocol=protocol,
+                                          test_predictions=pred_results['mapped_predictions'],
+                                          class_int2str=context.target_manager.class_int2str)
+        # Remap hashes to actual ids
+        predictions = {context.hash2id.get(seq_hash, seq_hash): pred for seq_hash, pred in predictions.items()}
         context.output_manager.add_prediction_result(prediction_results=predictions)
 
         logger.info(f"Calculated predictions for {len(pred_loader)} samples!")
-        return pred_results
+        return predictions
 
     @staticmethod
     def _do_and_log_bootstrapping_evaluation(context: PipelineContext,

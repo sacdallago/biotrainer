@@ -7,6 +7,8 @@ from typing import Dict, Union, Optional, Callable, List
 from .solver import Solver
 from .solver_utils import get_mean_and_confidence_bounds
 
+from ..utilities import BiotrainerResiduePrediction
+
 
 class ResidueSolver(Solver):
     def _transform_network_output(self, network_output: torch.Tensor) -> torch.Tensor:
@@ -74,7 +76,7 @@ class ResidueSolver(Solver):
 
     def inference_monte_carlo_dropout(self, dataloader: DataLoader,
                                       n_forward_passes: int = 30,
-                                      confidence_level: float = 0.05):
+                                      confidence_level: float = 0.05) -> List[BiotrainerResiduePrediction]:
         """
         Calculate inference results from existing models for given embeddings.
         Adaption needed for residue_to_x tasks because of multiple predictions for each sequence
@@ -86,7 +88,7 @@ class ResidueSolver(Solver):
         if not 0 < confidence_level < 1:
             raise ValueError(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
 
-        mapped_predictions = {}
+        predictions = []
         is_regression = isinstance(self, ResidueRegressionSolver)
 
         for i, (seq_ids, X, y, lengths) in enumerate(dataloader):
@@ -120,24 +122,32 @@ class ResidueSolver(Solver):
                     # For classification, take argmax of mean probabilities
                     _, predictions_by_mean = torch.max(dropout_mean, dim=0)
 
-                # Create dict with seq_id: prediction
-                mapped_predictions[seq_id] = []
                 for residue_idx, residue_prediction in enumerate(predictions_by_mean):
-                    mapped_predictions[seq_id].append({
-                        "prediction": residue_prediction.item(),
-                        "all_predictions": [dropout_iteration["prediction"][seq_idx][residue_idx] for
-                                            dropout_iteration in dropout_iterations],
-                        "mcd_mean": dropout_mean.T[residue_idx] if not is_regression else dropout_mean[residue_idx],
-                        "mcd_std": dropout_std.T[residue_idx] if not is_regression else dropout_std[residue_idx],
-                        "mcd_lower_bound": lower_bound.T[residue_idx] if not is_regression else lower_bound[
-                            residue_idx],
-                        "mcd_upper_bound": upper_bound.T[residue_idx] if not is_regression else upper_bound[
-                            residue_idx],
-                    })
-
+                    predictions.append(BiotrainerResiduePrediction(seq_id=seq_id,
+                                                                   residue_index=residue_idx,
+                                                                   prediction=residue_prediction.item(),
+                                                                   mcd_predictions=[
+                                                                       dropout_iteration["prediction"][seq_idx][
+                                                                           residue_idx] for
+                                                                       dropout_iteration in dropout_iterations],
+                                                                   mcd_mean=dropout_mean.T[
+                                                                       residue_idx].tolist() if not is_regression else
+                                                                   dropout_mean[residue_idx].tolist(),
+                                                                   mcd_std=dropout_std.T[
+                                                                       residue_idx].tolist() if not is_regression else
+                                                                   dropout_std[residue_idx].tolist(),
+                                                                   mcd_lower_bound=lower_bound.T[
+                                                                       residue_idx].tolist() if not is_regression else
+                                                                   lower_bound[
+                                                                       residue_idx].tolist(),
+                                                                   mcd_upper_bound=upper_bound.T[
+                                                                       residue_idx].tolist() if not is_regression else
+                                                                   upper_bound[
+                                                                       residue_idx].tolist()
+                                                                   ))
                 seq_idx += 1
 
-        return {'mapped_predictions': mapped_predictions}
+        return predictions
 
 
 class ResidueClassificationSolver(ResidueSolver):

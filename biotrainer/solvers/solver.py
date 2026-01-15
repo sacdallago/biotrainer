@@ -17,7 +17,7 @@ from .solver_utils import get_mean_and_confidence_bounds
 
 from ..models import BiotrainerModel
 from ..output_files import OutputManager
-from ..utilities import get_logger, EpochMetrics
+from ..utilities import get_logger, EpochMetrics, BiotrainerSequencePrediction, BiotrainerResiduePrediction
 
 logger = get_logger(__name__)
 
@@ -193,9 +193,11 @@ class Solver(ABC):
 
     def inference_monte_carlo_dropout(self, dataloader: DataLoader,
                                       n_forward_passes: int = 30,
-                                      confidence_level: float = 0.05):
+                                      confidence_level: float = 0.05) -> List[
+        Union[BiotrainerSequencePrediction, BiotrainerResiduePrediction]]:
         """
-        Calculate inference results from existing models for given embeddings
+        Calculate inference results from existing models for given embeddings. Implementation here is for
+        per-sequence protocols. For per-residue, see the residue_solvers script.
 
             dataloader: Dataloader with embeddings
             n_forward_passes: Times to repeat calculation with different dropout nodes enabled
@@ -204,7 +206,7 @@ class Solver(ABC):
         if not 0 < confidence_level < 1:
             raise ValueError(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
 
-        mapped_predictions = {}
+        predictions = []
 
         for i, (seq_ids, X, y, lengths) in enumerate(dataloader):
             dropout_iterations = self._do_dropout_iterations(X, lengths, n_forward_passes)
@@ -218,20 +220,20 @@ class Solver(ABC):
                 confidence_level=confidence_level)
             prediction_by_mean = self._probabilities_to_predictions(dropout_mean)
 
-            # Create dict with seq_id: prediction
             for idx, prediction in enumerate(prediction_by_mean):
-                mapped_predictions[seq_ids[idx]] = {"prediction": prediction.item(),
-                                                    "all_predictions": [dropout_iteration["prediction"][idx] for
-                                                                        dropout_iteration in dropout_iterations],
-                                                    "mcd_mean": dropout_mean[idx].tolist(),
-                                                    "mcd_std": dropout_std[idx].tolist(),
-                                                    "mcd_lower_bound": lower_bound[idx].tolist(),
-                                                    "mcd_upper_bound": upper_bound[idx].tolist(),
-                                                    }
+                predictions.append(BiotrainerSequencePrediction(seq_id=seq_ids[idx],
+                                                                prediction=prediction.item(),
+                                                                mcd_predictions=[dropout_iteration["prediction"][idx]
+                                                                                 for
+                                                                                 dropout_iteration in
+                                                                                 dropout_iterations],
+                                                                mcd_mean=dropout_mean[idx].tolist(),
+                                                                mcd_std=dropout_std[idx].tolist(),
+                                                                mcd_lower_bound=lower_bound[idx].tolist(),
+                                                                mcd_upper_bound=upper_bound[idx].tolist())
+                                   )
 
-        return {
-            'mapped_predictions': mapped_predictions
-        }
+        return predictions
 
     def auto_resume(self, training_dataloader: DataLoader, validation_dataloader: DataLoader,
                     train_wrapper):
