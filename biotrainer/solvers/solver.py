@@ -160,17 +160,26 @@ class Solver(ABC):
             'mapped_probabilities': mapped_probabilities
         }
 
+    def model_has_dropout(self):
+        return self._has_dropout(self.network)
+
+    @staticmethod
+    def _has_dropout(model) -> bool:
+        """Check if the model contains any dropout layers with p > 0.0"""
+        for m in model.modules():
+            if m.__class__.__name__.startswith('Dropout') and m.p > 0.0:
+                return True
+        return False
+
     @staticmethod
     def _enable_dropout(model):
         """ Function to enable the dropout layers during test-time """
-        number_dropout_layers = 0
+        if not Solver._has_dropout(model):
+            raise ValueError("Trying to do monte carlo dropout inference on model without dropout!")
+
         for m in model.modules():
             if m.__class__.__name__.startswith('Dropout'):
                 m.train()
-                if m.p > 0.0:
-                    number_dropout_layers += 1
-        if not number_dropout_layers > 0:
-            raise ValueError("Trying to do monte carlo dropout inference on model without dropout!")
 
     def _do_dropout_iterations(self, X, lengths, n_forward_passes):
         dropout_iterations = []
@@ -257,7 +266,8 @@ class Solver(ABC):
                     f"Training new model from scratch!")
         return train_wrapper(self)
 
-    def load_checkpoint(self, checkpoint_path: Path = None, resume_training: bool = False, disable_pytorch_compile: bool = True):
+    def load_checkpoint(self, checkpoint_path: Path = None, resume_training: bool = False,
+                        disable_pytorch_compile: bool = True):
         if checkpoint_path:
             checkpoint_file = checkpoint_path
             self.checkpoint_type = checkpoint_path.suffix
