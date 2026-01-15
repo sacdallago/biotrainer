@@ -72,7 +72,7 @@ class InputValidator:
                     targets = [target]
 
                     # r2v
-                    if RESIDUE_TO_VALUE_TARGET_DELIMITER in target:
+                    if RESIDUE_TO_VALUE_TARGET_DELIMITER in str(target):
                         if self.protocol != Protocol.residue_to_value:
                             return (f"Found {RESIDUE_TO_VALUE_TARGET_DELIMITER} in {target} for "
                                     f"sequence {seq_record.seq_id} - "
