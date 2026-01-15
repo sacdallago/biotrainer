@@ -356,7 +356,7 @@ class Inferencer:
         result_dict = {}
         for metric in metrics:
             all_metric_values = torch.tensor([res[metric] for res in iteration_results], dtype=torch.float16)
-            mean, lower_bound, upper_bound = get_mean_and_confidence_bounds(
+            mean, _, lower_bound, upper_bound = get_mean_and_confidence_bounds(
                 values=all_metric_values,
                 dimension=0,
                 confidence_level=confidence_level

@@ -106,7 +106,7 @@ class ResidueSolver(Solver):
             for seq_id, dropout_residues in outputs_by_sequence.items():
                 stacked_residues_tensor = torch.stack([torch.tensor(outputs) for outputs in dropout_residues], dim=1)
 
-                dropout_mean, lower_bound, upper_bound = get_mean_and_confidence_bounds(
+                dropout_mean, dropout_std, lower_bound, upper_bound = get_mean_and_confidence_bounds(
                     values=stacked_residues_tensor,
                     dimension=1,
                     confidence_level=confidence_level
@@ -128,6 +128,7 @@ class ResidueSolver(Solver):
                         "all_predictions": [dropout_iteration["prediction"][seq_idx][residue_idx] for
                                             dropout_iteration in dropout_iterations],
                         "mcd_mean": dropout_mean.T[residue_idx] if not is_regression else dropout_mean[residue_idx],
+                        "mcd_std": dropout_std.T[residue_idx] if not is_regression else dropout_std[residue_idx],
                         "mcd_lower_bound": lower_bound.T[residue_idx] if not is_regression else lower_bound[
                             residue_idx],
                         "mcd_upper_bound": upper_bound.T[residue_idx] if not is_regression else upper_bound[

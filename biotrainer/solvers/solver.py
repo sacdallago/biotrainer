@@ -203,9 +203,10 @@ class Solver(ABC):
             dropout_raw_values = torch.stack([torch.tensor(dropout_iteration["probabilities"])
                                               for dropout_iteration in dropout_iterations], dim=1)
 
-            dropout_mean, lower_bound, upper_bound = get_mean_and_confidence_bounds(values=dropout_raw_values,
-                                                                            dimension=1,
-                                                                            confidence_level=confidence_level)
+            dropout_mean, dropout_std, lower_bound, upper_bound = get_mean_and_confidence_bounds(
+                values=dropout_raw_values,
+                dimension=1,
+                confidence_level=confidence_level)
             prediction_by_mean = self._probabilities_to_predictions(dropout_mean)
 
             # Create dict with seq_id: prediction
@@ -213,11 +214,10 @@ class Solver(ABC):
                 mapped_predictions[seq_ids[idx]] = {"prediction": prediction.item(),
                                                     "all_predictions": [dropout_iteration["prediction"][idx] for
                                                                         dropout_iteration in dropout_iterations],
-                                                    "mcd_mean": dropout_mean[idx],
-                                                    "mcd_lower_bound": (
-                                                            lower_bound[idx]),
-                                                    "mcd_upper_bound": (
-                                                            upper_bound[idx]),
+                                                    "mcd_mean": dropout_mean[idx].tolist(),
+                                                    "mcd_std": dropout_std[idx].tolist(),
+                                                    "mcd_lower_bound": lower_bound[idx].tolist(),
+                                                    "mcd_upper_bound": upper_bound[idx].tolist(),
                                                     }
 
         return {
