@@ -63,7 +63,7 @@ class TestingStep(PipelineStep):
         predictions = {context.hash2id.get(seq_hash, seq_hash): pred for seq_hash, pred in predictions.items()}
         context.output_manager.add_prediction_result(prediction_results=predictions)
 
-        logger.info(f"Calculated predictions for {len(pred_loader)} samples!")
+        logger.info(f"Calculated predictions for {len(context.prediction_dataset)} samples!")
         return predictions
 
     @staticmethod
