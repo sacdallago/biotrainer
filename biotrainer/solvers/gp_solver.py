@@ -268,6 +268,9 @@ class GPSolver(Solver):
                     lower_bound = probs_tensor.quantile(lower_percentile, dim=1)
                     upper_bound = probs_tensor.quantile(upper_percentile, dim=1)
 
+                    # BALD Score
+                    bald_scores = self._calculate_bald_score(probs_tensor)  # (batch_size,)
+
                     # Prediction by mean
                     _, prediction_by_mean = torch.max(gp_mean, dim=1)
 
@@ -279,7 +282,8 @@ class GPSolver(Solver):
                             mcd_mean=gp_mean[idx].tolist(),
                             mcd_std=gp_std[idx].tolist(),
                             mcd_lower_bound=lower_bound[idx].tolist(),
-                            mcd_upper_bound=upper_bound[idx].tolist()
+                            mcd_upper_bound=upper_bound[idx].tolist(),
+                            bald_score=bald_scores[idx].item(),
                         ))
 
                 else:

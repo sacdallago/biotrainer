@@ -34,6 +34,7 @@ class BiotrainerSequencePrediction(BaseModel):
                                                                  description="Monte-Carlo-Dropout lower bound(s)")
     mcd_upper_bound: Optional[Union[float, List[float]]] = Field(default=None,
                                                                  description="Monte-Carlo-Dropout upper bound(s)")
+    bald_score: Optional[float] = Field(default=None, description="BALD score")
 
     def revert_mappings(self, protocol: Protocol,
                         class_int2str: Optional[Dict[int, str]] = None) -> BiotrainerSequencePrediction:
@@ -50,7 +51,8 @@ class BiotrainerSequencePrediction(BaseModel):
         return BiotrainerSequencePrediction(seq_id=self.seq_id, prediction=pred, mcd_predictions=mcd_preds,
                                             mcd_mean=self.mcd_mean, mcd_std=self.mcd_std,
                                             mcd_lower_bound=self.mcd_lower_bound,
-                                            mcd_upper_bound=self.mcd_upper_bound
+                                            mcd_upper_bound=self.mcd_upper_bound,
+                                            bald_score=self.bald_score
                                             )
 
 

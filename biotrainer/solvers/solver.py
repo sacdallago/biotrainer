@@ -15,6 +15,7 @@ from typing import Callable, Optional, Union, Dict, List, Any
 from .metrics_calculator import MetricsCalculator
 from .solver_utils import get_mean_and_confidence_bounds
 
+from ..protocols import Protocol
 from ..models import BiotrainerModel
 from ..output_files import OutputManager
 from ..utilities import get_logger, EpochMetrics, BiotrainerSequencePrediction, BiotrainerResiduePrediction
@@ -220,6 +221,10 @@ class Solver(ABC):
                 confidence_level=confidence_level)
             prediction_by_mean = self._probabilities_to_predictions(dropout_mean)
 
+            bald_scores = None
+            if self.protocol in Protocol.classification_protocols():
+                bald_scores = self._calculate_bald_score(dropout_raw_values)
+
             for idx, prediction in enumerate(prediction_by_mean):
                 predictions.append(BiotrainerSequencePrediction(seq_id=seq_ids[idx],
                                                                 prediction=prediction.item(),
@@ -230,7 +235,10 @@ class Solver(ABC):
                                                                 mcd_mean=dropout_mean[idx].tolist(),
                                                                 mcd_std=dropout_std[idx].tolist(),
                                                                 mcd_lower_bound=lower_bound[idx].tolist(),
-                                                                mcd_upper_bound=upper_bound[idx].tolist())
+                                                                mcd_upper_bound=upper_bound[idx].tolist(),
+                                                                bald_score=bald_scores[
+                                                                    idx].item() if bald_scores is not None else None,
+                                                                )
                                    )
 
         return predictions
@@ -506,3 +514,38 @@ class Solver(ABC):
             prediction = self._probabilities_to_predictions(probabilities)
             return {"prediction": prediction.cpu().tolist(),
                     "probabilities": probabilities.cpu().tolist()}
+
+    @staticmethod
+    def _calculate_bald_score(
+            mc_samples: torch.Tensor,  # Shape: (batch_size, n_mc, n_classes)
+            eps: float = 1e-10
+    ) -> torch.Tensor:
+        """
+        Calculate BALD (Bayesian Active Learning by Disagreement) score.
+
+        BALD = H[E[p(y|x,θ)]] - E[H[p(y|x,θ)]]
+             = Predictive Entropy - Expected Entropy
+
+        Args:
+            mc_samples: MC probability samples, shape (batch_size, n_mc, n_classes)
+            eps: Small constant for numerical stability
+
+        Returns:
+            bald_scores: Shape (batch_size,)
+        """
+        # Predictive entropy: H[E[p]]
+        mean_probs = mc_samples.mean(dim=1)  # (batch_size, n_classes)
+        predictive_entropy = -torch.sum(
+            mean_probs * torch.log(mean_probs + eps), dim=-1
+        )  # (batch_size,)
+
+        # Expected entropy: E[H[p]]
+        # Entropy per sample: -Σ p_i log(p_i)
+        sample_entropies = -torch.sum(
+            mc_samples * torch.log(mc_samples + eps), dim=-1
+        )  # (batch_size, n_mc)
+        expected_entropy = sample_entropies.mean(dim=1)  # (batch_size,)
+
+        # BALD = mutual information
+        bald = predictive_entropy - expected_entropy
+        return bald

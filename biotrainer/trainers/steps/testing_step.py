@@ -52,7 +52,8 @@ class TestingStep(PipelineStep):
             mcd_results = [result.revert_mappings(protocol=protocol, class_int2str=class_int2str) for result in
                            mcd_results]
             predictions = {
-                result.seq_id: {"prediction": result.prediction, "mcd_mean": result.mcd_mean, "mcd_std": result.mcd_std}
+                result.seq_id: {"prediction": result.prediction, "mcd_mean": result.mcd_mean, "mcd_std": result.mcd_std,
+                                "bald_score": result.bald_score}
                 for result in mcd_results}
         else:
             pred_results = solver.inference(pred_loader, calculate_test_metrics=False)
