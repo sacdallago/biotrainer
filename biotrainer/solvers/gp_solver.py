@@ -252,18 +252,21 @@ class GPSolver(Solver):
 
                     # Shape: (n_samples, batch_size, n_classes)
                     samples_tensor = torch.stack([s["probabilities"] for s in gp_samples], dim=0)
-                    # Transpose to (batch_size, n_samples, n_classes)
-                    samples_tensor = samples_tensor.transpose(0, 1)
+
+                    probs_tensor = torch.softmax(samples_tensor, dim=-1)
+
+                    # Move to (B, S, C)
+                    probs_tensor = probs_tensor.transpose(0, 1)
 
                     # Compute statistics across samples
-                    gp_mean = samples_tensor.mean(dim=1)  # (batch_size, n_classes)
-                    gp_std = samples_tensor.std(dim=1)  # (batch_size, n_classes)
+                    gp_mean = probs_tensor.mean(dim=1)  # (batch_size, n_classes)
+                    gp_std = probs_tensor.std(dim=1)  # (batch_size, n_classes)
 
                     # Confidence bounds (percentile-based)
                     lower_percentile = confidence_level / 2
                     upper_percentile = 1 - (confidence_level / 2)
-                    lower_bound = samples_tensor.quantile(lower_percentile, dim=1)
-                    upper_bound = samples_tensor.quantile(upper_percentile, dim=1)
+                    lower_bound = probs_tensor.quantile(lower_percentile, dim=1)
+                    upper_bound = probs_tensor.quantile(upper_percentile, dim=1)
 
                     # Prediction by mean
                     _, prediction_by_mean = torch.max(gp_mean, dim=1)
