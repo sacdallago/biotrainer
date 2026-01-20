@@ -14,7 +14,7 @@ class PBCConfigBank(AutoEvalConfigBank):
         base_config = {
             "model_choice": "LogReg",
             "num_epochs": 50,
-            "learning_rate": 1e-2,
+            "learning_rate": 1e-3,
             "batch_size": 64,
             "ignore_file_inconsistencies": True,
             "seed": 42,
@@ -22,6 +22,7 @@ class PBCConfigBank(AutoEvalConfigBank):
             "shuffle": True,
             "patience": 10,
             "epsilon": 1e-3,
+            "scaling_method": "standard"
         }
 
         # Task-specific configurations that override or extend base config
