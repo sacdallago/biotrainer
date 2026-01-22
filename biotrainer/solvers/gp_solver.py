@@ -206,8 +206,8 @@ class GPSolver(Solver):
                 **self.metrics_calculator.compute_metrics(predicted=all_predictions_cat, labels=all_labels_cat)
             }
             # TODO Negative accuracy as proxy for validation loss in classification tasks (lower = better)
-            metrics['loss'] = metrics.get('mse', -1 * metrics.get('accuracy'))
-        return {
+            metrics['loss'] = metrics['mse'] if 'mse' in metrics else -1 * metrics.get('accuracy', 0)
+            return {
             'metrics': metrics,
             'mapped_predictions': mapped_predictions,
             'mapped_probabilities': mapped_probabilities
