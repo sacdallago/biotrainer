@@ -19,7 +19,7 @@ from ..embedders import EmbeddingService
 from ..output_files import InferenceOutputManager
 from ..datasets import get_dataset, get_embeddings_collate_function
 from ..solvers import get_solver, get_mean_and_confidence_bounds, MetricsCalculator
-from ..utilities import seed_all, EmbeddingDatasetSample, MASK_AND_LABELS_PAD_VALUE, revert_mappings
+from ..utilities import seed_all, EmbeddingDatasetSample, MASK_AND_LABELS_PAD_VALUE, revert_mappings, BootstrappedMetric
 
 
 class Inferencer:
@@ -75,13 +75,13 @@ class Inferencer:
             split_config["protocol"] = self.protocol
             split_config["device"] = self.device
             # Positional arguments
-            #model_choice = split_config.pop("model_choice")
-            #n_classes = split_config.pop("n_classes")
-            #loss_choice = split_config.pop("loss_choice")
-            #optimizer_choice = split_config.pop("optimizer_choice")
-            #learning_rate = split_config.pop("learning_rate")
-            #log_dir = split_config.pop("log_dir")
-            #disable_pytorch_compile = split_config.pop("disable_pytorch_compile")
+            # model_choice = split_config.pop("model_choice")
+            # n_classes = split_config.pop("n_classes")
+            # loss_choice = split_config.pop("loss_choice")
+            # optimizer_choice = split_config.pop("optimizer_choice")
+            # learning_rate = split_config.pop("learning_rate")
+            # log_dir = split_config.pop("log_dir")
+            # disable_pytorch_compile = split_config.pop("disable_pytorch_compile")
             checkpoint_path = Path(log_dir) / Path(split_checkpoints[split_name])
 
             model = get_model(**split_config)
@@ -258,7 +258,7 @@ class Inferencer:
                                            iterations: int = 30,
                                            sample_size: int = -1,
                                            confidence_level: float = 0.05,
-                                           seed: int = 42) -> Dict[str, Dict[str, float]]:
+                                           seed: int = 42) -> List[BootstrappedMetric]:
         """
         Calculate predictions from embeddings.
 
@@ -310,7 +310,7 @@ class Inferencer:
                           seq_ids: List[str],
                           all_predictions_dict: Dict,
                           all_targets_dict: Dict,
-                          metrics_calculator: MetricsCalculator):
+                          metrics_calculator: MetricsCalculator) -> List[BootstrappedMetric]:
         """
 
         :param iterations: Number of iterations to perform bootstrapping
@@ -353,7 +353,7 @@ class Inferencer:
 
         # Process results
         metrics = list(iteration_results[0].keys())
-        result_dict = {}
+        results = []
         for metric in metrics:
             all_metric_values = torch.tensor([res[metric] for res in iteration_results], dtype=torch.float16)
             mean, _, lower_bound, upper_bound = get_mean_and_confidence_bounds(
@@ -361,9 +361,11 @@ class Inferencer:
                 dimension=0,
                 confidence_level=confidence_level
             )
-            result_dict[metric] = {"mean": mean.item(), "lower": lower_bound.item(), "upper": upper_bound.item()}
+            results.append(BootstrappedMetric(name=metric, mean=mean.item(), lower=lower_bound.item(),
+                                              upper=upper_bound.item(), iterations=iterations, sample_size=sample_size,
+                                              confidence_level=confidence_level))
 
-        return result_dict
+        return results
 
     def from_embeddings_with_monte_carlo_dropout(self, embeddings: Union[Iterable, Dict],
                                                  split_name: str = "hold_out",

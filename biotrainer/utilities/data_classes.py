@@ -23,6 +23,15 @@ class EpochMetrics(BaseModel):
         return {"epoch": self.epoch, "training": self.training, "validation": self.validation}
 
 
+class BootstrappedMetric(BaseModel):
+    name: str = Field(description="Name of the metric")
+    mean: float = Field(description="Mean of the metric values")
+    lower: float = Field(description="Lower bound of the metric values")
+    upper: float = Field(description="Upper bound of the metric values")
+    iterations: int = Field(description="Number of iterations used for bootstrapping")
+    sample_size: int = Field(description="Sample size used for bootstrapping")
+    confidence_level: float = Field(description="Confidence level used for bootstrapping")
+
 class BiotrainerSequencePrediction(BaseModel):
     seq_id: str = Field(description="Sequence identifier")
     prediction: Any = Field(description="Predicted value")

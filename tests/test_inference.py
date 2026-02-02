@@ -3,12 +3,12 @@ import unittest
 import numpy as np
 import torch._dynamo
 
-from sys import platform
 from typing import Dict, Union, List
 
-from biotrainer.inference import Inferencer
-from biotrainer.embedders import OneHotEncodingEmbedder
 from biotrainer.protocols import Protocol
+from biotrainer.inference import Inferencer
+from biotrainer.utilities import BootstrappedMetric
+from biotrainer.embedders import OneHotEncodingEmbedder
 
 
 class InferencerTests(unittest.TestCase):
@@ -134,63 +134,62 @@ class InferencerTests(unittest.TestCase):
         Checks that metrics calculated with and without bootstrapping are within about the same range
         """
 
-        def _get_error_range(bootstrapping_dict):
-            return (bootstrapping_dict["upper"] - bootstrapping_dict["lower"]) * 0.5 * self.error_tolerance_factor
+        def _get_error_range(bootstrapped_metric: BootstrappedMetric):
+            return max(bootstrapped_metric.upper - bootstrapped_metric.lower * 0.5 * self.error_tolerance_factor,
+                       self.error_tolerance)
 
         # residue_to_class
-        r2c_dict_bootstrapping = self.inferencer_r2c.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
-                                                                                        self._test_targets_r2c,
-                                                                                        iterations=10,
-                                                                                        sample_size=3,
-                                                                                        seed=42)
+        r2c_bootstrapping = self.inferencer_r2c.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
+                                                                                   self._test_targets_r2c,
+                                                                                   iterations=10,
+                                                                                   sample_size=3,
+                                                                                   seed=42)
         r2c_dict = self.inferencer_r2c.from_embeddings(self.per_residue_embeddings, self._test_targets_r2c)
-        for metric in r2c_dict_bootstrapping.keys():
-            self.assertAlmostEqual(r2c_dict["metrics"][metric], r2c_dict_bootstrapping[metric]["mean"],
-                                   delta=_get_error_range(r2c_dict_bootstrapping[metric]))
+        for metric in r2c_bootstrapping:
+            self.assertAlmostEqual(r2c_dict["metrics"][metric.name], metric.mean, delta=_get_error_range(metric))
+            self.assertTrue(metric.lower <= metric.mean <= metric.upper)
+            self.assertTrue(metric.iterations == 10)
+            self.assertTrue(metric.sample_size == 3)
 
         # residues_to_class
-        rs2c_dict_bootstrapping = self.inferencer_rs2c.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
-                                                                                          self._test_targets_rs2c,
-                                                                                          iterations=6,
-                                                                                          sample_size=2,
-                                                                                          seed=42)
+        rs2c_bootstrapping = self.inferencer_rs2c.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
+                                                                                     self._test_targets_rs2c,
+                                                                                     iterations=6,
+                                                                                     sample_size=2,
+                                                                                     seed=42)
         rs2c_dict = self.inferencer_rs2c.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2c)
-        for metric in rs2c_dict_bootstrapping.keys():
-            self.assertAlmostEqual(rs2c_dict["metrics"][metric], rs2c_dict_bootstrapping[metric]["mean"],
-                                   delta=_get_error_range(rs2c_dict_bootstrapping[metric]))
+        for metric in rs2c_bootstrapping:
+            self.assertAlmostEqual(rs2c_dict["metrics"][metric.name], metric.mean, delta=_get_error_range(metric))
 
         # sequence_to_class
-        s2c_dict_bootstrapping = self.inferencer_s2c.from_embeddings_with_bootstrapping(self.per_sequence_embeddings,
-                                                                                        self._test_targets_s2c,
-                                                                                        iterations=10,
-                                                                                        sample_size=3,
-                                                                                        seed=42)
+        s2c_bootstrapping = self.inferencer_s2c.from_embeddings_with_bootstrapping(self.per_sequence_embeddings,
+                                                                                   self._test_targets_s2c,
+                                                                                   iterations=10,
+                                                                                   sample_size=3,
+                                                                                   seed=42)
         s2c_dict = self.inferencer_s2c.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2c)
-        for metric in s2c_dict_bootstrapping.keys():
-            self.assertAlmostEqual(s2c_dict["metrics"][metric], s2c_dict_bootstrapping[metric]["mean"],
-                                   delta=_get_error_range(s2c_dict_bootstrapping[metric]))
+        for metric in s2c_bootstrapping:
+            self.assertAlmostEqual(s2c_dict["metrics"][metric.name], metric.mean, delta=_get_error_range(metric))
 
         # sequence_to_value
-        s2v_dict_bootstrapping = self.inferencer_s2v.from_embeddings_with_bootstrapping(self.per_sequence_embeddings,
-                                                                                        self._test_targets_s2v,
-                                                                                        iterations=10,
-                                                                                        sample_size=2,
-                                                                                        seed=42)
+        s2v_bootstrapping = self.inferencer_s2v.from_embeddings_with_bootstrapping(self.per_sequence_embeddings,
+                                                                                   self._test_targets_s2v,
+                                                                                   iterations=10,
+                                                                                   sample_size=2,
+                                                                                   seed=42)
         s2v_dict = self.inferencer_s2v.from_embeddings(self.per_sequence_embeddings, self._test_targets_s2v)
-        for metric in s2v_dict_bootstrapping.keys():
-            self.assertAlmostEqual(s2v_dict["metrics"][metric], s2v_dict_bootstrapping[metric]["mean"],
-                                   delta=_get_error_range(s2v_dict_bootstrapping[metric]))
+        for metric in s2v_bootstrapping:
+            self.assertAlmostEqual(s2v_dict["metrics"][metric.name], metric.mean, delta=_get_error_range(metric))
 
         # residues_to_value
-        rs2v_dict_bootstrapping = self.inferencer_rs2v.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
-                                                                                          self._test_targets_rs2v,
-                                                                                          iterations=10,
-                                                                                          sample_size=2,
-                                                                                          seed=42)
+        rs2v_bootstrapping = self.inferencer_rs2v.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
+                                                                                     self._test_targets_rs2v,
+                                                                                     iterations=10,
+                                                                                     sample_size=2,
+                                                                                     seed=42)
         rs2v_dict = self.inferencer_rs2v.from_embeddings(self.per_residue_embeddings, self._test_targets_rs2v)
-        for metric in rs2v_dict_bootstrapping.keys():
-            self.assertAlmostEqual(rs2v_dict["metrics"][metric], rs2v_dict_bootstrapping[metric]["mean"],
-                                   delta=_get_error_range(rs2v_dict_bootstrapping[metric]))
+        for metric in rs2v_bootstrapping:
+            self.assertAlmostEqual(rs2v_dict["metrics"][metric.name], metric.mean, delta=_get_error_range(metric))
 
         # Check that a sample size and iteration of 1 work
         _ = self.inferencer_r2c.from_embeddings_with_bootstrapping(self.per_residue_embeddings,
