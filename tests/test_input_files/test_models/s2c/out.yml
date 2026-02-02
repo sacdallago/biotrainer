@@ -34,7 +34,7 @@ config:
   validate_input: true
 database_type: Protein
 derived_values:
-  biotrainer_version: 1.0.0
+  biotrainer_version: 1.3.0
   class_int2str:
     0: Glob
     1: GlobSP
@@ -50,27 +50,29 @@ derived_values:
     1: 1.0
     2: 1.0
     3: 1.0
+  embeddings_file: 
+    /home/sebie/PycharmProjects/biotrainerFork/examples/sequence_to_class/output/sequence_to_class/one_hot_encoding/reduced_embeddings_file_one_hot_encoding_half.h5
   model_hash: d581ad326970805b
   n_classes: 4
   n_features: 21
   n_testing_ids: 2
-  pipeline_elapsed_time: 1.1161456860027101
-  pipeline_end_time: '2025-06-26T12:22:41.714359'
-  pipeline_start_time: '2025-06-26T12:22:40.598213'
-  training_elapsed_time: 0.37126492700190283
+  pipeline_elapsed_time: 0.9997594080050476
+  pipeline_end_time: '2026-02-02T18:46:36.952675'
+  pipeline_start_time: '2026-02-02T18:46:35.952919'
+  training_elapsed_time: 0.399992011996801
 training_results:
   hold_out:
     n_training_ids: 1
     n_validation_ids: 1
     split_hyper_params: {}
     n_free_parameters: 836
-    start_time: '2025-06-26T12:22:40.645276'
-    end_time: '2025-06-26T12:22:40.978637'
-    elapsed_time: 0.3333484299982956
+    start_time: '2026-02-02T18:46:36.245466'
+    end_time: '2026-02-02T18:46:36.641706'
+    elapsed_time: 0.39623003400629386
     best_training_epoch_metrics:
       epoch: 6
       training:
-        loss: 1.4443376064300537
+        loss: 1.4443323612213135
         accuracy: 0.0
         macro-precision: 0.0
         micro-precision: 0.0
@@ -93,7 +95,7 @@ training_results:
         spearmans-corr-coeff: 0.0
         matthews-corr-coeff: 0.0
       validation:
-        loss: 1.407588243484497
+        loss: 1.4075875282287598
         accuracy: 0.0
         macro-precision: 0.0
         micro-precision: 0.0
@@ -117,46 +119,46 @@ training_results:
         matthews-corr-coeff: 0.0
     training_loss:
       '0': 1.5041325092315674
-      '1': 1.4994826316833496
-      '2': 1.5409173965454102
-      '3': 1.4478161334991455
-      '4': 1.4573078155517578
-      '5': 1.4478826522827148
-      '6': 1.4443376064300537
-      '7': 1.417114019393921
-      '8': 1.4668575525283813
-      '9': 1.4193494319915771
-      '10': 1.3971160650253296
-      '11': 1.4339247941970825
-      '12': 1.431593656539917
-      '13': 1.4262131452560425
-      '14': 1.3615515232086182
-      '15': 1.3960167169570923
-      '16': 1.3982455730438232
-      '17': 1.403325080871582
+      '1': 1.499480962753296
+      '2': 1.540912389755249
+      '3': 1.4478137493133545
+      '4': 1.457303524017334
+      '5': 1.4478785991668701
+      '6': 1.4443323612213135
+      '7': 1.417111873626709
+      '8': 1.466846227645874
+      '9': 1.4193452596664429
+      '10': 1.3971158266067505
+      '11': 1.4339171648025513
+      '12': 1.4315836429595947
+      '13': 1.4262030124664307
+      '14': 1.3615586757659912
+      '15': 1.3960132598876953
+      '16': 1.3982398509979248
+      '17': 1.4033159017562866
     validation_loss:
       '0': 1.5047531127929688
-      '1': 1.468870997428894
-      '2': 1.4312660694122314
-      '3': 1.4781889915466309
-      '4': 1.5135815143585205
-      '5': 1.4996626377105713
-      '6': 1.407588243484497
-      '7': 1.4775190353393555
-      '8': 1.4959872961044312
-      '9': 1.4704619646072388
-      '10': 1.446098804473877
-      '11': 1.433595061302185
-      '12': 1.500138759613037
-      '13': 1.5521775484085083
-      '14': 1.4084441661834717
-      '15': 1.4727874994277954
-      '16': 1.4889369010925293
-      '17': 1.5795818567276
+      '1': 1.4688695669174194
+      '2': 1.431264877319336
+      '3': 1.4781839847564697
+      '4': 1.5135719776153564
+      '5': 1.4996525049209595
+      '6': 1.4075875282287598
+      '7': 1.477508306503296
+      '8': 1.4959716796875
+      '9': 1.4704498052597046
+      '10': 1.446090579032898
+      '11': 1.4335885047912598
+      '12': 1.5001161098480225
+      '13': 1.5521385669708252
+      '14': 1.408443808555603
+      '15': 1.4727673530578613
+      '16': 1.488910436630249
+      '17': 1.5795221328735352
 test_results:
   test:
     metrics:
-      loss: 1.307281255722046
+      loss: 1.307288646697998
       accuracy: 0.5
       macro-precision: 0.25
       micro-precision: 0.5
@@ -180,138 +182,458 @@ test_results:
       matthews-corr-coeff: 0.0
     bootstrapping:
       results:
-        accuracy:
-          mean: 0.5166015625
-          error: 0.74951171875
-        macro-precision:
-          mean: 0.408447265625
-          error: 0.79833984375
-        micro-precision:
-          mean: 0.5166015625
-          error: 0.74951171875
-        '- precision class 0':
-          mean: 0.0
-          error: 0.0
-        '- precision class 1':
-          mean: 0.0
-          error: 0.0
-        '- precision class 2':
-          mean: 0.0
-          error: 0.0
-        '- precision class 3':
-          mean: 0.5166015625
-          error: 0.74951171875
-        macro-recall:
-          mean: 0.5166015625
-          error: 0.74951171875
-        micro-recall:
-          mean: 0.5166015625
-          error: 0.74951171875
-        '- recall class 0':
-          mean: 0.0
-          error: 0.0
-        '- recall class 1':
-          mean: 0.0
-          error: 0.0
-        '- recall class 2':
-          mean: 0.0
-          error: 0.0
-        '- recall class 3':
-          mean: 0.7333984375
-          error: 0.88134765625
-        macro-f1_score:
-          mean: 0.4443359375
-          error: 0.77392578125
-        micro-f1_score:
-          mean: 0.5166015625
-          error: 0.74951171875
-        '- f1_score class 0':
-          mean: 0.0
-          error: 0.0
-        '- f1_score class 1':
-          mean: 0.0
-          error: 0.0
-        '- f1_score class 2':
-          mean: 0.0
-          error: 0.0
-        '- f1_score class 3':
-          mean: 0.5888671875
-          error: 0.76123046875
-        spearmans-corr-coeff:
-          mean: 0.0
-          error: 0.0
-        matthews-corr-coeff:
-          mean: 0.0
-          error: 0.0
+      - metric_name: accuracy
+        mean: 0.5166666507720947
+        lower: 0.0
+        upper: 1.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: macro-precision
+        mean: 0.40833333134651184
+        lower: 0.0
+        upper: 1.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: micro-precision
+        mean: 0.5166666507720947
+        lower: 0.0
+        upper: 1.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- precision class 0'
+        mean: 0.0
+        lower: 0.0
+        upper: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- precision class 1'
+        mean: 0.0
+        lower: 0.0
+        upper: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- precision class 2'
+        mean: 0.0
+        lower: 0.0
+        upper: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- precision class 3'
+        mean: 0.5166666507720947
+        lower: 0.0
+        upper: 1.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: macro-recall
+        mean: 0.5166666507720947
+        lower: 0.0
+        upper: 1.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: micro-recall
+        mean: 0.5166666507720947
+        lower: 0.0
+        upper: 1.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- recall class 0'
+        mean: 0.0
+        lower: 0.0
+        upper: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- recall class 1'
+        mean: 0.0
+        lower: 0.0
+        upper: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- recall class 2'
+        mean: 0.0
+        lower: 0.0
+        upper: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- recall class 3'
+        mean: 0.7333333492279053
+        lower: 0.0
+        upper: 1.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: macro-f1_score
+        mean: 0.44440919160842896
+        lower: 0.0
+        upper: 1.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: micro-f1_score
+        mean: 0.5166666507720947
+        lower: 0.0
+        upper: 1.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- f1_score class 0'
+        mean: 0.0
+        lower: 0.0
+        upper: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- f1_score class 1'
+        mean: 0.0
+        lower: 0.0
+        upper: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- f1_score class 2'
+        mean: 0.0
+        lower: 0.0
+        upper: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: '- f1_score class 3'
+        mean: 0.588818371295929
+        lower: 0.0
+        upper: 1.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: spearmans-corr-coeff
+        mean: 0.0
+        lower: 0.0
+        upper: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      - metric_name: matthews-corr-coeff
+        mean: 0.0
+        lower: 0.0
+        upper: 0.0
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
       iterations: 30
       sample_size: 2
       confidence_level: 0.05
     test_baselines:
       random_model:
         results:
-          accuracy:
-            mean: 0.0
-            error: 0.0
-          macro-precision:
-            mean: 0.0
-            error: 0.0
-          micro-precision:
-            mean: 0.0
-            error: 0.0
-          '- precision class 0':
-            mean: 0.0
-            error: 0.0
-          '- precision class 1':
-            mean: 0.0
-            error: 0.0
-          '- precision class 2':
-            mean: 0.0
-            error: 0.0
-          '- precision class 3':
-            mean: 0.0
-            error: 0.0
-          macro-recall:
-            mean: 0.0
-            error: 0.0
-          micro-recall:
-            mean: 0.0
-            error: 0.0
-          '- recall class 0':
-            mean: 0.0
-            error: 0.0
-          '- recall class 1':
-            mean: 0.0
-            error: 0.0
-          '- recall class 2':
-            mean: 0.0
-            error: 0.0
-          '- recall class 3':
-            mean: 0.0
-            error: 0.0
-          macro-f1_score:
-            mean: 0.0
-            error: 0.0
-          micro-f1_score:
-            mean: 0.0
-            error: 0.0
-          '- f1_score class 0':
-            mean: 0.0
-            error: 0.0
-          '- f1_score class 1':
-            mean: 0.0
-            error: 0.0
-          '- f1_score class 2':
-            mean: 0.0
-            error: 0.0
-          '- f1_score class 3':
-            mean: 0.0
-            error: 0.0
-          spearmans-corr-coeff:
-            mean: 0.0
-            error: 0.0
-          matthews-corr-coeff:
-            mean: 0.0
-            error: 0.0
+        - metric_name: accuracy
+          mean: 0.4833333194255829
+          lower: 0.0
+          upper: 1.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: macro-precision
+          mean: 0.375
+          lower: 0.0
+          upper: 1.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: micro-precision
+          mean: 0.4833333194255829
+          lower: 0.0
+          upper: 1.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- precision class 0'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- precision class 1'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- precision class 2'
+          mean: 0.4833333194255829
+          lower: 0.0
+          upper: 1.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- precision class 3'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: macro-recall
+          mean: 0.4833333194255829
+          lower: 0.0
+          upper: 1.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: micro-recall
+          mean: 0.4833333194255829
+          lower: 0.0
+          upper: 1.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- recall class 0'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- recall class 1'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- recall class 2'
+          mean: 0.699999988079071
+          lower: 0.0
+          upper: 1.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- recall class 3'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: macro-f1_score
+          mean: 0.4110758602619171
+          lower: 0.0
+          upper: 1.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: micro-f1_score
+          mean: 0.4833333194255829
+          lower: 0.0
+          upper: 1.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- f1_score class 0'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- f1_score class 1'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- f1_score class 2'
+          mean: 0.5554850101470947
+          lower: 0.0
+          upper: 1.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- f1_score class 3'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: spearmans-corr-coeff
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: matthews-corr-coeff
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        iterations: 30
+        sample_size: 2
+        confidence_level: 0.05
+      random_sampling:
+        results:
+        - metric_name: accuracy
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: macro-precision
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: micro-precision
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- precision class 0'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- precision class 1'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- precision class 2'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- precision class 3'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: macro-recall
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: micro-recall
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- recall class 0'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- recall class 1'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- recall class 2'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- recall class 3'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: macro-f1_score
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: micro-f1_score
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- f1_score class 0'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- f1_score class 1'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- f1_score class 2'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: '- f1_score class 3'
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: spearmans-corr-coeff
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
+        - metric_name: matthews-corr-coeff
+          mean: 0.0
+          lower: 0.0
+          upper: 0.0
+          iterations: 30
+          sample_size: 2
+          confidence_level: 0.05
         iterations: 30
         sample_size: 2
         confidence_level: 0.05
