@@ -7,6 +7,8 @@ from typing import Optional, Dict, Union
 from torchmetrics import Accuracy, Precision, Recall, F1Score, SpearmanCorrCoef, MatthewsCorrCoef, Metric, \
     MeanSquaredError
 
+from .ndcg import NDCG
+
 from ..utilities import MASK_AND_LABELS_PAD_VALUE
 
 
@@ -124,6 +126,7 @@ class RegressionMetricsCalculator(MetricsCalculator):
         self.mse = MeanSquaredError(squared=True)
         self.rmse = MeanSquaredError(squared=False)
         self.scc = SpearmanCorrCoef()
+        self.ndcg = NDCG(quantile=True, top=10)
 
     def compute_metrics(
             self, predicted: Optional[torch.Tensor] = None,
@@ -131,7 +134,8 @@ class RegressionMetricsCalculator(MetricsCalculator):
         return {
             'mse': self._compute_metric(self.mse, predicted, labels).item(),
             'rmse': self._compute_metric(self.rmse, predicted, labels).item(),
-            'spearmans-corr-coeff': self._compute_metric(self.scc, predicted, labels).item()
+            'spearmans-corr-coeff': self._compute_metric(self.scc, predicted, labels).item(),
+            'ndcg': self._compute_metric(self.ndcg, predicted, labels).item()
         }
 
 
