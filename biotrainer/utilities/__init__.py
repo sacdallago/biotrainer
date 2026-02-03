@@ -15,6 +15,7 @@ from .constants import (
     METRICS_WITHOUT_REVERSED_SORTING,
     RESIDUE_TO_VALUE_TARGET_DELIMITER,
     AMINO_ACIDS,
+    STANDARD_AAS,
 )
 
 __all__ = [
@@ -35,6 +36,7 @@ __all__ = [
     'RESIDUE_TO_VALUE_TARGET_DELIMITER',
     'METRICS_WITHOUT_REVERSED_SORTING',
     'AMINO_ACIDS',
+    'STANDARD_AAS',
     'Split',
     'SplitResult',
     'EmbeddingDatasetSample',

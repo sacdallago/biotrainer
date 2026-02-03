@@ -11,18 +11,17 @@ import torch
 
 from typing import List, Generator, Optional, Iterable, Any, Union, Callable
 
-from .preprocessing_strategies import preprocess_sequences_without_whitespaces
+from .tokenization_mixin import BiotrainerTokenizerMixin
 
 from ...utilities import get_logger, get_device_memory
 
 logger = get_logger(__name__)
 
 
-class EmbedderInterface(abc.ABC):
+class EmbedderInterface(abc.ABC, BiotrainerTokenizerMixin):
     name: str
     _model: Optional[Any] = None
     _device: Union[None, str, torch.device] = None
-    _preprocessing_strategy: Callable = lambda self, sequences, mask_token: preprocess_sequences_without_whitespaces(sequences, mask_token)
 
     @abc.abstractmethod
     def _embed_single(self, sequence: str) -> torch.Tensor:
@@ -40,7 +39,7 @@ class EmbedderInterface(abc.ABC):
         return None
 
     def _preprocess_sequences(self, sequences: Iterable[str]) -> List[str]:
-        return self._preprocessing_strategy(sequences, self.get_mask_token())
+        return self._find_preprocessing_strategy()(sequences, self.get_mask_token())
 
     def _embed_batch(self, batch: List[str]) -> Generator[torch.Tensor, None, None]:
         """Computes the embeddings from all sequences in the batch
