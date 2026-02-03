@@ -57,6 +57,10 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def _compute_perplexity(self, sequence: str) -> float:
+        raise NotImplementedError
+
     def _score_variants_from_marginal_logits(self,
                                              wt_sequence: str,
                                              logits: torch.Tensor,
@@ -161,13 +165,30 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
             else:
                 score = mt_pppl
 
-            variant_score = VariantScore.from_pppl(variant=variant, mutation_score=score, model_name=self._name)
+            variant_score = VariantScore.from_total_score(variant=variant, mutation_score=score,
+                                                          model_name=self._name,
+                                                          method_name=ZeroShotMethod.PSEUDOPERPLEXITY)
             variant_scores.append(variant_score)
 
         return variant_scores
 
+    def zero_shot_perplexity(self, wt_sequence: str, mutations: List[str], one_indexed: bool = True,
+                             subtract_wt: bool = True) -> List[VariantScore]:
+        wt_ppl = self._compute_perplexity(wt_sequence) if subtract_wt else None
+        results = []
+        for mutation in tqdm(mutations, desc="Scoring mutations (ppl)", unit="variant", ncols=100, leave=False):
+            variant = Variant.parse(mutation, wt_sequence=wt_sequence, one_indexed=one_indexed)
+            mt_seq = variant.get_mutant_sequence()
+            mt_ppl = self._compute_perplexity(mt_seq)
+            score = mt_ppl - wt_ppl if subtract_wt else mt_ppl
 
-class BertLikeEngineer(BioEngineerModelWrapper):
+            variant_score = VariantScore.from_total_score(variant=variant, mutation_score=score, model_name=self._name,
+                                                          method_name=ZeroShotMethod.PERPLEXITY)
+            results.append(variant_score)
+        return results
+
+
+class BertLikeEngineer(BioEngineerModelWrapper, ABC):
     """ Model wrapper for BERT-like models (e.g. ProtBert, ESM-2)
 
     Implementing classes should still overwrite the _find_preprocessing_strategy method for performance
@@ -242,3 +263,27 @@ class BertLikeEngineer(BioEngineerModelWrapper):
 
         # Return sum of log probabilities
         return sum(position_log_probs)
+
+    def _compute_perplexity(self, sequence: str) -> float:
+        raise NotImplementedError
+
+
+class GPTLikeEngineer(BioEngineerModelWrapper, ABC):
+    def supported_methods(self) -> List[ZeroShotMethod]:
+        return [ZeroShotMethod.PERPLEXITY]
+
+    def _get_logits(self, sequence: str):
+        raise NotImplementedError("WT marginals are not defined for causal LMs")
+
+    def _get_masked_logits(self, sequence: str):
+        raise NotImplementedError("Masked marginals are not defined for causal LMs")
+
+    def _compute_pseudoperplexity(self, sequence: str) -> float:
+        raise NotImplementedError("Pseudo-ppl is for masked LMs; use perplexity for causal LMs")
+
+    def _compute_perplexity(self, sequence: str) -> float:
+        input_ids, attention_mask = self._tokenize([sequence], preprocess=True)
+        with torch.no_grad():
+            out = self._model(input_ids=input_ids, attention_mask=attention_mask, labels=input_ids)
+            loss = out.loss  # mean cross-entropy per token (already shifted for causal LM)
+        return torch.exp(loss).item()

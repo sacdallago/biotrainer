@@ -6,7 +6,7 @@ import pandas as pd
 from pathlib import Path
 from typing import List, Optional, Dict, Union
 
-from .bioengineer_models import ESM2Engineer, ProtBertEngineer
+from .bioengineer_models import ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer
 from .bioengineer_interfaces import BioEngineerModelWrapper
 from .bioengineer_baselines import BioengineerBaseline, ConstantEngineerBaseline, RandomEngineerBaseline
 from .bioengineer_data_classes import VariantScore, ZeroShotMethod, Variant, RankingResult
@@ -17,7 +17,7 @@ from ..solvers.metrics_calculator import RegressionMetricsCalculator
 
 
 class BioEngineer:
-    __available_models = [ESM2Engineer, ProtBertEngineer]
+    __available_models = [ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer]
     __available_baselines = [ConstantEngineerBaseline, RandomEngineerBaseline]
 
     def __init__(self, model_wrapper: BioEngineerModelWrapper):
@@ -86,7 +86,7 @@ class BioEngineer:
                                    wt_sequence: str,
                                    mutations: List[str],
                                    one_indexed: Optional[bool] = True,
-                                   substract_wt_pppl: Optional[bool] = True) -> List[VariantScore]:
+                                   subtract_wt_pppl: Optional[bool] = True) -> List[VariantScore]:
         """
         Compute the zero-shot pseudoperplexity score for a given sequence and its mutations.
 
@@ -101,14 +101,22 @@ class BioEngineer:
             mutation follows a specific format defined by the implementation.
         :param one_indexed: Determines whether the mutation indices are one-indexed.
             Defaults to True. If False, zero-indexing is assumed.
-        :param substract_wt_pppl: Flag to indicate whether the wild-type pseudoperplexity
+        :param subtract_wt_pppl: Flag to indicate whether the wild-type pseudoperplexity
             is subtracted from each mutation's pseudoperplexity score. Defaults to True.
         :return: A list of VariantScore objects, each representing the pseudoperplexity
             score associated with a mutation.
         :raises:
             NotImplementedError: If pseudoperplexity calculation is not available
         """
-        return self.model_wrapper.zero_shot_pseudoperplexity(wt_sequence, mutations, one_indexed, substract_wt_pppl)
+        return self.model_wrapper.zero_shot_pseudoperplexity(wt_sequence, mutations, one_indexed, subtract_wt_pppl)
+
+    def zero_shot_perplexity(self,
+                             wt_sequence: str,
+                             mutations: List[str],
+                             one_indexed: Optional[bool] = True,
+                             subtract_wt_ppl: Optional[bool] = True
+                             ) -> List[VariantScore]:
+        return self.model_wrapper.zero_shot_perplexity(wt_sequence, mutations, one_indexed, subtract_wt_ppl)
 
     def rank_pgym_dataset(self,
                           dataset_file_path: Union[str, Path],
@@ -157,7 +165,7 @@ class BioEngineer:
         print(f"Running {method} on {dataset_file_path.name}...")
 
         # Calculate variant scores
-        substract_wt_pppl = True  # ProteinGym default for pppl
+        subtract_wt_pppl = True  # ProteinGym default for pppl/ppl
         result = None
         match method:
             case ZeroShotMethod.WT_MARGINALS:
@@ -168,7 +176,10 @@ class BioEngineer:
                                                          one_indexed=one_indexed)
             case ZeroShotMethod.PSEUDOPERPLEXITY:
                 result = self.zero_shot_pseudoperplexity(wt_sequence=wt_seq, mutations=mutations,
-                                                         one_indexed=one_indexed, substract_wt_pppl=substract_wt_pppl)
+                                                         one_indexed=one_indexed, subtract_wt_pppl=subtract_wt_pppl)
+            case ZeroShotMethod.PERPLEXITY:
+                result = self.zero_shot_perplexity(wt_sequence=wt_seq, mutations=mutations, one_indexed=one_indexed,
+                                                   subtract_wt_ppl=subtract_wt_pppl)
         assert result is not None, "Zero-shot method returned no results!"
 
         # Rank variants

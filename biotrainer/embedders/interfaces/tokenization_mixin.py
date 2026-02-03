@@ -1,6 +1,6 @@
 import torch
 
-from typing import List, Tuple, Optional, Dict, Iterable
+from typing import List, Tuple, Optional, Dict, Iterable, Callable
 
 from .preprocessing_strategies import (
     preprocess_sequences_with_whitespaces,
@@ -45,7 +45,7 @@ class BiotrainerTokenizerMixin:
         """
         return []  # Nothing by default
 
-    def _find_preprocessing_strategy(self):
+    def _find_preprocessing_strategy(self) -> Callable:
         # Default fallback implementation:
         # Try to automatically determine whether whitespaces are required
         dummy_sequence = [STANDARD_AAS]  # All 20 standard amino acids

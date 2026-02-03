@@ -42,6 +42,9 @@ class ConstantEngineerBaseline(BioEngineerModelWrapper):
         """
         return len(sequence) * np.log(1.0 / 20)
 
+    def _compute_perplexity(self, sequence: str) -> float:
+        return self._compute_pseudoperplexity(sequence)  # No difference here
+
 
 class RandomEngineerBaseline(BioEngineerModelWrapper):
     """
@@ -108,3 +111,6 @@ class RandomEngineerBaseline(BioEngineerModelWrapper):
             position_log_probs.append(log_probs[i, aa_idx].item())
 
         return sum(position_log_probs)
+
+    def _compute_perplexity(self, sequence: str) -> float:
+        return self._compute_pseudoperplexity(sequence)  # No difference here

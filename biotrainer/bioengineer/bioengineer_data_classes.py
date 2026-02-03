@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 
 from enum import Enum
-from typing import Optional, List, Literal
+from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator, computed_field
 
 from ..utilities import BootstrappedMetric
@@ -13,6 +13,7 @@ class ZeroShotMethod(Enum):
     WT_MARGINALS = "WT_MARGINALS"
     MASKED_MARGINALS = "MASKED_MARGINALS"
     PSEUDOPERPLEXITY = "PSEUDOPERPLEXITY"
+    PERPLEXITY = "PERPLEXITY"
 
 
 class Mutation(BaseModel):
@@ -194,18 +195,19 @@ class VariantScore(BaseModel):
         )
 
     @classmethod
-    def from_pppl(
+    def from_total_score(
             cls,
             variant: Variant,
             mutation_score: float,
             model_name: str,
+            method_name: ZeroShotMethod
     ) -> VariantScore:
         """
         Create VariantScore from pseudoperplexity scoring.
         """
         return cls(
             variant=variant,
-            strategy=ZeroShotMethod.PSEUDOPERPLEXITY,
+            strategy=method_name,
             mutation_scores=[],
             total_score=mutation_score,
             model_name=model_name,
