@@ -33,6 +33,7 @@ dependencies = [
     "scikit-learn>=1.5.1",
     "tensorboard>=2.18.0",
     "torch>=2.7.0,<3.0.0",
+    "gpytorch>=1.15,<2.0",
     "tqdm>=4.67.0",
     "transformers>=4.57.3",
     "torchmetrics>=1.7.1",
