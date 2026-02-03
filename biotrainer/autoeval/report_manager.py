@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import json
-
 from ruamel import yaml
 from pathlib import Path
 from typing import Dict, Any, Union
 from pydantic import BaseModel, Field
 
-from .data_handler import AutoEvalTask
+from .interfaces import AutoEvalTask
 from .pbc.pbc_datasets import PBC_DATASETS
 from .flip.flip_datasets import FLIP_DATASETS
 
@@ -70,7 +68,7 @@ class AutoEvalReport(BaseModel):
 
     def compare(self, other_reports: list[AutoEvalReport]):
         """Compare this report with other reports on the same evaluation metrics.
-    
+
         Args:
             other_reports: List of AutoEvalReport objects to compare with
         """
@@ -113,7 +111,7 @@ class AutoEvalReport(BaseModel):
             values='Score',
             aggfunc='first'
         ).reset_index()
-    
+
         print("\nComparison of reports:")
         print(df_pivot.to_string(index=False))
 

@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
-from ..data_handler import AutoEvalTask
-from ..config_bank import AutoEvalConfigBank
+from ..core import AutoEvalTask, AutoEvalConfigBank
+
 
 class PBCConfigBank(AutoEvalConfigBank):
 
@@ -57,5 +57,5 @@ class PBCConfigBank(AutoEvalConfigBank):
 
         config = base_config.copy()
         config.update(task_specific_configs[dataset_name])
-    
+
         return config

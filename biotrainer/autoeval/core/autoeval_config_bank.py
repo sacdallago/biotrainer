@@ -2,7 +2,7 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Union, Optional
 
-from .data_handler import AutoEvalTask
+from .autoeval_task import AutoEvalTask
 
 
 class AutoEvalConfigBank(ABC):
