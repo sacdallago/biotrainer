@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator, computed_field
 
-from ..utilities import BootstrappedMetric
+from ..utilities import MetricEstimate
 
 
 class ZeroShotMethod(Enum):
@@ -215,8 +215,8 @@ class VariantScore(BaseModel):
 
 
 class RankingResult(BaseModel):
-    scc: BootstrappedMetric = Field(description="Spearmans correlation coefficient (overall ranking quality)")
-    ndcg: BootstrappedMetric = Field(description="Normalized discounted cumulative gain (top-k ranking quality)")
+    scc: MetricEstimate = Field(description="Spearmans correlation coefficient (overall ranking quality)")
+    ndcg: MetricEstimate = Field(description="Normalized discounted cumulative gain (top-k ranking quality)")
 
     def scc_score(self):
         """ Rounded SCC mean bootstrapped score """
@@ -227,4 +227,4 @@ class RankingResult(BaseModel):
         return round(self.ndcg.mean, 3)
 
     def __str__(self) -> str:
-        return f"SCC: {self.scc_score()}, NDCG: {self.ndcg_score()}"
+        return f"Ranking result - SCC: {self.scc_score()}, NDCG: {self.ndcg_score()}"
