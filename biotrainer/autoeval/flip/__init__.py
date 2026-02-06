@@ -1,4 +1,3 @@
-from .flip_config_bank import FLIPConfigBank
-from .flip_data_handler import FLIPDataHandler
+from .flip_framework import FLIPFramework
 
-__all__ = ["FLIPDataHandler", "FLIPConfigBank"]
+__all__ = ["FLIPFramework"]

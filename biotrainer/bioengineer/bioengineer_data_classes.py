@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import numpy as np
 
 from enum import Enum
 from typing import Optional, List
@@ -217,6 +218,41 @@ class VariantScore(BaseModel):
 class RankingResult(BaseModel):
     scc: MetricEstimate = Field(description="Spearmans correlation coefficient (overall ranking quality)")
     ndcg: MetricEstimate = Field(description="Normalized discounted cumulative gain (top-k ranking quality)")
+
+    @classmethod
+    def aggregate(cls, results: List[RankingResult]) -> RankingResult:
+        """
+        Aggregate ranking results across multiple assays.
+        Follows ProteinGym's aggregation approach: simple mean and std across all assays.
+        """
+
+        # Extract scores (no absolute values)
+        scc_scores = [rr.scc_score() for rr in results]
+        ndcg_scores = [rr.ndcg_score() for rr in results]
+
+        # Compute mean and std
+        total_scc_mean = float(np.mean(scc_scores))
+        total_scc_std = float(np.std(scc_scores, ddof=1))  # ddof=1: sample std
+        total_ndcg_mean = float(np.mean(ndcg_scores))
+        total_ndcg_std = float(np.std(ndcg_scores, ddof=1))
+
+        # Create aggregated result with mean ± std bounds
+        overall_ranking_result = RankingResult(
+            scc=MetricEstimate(
+                name="scc",
+                mean=total_scc_mean,
+                lower=total_scc_mean - total_scc_std,
+                upper=total_scc_mean + total_scc_std
+            ),
+            ndcg=MetricEstimate(
+                name="ndcg",
+                mean=total_ndcg_mean,
+                lower=total_ndcg_mean - total_ndcg_std,
+                upper=total_ndcg_mean + total_ndcg_std
+            )
+        )
+
+        return overall_ranking_result
 
     def scc_score(self):
         """ Rounded SCC mean bootstrapped score """

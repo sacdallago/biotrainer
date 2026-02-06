@@ -25,6 +25,7 @@ class AutoEvalDataHandler(ABC):
         Args:
             data_dir: Directory to extract the data to
         """
+        # Download data archive
         urls = self.get_download_urls()
 
         zip_file = data_dir.with_suffix('.zip')
@@ -60,8 +61,7 @@ class AutoEvalDataHandler(ABC):
                 zip_file.unlink()
 
                 print("Data downloaded and unpacked successfully!")
-                return  # Success - exit the function
-
+                break  # Exit download loop
             except Exception as e:
                 print(f"Failed to download from {url}: {e}")
                 if zip_file.exists():
@@ -75,6 +75,30 @@ class AutoEvalDataHandler(ABC):
                 # Otherwise, continue to the next URL
                 print("Trying next fallback URL...")
                 continue
+
+        # Download reference file if necessary
+        reference_urls = self.get_reference_file_urls()
+        if len(reference_urls) > 0:
+            reference_file_path = self.get_reference_file_path(data_dir)
+            if reference_file_path.exists():
+                print(f"Reference file already exists at: {reference_file_path}")
+                return
+            if not reference_file_path.parent.exists():
+                reference_file_path.parent.mkdir(parents=True)
+
+            print("Downloading reference file..")
+            for reference_url in reference_urls:
+                try:
+                    response = requests.get(reference_url, headers=headers, stream=False)
+                    response.raise_for_status()
+
+                    with open(reference_file_path, 'wb') as f:
+                        f.write(response.content)
+
+                    print(f"Reference file downloaded successfully: {reference_url}")
+                    break
+                except Exception as e:
+                    print(f"Failed to download reference file from {reference_url}: {e}")
 
     @staticmethod
     @abstractmethod
@@ -102,17 +126,28 @@ class AutoEvalDataHandler(ABC):
         raise NotImplementedError
 
     @staticmethod
+    def get_reference_file_urls() -> List[str]:
+        return []
+
+    @staticmethod
+    def get_reference_file_name() -> str:
+        return "reference.csv"
+
+    def get_reference_file_path(self, base_path: Path) -> Path:
+        return base_path / "reference" / self.get_reference_file_name()
+
+    @staticmethod
     def is_download_necessary(base_path: Path) -> bool:
         if not base_path.is_dir():
             raise ValueError(f"Given path {base_path} is not a directory!")
         return len(os.listdir(base_path)) == 0  # Directory is empty => Download
 
     @abstractmethod
-    def preprocess(self, base_path: Path, min_seq_length: int, max_seq_length: int):
+    def preprocess(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]):
         raise NotImplementedError
 
     @abstractmethod
-    def get_tasks(self, base_path: Path, min_seq_length: int, max_seq_length: int) -> List[AutoEvalTask]:
+    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) -> List[AutoEvalTask]:
         """
         Get tasks to execute in the autoeval pipeline via biotrainer.
 

@@ -1,13 +1,13 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 
 class AutoEvalTask(BaseModel):
     framework_name: str = Field(description="Name of the framework of this task")
     dataset_name: str = Field(description="Name of the dataset of this task")
-    split_name: Optional[str] = Field(description="Name of the split of this task (optional)")
-    input_file: Path = Field(description="Path to the input file of this task")
+    split_name: Optional[str] = Field(default=None, description="Name of the split of this task (optional)")
+    input_files: List[Path] = Field(description="Path(s) to the input file(s) of this task")
     type: str = Field(description="Type of the task (e.g. protein/dna)")
 
     def combined_name(self):

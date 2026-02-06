@@ -226,7 +226,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         # tokenized_sequences[0, -1] = EOS
         seq_len = tokenized_sequences.size(1)
 
-        for i in range(1, seq_len - 1):
+        for i in tqdm(range(1, seq_len - 1), desc="Computing masked logits", unit="pos", ncols=100, leave=False):
             # Clone and mask position i
             batch_tokens_masked = tokenized_sequences.clone()
             batch_tokens_masked[0, i] = mask_token_id

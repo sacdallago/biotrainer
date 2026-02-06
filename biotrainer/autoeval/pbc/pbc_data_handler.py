@@ -1,10 +1,10 @@
 from tqdm import tqdm
-from typing import List
+from typing import List, Optional
 from pathlib import Path
 
 from .pbc_datasets import PBC_DATASETS
 
-from ..core import AutoEvalDataHandler, AutoEvalTask
+from ..core import AutoEvalDataHandler, AutoEvalTask, AutoEvalMode
 
 
 class PBCDataHandler(AutoEvalDataHandler):
@@ -27,7 +27,7 @@ class PBCDataHandler(AutoEvalDataHandler):
             dataset_and_split_names.extend(splits)
         return dataset_and_split_names
 
-    def preprocess(self, base_path: Path, min_seq_length: int, max_seq_length: int) -> None:
+    def preprocess(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) -> None:
         """ Filters all dataset splits for sequences that fulfill the length requirements """
         for dataset, split_name in tqdm(self._get_all_dataset_and_split_names(), desc="Preprocessing datasets"):
             dataset_dir = base_path / "supervised" / dataset
@@ -39,7 +39,7 @@ class PBCDataHandler(AutoEvalDataHandler):
 
         print("PBC data preprocessing completed!")
 
-    def get_tasks(self, base_path: Path, min_seq_length: int, max_seq_length: int) -> List[AutoEvalTask]:
+    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) -> List[AutoEvalTask]:
         """Build tasks for all PBC datasets"""
         tasks = []
 
@@ -58,7 +58,8 @@ class PBCDataHandler(AutoEvalDataHandler):
                 AutoEvalTask(framework_name=self.get_framework_name(),
                              dataset_name=dataset,
                              split_name=split_name,
-                             input_file=input_file,
-                             type="Protein"))
+                             input_files=[input_file],
+                             type="Protein",
+                             mode=AutoEvalMode.SUPERVISED))
 
         return tasks
