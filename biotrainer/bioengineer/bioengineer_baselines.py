@@ -29,11 +29,11 @@ class ConstantEngineerBaseline(BioEngineerModelWrapper):
     def supported_methods(self) -> List[ZeroShotMethod]:
         return [ZeroShotMethod.WT_MARGINALS, ZeroShotMethod.MASKED_MARGINALS, ZeroShotMethod.PSEUDOPERPLEXITY]
 
-    def _get_logits(self, sequence: str) -> torch.Tensor:
-        return torch.full((len(sequence), 20), fill_value=0.2, device=torch.device("cpu"))
+    def _get_probabilities(self, sequence: str) -> torch.Tensor:
+        return torch.full((len(sequence), 20), fill_value=0.05, device=torch.device("cpu"))
 
-    def _get_masked_logits(self, sequence: str) -> torch.Tensor:
-        return torch.full((len(sequence), 20), fill_value=0.2, device=torch.device("cpu"))
+    def _get_masked_probabilities(self, sequence: str) -> torch.Tensor:
+        return torch.full((len(sequence), 20), fill_value=0.05, device=torch.device("cpu"))
 
     def _compute_pseudoperplexity(self, sequence: str) -> float:
         """
@@ -73,7 +73,7 @@ class RandomEngineerBaseline(BioEngineerModelWrapper):
     def supported_methods(self) -> List[ZeroShotMethod]:
         return [ZeroShotMethod.WT_MARGINALS, ZeroShotMethod.MASKED_MARGINALS, ZeroShotMethod.PSEUDOPERPLEXITY]
 
-    def _get_logits(self, sequence: str) -> torch.Tensor:
+    def _get_probabilities(self, sequence: str) -> torch.Tensor:
         """
         Return random logits sampled from N(0, 1).
 
@@ -84,24 +84,23 @@ class RandomEngineerBaseline(BioEngineerModelWrapper):
         seq_seed = hash(sequence) % (2 ** 32)
         local_rng = np.random.RandomState(self._seed ^ seq_seed)
 
-        # Sample logits from standard normal distribution
-        logits = local_rng.randn(len(sequence), 20).astype(np.float32)
+        # Sample logits from uniform distribution between 0 and 1
+        logits = local_rng.uniform(0, 1, size=(len(sequence), 20)).astype(np.float32)
 
         return torch.from_numpy(logits)
 
-    def _get_masked_logits(self, sequence: str) -> torch.Tensor:
+    def _get_masked_probabilities(self, sequence: str) -> torch.Tensor:
         """
         For random baseline, masked-marginals same as wt-marginals.
         (No actual model to condition on context)
         """
-        return self._get_logits(sequence)
+        return self._get_probabilities(sequence)
 
     def _compute_pseudoperplexity(self, sequence: str) -> float:
         """
         Compute pseudo-ppl using the random logits.
         """
-        logits = self._get_logits(sequence)
-        log_probs = torch.log_softmax(logits, dim=-1)
+        log_probs = self._get_probabilities(sequence)
 
         aa_to_idx = self.aa_to_idx()
         position_log_probs = []
