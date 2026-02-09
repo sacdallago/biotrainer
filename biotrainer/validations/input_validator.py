@@ -9,6 +9,7 @@ from ..input_files import BiotrainerSequenceRecord, read_FASTA
 
 
 class InputValidator:
+    EXCLUDED_SEQS = ["", None]
 
     def __init__(self, protocol: Protocol):
         self.protocol = protocol
@@ -34,8 +35,10 @@ class InputValidator:
 
     @staticmethod
     def _validate_unique_sequences(input_data: List[BiotrainerSequenceRecord]) -> str:
-        len_data = len(input_data)
-        unique_sequence_data = {seq_record.seq: seq_record for seq_record in input_data}
+        filtered_input_data = [seq_record for seq_record in input_data
+                                if seq_record.seq not in InputValidator.EXCLUDED_SEQS]
+        len_data = len(filtered_input_data)
+        unique_sequence_data = {seq_record.seq: seq_record for seq_record in filtered_input_data}
         len_unique = len(unique_sequence_data)
         if len_data != len_unique:
             affected_seqs = [seq_record.seq for seq_record in input_data
@@ -50,6 +53,8 @@ class InputValidator:
         invalid_char_pattern = re.compile(r'[^a-zA-Z]')
 
         for seq_record in input_data:
+            if seq_record.seq in InputValidator.EXCLUDED_SEQS:
+                continue
             # Check if there are any invalid characters in the sequence
             invalid_match = invalid_char_pattern.search(seq_record.seq)
             if invalid_match:
