@@ -24,7 +24,8 @@ class InputValidator:
         if not isinstance(input_data[0], BiotrainerSequenceRecord):
             raise ValueError(f"Expected BiotrainerSequenceRecord, got {type(input_data[0])}!")
 
-        for error in (self._validate_unique_sequences(input_data),
+        for error in (self._validate_unique_ids(input_data),
+                      self._validate_unique_sequences(input_data),
                       self._validate_sequences(input_data),
                       self._validate_targets(input_data),
                       self._validate_embeddings(input_data)):
@@ -32,6 +33,17 @@ class InputValidator:
                 raise ValueError(error)
 
         return input_data
+
+    @staticmethod
+    def _validate_unique_ids(input_data: List[BiotrainerSequenceRecord]) -> str:
+        len_data = len(input_data)
+        ids = {seq_record.get_id_for_id2emb() for seq_record in input_data}
+        len_unique = len(ids)
+        if len_data != len_unique:
+            affected_input = [seq_record.seq_id for seq_record in input_data]
+            return (f"There are {len_data - len_unique} duplicated sequences in the input file!\n"
+                    f"Affected sequences: {affected_input}")
+        return ""
 
     @staticmethod
     def _validate_unique_sequences(input_data: List[BiotrainerSequenceRecord]) -> str:

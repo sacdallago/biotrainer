@@ -59,6 +59,11 @@ class BiotrainerSequenceRecord(BaseModel):
     def get_hash(self) -> str:
         return calculate_sequence_hash(self.seq)
 
+    def get_id_for_id2emb(self):
+        if self.seq is not None and self.seq != "":
+            return self.get_hash()
+        return self.seq_id
+
     def copy_with_embedding(self, embedding: torch.Tensor) -> BiotrainerSequenceRecord:
         """ Set the embedding for this sequence record and return sequence record """
         return BiotrainerSequenceRecord(seq_id=self.seq_id, seq=self.seq,
@@ -79,7 +84,7 @@ class BiotrainerSequenceRecord(BaseModel):
         id2masks = {}
         id2sets = {}
         for seq_record in input_records:
-            seq_hash = seq_record.get_hash()
+            seq_hash = seq_record.get_id_for_id2emb()
 
             target = seq_record.get_target()
             target = BiotrainerSequenceRecord._convert_regression_target_if_necessary(target)
