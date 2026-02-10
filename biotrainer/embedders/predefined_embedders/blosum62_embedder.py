@@ -2,12 +2,12 @@ import torch
 import numpy as np
 import blosum as bl
 
-from ..interfaces import EmbedderInterface
+from ..interfaces import BaselineEmbedder
 
 from ...utilities import AMINO_ACIDS
 
 
-class Blosum62Embedder(EmbedderInterface):
+class Blosum62Embedder(BaselineEmbedder):
     """
     Baseline embedder: BLOSUM62 matrix as per-residue embedding
 
@@ -49,8 +49,3 @@ class Blosum62Embedder(EmbedderInterface):
 
         # Use advanced indexing to get BLOSUM rows for each position
         return torch.tensor(self.lookup_matrix[indices])
-
-    @staticmethod
-    def reduce_per_protein(embedding: torch.Tensor) -> torch.Tensor:
-        """Returns the average BLOSUM profile of the sequence"""
-        return embedding.mean(axis=0)
