@@ -47,9 +47,14 @@ def get_unique_framework_sequences(framework: Union[str, AvailableFramework, Aut
     for task in auto_eval_tasks:
         config = config_bank.get_task_config(task=task)
         task_config_tuples.append((task, config))
+        input_files = task.input_files
+        if len(input_files) != 1:
+            # Only one input file per supervised task
+            raise AssertionError(f"Expected exactly one input file for task "
+                                 f"{task.combined_name()} but found {len(input_files)}!")
 
     unique_per_residue, unique_per_sequence = _get_unique_sequences_for_all_tasks(
-        {str(t.input_file): Protocol.from_string(c["protocol"]) for t, c in task_config_tuples}
+        {str(t.input_files[0]): Protocol.from_string(c["protocol"]) for t, c in task_config_tuples}
     )
     return task_config_tuples, unique_per_residue, unique_per_sequence
 
@@ -152,7 +157,7 @@ def _run_pipeline(embedder_name: str,
         config = AutoEvalConfigBank.add_custom_values_to_config(config=config,
                                                                 embedder_name=embedder_name,
                                                                 embeddings_file=task_embeddings_file,
-                                                                input_file=task.input_file,
+                                                                input_file=task.input_files[0],
                                                                 output_dir=task_output_dir,
                                                                 )
 
@@ -299,7 +304,6 @@ def autoeval_supervised_pipeline(embedder_name: str,
                                  custom_storage_path: Optional[Union[Path, str]] = None,
                                  custom_output_observers: List[BiotrainerOutputObserver] = None,
                                  ) -> Generator[AutoEvalProgress, None, None]:
-
     if custom_pipeline is not None and any([v is not None for v in [custom_tokenizer_config,
                                                                     precomputed_per_residue_embeddings,
                                                                     precomputed_per_sequence_embeddings,
