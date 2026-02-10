@@ -13,7 +13,7 @@ from .bioengineer_data_classes import VariantScore, ZeroShotMethod, Variant, Ran
 
 from ..utilities import get_device
 from ..inference import Inferencer
-from ..solvers.metrics_calculator import RegressionMetricsCalculator
+from ..solvers.metrics_calculator import SequenceRegressionMetricsCalculator
 
 
 class BioEngineer:
@@ -213,7 +213,9 @@ class BioEngineer:
         bt_res = Inferencer._do_bootstrapping(iterations=30, sample_size=len(common_variants), confidence_level=0.05,
                                               seq_ids=list(common_variants), all_predictions_dict=v_d,
                                               all_targets_dict=a_s,
-                                              metrics_calculator=RegressionMetricsCalculator(device="cpu", n_classes=1))
+                                              metrics_calculator=SequenceRegressionMetricsCalculator(device="cpu",
+                                                                                                     n_classes=1)
+                                              )
         scc = [res for res in bt_res if res.name == "spearmans-corr-coeff"][0]
         ndcg = [res for res in bt_res if res.name == "ndcg"][0]
         assert scc is not None and ndcg is not None, "Bootstrapping failed!"

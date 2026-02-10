@@ -126,7 +126,6 @@ class RegressionMetricsCalculator(MetricsCalculator):
         self.mse = MeanSquaredError(squared=True)
         self.rmse = MeanSquaredError(squared=False)
         self.scc = SpearmanCorrCoef()
-        self.ndcg = NDCG(quantile=True, top=10)
 
     def compute_metrics(
             self, predicted: Optional[torch.Tensor] = None,
@@ -135,7 +134,6 @@ class RegressionMetricsCalculator(MetricsCalculator):
             'mse': self._compute_metric(self.mse, predicted, labels).item(),
             'rmse': self._compute_metric(self.rmse, predicted, labels).item(),
             'spearmans-corr-coeff': self._compute_metric(self.scc, predicted, labels).item(),
-            'ndcg': self._compute_metric(self.ndcg, predicted, labels).item()
         }
 
 
@@ -159,11 +157,21 @@ class ResidueClassificationMetricsCalculator(ClassificationMetricsCalculator):
         else:
             return super().compute_metrics(predicted=predicted, labels=labels)
 
-class ResiduesClassificationMetricsCalculator(ClassificationMetricsCalculator):
+class ResiduesClassificationMetricsCalculator(SequenceClassificationMetricsCalculator):
     pass
 
 class SequenceRegressionMetricsCalculator(RegressionMetricsCalculator):
-    pass
+    def __init__(self, device, n_classes: int):
+        super().__init__(device, n_classes)
+        self.ndcg = NDCG(quantile=True, top=10)
+
+    def compute_metrics(
+            self, predicted: Optional[torch.Tensor] = None,
+            labels: Optional[torch.Tensor] = None) -> Dict[str, Union[int, float]]:
+        base_metrics = super().compute_metrics(predicted=predicted, labels=labels)
+
+        ndcg = self._compute_metric(self.ndcg, predicted, labels).item()
+        return {**base_metrics, "ndcg": ndcg}
 
 class ResidueRegressionMetricsCalculator(RegressionMetricsCalculator):
     def compute_metrics(
@@ -194,5 +202,5 @@ class ResidueRegressionMetricsCalculator(RegressionMetricsCalculator):
         }
 
 
-class ResiduesRegressionMetricsCalculator(RegressionMetricsCalculator):
+class ResiduesRegressionMetricsCalculator(SequenceRegressionMetricsCalculator):
     pass
