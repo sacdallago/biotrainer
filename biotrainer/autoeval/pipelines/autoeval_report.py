@@ -75,6 +75,7 @@ class SupervisedFrameworkReport(BaseModel, FrameworkReport):
         metrics = []
         for test_set_name, test_set_dict in test_results.items():
             bootstrapping = test_set_dict["bootstrapping"]["results"]
+            bootstrapping = {b_dict["name"]: b_dict for b_dict in bootstrapping}
             metric_mean = round(bootstrapping[evaluation_metric]["mean"], 3)
             metric_lower = round(bootstrapping[evaluation_metric]["lower"], 3)
             metric_upper = round(bootstrapping[evaluation_metric]["upper"], 3)
