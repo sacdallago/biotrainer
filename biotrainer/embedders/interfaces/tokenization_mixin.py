@@ -17,7 +17,7 @@ class BiotrainerTokenizerMixin:
     Expects the host class to define:
       - self._tokenizer: a HuggingFace-like tokenizer with batch_encode_plus and get_vocab
       - self._model: a model with a .device attribute (used to place token tensors)
-      - self.name: string identifier for model name (used for special-cases)
+      - self._device: torch.device to place token tensors on
       - optional: self._preprocessing_strategy (callable). If not present, `_find_preprocessing_strategy` sets it.
     """
 
@@ -32,8 +32,8 @@ class BiotrainerTokenizerMixin:
             padding="longest",
         )
 
-        tokenized_sequences = torch.tensor(ids["input_ids"]).to(self._model.device)
-        attention_mask = torch.tensor(ids["attention_mask"]).to(self._model.device)
+        tokenized_sequences = torch.tensor(ids["input_ids"]).to(self._device)
+        attention_mask = torch.tensor(ids["attention_mask"]).to(self._device)
         return tokenized_sequences, attention_mask
 
     def _get_custom_indices_to_remove(self) -> List[int]:

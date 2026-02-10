@@ -20,7 +20,7 @@ class ConstantEngineerBaseline(BioEngineerModelWrapper):
     @classmethod
     def detect(cls, embedder_name: str, device: torch.device):
         if embedder_name.upper() == BioengineerBaseline.CONSTANT.value:
-            return cls(name=embedder_name, model=None, tokenizer=None)
+            return cls(name=embedder_name, model=None, tokenizer=None, device=device)
         return None
 
     def aa_to_idx(self) -> Dict[str, int]:
@@ -64,7 +64,7 @@ class RandomEngineerBaseline(BioEngineerModelWrapper):
     @classmethod
     def detect(cls, embedder_name: str, device: torch.device):
         if embedder_name.upper() == BioengineerBaseline.RANDOM.value:
-            return cls(name=embedder_name, model=None, tokenizer=None)
+            return cls(name=embedder_name, model=None, tokenizer=None, device=device)
         return None
 
     def aa_to_idx(self) -> Dict[str, int]:

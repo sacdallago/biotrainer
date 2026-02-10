@@ -16,7 +16,7 @@ class ESM2Engineer(BertLikeEngineer):
         if embedder_name in _esm2_family_dict.keys():
             tokenizer = EsmTokenizer.from_pretrained(embedder_name, do_lower_case=False)
             model = EsmForMaskedLM.from_pretrained(embedder_name).to(device).eval()
-            return cls(name=embedder_name, model=model, tokenizer=tokenizer)
+            return cls(name=embedder_name, model=model, tokenizer=tokenizer, device=device)
         return None
 
     def _find_preprocessing_strategy(self) -> Callable:
@@ -29,7 +29,7 @@ class ProtBertEngineer(BertLikeEngineer):
         if "prot_bert" in embedder_name:
             tokenizer = BertTokenizer.from_pretrained(embedder_name, do_lower_case=False)
             model = BertForMaskedLM.from_pretrained(embedder_name).to(device).eval()
-            return cls(name=embedder_name, model=model, tokenizer=tokenizer)
+            return cls(name=embedder_name, model=model, tokenizer=tokenizer, device=device)
         return None
 
     def _find_preprocessing_strategy(self) -> Callable:
@@ -42,7 +42,7 @@ class ProtGPT2Engineer(GPTLikeEngineer):
         if embedder_name == "nferruz/ProtGPT2":
             tokenizer = AutoTokenizer.from_pretrained(embedder_name)
             model = AutoModelForCausalLM.from_pretrained(embedder_name).to(device).eval()
-            return cls(name=embedder_name, model=model, tokenizer=tokenizer)
+            return cls(name=embedder_name, model=model, tokenizer=tokenizer, device=device)
         return None
 
     def _find_preprocessing_strategy(self) -> Callable:

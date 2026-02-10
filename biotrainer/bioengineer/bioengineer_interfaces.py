@@ -12,10 +12,11 @@ from ..embedders.interfaces import BiotrainerTokenizerMixin
 
 class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
 
-    def __init__(self, name, model, tokenizer):
+    def __init__(self, name: str, model, tokenizer, device: torch.device):
         self._name = name
         self._model = model
         self._tokenizer = tokenizer
+        self._device = device
 
     @classmethod
     @abstractmethod

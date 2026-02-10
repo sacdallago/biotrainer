@@ -155,8 +155,6 @@ class EmbeddingService:
                         desc="Computing Embeddings",
                         disable=is_running_in_notebook()
                 ):
-                    h5_index = seq_record.get_hash() if store_by_hash else seq_record.seq_id
-
                     # Convert to numpy and move to CPU before putting in queue
                     embedding_np = embedding.cpu().numpy()
 
