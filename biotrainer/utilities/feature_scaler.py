@@ -14,9 +14,13 @@ from ..protocols import Protocol
 class FeatureScaler:
 
     def __init__(self, method: str, protocol: Protocol, loaded_scaler: Optional[Any] = None):
-        self.method = method
+        self.method: str = method
         self.protocol = protocol
         self.scaler = loaded_scaler
+
+    @staticmethod
+    def get_file_name(method: str):
+        return f"{method}_scaling.pkl"
 
     @classmethod
     def load(cls, method: str, protocol: Protocol, load_path: Path):
@@ -103,7 +107,7 @@ class FeatureScaler:
 
         return scaled_dict
 
-    def transform(self, x: Dict[str, torch.tensor]):
+    def transform(self, x: Dict[str, torch.tensor]) -> Dict[str, torch.tensor]:
         assert self.scaler is not None, f"Feature scaler called without fitting!"
 
         if self.protocol in Protocol.using_per_sequence_embeddings():

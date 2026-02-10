@@ -35,7 +35,7 @@ class ScalingStep(PipelineStep):
             id2emb = {**training_embs_scaled, **other_embs_scaled}
             # Save fitted scaler
             save_dir = context.config["log_dir"]
-            scaling_save_name = f"{scaling_method}_scaling.pkl"
+            scaling_save_name = feature_scaler.get_file_name(feature_scaler.method)
             feature_scaler.save(Path(save_dir) / scaling_save_name)
             logger.info(f"Fitted feature scaling {scaling_method}!")
         else:
