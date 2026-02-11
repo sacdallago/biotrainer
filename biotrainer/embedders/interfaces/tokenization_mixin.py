@@ -25,15 +25,16 @@ class BiotrainerTokenizerMixin:
         if preprocess:
             batch = self._preprocess_sequences(batch)
 
-        ids = self._tokenizer.batch_encode_plus(
+        # Transformers v5 removed the public `batch_encode_plus` in favor of `__call__`.
+        enc = self._tokenizer(
             batch,
             add_special_tokens=True,
             is_split_into_words=False,
             padding="longest",
+            return_tensors="pt",
         )
-
-        tokenized_sequences = torch.tensor(ids["input_ids"]).to(self._device)
-        attention_mask = torch.tensor(ids["attention_mask"]).to(self._device)
+        tokenized_sequences = enc["input_ids"].to(self._device)
+        attention_mask = enc["attention_mask"].to(self._device)
         return tokenized_sequences, attention_mask
 
     def _get_custom_indices_to_remove(self) -> List[int]:
