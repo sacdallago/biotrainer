@@ -57,7 +57,7 @@ class EmbedderInterface(abc.ABC, BiotrainerTokenizerMixin):
         batch_size = int(memory_gb * residues_per_gb * safety_factor)
 
         # Clamp batch size
-        batch_size_cap = 8192  # Hard cap to avoid too large batches
+        batch_size_cap = 8192 * 6 # Should provide a good trade-off between speed and stability, even on an H100
         batch_size = min(batch_size, batch_size_cap)
         batch_size = max(batch_size, 0)
 
