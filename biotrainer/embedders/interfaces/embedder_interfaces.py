@@ -56,7 +56,7 @@ class EmbedderInterface(abc.ABC, BiotrainerTokenizerMixin):
         batch_size = int(memory_gb * residues_per_gb * safety_factor)
 
         # Account for separators that are processed by the tokenizer (do not count towards batch_size => double it)
-        first_sequence = preprocessed_sequences[0]
+        first_sequence = set(preprocessed_sequences[0])
         if any([separator in first_sequence for separator in (' ', ',', ';')]):
             batch_size *= 2
 
