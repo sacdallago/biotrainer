@@ -50,10 +50,16 @@ class EmbedderInterface(abc.ABC, BiotrainerTokenizerMixin):
             yield self._embed_single(sequence)
 
     def estimate_batch_size(self, preprocessed_sequences: List[str]) -> int:
+        # Calculate batch size via memory
         memory_gb = get_device_memory(self._device)
         safety_factor = 0.8
         residues_per_gb = 1024  # Estimating 1MB/residue
         batch_size = int(memory_gb * residues_per_gb * safety_factor)
+
+        # Clamp batch size
+        batch_size_cap = 8192  # Hard cap to avoid too large batches
+        batch_size = min(batch_size, batch_size_cap)
+        batch_size = max(batch_size, 0)
 
         # Account for separators that are processed by the tokenizer (do not count towards batch_size => double it)
         first_sequence = set(preprocessed_sequences[0])
