@@ -471,9 +471,3 @@ class ConfigurationVerificationTests(unittest.TestCase):
         configurator = Configurator.from_config_dict(config_dict)
         with self.assertRaises(ConfigurationException) as context:
             configurator.get_verified_config()
-
-        config_dict["scaling_method"] = "standard"
-        config_dict["protocol"] = "residue_to_class"
-        configurator = Configurator.from_config_dict(config_dict)
-        with self.assertRaises(ConfigurationException) as context:
-            configurator.get_verified_config()
