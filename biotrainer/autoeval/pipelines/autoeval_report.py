@@ -4,13 +4,14 @@ from ruamel import yaml
 from pathlib import Path
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Union, Optional
+from typing import Dict, Any, Union, Optional, List
 
 from ..core import AutoEvalTask
 from ..pbc.pbc_datasets import PBC_DATASETS
 from ..flip.flip_datasets import FLIP_DATASETS
 
 from ...bioengineer import ZeroShotMethod, RankingResult
+
 
 class FrameworkReport(ABC):
     @abstractmethod
@@ -19,6 +20,10 @@ class FrameworkReport(ABC):
 
     @abstractmethod
     def number_tasks(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_task_names(self) -> List[str]:
         raise NotImplementedError
 
 
@@ -55,14 +60,14 @@ class SupervisedFrameworkReport(BaseModel, FrameworkReport):
         print("Results:")
 
         for task_name in task_names:
-            metrics = self._extract_metrics(task_name)
+            metrics = self.extract_metrics(task_name)
             for metric in metrics:
                 print(
                     f"{metric['task_name']} ({metric['protocol']}) - {metric['test_set_name']} - "
                     f"{metric['evaluation_metric']}: {metric['mean']} ({metric['lower']} - {metric['upper']})"
                 )
 
-    def _extract_metrics(self, combined_task_name: str) -> list[dict]:
+    def extract_metrics(self, combined_task_name: str) -> list[dict]:
         """Extract metrics for a given task."""
         framework_to_datasets = {"PBC": PBC_DATASETS, "FLIP": FLIP_DATASETS}
 
@@ -94,6 +99,9 @@ class SupervisedFrameworkReport(BaseModel, FrameworkReport):
     def number_tasks(self):
         return len(self.results.keys())
 
+    def get_task_names(self) -> List[str]:
+        return list(self.results.keys())
+
 
 class ZeroShotFrameworkReport(BaseModel, FrameworkReport):
     method: ZeroShotMethod = Field(description="Scoring method used")
@@ -121,6 +129,10 @@ class ZeroShotFrameworkReport(BaseModel, FrameworkReport):
 
     def number_tasks(self):
         return len(self.aggregated_results)
+
+    def get_task_names(self) -> List[str]:
+        return list(self.aggregated_results.keys())
+
 
 class ZeroShotCachedResults(BaseModel):
     """ Utility class for storing cached results for zero-shot evaluation """
@@ -222,12 +234,12 @@ class AutoEvalReport(BaseModel):
             print(f"\n{framework_name} zero-shot results:")
             report.summary()
 
-    def compare(self, other_reports: list[AutoEvalReport]):
-        # TODO
+    def compare(self, other_reports: list[AutoEvalReport], plot: Optional[bool] = False):
         """Compare this report with other reports on the same evaluation metrics.
-
+    
         Args:
             other_reports: List of AutoEvalReport objects to compare with
+            plot: Whether to plot the comparison
         """
         import pandas as pd
         pd.set_option('display.max_rows', None)
@@ -235,12 +247,12 @@ class AutoEvalReport(BaseModel):
         pd.set_option('display.width', None)
 
         all_reports = [self] + other_reports
-        report_names = [report.embedder_name for report in all_reports]
 
         # Get all unique task names across all reports
         all_task_names = set()
         for report in all_reports:
-            all_task_names.update(report.results.keys())
+            for framework_report in [*report.supervised_results.values(), *report.zeroshot_results.values()]:
+                all_task_names.update(framework_report.get_task_names())
 
         # Create list to store all data
         data = []
@@ -248,17 +260,22 @@ class AutoEvalReport(BaseModel):
         # For each task, gather metrics across all reports
         for task_name in sorted(all_task_names):
             for report in all_reports:
-                if task_name in report.results:
-                    metrics = report._extract_metrics(task_name)
-                    for metric in metrics:
-                        data.append({
-                            'Task': task_name,
-                            'Protocol': metric['protocol'],
-                            'Test Set': metric['test_set_name'],
-                            'Metric': metric['evaluation_metric'],
-                            'Model': report.embedder_name,
-                            'Score': f"{metric['mean']} ({metric['lower']}-{metric['upper']})"
-                        })
+                # TODO Zero-Shot Results
+                for framework_report in [*report.supervised_results.values()]:
+                    if task_name in framework_report.get_task_names():
+                        metrics = framework_report.extract_metrics(task_name)
+                        for metric in metrics:
+                            data.append({
+                                'Task': task_name,
+                                'Protocol': metric['protocol'],
+                                'Test Set': metric['test_set_name'],
+                                'Metric': metric['evaluation_metric'],
+                                'Model': report.embedder_name,
+                                'Score': f"{metric['mean']} ({metric['lower']}-{metric['upper']})",
+                                'Mean': metric['mean'],  # Add numerical values for plotting
+                                'Lower': metric['lower'],
+                                'Upper': metric['upper']
+                            })
 
         # Create DataFrame and pivot it
         df = pd.DataFrame(data)
@@ -266,9 +283,74 @@ class AutoEvalReport(BaseModel):
             index=['Task', 'Protocol', 'Test Set', 'Metric'],
             columns='Model',
             values='Score',
-            aggfunc='first'
+            aggfunc='first',
+            sort=False
         ).reset_index()
 
         print("\nComparison of reports:")
         print(df_pivot.to_string(index=False))
 
+        if plot:
+            try:
+                import seaborn as sns
+                import matplotlib.pyplot as plt
+
+                # Create combined task+test_set names for plotting
+                plot_data = pd.DataFrame(data)
+                plot_data['Task_TestSet'] = plot_data.apply(
+                    lambda x: f"{x['Task']}\n({x['Test Set']} - {x['Metric']})" if x['Test Set'] != 'test'
+                    else f"{x['Task']}\n({x['Metric']})", axis=1
+                )
+
+                # Create figure with adjusted size based on number of unique task+test_set combinations
+                unique_task_testsets = plot_data['Task_TestSet'].unique()
+                plt.figure(figsize=(16, max(8, len(unique_task_testsets) * 0.75)))
+
+                # Set style and create bar plot
+                sns.set_style("whitegrid")
+                ax = sns.barplot(
+                    data=plot_data,
+                    x='Task_TestSet',
+                    y='Mean',
+                    hue='Model',
+                    capsize=0.2,
+                    err_kws={'linewidth': 1},  # Replace deprecated errwidth
+                    errorbar=lambda x: (x.std(), x.std()),  # Symmetric error bars
+                    alpha=0.8
+                )
+
+                # Add error bars manually using the confidence intervals
+                for i, model in enumerate(plot_data['Model'].unique()):
+                    model_data = plot_data[plot_data['Model'] == model]
+                    for j, task_testset in enumerate(unique_task_testsets):
+                        task_data = model_data[model_data['Task_TestSet'] == task_testset]
+                        if not task_data.empty:
+                            x = j + (i - len(plot_data['Model'].unique()) / 2 + 0.5) * (
+                                    0.8 / len(plot_data['Model'].unique()))
+                            plt.vlines(
+                                x=x,
+                                ymin=task_data['Lower'].iloc[0],
+                                ymax=task_data['Upper'].iloc[0],
+                                color=plt.cm.tab10(i),
+                                linewidth=2,
+                                alpha=0.6
+                            )
+
+                # Customize plot
+                plt.title('Performance Comparison Across Tasks')
+                plt.xlabel('Task')
+                plt.ylabel('Score')
+
+                # Rotate x-axis labels for better readability
+                plt.xticks(rotation=45, ha='right')
+
+                # Adjust legend position
+                plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+
+                # Adjust layout to prevent label cutoff
+                plt.tight_layout()
+
+                plt.show()
+
+            except ImportError as e:
+                print(f"Plotting requires matplotlib and seaborn: {e}")
