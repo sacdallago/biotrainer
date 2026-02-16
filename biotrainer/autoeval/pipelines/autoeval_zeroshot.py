@@ -37,7 +37,8 @@ def _run_tasks(framework: AutoEvalFramework,
                                current_task_name=current_task_name,
                                current_framework_name=framework.get_name())
         individual_results = {}
-        for file_path in task.input_files:
+        for idx, file_path in enumerate(task.input_files):
+            print(f"Running dataset {idx+1}/{len(task.input_files)} [name: {file_path.name}]...")
             # Check if cached result exists for this dataset
             file_name = file_path.name
             maybe_cached_result = cached_results.maybe_cached_result(dataset_name=file_name)
