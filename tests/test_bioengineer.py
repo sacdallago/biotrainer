@@ -8,8 +8,9 @@ class BioEngineerTests(unittest.TestCase):
     error_tolerance = 0.01
 
     def test_baselines(self):
-        """ Checks that training with and without class weights results in different models"""
+        """ Test BioEngineer baselines on protein gym dataset """
         dataset_path = "test_input_files/pgym/B2L11_HUMAN_Dutta_2010_binding-Mcl-1.csv"
+        # Check all baselines and methods
         for baseline in BioEngineerBaseline:
             for method in ZeroShotMethod:
                 bio_engineer = BioEngineer.from_baseline(baseline=baseline)
@@ -20,3 +21,12 @@ class BioEngineerTests(unittest.TestCase):
                                        method=method)
                 self.assertTrue(-1 <= ranking.scc.mean <= 1)
                 self.assertTrue(0 <= ranking.ndcg.mean <= 1)
+
+        # Check that baseline creation from name works
+        bio_engineer = BioEngineer.from_name(name=BioEngineerBaseline.CONSTANT_BASELINE.name)
+        ranking = bio_engineer.rank_pgym_dataset(dataset_file_path=dataset_path,
+                                                 method=ZeroShotMethod.WT_MARGINALS)
+        self.assertTrue(-1 <= ranking.scc.mean <= 1)
+        self.assertTrue(0 <= ranking.ndcg.mean <= 1)
+
+

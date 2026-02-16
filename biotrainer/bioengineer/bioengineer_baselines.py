@@ -11,16 +11,16 @@ from ..utilities import STANDARD_AAS
 
 
 class BioEngineerBaseline(Enum):
-    CONSTANT = "CONSTANT"
-    RANDOM = "RANDOM"
+    CONSTANT_BASELINE = "bioengineer_constant_baseline"
+    RANDOM_BASELINE = "bioengineer_random_baseline"
 
 
 class ConstantEngineerBaseline(BioEngineerModelWrapper):
 
     @classmethod
     def detect(cls, embedder_name: str, device: torch.device):
-        if embedder_name.upper() == BioEngineerBaseline.CONSTANT.value:
-            return cls(name=embedder_name, model=None, tokenizer=None, device=device)
+        if embedder_name in [BioEngineerBaseline.CONSTANT_BASELINE.value, BioEngineerBaseline.CONSTANT_BASELINE.name]:
+            return cls(name=BioEngineerBaseline.CONSTANT_BASELINE.value, model=None, tokenizer=None, device=device)
         return None
 
     def aa_to_idx(self) -> Dict[str, int]:
@@ -63,8 +63,8 @@ class RandomEngineerBaseline(BioEngineerModelWrapper):
 
     @classmethod
     def detect(cls, embedder_name: str, device: torch.device):
-        if embedder_name.upper() == BioEngineerBaseline.RANDOM.value:
-            return cls(name=embedder_name, model=None, tokenizer=None, device=device)
+        if embedder_name in [BioEngineerBaseline.RANDOM_BASELINE.value, BioEngineerBaseline.RANDOM_BASELINE.name]:
+            return cls(name=BioEngineerBaseline.RANDOM_BASELINE.value, model=None, tokenizer=None, device=device)
         return None
 
     def aa_to_idx(self) -> Dict[str, int]:

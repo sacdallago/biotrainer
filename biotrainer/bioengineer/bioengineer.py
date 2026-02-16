@@ -26,7 +26,7 @@ class BioEngineer:
     @classmethod
     def from_name(cls, name: str, device: Optional[torch.device] = None) -> BioEngineer:
         device = get_device(device)
-        for available_model in cls.__available_models:
+        for available_model in (cls.__available_models + cls.__available_baselines):
             model = available_model.detect(name, device=device)
             if model is not None:
                 return cls(model)
