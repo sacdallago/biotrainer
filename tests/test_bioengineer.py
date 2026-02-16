@@ -1,0 +1,22 @@
+import unittest
+
+from biotrainer.bioengineer import BioEngineer, BioEngineerBaseline, ZeroShotMethod
+
+
+
+class BioEngineerTests(unittest.TestCase):
+    error_tolerance = 0.01
+
+    def test_baselines(self):
+        """ Checks that training with and without class weights results in different models"""
+        dataset_path = "test_input_files/pgym/B2L11_HUMAN_Dutta_2010_binding-Mcl-1.csv"
+        for baseline in BioEngineerBaseline:
+            for method in ZeroShotMethod:
+                bio_engineer = BioEngineer.from_baseline(baseline=baseline)
+                if method not in bio_engineer.model_wrapper.supported_methods():
+                    continue
+                self.assertIsNotNone(bio_engineer.model_wrapper, f"Model wrapper for baseline {baseline} is None!")
+                ranking = bio_engineer.rank_pgym_dataset(dataset_file_path=dataset_path,
+                                       method=method)
+                self.assertTrue(-1 <= ranking.scc.mean <= 1)
+                self.assertTrue(0 <= ranking.ndcg.mean <= 1)
