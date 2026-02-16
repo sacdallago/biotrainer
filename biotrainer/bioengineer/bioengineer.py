@@ -8,7 +8,7 @@ from typing import List, Optional, Dict, Union
 
 from .bioengineer_models import ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer
 from .bioengineer_interfaces import BioEngineerModelWrapper
-from .bioengineer_baselines import BioengineerBaseline, ConstantEngineerBaseline, RandomEngineerBaseline
+from .bioengineer_baselines import BioEngineerBaseline, ConstantEngineerBaseline, RandomEngineerBaseline
 from .bioengineer_data_classes import VariantScore, ZeroShotMethod, Variant, RankingResult
 
 from ..utilities import get_device
@@ -33,7 +33,7 @@ class BioEngineer:
         raise ValueError(f"No model found for name {name}")
 
     @classmethod
-    def from_baseline(cls, baseline: BioengineerBaseline) -> BioEngineer:
+    def from_baseline(cls, baseline: BioEngineerBaseline) -> BioEngineer:
         for available_baseline in cls.__available_baselines:
             baseline_model = available_baseline.detect(embedder_name=baseline.name, device=torch.device("cpu"))
             if baseline_model is not None:

@@ -10,7 +10,7 @@ from .bioengineer_interfaces import BioEngineerModelWrapper
 from ..utilities import STANDARD_AAS
 
 
-class BioengineerBaseline(Enum):
+class BioEngineerBaseline(Enum):
     CONSTANT = "CONSTANT"
     RANDOM = "RANDOM"
 
@@ -19,7 +19,7 @@ class ConstantEngineerBaseline(BioEngineerModelWrapper):
 
     @classmethod
     def detect(cls, embedder_name: str, device: torch.device):
-        if embedder_name.upper() == BioengineerBaseline.CONSTANT.value:
+        if embedder_name.upper() == BioEngineerBaseline.CONSTANT.value:
             return cls(name=embedder_name, model=None, tokenizer=None, device=device)
         return None
 
@@ -63,7 +63,7 @@ class RandomEngineerBaseline(BioEngineerModelWrapper):
 
     @classmethod
     def detect(cls, embedder_name: str, device: torch.device):
-        if embedder_name.upper() == BioengineerBaseline.RANDOM.value:
+        if embedder_name.upper() == BioEngineerBaseline.RANDOM.value:
             return cls(name=embedder_name, model=None, tokenizer=None, device=device)
         return None
 
