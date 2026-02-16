@@ -37,7 +37,8 @@ class PGYMDataHandler(AutoEvalDataHandler):
     def preprocess(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) -> None:
         print("PGYM data preprocessing completed (nothing to do)!")
 
-    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) -> List[AutoEvalTask]:
+    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) -> List[
+        AutoEvalTask]:
         """Build tasks for all PGYM datasets"""
         substitutions_path = base_path / "DMS_ProteinGym_substitutions"
         reference_df = pd.read_csv(self.get_reference_file_path(base_path))
@@ -65,5 +66,9 @@ class PGYMDataHandler(AutoEvalDataHandler):
                                       dataset_name="nonvirus",
                                       input_files=list(non_virus_taxon_files),
                                       type="Protein")
-
-        return [virus_task, non_virus_task]
+        # Total task contains all datasets and will re-use cached results
+        total_task = AutoEvalTask(framework_name=self.get_framework_name(),
+                                  dataset_name="total",
+                                  input_files=list(virus_taxon_files) + list(non_virus_taxon_files),
+                                  type="Protein")
+        return [virus_task, non_virus_task, total_task]
