@@ -6,8 +6,9 @@ import pandas as pd
 from pathlib import Path
 from typing import List, Optional, Dict, Union
 
-from .bioengineer_models import ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer
 from .bioengineer_interfaces import BioEngineerModelWrapper
+from .bioengineer_models import ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer
+from .bioengineer_custom_model import CustomBioEngineerModel, CustomBioEngineerModelWrapper
 from .bioengineer_baselines import BioEngineerBaseline, ConstantEngineerBaseline, RandomEngineerBaseline
 from .bioengineer_data_classes import VariantScore, ZeroShotMethod, Variant, RankingResult
 
@@ -39,6 +40,15 @@ class BioEngineer:
             if baseline_model is not None:
                 return cls(baseline_model)
         raise ValueError(f"No baseline found for name {baseline.name}")
+
+    @classmethod
+    def from_model_wrapper(cls, model_wrapper: BioEngineerModelWrapper) -> BioEngineer:
+        return cls(model_wrapper)
+
+    @classmethod
+    def from_custom_model(cls, model: CustomBioEngineerModel, device: Optional[torch.device] = None):
+        device = get_device(device)
+        return cls(CustomBioEngineerModelWrapper(custom_bioengineer=model, device=device))
 
     def zero_shot_wt_marginals(self,
                                wt_sequence: str,

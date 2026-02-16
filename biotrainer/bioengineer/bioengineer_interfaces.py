@@ -24,6 +24,10 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         raise NotImplementedError
 
     @abstractmethod
+    def _model_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        raise NotImplementedError
+
+    @abstractmethod
     def supported_methods(self) -> List[ZeroShotMethod]:
         """ Return a list of supported zero-shot methods """
         raise NotImplementedError
@@ -312,9 +316,12 @@ class GPTLikeEngineer(BioEngineerModelWrapper, ABC):
     def _compute_pseudoperplexity(self, sequence: str) -> float:
         raise NotImplementedError("Pseudo-ppl is for masked LMs; use perplexity for causal LMs")
 
+    def _model_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        with torch.no_grad():
+            output = self._model(input_ids=input_ids, attention_mask=attention_mask, labels=input_ids)
+            return output.loss  # mean cross-entropy per token (already shifted for causal LM)
+
     def _compute_perplexity(self, sequence: str) -> float:
         input_ids, attention_mask = self._tokenize([sequence], preprocess=True)
-        with torch.no_grad():
-            out = self._model(input_ids=input_ids, attention_mask=attention_mask, labels=input_ids)
-            loss = out.loss  # mean cross-entropy per token (already shifted for causal LM)
+        loss = self._model_forward_fn(input_ids=input_ids, attention_mask=attention_mask)
         return torch.exp(loss).item()
