@@ -5,7 +5,7 @@ import numpy as np
 
 from enum import Enum
 from typing import Optional, List
-from pydantic import BaseModel, Field, field_validator, computed_field
+from pydantic import BaseModel, Field, field_validator, computed_field, SerializeAsAny
 
 from ..utilities import MetricEstimate
 
@@ -216,8 +216,8 @@ class VariantScore(BaseModel):
 
 
 class RankingResult(BaseModel):
-    scc: MetricEstimate = Field(description="Spearmans correlation coefficient (overall ranking quality)")
-    ndcg: MetricEstimate = Field(description="Normalized discounted cumulative gain (top-k ranking quality)")
+    scc: SerializeAsAny[MetricEstimate] = Field(description="Spearmans correlation coefficient (overall ranking quality)")
+    ndcg: SerializeAsAny[MetricEstimate] = Field(description="Normalized discounted cumulative gain (top-k ranking quality)")
 
     @classmethod
     def aggregate(cls, results: List[RankingResult]) -> RankingResult:
