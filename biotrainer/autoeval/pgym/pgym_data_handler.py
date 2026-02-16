@@ -59,11 +59,11 @@ class PGYMDataHandler(AutoEvalDataHandler):
 
         virus_task = AutoEvalTask(framework_name=self.get_framework_name(),
                                   dataset_name="virus",
-                                  input_files=list(virus_taxon_files)[0:10],  # TODO DEBUG
+                                  input_files=list(virus_taxon_files),
                                   type="Protein")
         non_virus_task = AutoEvalTask(framework_name=self.get_framework_name(),
                                       dataset_name="nonvirus",
-                                      input_files=list(non_virus_taxon_files)[0:10],  # TODO DEBUG
+                                      input_files=list(non_virus_taxon_files),
                                       type="Protein")
 
         return [virus_task, non_virus_task]
