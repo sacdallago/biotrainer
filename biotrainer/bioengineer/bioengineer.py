@@ -141,6 +141,12 @@ class BioEngineer:
         if method not in self.model_wrapper.supported_methods():
             raise ValueError(f"Method {method} not supported by this model!")
 
+        if isinstance(dataset_file_path, str):
+            dataset_file_path = Path(dataset_file_path)
+
+        if not dataset_file_path.exists():
+            raise ValueError(f"Dataset file {dataset_file_path} does not exist!")
+
         # Read ProteinGym dataset
         df = pd.read_csv(dataset_file_path)
         if len(df) == 0:
