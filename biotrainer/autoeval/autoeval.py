@@ -32,6 +32,7 @@ def autoeval_pipeline(embedder_name: str,
                           Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None,
                       custom_storage_path: Optional[Union[Path, str]] = None,
                       custom_output_observers: List[BiotrainerOutputObserver] = None,
+                      device: Optional[Union[str, torch.device]] = None,
                       ) -> Generator[AutoEvalProgress, None, None]:
     """
     Run the autoeval pipeline for a given embedder_name and framework.
@@ -66,6 +67,7 @@ def autoeval_pipeline(embedder_name: str,
         Takes an iterable of sequence strings as input and must provide the per-sequence embeddings as a generator.
     :param custom_storage_path: Optional path where to store the framework datasets if not downloaded yet.
     :param custom_output_observers: Optional list of custom training output observers.
+    :param device: Optional device specifier for embedding/model computations (e.g., 'cuda:0', 'cuda:1', 'cpu').
     :return: A dictionary containing the autoeval pipeline results. Each task result is a biotrainer model output dict.
     """
     framework_obj: AutoEvalFramework = validate_input(framework,
@@ -116,7 +118,8 @@ def autoeval_pipeline(embedder_name: str,
                                                     custom_embedding_function_per_residue=custom_embedding_function_per_residue,
                                                     custom_embedding_function_per_sequence=custom_embedding_function_per_sequence,
                                                     custom_storage_path=custom_storage_path,
-                                                    custom_output_observers=custom_output_observers)
+                                                    custom_output_observers=custom_output_observers,
+                                                    device=device)
         case AutoEvalMode.ZERO_SHOT:
             yield from autoeval_zeroshot_pipeline(embedder_name=embedder_name,
                                                   framework=framework_obj,
@@ -124,4 +127,5 @@ def autoeval_pipeline(embedder_name: str,
                                                   autoeval_report=autoeval_report,
                                                   output_dir=output_dir,
                                                   force_download=force_download,
-                                                  custom_storage_path=custom_storage_path)
+                                                  custom_storage_path=custom_storage_path,
+                                                  device=device)

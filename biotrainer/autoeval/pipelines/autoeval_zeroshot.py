@@ -15,8 +15,9 @@ def _run_tasks(framework: AutoEvalFramework,
                zero_shot_method: ZeroShotMethod,
                autoeval_report: AutoEvalReport,
                output_dir: Path,
-               autoeval_tasks: List[AutoEvalTask]):
-    bioengineer = BioEngineer.from_name(name=embedder_name, device=get_device())
+               autoeval_tasks: List[AutoEvalTask],
+               device=None):
+    bioengineer = BioEngineer.from_name(name=embedder_name, device=get_device(device))
 
     # Load cached results
     cached_results = ZeroShotCachedResults.loaded_or_empty(embedder_name=embedder_name,
@@ -76,6 +77,7 @@ def autoeval_zeroshot_pipeline(embedder_name: str,
                                output_dir: Optional[Union[Path, str]] = "autoeval_output",
                                force_download: Optional[bool] = False,
                                custom_storage_path: Optional[Union[Path, str]] = None,
+                               device=None,
                                ):
     # Setup
     autoeval_tasks = setup_pipeline(data_handler=framework.get_data_handler(),
@@ -87,4 +89,5 @@ def autoeval_zeroshot_pipeline(embedder_name: str,
                          zero_shot_method=method,
                          autoeval_report=autoeval_report,
                          output_dir=output_dir,
-                         autoeval_tasks=autoeval_tasks)
+                         autoeval_tasks=autoeval_tasks,
+                         device=device)

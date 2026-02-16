@@ -97,6 +97,7 @@ def _run_pipeline(embedder_name: str,
                   custom_storage_path: Optional[str] = None,
                   custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
                   force_download: Optional[bool] = False,
+                  device = None,
                   ) -> Generator[AutoEvalProgress, None, None]:
     task_config_tuples, unique_per_residue, unique_per_sequence = get_unique_framework_sequences(framework=framework,
                                                                                                  min_seq_length=min_seq_length,
@@ -159,6 +160,7 @@ def _run_pipeline(embedder_name: str,
                                                                 embeddings_file=task_embeddings_file,
                                                                 input_file=task.input_files[0],
                                                                 output_dir=task_output_dir,
+                                                                device=device,
                                                                 )
 
         result = parse_config_file_and_execute_run(config=config,
@@ -191,7 +193,8 @@ def _setup_embedding_functions(embedder_name,
                                    Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None,
                                custom_embedding_function_per_sequence: Optional[
                                    Callable[
-                                       [Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None, ):
+                                       [Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None,
+                               device=None, ):
     # Custom Pipeline -> Embedding calculation handled inside of pipeline
     if custom_pipeline:
         return None, None
@@ -215,7 +218,7 @@ def _setup_embedding_functions(embedder_name,
         embedding_service: EmbeddingService = get_embedding_service(embedder_name=embedder_name,
                                                                     custom_tokenizer_config=custom_tokenizer_config,
                                                                     use_half_precision=use_half_precision,
-                                                                    device=get_device()
+                                                                    device=get_device(device)
                                                                     )
         embedding_function_per_residue = lambda seqs: embedding_service.compute_embeddings(input_data=seqs,
                                                                                            output_dir=output_dir,
@@ -303,6 +306,7 @@ def autoeval_supervised_pipeline(embedder_name: str,
                                      Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None,
                                  custom_storage_path: Optional[Union[Path, str]] = None,
                                  custom_output_observers: List[BiotrainerOutputObserver] = None,
+                                 device=None,
                                  ) -> Generator[AutoEvalProgress, None, None]:
     if custom_pipeline is not None and any([v is not None for v in [custom_tokenizer_config,
                                                                     precomputed_per_residue_embeddings,
@@ -335,7 +339,8 @@ def autoeval_supervised_pipeline(embedder_name: str,
         precomputed_per_residue_embeddings=precomputed_per_residue_embeddings,
         precomputed_per_sequence_embeddings=precomputed_per_sequence_embeddings,
         custom_embedding_function_per_residue=custom_embedding_function_per_residue,
-        custom_embedding_function_per_sequence=custom_embedding_function_per_sequence)
+        custom_embedding_function_per_sequence=custom_embedding_function_per_sequence,
+        device=device)
 
     # Pipeline
     yield from _run_pipeline(embedder_name=embedder_name,
@@ -349,5 +354,6 @@ def autoeval_supervised_pipeline(embedder_name: str,
                              custom_pipeline=custom_pipeline,
                              custom_storage_path=custom_storage_path,
                              custom_output_observers=custom_output_observers,
-                             force_download=force_download
+                             force_download=force_download,
+                             device=device,
                              )

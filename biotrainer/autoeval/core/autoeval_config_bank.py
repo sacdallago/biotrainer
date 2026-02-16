@@ -17,10 +17,13 @@ class AutoEvalConfigBank(ABC):
                                     input_file: Union[str, Path],
                                     output_dir: Union[str, Path],
                                     embeddings_file: Optional[Union[str, Path]] = None,
+                                    device = None,
                                     ) -> Dict[str, Any]:
         config.update({"embedder_name": embedder_name,
                        "input_file": str(input_file),
                        "output_dir": str(output_dir)})
         if embeddings_file is not None:
             config.update({"embeddings_file": str(embeddings_file)})
+        if device is not None:
+            config.update({"device": device})
         return config
