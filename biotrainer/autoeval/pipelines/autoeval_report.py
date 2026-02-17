@@ -187,7 +187,6 @@ class SupervisedFrameworkReport(BaseModel, FrameworkReport):
                     hue='Model',
                     capsize=0.2,
                     err_kws={'linewidth': 1},  # Replace deprecated errwidth
-                    errorbar=lambda x: (x.std(), x.std()),  # Symmetric error bars
                     alpha=0.8,
                     palette='colorblind'
                 )
@@ -209,6 +208,21 @@ class SupervisedFrameworkReport(BaseModel, FrameworkReport):
                                 linewidth=2,
                                 alpha=0.6,
                             )
+
+                # Add score values to the bottom of bars
+                for i, model in enumerate(plot_data['Model'].unique()):
+                    model_data = plot_data[plot_data['Model'] == model]
+                    for j, task_testset in enumerate(unique_task_testsets):
+                        task_data = model_data[model_data['Task_TestSet'] == task_testset]
+                        if not task_data.empty:
+                            x = j + (i - len(plot_data['Model'].unique()) / 2 + 0.5) * (
+                                    0.8 / len(plot_data['Model'].unique())) + 0.02  # 0.02 is for padding
+                            y = task_data['Mean'].iloc[0]
+                            # Add text label at the bottom of the bar
+                            ax.text(x, 0.01, f'{y:.3f}',
+                                    ha='center', va='bottom',
+                                    fontsize=8, rotation=90,
+                                    color='black', fontweight='bold')
 
                 # Show plot
                 FrameworkReport._show_plot(plt)
@@ -316,7 +330,6 @@ class ZeroShotFrameworkReport(BaseModel, FrameworkReport):
                     hue='Model',
                     capsize=0.2,
                     err_kws={'linewidth': 1},
-                    errorbar=lambda x: (x.std(), x.std()),
                     alpha=0.8,
                     palette='colorblind'
                 )
@@ -338,6 +351,21 @@ class ZeroShotFrameworkReport(BaseModel, FrameworkReport):
                                 linewidth=2,
                                 alpha=0.6
                             )
+
+                # Add score values to the bottom of bars
+                for i, model in enumerate(plot_data['Model'].unique()):
+                    model_data = plot_data[plot_data['Model'] == model]
+                    for j, task_metric in enumerate(unique_task_metrics):
+                        task_data = model_data[model_data['Task_Metric'] == task_metric]
+                        if not task_data.empty:
+                            x = j + (i - len(plot_data['Model'].unique()) / 2 + 0.5) * (
+                                    0.8 / len(plot_data['Model'].unique())) + 0.02 # 0.02 is for padding
+                            y = task_data['Mean'].iloc[0]
+                            # Add text label at the bottom of the bar
+                            ax.text(x, 0.01, f'{y:.3f}',
+                                    ha='center', va='bottom',
+                                    fontsize=8, rotation=90,
+                                    color='black', fontweight='bold')
 
                 # Add vertical lines between different tasks
                 prev_task = None
