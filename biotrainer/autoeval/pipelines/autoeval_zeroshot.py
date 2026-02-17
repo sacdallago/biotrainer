@@ -16,8 +16,10 @@ def _run_tasks(framework: AutoEvalFramework,
                autoeval_report: AutoEvalReport,
                output_dir: Path,
                autoeval_tasks: List[AutoEvalTask],
+               bioengineer: Optional[BioEngineer] = None,
                device=None):
-    bioengineer = BioEngineer.from_name(name=embedder_name, device=get_device(device))
+    if not bioengineer:
+        bioengineer = BioEngineer.from_name(name=embedder_name, device=get_device(device))
 
     # Load cached results
     cached_results = ZeroShotCachedResults.loaded_or_empty(embedder_name=embedder_name,
@@ -39,7 +41,7 @@ def _run_tasks(framework: AutoEvalFramework,
                                current_framework_name=framework.get_name())
         individual_results = {}
         for idx, file_path in enumerate(task.input_files):
-            print(f"Running dataset {idx+1}/{len(task.input_files)} [name: {file_path.name}]...")
+            print(f"Running dataset {idx + 1}/{len(task.input_files)} [name: {file_path.name}]...")
             # Check if cached result exists for this dataset
             file_name = file_path.name
             maybe_cached_result = cached_results.maybe_cached_result(dataset_name=file_name)
@@ -77,6 +79,7 @@ def autoeval_zeroshot_pipeline(embedder_name: str,
                                output_dir: Optional[Union[Path, str]] = "autoeval_output",
                                force_download: Optional[bool] = False,
                                custom_storage_path: Optional[Union[Path, str]] = None,
+                               custom_bioengineer: Optional[BioEngineer] = None,
                                device=None,
                                ):
     # Setup
@@ -85,9 +88,10 @@ def autoeval_zeroshot_pipeline(embedder_name: str,
                                     force_download=force_download)
     # Pipeline
     yield from _run_tasks(framework=framework,
-                         embedder_name=embedder_name,
-                         zero_shot_method=method,
-                         autoeval_report=autoeval_report,
-                         output_dir=output_dir,
-                         autoeval_tasks=autoeval_tasks,
-                         device=device)
+                          embedder_name=embedder_name,
+                          zero_shot_method=method,
+                          autoeval_report=autoeval_report,
+                          output_dir=output_dir,
+                          autoeval_tasks=autoeval_tasks,
+                          bioengineer=custom_bioengineer,
+                          device=device)
