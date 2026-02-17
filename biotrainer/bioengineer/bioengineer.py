@@ -42,12 +42,11 @@ class BioEngineer:
         raise ValueError(f"No baseline found for name {baseline.name}")
 
     @classmethod
-    def from_model_wrapper(cls, model_wrapper: BioEngineerModelWrapper) -> BioEngineer:
-        return cls(model_wrapper)
-
-    @classmethod
-    def from_custom_model(cls, model: CustomBioEngineerModel, device: Optional[torch.device] = None):
+    def from_custom_model(cls, model: Union[CustomBioEngineerModel, BioEngineerModelWrapper],
+                          device: Optional[torch.device] = None):
         device = get_device(device)
+        if isinstance(model, BioEngineerModelWrapper):
+            return cls(model)
         return cls(CustomBioEngineerModelWrapper(custom_bioengineer=model, device=device))
 
     def zero_shot_wt_marginals(self,
