@@ -33,9 +33,9 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         raise NotImplementedError
 
     @abstractmethod
-    def _get_probabilities(self, sequence: str) -> torch.Tensor:
+    def _get_log_probabilities(self, sequence: str) -> torch.Tensor:
         """
-        Get probabilities for all positions without masking (WT-marginals).
+        Get log probabilities for all positions without masking (WT-marginals).
 
         Returns:
             torch.Tensor: [seq_len, vocab_size]
@@ -43,9 +43,9 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         raise NotImplementedError
 
     @abstractmethod
-    def _get_masked_probabilities(self, sequence: str) -> torch.Tensor:
+    def _get_masked_log_probabilities(self, sequence: str) -> torch.Tensor:
         """
-        Get probabilities for all positions using the masked-marginals strategy.
+        Get log probabilities for all positions using the masked-marginals strategy.
         Each position is masked independently and scored.
 
         Returns:
@@ -109,7 +109,7 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         """
         Score mutations using the WT-marginals strategy (no masking).
         """
-        log_probs = self._get_probabilities(wt_sequence)  # Raises NotImplementedError if not available
+        log_probs = self._get_log_probabilities(wt_sequence)  # Raises NotImplementedError if not available
         return self._score_variants_from_marginal_probabilities(wt_sequence, log_probs, mutations, one_indexed,
                                                                 ZeroShotMethod.WT_MARGINALS)
 
@@ -129,7 +129,7 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         Returns:
             List of VariantScore objects
         """
-        log_probs = self._get_masked_probabilities(wt_sequence)
+        log_probs = self._get_masked_log_probabilities(wt_sequence)
         return self._score_variants_from_marginal_probabilities(wt_sequence, log_probs, mutations, one_indexed,
                                                                 ZeroShotMethod.MASKED_MARGINALS)
 
@@ -211,7 +211,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
             )
         return output.logits
 
-    def _get_probabilities(self, sequence: str):
+    def _get_log_probabilities(self, sequence: str):
         tokenized_sequences, attention_mask = self._tokenize([sequence], preprocess=True)
         seq_len = tokenized_sequences.size(1)
 
@@ -246,7 +246,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         windowed_mask = attention_mask[:, start:end + 1] if attention_mask is not None else None
         return start, end, windowed_tokens, windowed_mask
 
-    def _get_masked_probabilities(self, sequence: str) -> torch.Tensor:
+    def _get_masked_log_probabilities(self, sequence: str) -> torch.Tensor:
         # Tokenize the sequence
         tokenized_sequences, attention_mask = self._tokenize([sequence], preprocess=True)
 
@@ -286,7 +286,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
 
     def _compute_pseudoperplexity(self, sequence: str) -> float:
         # Get masked probabilities for all positions
-        log_probs = self._get_masked_probabilities(sequence)  # [seq_len, vocab_size]
+        log_probs = self._get_masked_log_probabilities(sequence)  # [seq_len, vocab_size]
 
         # Extract log probabilities for actual amino acids at each position
         aa_to_idx = self.aa_to_idx()
@@ -307,10 +307,10 @@ class GPTLikeEngineer(BioEngineerModelWrapper, ABC):
     def supported_methods(self) -> List[ZeroShotMethod]:
         return [ZeroShotMethod.PERPLEXITY]
 
-    def _get_probabilities(self, sequence: str):
+    def _get_log_probabilities(self, sequence: str):
         raise NotImplementedError("WT marginals are not defined for causal LMs")
 
-    def _get_masked_probabilities(self, sequence: str):
+    def _get_masked_log_probabilities(self, sequence: str):
         raise NotImplementedError("Masked marginals are not defined for causal LMs")
 
     def _compute_pseudoperplexity(self, sequence: str) -> float:
