@@ -23,7 +23,7 @@ class CustomBioEngineerModel(ABC):
         """
         Run the model on a batch of input IDs
 
-        Should return either output.logits (for BERT-like models) or output (for GPT-like models)
+        Should return either output.logits (for BERT-like models) or output.loss (for GPT-like models)
         """
         raise NotImplementedError
 
