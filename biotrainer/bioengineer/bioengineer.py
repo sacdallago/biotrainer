@@ -4,7 +4,7 @@ import torch
 import pandas as pd
 
 from pathlib import Path
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Tuple
 
 from .bioengineer_interfaces import BioEngineerModelWrapper
 from .bioengineer_models import ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer
@@ -130,7 +130,7 @@ class BioEngineer:
     def rank_pgym_dataset(self,
                           dataset_file_path: Union[str, Path],
                           method: ZeroShotMethod,
-                          single_mutations_only: bool = False) -> RankingResult:
+                          single_mutations_only: bool = False) -> Tuple[List[VariantScore], RankingResult]:
         """
         Ranks a given ProteinGym dataset using the specified zero-shot method. This method loads the dataset,
         calculates the scores for mutant sequences, and ranks the results against experimentally derived
@@ -141,8 +141,9 @@ class BioEngineer:
         :param method: Zero-shot prediction method to be used for scoring variant sequences.
         :param single_mutations_only: If True, considers only single mutations in ranking. Defaults to False.
 
-        :return: The ranking result containing the evaluation metrics for predicted mutation scores against
-                 the actual ProteinGym scores.
+        :return: Tuple containing: [0] The list of calculated variant scores,
+                [1] The ranking result containing the evaluation metrics for predicted mutation scores against
+                    the actual ProteinGym scores.
 
         :raises ValueError: If the specified method is not supported by the model. Additionally raised if
                             the dataset file is empty or missing required columns.
@@ -201,7 +202,7 @@ class BioEngineer:
         print(f"Ranking results for {dataset_file_path.name}...")
         ranking_result = self.rank_variant_scores(variant_scores=result, actual_scores=mutation_fitness)
         print(f"Ranking result for {dataset_file_path.name}: {ranking_result}")
-        return ranking_result
+        return result, ranking_result
 
     @staticmethod
     def rank_variant_scores(variant_scores: List[VariantScore], actual_scores: Dict[str, float]) -> RankingResult:

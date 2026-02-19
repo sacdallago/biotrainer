@@ -17,15 +17,17 @@ class BioEngineerTests(unittest.TestCase):
                 if method not in bio_engineer.model_wrapper.supported_methods():
                     continue
                 self.assertIsNotNone(bio_engineer.model_wrapper, f"Model wrapper for baseline {baseline} is None!")
-                ranking = bio_engineer.rank_pgym_dataset(dataset_file_path=dataset_path,
+                scores, ranking = bio_engineer.rank_pgym_dataset(dataset_file_path=dataset_path,
                                        method=method)
+                self.assertTrue(len(scores) > 0)
                 self.assertTrue(-1 <= ranking.scc.mean <= 1)
                 self.assertTrue(0 <= ranking.ndcg.mean <= 1)
 
         # Check that baseline creation from name works
         bio_engineer = BioEngineer.from_name(name=BioEngineerBaseline.CONSTANT_BASELINE.name)
-        ranking = bio_engineer.rank_pgym_dataset(dataset_file_path=dataset_path,
+        scores, ranking = bio_engineer.rank_pgym_dataset(dataset_file_path=dataset_path,
                                                  method=ZeroShotMethod.WT_MARGINALS)
+        self.assertTrue(len(scores) > 0)
         self.assertTrue(-1 <= ranking.scc.mean <= 1)
         self.assertTrue(0 <= ranking.ndcg.mean <= 1)
 

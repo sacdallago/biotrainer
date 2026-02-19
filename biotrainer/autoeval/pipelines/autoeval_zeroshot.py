@@ -51,7 +51,7 @@ def _run_tasks(framework: AutoEvalFramework,
                 continue
 
             # Cached result does not exist, run bioengineer
-            ranking_result = bioengineer.rank_pgym_dataset(dataset_file_path=file_path,
+            _, ranking_result = bioengineer.rank_pgym_dataset(dataset_file_path=file_path,
                                                            method=zero_shot_method,
                                                            single_mutations_only=False)
             cached_results.update_and_sync(dataset_name=file_name, result=ranking_result, output_dir=output_dir)
