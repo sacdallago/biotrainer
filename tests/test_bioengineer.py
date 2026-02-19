@@ -1,6 +1,7 @@
 import unittest
 
 from biotrainer.bioengineer import BioEngineer, BioEngineerBaseline, ZeroShotMethod
+from biotrainer.bioengineer.bioengineer_data_classes import Variant
 
 
 
@@ -30,5 +31,16 @@ class BioEngineerTests(unittest.TestCase):
         self.assertTrue(len(scores) > 0)
         self.assertTrue(-1 <= ranking.scc.mean <= 1)
         self.assertTrue(0 <= ranking.ndcg.mean <= 1)
+
+    def test_mutation_parsing(self):
+        wt_sequence = "MAGSMALM"
+        mutations = ["A2S", "G3M", "M1A", "M1S", "M1S:M5A"]
+        for mutation in mutations:
+            variant = Variant.parse(variant_string=mutation, wt_sequence=wt_sequence, one_indexed=True)
+            self.assertEqual(variant.wt_sequence, wt_sequence)
+            self.assertEqual(len(variant.mutations), 1 if ":" not in mutation else 2)
+
+            mut_seq = variant.get_mutant_sequence(wt_sequence=wt_sequence)
+            self.assertTrue(len(mut_seq) == len(wt_sequence))
 
 
