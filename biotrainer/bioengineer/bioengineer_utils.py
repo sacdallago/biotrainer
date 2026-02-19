@@ -200,37 +200,37 @@ def get_optimal_window(
         model_window: Maximum window size (default: 1024)
 
     Returns:
-        Tuple[start, end]: Window boundaries (inclusive range [start, end])
+        Tuple[start, end): Window boundaries as a half-open interval [start, end)
 
     Example:
         >>> # Sequence of length 2000, masking position 1000
         >>> get_optimal_window(1000, 2000, 1024)
-        (488, 1511)  # Centered window: 1000 ± 512
+        (488, 1512)  # Centered window: 1000 ± 512 (end-exclusive)
 
         >>> # Masking position 100 (near start)
         >>> get_optimal_window(100, 2000, 1024)
-        (0, 1023)  # Window starts at beginning
+        (0, 1024)  # Window starts at beginning (end-exclusive)
     """
     half_window = model_window // 2  # 512 tokens on each side for default value
 
     # Case 1: Sequence fits entirely within model window
     if seq_len_with_special <= model_window:
-        return 0, seq_len_with_special - 1
+        return 0, seq_len_with_special
 
     # Case 2: Masked position is in the first half - align window to start
     if masked_position < half_window:
-        return 0, model_window - 1
+        return 0, model_window
 
     # Case 3: Masked position is in the last half - align window to end
     if masked_position >= seq_len_with_special - half_window:
-        return seq_len_with_special - model_window, seq_len_with_special - 1
+        return seq_len_with_special - model_window, seq_len_with_special
 
     # Case 4: Masked position is in the middle - center window on it
     start = masked_position - half_window
-    end = masked_position + half_window - 1  # -1 because window_size includes both boundaries
+    end = masked_position + half_window  # end-exclusive
 
     # Clamp to valid range
     start = max(0, start)
-    end = min(seq_len_with_special - 1, end)
+    end = min(seq_len_with_special, end)
 
     return start, end

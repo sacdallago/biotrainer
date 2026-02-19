@@ -211,8 +211,10 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
             )
             logits = output.logits
             logits = logits[0]  # [1, seq_len, vocab_size] -> [seq_len, vocab_size]
-            logits = logits[1:-1]  # Remove EOS and BOS tokens
         return logits
+
+    def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
+        return tensor[1:-1]  # Remove BOS and EOS tokens
 
     def _get_log_probabilities(self, sequence: str):
         tokenized_sequences, attention_mask = self._tokenize([sequence], preprocess=True)
@@ -229,6 +231,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
             # Standard single-window scoring
             logits = self._model_forward_fn(input_ids=tokenized_sequences,
                                             attention_mask=attention_mask)
+            logits = self._strip_special_tokens(logits)
             # Use full vocabulary for probabilities (ProteinGym approach)
             log_probs = torch.log_softmax(logits, dim=-1)
 
@@ -243,8 +246,9 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         )
 
         # Extract window
-        windowed_tokens = batch_tokens_masked[:, start:end + 1]
-        windowed_mask = attention_mask[:, start:end + 1] if attention_mask is not None else None
+        # get_optimal_window returns a half-open interval [start, end)
+        windowed_tokens = batch_tokens_masked[:, start:end]
+        windowed_mask = attention_mask[:, start:end] if attention_mask is not None else None
         return start, end, windowed_tokens, windowed_mask
 
     def _get_masked_log_probabilities(self, sequence: str) -> torch.Tensor:
@@ -262,7 +266,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         # tokenized_sequences[0, -1] = EOS
         seq_len = tokenized_sequences.size(1)
 
-        for i in tqdm(range(1, seq_len - 1), desc="Computing masked probabilities", unit="pos", ncols=100, leave=False):
+        for i in tqdm(range(seq_len), desc="Computing masked probabilities", unit="pos", ncols=100, leave=False):
             # Clone and mask position i
             batch_tokens_masked = tokenized_sequences.clone()
             batch_tokens_masked[0, i] = mask_token_id
@@ -272,10 +276,10 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
                                                                                    masked_position=i,
                                                                                    seq_len_with_special=seq_len)
             logits = self._model_forward_fn(input_ids=windowed_tokens,
-                                            attention_mask=windowed_mask)
+                                            attention_mask=windowed_mask) # [seq_len, vocab_size] without EOS/BOS
 
             # Get log probabilities for the masked position
-            token_position = i - start - 1 # No BOS
+            token_position = i - start
             token_logits = logits[token_position]  # [vocab_size]
             all_token_probs.append(token_logits.cpu())
 
@@ -284,7 +288,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
 
         # Use full vocabulary for probabilities (ProteinGym approach)
         log_probs = torch.log_softmax(logits, dim=-1)
-        return log_probs
+        return self._strip_special_tokens(log_probs)
 
     def _compute_pseudoperplexity(self, sequence: str) -> float:
         # Get masked probabilities for all positions

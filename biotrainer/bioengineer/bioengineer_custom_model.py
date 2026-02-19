@@ -28,6 +28,11 @@ class CustomBioEngineerModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
+        """ Remove special tokens from output (if necessary) """
+        return tensor
+
+    @abstractmethod
     def tokenize(self, batch: List[str]) -> Tuple[torch.Tensor, torch.Tensor]:
         """ Tokenize a batch of sequences"""
         raise NotImplementedError
@@ -60,6 +65,9 @@ class CustomBioEngineerModelWrapper(BertLikeEngineer, GPTLikeEngineer):
 
     def _model_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         return self._custom_bioengineer.run_model(input_ids, attention_mask)
+
+    def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
+        return self._custom_bioengineer.strip_special_tokens(tensor)
 
     def supported_methods(self) -> List[ZeroShotMethod]:
         return self._custom_bioengineer.supported_methods()
