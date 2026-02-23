@@ -29,7 +29,7 @@ class FrameworkReport(ABC):
         raise NotImplementedError
 
     @staticmethod
-    def _show_plot(plt):
+    def _postprocess_plot(plt):
         # Customize plot
         plt.title('Performance Comparison Across Tasks')
         plt.xlabel('Task', fontsize=16)
@@ -47,7 +47,7 @@ class FrameworkReport(ABC):
         # Adjust layout to prevent label cutoff
         plt.tight_layout()
 
-        plt.show()
+        return plt
 
 
 class SupervisedFrameworkReport(BaseModel, FrameworkReport):
@@ -121,7 +121,8 @@ class SupervisedFrameworkReport(BaseModel, FrameworkReport):
 
     @staticmethod
     def compare(all_reports: Tuple[str, SupervisedFrameworkReport],  # embedder_name -> SupervisedFrameworkReport,
-                plot: Optional[bool] = False):
+                plot: Optional[bool] = False,
+                save_path: Optional[Union[Path, str]] = None):
 
         # Get all unique task names across all reports
         all_task_names = set()
@@ -225,8 +226,10 @@ class SupervisedFrameworkReport(BaseModel, FrameworkReport):
                                     color='black', fontweight='bold')
 
                 # Show plot
-                FrameworkReport._show_plot(plt)
-
+                plt = FrameworkReport._postprocess_plot(plt)
+                if save_path is not None:
+                    plt.savefig(save_path, bbox_inches='tight')
+                plt.show()
             except ImportError as e:
                 print(f"Plotting requires matplotlib and seaborn: {e}")
 
@@ -263,7 +266,8 @@ class ZeroShotFrameworkReport(BaseModel, FrameworkReport):
 
     @staticmethod
     def compare(all_reports: Tuple[str, ZeroShotFrameworkReport],  # embedder_name -> ZeroShotFrameworkReport
-                plot: Optional[bool] = False):
+                plot: Optional[bool] = False,
+                save_path: Optional[Path] = None):
 
         # Get all unique task names across all reports
         all_task_names = set()
@@ -376,8 +380,10 @@ class ZeroShotFrameworkReport(BaseModel, FrameworkReport):
                     prev_task = current_task
 
                 # Show plot
-                FrameworkReport._show_plot(plt)
-
+                plt = FrameworkReport._postprocess_plot(plt)
+                if save_path is not None:
+                    plt.savefig(save_path, bbox_inches='tight')
+                plt.show()
             except ImportError as e:
                 print(f"Plotting requires matplotlib and seaborn: {e}")
 
@@ -488,16 +494,26 @@ class AutoEvalReport(BaseModel):
             print(f"\n{framework_name} zero-shot results:")
             report.summary()
 
-    def compare(self, other_reports: list[AutoEvalReport], plot: Optional[bool] = False):
+    def compare(self, other_reports: list[AutoEvalReport],
+                plot: Optional[bool] = False,
+                save_path: Optional[Union[Path, str]] = None):
         """Compare this report with other reports on the same evaluation metrics.
     
         Args:
             other_reports: List of AutoEvalReport objects to compare with
             plot: Whether to plot the comparison
+            save_path: Directory to save the plot(s) to. If None, the plot is not saved.
         """
         pd.set_option('display.max_rows', None)
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', None)
+
+        if save_path is not None:
+            if isinstance(save_path, str):
+                save_path = Path(save_path)
+            save_path.mkdir(parents=True, exist_ok=True)
+            if not save_path.is_dir():
+                raise ValueError(f"save_path must be a directory, got {save_path}")
 
         # Supervised
         all_supervised_reports = []
@@ -506,7 +522,8 @@ class AutoEvalReport(BaseModel):
                 all_supervised_reports.append((report.embedder_name, supervised_result))
 
         if len(all_supervised_reports) > 0:
-            SupervisedFrameworkReport.compare(all_supervised_reports, plot=plot)
+            SupervisedFrameworkReport.compare(all_supervised_reports, plot=plot,
+                                              save_path=save_path / "comparison_supervised.png")
 
         # Zeroshot
         # TODO Separate by method
@@ -516,4 +533,5 @@ class AutoEvalReport(BaseModel):
                 all_zeroshot_reports.append((report.embedder_name, zeroshot_result))
 
         if len(all_zeroshot_reports) > 0:
-            ZeroShotFrameworkReport.compare(all_zeroshot_reports, plot=plot)
+            ZeroShotFrameworkReport.compare(all_zeroshot_reports, plot=plot,
+                                            save_path=save_path / "comparison_zeroshot.png")
