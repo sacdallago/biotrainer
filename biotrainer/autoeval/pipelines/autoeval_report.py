@@ -508,12 +508,16 @@ class AutoEvalReport(BaseModel):
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', None)
 
+        save_path_supervised = None
+        save_path_zeroshot = None
         if save_path is not None:
             if isinstance(save_path, str):
                 save_path = Path(save_path)
             save_path.mkdir(parents=True, exist_ok=True)
             if not save_path.is_dir():
                 raise ValueError(f"save_path must be a directory, got {save_path}")
+            save_path_supervised = save_path / "comparison_supervised.png"
+            save_path_zeroshot = save_path / "comparison_zeroshot.png"
 
         # Supervised
         all_supervised_reports = []
@@ -523,7 +527,7 @@ class AutoEvalReport(BaseModel):
 
         if len(all_supervised_reports) > 0:
             SupervisedFrameworkReport.compare(all_supervised_reports, plot=plot,
-                                              save_path=save_path / "comparison_supervised.png")
+                                              save_path=save_path_supervised)
 
         # Zeroshot
         # TODO Separate by method
@@ -534,4 +538,4 @@ class AutoEvalReport(BaseModel):
 
         if len(all_zeroshot_reports) > 0:
             ZeroShotFrameworkReport.compare(all_zeroshot_reports, plot=plot,
-                                            save_path=save_path / "comparison_zeroshot.png")
+                                            save_path=save_path_zeroshot)
