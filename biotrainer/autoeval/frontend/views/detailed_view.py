@@ -96,22 +96,32 @@ def render_detailed(loaded):
                             domain = (0.0, 1.0)
                         else:
                             domain = None
-                        y_enc = alt.Y("mean:Q", title="Score", scale=alt.Scale(domain=domain) if domain else alt.Undefined)
-                        chart = (
-                            alt.Chart(dfp)
-                            .mark_bar()
-                            .encode(
-                                x=alt.X("test_set_name:N", title="Test Set"),
-                                y=y_enc,
-                                color=alt.Color("evaluation_metric:N", title="Metric"),
-                                tooltip=[
-                                    alt.Tooltip("evaluation_metric", title="Metric"),
-                                    alt.Tooltip("test_set_name", title="Test Set"),
-                                    alt.Tooltip("mean", title="Mean"),
-                                    alt.Tooltip("CI", title="95% CI"),
-                                ],
-                            )
+                        y_scale = alt.Scale(domain=domain) if domain else alt.Undefined
+                        y_enc = alt.Y("mean:Q", title="Score", scale=y_scale)
+
+                        # Base bar chart
+                        bars = alt.Chart(dfp).mark_bar().encode(
+                            x=alt.X("test_set_name:N", title="Test Set"),
+                            y=y_enc,
+                            color=alt.Color("evaluation_metric:N", title="Metric"),
+                            tooltip=[
+                                alt.Tooltip("evaluation_metric", title="Metric"),
+                                alt.Tooltip("test_set_name", title="Test Set"),
+                                alt.Tooltip("mean", title="Mean"),
+                                alt.Tooltip("CI", title="95% CI"),
+                            ],
                         )
+
+                        # Adding error bars for confidence intervals
+                        error_bars = alt.Chart(dfp).mark_errorbar().encode(
+                            x=alt.X("test_set_name:N", title="Test Set"),
+                            y=alt.Y("lower:Q", title=""),
+                            y2="upper:Q",
+                            color=alt.Color("evaluation_metric:N", title="Metric")
+                        )
+
+                        # Combine bar chart and error bars
+                        chart = bars + error_bars
                         st.altair_chart(chart.properties(height=320), use_container_width=True)
                     except Exception:
                         pass
@@ -132,7 +142,18 @@ def render_detailed(loaded):
                         line = (
                             alt.Chart(plot_dfm)
                             .mark_line()
-                            .encode(x="epoch:Q", y="loss:Q", color="series:N")
+                            .encode(
+                                x="epoch:Q",
+                                y="loss:Q",
+                                color=alt.Color(
+                                    "series:N",
+                                    scale=alt.Scale(
+                                        domain=["train_loss", "val_loss"],
+                                        range=["blue", "orange"],
+                                    ),
+                                    legend=alt.Legend(title="Loss Type"),
+                                ),
+                            )
                             .properties(height=320)
                         )
                         st.altair_chart(line, use_container_width=True)

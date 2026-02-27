@@ -56,21 +56,18 @@ def render_leaderboard(df_lb: pd.DataFrame, loaded: List[LoadedReport]):
                 st.info("Install 'matplotlib' and 'seaborn' to see the comparison plot.")
             else:
                 st.pyplot(fig, use_container_width=True)
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    st.download_button(
-                        "⬇️ Download PNG",
-                        data=fig_to_png_bytes(fig),
-                        file_name="comparison.png",
-                        mime="image/png",
-                    )
-                with col_b:
-                    st.download_button(
-                        "⬇️ Download PDF",
-                        data=fig_to_pdf_bytes(fig),
-                        file_name="comparison.pdf",
-                        mime="application/pdf",
-                    )
+                st.download_button(
+                    "⬇️ Download PNG",
+                    data=fig_to_png_bytes(fig),
+                    file_name="comparison.png",
+                    mime="image/png",
+                )
+                st.download_button(
+                    "⬇️ Download PDF",
+                    data=fig_to_pdf_bytes(fig),
+                    file_name="comparison.pdf",
+                    mime="application/pdf",
+                )
     except Exception as e:
         st.caption("Unable to render comparison plot.")
         print(e)
