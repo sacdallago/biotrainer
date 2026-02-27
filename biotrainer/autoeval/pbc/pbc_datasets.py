@@ -27,3 +27,9 @@ PBC_DATASETS = {
         "protocol": Protocol.residue_to_class,
     },
 }
+
+def n_tasks():
+    n = 0
+    for dataset in PBC_DATASETS.values():
+        n += len(dataset["splits"]) if "splits" in dataset else 1
+    return n
