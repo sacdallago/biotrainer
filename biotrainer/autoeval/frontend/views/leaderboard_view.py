@@ -15,7 +15,7 @@ from ..utils.utils import LoadedReport
 from ...pipelines.autoeval_plotting import plot_comparison, fig_to_png_bytes, fig_to_pdf_bytes, aggregate_dfs
 
 
-def render_leaderboard(df_lb: pd.DataFrame, loaded: List[LoadedReport]):
+def render_leaderboard_table(df_lb: Optional[pd.DataFrame]):
     st.subheader("Leaderboard (average rank across tasks)")
     if df_lb is None or df_lb.empty:
         st.info("No data to display. Load reports to see the leaderboard.")
@@ -23,7 +23,16 @@ def render_leaderboard(df_lb: pd.DataFrame, loaded: List[LoadedReport]):
 
     fw = str(st.selectbox("Framework", options=frontend_constants.SUPPORTED_FRAMEWORKS, index=0)).upper()
     sub = df_lb[df_lb["Framework"] == fw].copy()
+    sub.drop(columns=["Framework", "Num Tasks"], inplace=True)
+    sub["Rank"] = sub.index + 1
+    sub = sub[["Rank"] + [col for col in sub.columns if col != "Rank"]]
+
     st.dataframe(sub, use_container_width=True, hide_index=True)
+    return fw
+
+
+def render_leaderboard(df_lb: pd.DataFrame, loaded: List[LoadedReport]):
+    fw = render_leaderboard_table(df_lb)
 
     st.markdown("#### Overall task comparison")
     # Render the AutoEval-style comparison plot for the chosen framework

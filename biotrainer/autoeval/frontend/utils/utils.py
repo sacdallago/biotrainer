@@ -144,11 +144,11 @@ def leaderboard_dataframe(loaded: List[LoadedReport]) -> pd.DataFrame:
                 })
 
     if not rows:
-        return pd.DataFrame(columns=["Framework", "Model", "Avg Rank", "Num Tasks"])
+        return pd.DataFrame(columns=["Framework", "Model", "Leaderboard Score", "Num Tasks"])
 
     df = pd.DataFrame(rows).dropna(subset=["Mean"])  # drop where mean missing
     if df.empty:
-        return pd.DataFrame(columns=["Framework", "Model", "Avg Rank", "Num Tasks"])
+        return pd.DataFrame(columns=["Framework", "Model", "Leaderboard Score", "Num Tasks"])
 
     # Rank per (Framework, Task) — higher is better (rank 1 is best)
     df["Rank"] = df.groupby(["Framework", "Task"])['Mean'].rank(ascending=False, method='min')
@@ -159,7 +159,7 @@ def leaderboard_dataframe(loaded: List[LoadedReport]) -> pd.DataFrame:
         .agg(Avg_Rank=("Rank", "mean"), Num_Tasks=("Task", "nunique"))
     )
     agg = agg.sort_values(["Framework", "Avg_Rank"]).reset_index(drop=True)
-    agg.rename(columns={"Avg_Rank": "Avg Rank", "Num_Tasks": "Num Tasks"}, inplace=True)
+    agg.rename(columns={"Avg_Rank": "Leaderboard Score", "Num_Tasks": "Num Tasks"}, inplace=True)
     return agg
 
 

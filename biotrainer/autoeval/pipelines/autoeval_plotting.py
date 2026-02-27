@@ -31,8 +31,9 @@ def plot_comparison(df: pd.DataFrame):
     x_labels = list(pd.unique(df["TaskLabel"]))
     models = list(pd.unique(df["Model"]))
 
+    fig_width = 16
     fig_height = max(6, len(x_labels) * 0.6)
-    fig, ax = plt.subplots(figsize=(16, fig_height))
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=600)
     sns.set_style("whitegrid")
     palette = sns.color_palette("colorblind", n_colors=len(models))
 
