@@ -7,10 +7,9 @@ try:
 except Exception:  # pragma: no cover
     raise
 
-from ..utils.plotting import (
-    build_supervised_compare_df,
-    build_zeroshot_compare_df,
+from ...pipelines.autoeval_plotting import (
     plot_comparison,
+    aggregate_dfs,
     fig_to_png_bytes,
     fig_to_pdf_bytes,
 )
@@ -31,30 +30,39 @@ def render_compare(loaded):
 
     # Supervised comparison
     st.markdown("#### Supervised (PBC)")
-    df_sup = build_supervised_compare_df(chosen, framework="PBC")
+    df_sup = aggregate_dfs([
+        l.report.supervised_results["PBC"].to_df(framework="PBC").assign(Model=l.report.embedder_name)
+        for l in loaded if "PBC" in l.report.supervised_results
+    ])
     if df_sup is None or df_sup.empty:
         st.caption("No overlapping supervised tasks to compare.")
     else:
         # Wide table similar to previous pivot
         pivot = (
-            df_sup.pivot_table(index=["Task", "Test Set", "Metric"], columns="Model", values="Mean", aggfunc="first", sort=False)
+            df_sup.pivot_table(index=["Task", "Test Set", "Metric"], columns="Model", values="Mean", aggfunc="first",
+                               sort=False)
             .reset_index()
         )
         st.dataframe(pivot, use_container_width=True)
-        fig, ax = plot_comparison(df_sup, title="Performance Comparison Across Tasks")
+        fig, ax = plot_comparison(df_sup)
         if fig is not None:
             st.pyplot(fig, use_container_width=True)
             col1, col2 = st.columns(2)
             with col1:
-                st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig), file_name="supervised_comparison.png", mime="image/png")
+                st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig), file_name="supervised_comparison.png",
+                                   mime="image/png")
             with col2:
-                st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig), file_name="supervised_comparison.pdf", mime="application/pdf")
+                st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig), file_name="supervised_comparison.pdf",
+                                   mime="application/pdf")
         else:
             st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
 
     # Zeroshot comparison
     st.markdown("#### Zero-Shot (PGYM)")
-    df_zero = build_zeroshot_compare_df(chosen, framework="PGYM")
+    df_zero = aggregate_dfs([
+        l.report.supervised_results["PGYM"].to_df(framework="PGYM").assign(Model=l.report.embedder_name)
+        for l in chosen if "PGYM" in l.report.zeroshot_results
+    ])
     if df_zero is None or df_zero.empty:
         st.caption("No overlapping zero-shot tasks to compare.")
     else:
@@ -63,13 +71,15 @@ def render_compare(loaded):
             .reset_index()
         )
         st.dataframe(pivot, use_container_width=True)
-        fig, ax = plot_comparison(df_zero, title="Performance Comparison Across Tasks")
+        fig, ax = plot_comparison(df_zero)
         if fig is not None:
             st.pyplot(fig, use_container_width=True)
             col1, col2 = st.columns(2)
             with col1:
-                st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig), file_name="zeroshot_comparison.png", mime="image/png")
+                st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig), file_name="zeroshot_comparison.png",
+                                   mime="image/png")
             with col2:
-                st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig), file_name="zeroshot_comparison.pdf", mime="application/pdf")
+                st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig), file_name="zeroshot_comparison.pdf",
+                                   mime="application/pdf")
         else:
             st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
