@@ -1,0 +1,154 @@
+from __future__ import annotations
+
+from typing import List, Tuple
+
+import pandas as pd
+
+try:
+    import streamlit as st
+except Exception:  # pragma: no cover - runtime import guard
+    raise
+
+from ...pipelines.autoeval_report import AutoEvalReport, SupervisedFrameworkReport, ZeroShotFrameworkReport
+from ..utils import utils as frontend_utils
+
+
+_BIN_METRICS_01 = {"accuracy", "acc", "f1", "f1_score", "auc", "auroc", "mcc"}
+
+
+def _scale_supervised_metric_df(df_task: pd.DataFrame) -> pd.DataFrame:
+    if df_task is None or df_task.empty:
+        return df_task
+    df = df_task.copy()
+    # Normalize Spearman (absolute values, 0..1)
+    mask_scc = df["evaluation_metric"].str.lower().str.contains("spearman") | (
+        df["evaluation_metric"].str.lower() == "scc"
+    ) | df["evaluation_metric"].str.lower().str.contains("spearmans-corr-coeff")
+    for col in ["mean", "lower", "upper"]:
+        df.loc[mask_scc, col] = df.loc[mask_scc, col].abs()
+    return df
+
+
+def _metric_domain(metric_name: str) -> Tuple[float, float] | None:
+    m = (metric_name or "").lower()
+    if any(k in m for k in ["spearman", "scc", "accuracy", "acc", "f1", "auc", "auroc", "mcc"]):
+        return (0.0, 1.0)
+    return None
+
+
+def render_detailed(loaded):
+    st.subheader("Detailed Report View")
+    if not loaded:
+        st.info("Load reports to inspect details.")
+        return
+
+    labels = [f"{it.report.embedder_name} ({it.report.training_date}) — {it.path.name}" for it in loaded]
+    idx = st.selectbox("Select report", options=list(range(len(loaded))), format_func=lambda i: labels[i])
+    item = loaded[idx]
+    rep: AutoEvalReport = item.report
+
+    # Summary
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Model", rep.embedder_name)
+    with col2:
+        st.metric("Training date", rep.training_date)
+    with col3:
+        fwks = list(rep.supervised_results.keys()) + list(rep.zeroshot_results.keys())
+        st.metric("Frameworks", ", ".join(sorted(set([f.upper() for f in fwks]))) or "-")
+
+    st.divider()
+    framework_tab_names: List[Tuple[str, str]] = []  # (label, kind)
+    if rep.supervised_results:
+        framework_tab_names.append(("Supervised", "supervised"))
+    if rep.zeroshot_results:
+        framework_tab_names.append(("Zero-Shot", "zeroshot"))
+
+    if not framework_tab_names:
+        st.info("This report has no results.")
+        return
+
+    tabs = st.tabs([name for name, _ in framework_tab_names])
+    for tab, (_, kind) in zip(tabs, framework_tab_names):
+        with tab:
+            if kind == "supervised":
+                fw_names = list(rep.supervised_results.keys())
+                fw_sel = st.selectbox("Framework", options=fw_names)
+                srep: SupervisedFrameworkReport = rep.supervised_results[fw_sel]
+                tasks = srep.get_task_names()
+                if not tasks:
+                    st.info("No tasks available.")
+                    continue
+                task = st.selectbox("Task", options=tasks)
+                df_task = frontend_utils.supervised_task_metrics_dataframe(srep, task)
+                df_task = _scale_supervised_metric_df(df_task)
+                st.dataframe(df_task, use_container_width=True, hide_index=True)
+
+                # Per-task plot (means with CIs) across test sets/metrics
+                if not df_task.empty:
+                    try:
+                        import altair as alt
+                        dfp = df_task.copy()
+                        dfp["CI"] = dfp.apply(lambda r: f"[{r['lower']}, {r['upper']}]", axis=1)
+                        # Determine if all metrics are in [0,1] family; if yes, enforce domain [0,1]
+                        uniq_metrics = sorted(dfp["evaluation_metric"].astype(str).str.lower().unique())
+                        if all(_metric_domain(m) == (0.0, 1.0) for m in uniq_metrics):
+                            domain = (0.0, 1.0)
+                        else:
+                            domain = None
+                        y_enc = alt.Y("mean:Q", title="Score", scale=alt.Scale(domain=domain) if domain else alt.Undefined)
+                        chart = (
+                            alt.Chart(dfp)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X("test_set_name:N", title="Test Set"),
+                                y=y_enc,
+                                color=alt.Color("evaluation_metric:N", title="Metric"),
+                                tooltip=[
+                                    alt.Tooltip("evaluation_metric", title="Metric"),
+                                    alt.Tooltip("test_set_name", title="Test Set"),
+                                    alt.Tooltip("mean", title="Mean"),
+                                    alt.Tooltip("CI", title="95% CI"),
+                                ],
+                            )
+                        )
+                        st.altair_chart(chart.properties(height=320), use_container_width=True)
+                    except Exception:
+                        pass
+
+                # Loss curves if present
+                result_dict = srep.results.get(task)
+                tr, va, epochs = frontend_utils.get_training_validation_curves(result_dict)
+                if tr or va:
+                    st.markdown("#### Training / Validation Loss")
+                    plot_df = pd.DataFrame({"epoch": epochs})
+                    if tr:
+                        plot_df["train_loss"] = tr
+                    if va:
+                        plot_df["val_loss"] = va
+                    try:
+                        import altair as alt
+                        plot_dfm = plot_df.melt("epoch", var_name="series", value_name="loss")
+                        line = (
+                            alt.Chart(plot_dfm)
+                            .mark_line()
+                            .encode(x="epoch:Q", y="loss:Q", color="series:N")
+                            .properties(height=320)
+                        )
+                        st.altair_chart(line, use_container_width=True)
+                    except Exception:
+                        st.line_chart(plot_df.set_index("epoch"))
+                else:
+                    st.caption("No training/validation loss curves found in this result.")
+
+            else:  # zeroshot
+                fw_names = list(rep.zeroshot_results.keys())
+                fw_sel = st.selectbox("Framework", options=fw_names)
+                zrep: ZeroShotFrameworkReport = rep.zeroshot_results[fw_sel]
+                tasks = zrep.get_task_names()
+                if not tasks:
+                    st.info("No tasks available.")
+                    continue
+                task = st.selectbox("Task", options=tasks)
+                df_task = frontend_utils.zeroshot_task_metrics_dataframe(zrep, task)
+                st.dataframe(df_task, use_container_width=True, hide_index=True)

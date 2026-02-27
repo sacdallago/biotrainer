@@ -63,6 +63,10 @@ dev = [
     "build>=1.2.2",
     "pip-audit>=2.9.0",
 ]
+autoeval-frontend = [
+    "streamlit",
+    "altair"
+]
 
 [project.urls]
 Issues = "https://github.com/sacdallago/biotrainer/issues"
