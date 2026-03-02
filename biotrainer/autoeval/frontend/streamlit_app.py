@@ -5,6 +5,12 @@ from typing import List, Optional
 
 try:
     import streamlit as st
+
+    # First set page config before anything else
+    st.set_page_config(page_title="Autoeval Dashboard",
+                       page_icon="🏆",
+                       initial_sidebar_state="expanded",
+                       layout="wide")
 except Exception as _e:
     raise SystemExit(
         "Streamlit is required to run this app. Install with `pip install streamlit` - "
@@ -22,11 +28,6 @@ from .views.evaluate_view import render_evaluate_view
 from .views.leaderboard_view import render_leaderboard
 
 from ..pipelines import AutoEvalReport
-
-st.set_page_config(page_title="Autoeval Dashboard",
-                   page_icon="🏆",
-                   initial_sidebar_state="expanded",
-                   layout="wide")
 
 # Global CSS to widen content area and reduce top/bottom padding
 st.markdown(
