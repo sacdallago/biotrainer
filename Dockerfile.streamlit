@@ -33,7 +33,7 @@ ENV NUMBA_CACHE_DIR=/tmp/numba_cache
 
 # Copy application code
 COPY biotrainer ./biotrainer
-COPY run_autoeval-frontend.py ./run-streamlit.py
+COPY run_autoeval-frontend.py ./run_autoeval-frontend.py
 
 # Expose Streamlit default port
 EXPOSE 8501
