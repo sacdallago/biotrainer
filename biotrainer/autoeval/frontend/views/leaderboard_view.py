@@ -65,7 +65,8 @@ def _build_framework_selector() -> str:
                 label="Framework",
                 label_visibility="collapsed",
                 options=frontend_constants.SUPPORTED_FRAMEWORKS,
-                index=max(0, list(map(str.upper, frontend_constants.SUPPORTED_FRAMEWORKS)).index(st.session_state.lb_selected_fw))
+                index=max(0, list(map(str.upper, frontend_constants.SUPPORTED_FRAMEWORKS)).index(
+                    st.session_state.lb_selected_fw))
                 if st.session_state.lb_selected_fw in list(map(str.upper, frontend_constants.SUPPORTED_FRAMEWORKS))
                 else 0,
             )
@@ -150,8 +151,7 @@ def _build_ranking_visualization(ranking: Ranking, ranking_list: List[Tuple[int,
             st.markdown("<hr style='margin:4px 0;'>", unsafe_allow_html=True)  # Minimal divider spacing
 
 
-def _build_leaderboard_visualization(ranking: Ranking):
-    leaderboard = ranking.get_leaderboard_ranking()
+def _build_leaderboard_visualization(ranking: Ranking, leaderboard):
     _build_ranking_visualization(ranking, leaderboard)
 
 
@@ -191,8 +191,10 @@ def render_leaderboard(ranking_pbc: Ranking, ranking_pgym: Ranking, loaded: List
 
     _build_ranking_selection(weighted_ranking)
 
+    leaderboard = weighted_ranking.get_leaderboard_ranking()
+
     if st.session_state.lb_selected_ranking == "global":
-        _build_leaderboard_visualization(weighted_ranking)
+        _build_leaderboard_visualization(weighted_ranking, leaderboard)
     else:
         _build_category_visualization(st.session_state.lb_selected_ranking, weighted_ranking)
 
@@ -207,25 +209,27 @@ def render_leaderboard(ranking_pbc: Ranking, ranking_pgym: Ranking, loaded: List
 
     _copy_ranking_controls(weighted_ranking)
 
-    # Comparison plot section (kept from previous implementation)
+    # Comparison plot section
     st.markdown("#### Overall task comparison")
+    plot_maximum = st.slider("Select the maximum number of models to compare:", min_value=1, max_value=6, value=6)
+    best_n_models = [entry[1].name.lower() for entry in leaderboard[:plot_maximum]]
     try:
         if fw == "PBC":
-            df_plot = aggregate_dfs(
-                [
-                    l.report.supervised_results[fw].to_df(framework=fw).assign(Model=l.report.embedder_name)
-                    for l in loaded
-                    if fw in l.report.supervised_results
-                ]
-            )
+            dfs = [
+                l.report.supervised_results[fw].to_df(framework=fw).assign(Model=l.report.embedder_name)
+                for l in loaded
+                if fw in l.report.supervised_results and l.report.embedder_name.lower() in best_n_models
+            ]
+            dfs = sorted(dfs, key=lambda df: best_n_models.index(df["Model"].str.lower().iloc[0]), reverse=True)
+            df_plot = aggregate_dfs(dfs)
         else:
-            df_plot = aggregate_dfs(
-                [
+            dfs = [
                     l.report.zeroshot_results[fw].to_df(framework=fw).assign(Model=l.report.embedder_name)
                     for l in loaded
-                    if fw in l.report.zeroshot_results
+                    if fw in l.report.zeroshot_results and l.report.embedder_name.lower() in best_n_models
                 ]
-            )
+            dfs = sorted(dfs, key=lambda df: best_n_models.index(df["Model"].str.lower().iloc[0]), reverse=True)
+            df_plot = aggregate_dfs(dfs)
 
         if df_plot is None or df_plot.empty:
             st.caption("No overlapping tasks available for a comparison plot.")
