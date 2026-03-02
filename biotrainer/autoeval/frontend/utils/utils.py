@@ -8,7 +8,10 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 from .constants import SUPPORTED_FRAMEWORKS
+
 from ...pipelines.autoeval_report import AutoEvalReport, SupervisedFrameworkReport, ZeroShotFrameworkReport
+
+from ....utilities.ranking import Ranking, RankingGroup, RankingEntry
 
 
 @dataclass
@@ -93,74 +96,57 @@ def load_reports_from_paths(paths: List[Path]) -> List[LoadedReport]:
     return uniq
 
 
-def leaderboard_dataframe(loaded: List[LoadedReport]) -> pd.DataFrame:
-    """Compute a simple leaderboard divided by framework (PBC and PGYM).
-
-    For each framework, we compute per-task ranks across reports using the main metric
-    mean, then compute the average rank across tasks per report.
-    """
-    rows: List[Dict] = []
+def leaderboard_dataframe(loaded: List[LoadedReport]) -> Tuple[Ranking, Ranking]:
+    """Compute leaderboard divided by framework (PBC and PGYM)."""
+    pbc_entries = []
+    pgym_entries = []
     # Build a dict: framework -> task -> list of (model, mean)
     for item in loaded:
-        r = item.report
-        # Supervised frameworks contribute (e.g., PBC)
-        for fw_name, srep in r.supervised_results.items():
+        report = item.report
+        # Supervised PBC
+        pbc_metrics = {}
+        for fw_name, srep in report.supervised_results.items():
             fw_upper = fw_name.upper()
             if fw_upper not in SUPPORTED_FRAMEWORKS:
                 continue
             for task in srep.get_task_names():
                 # Extract the primary metric mean for the task (first test set/metric)
-                try:
-                    metrics = srep.extract_metrics(task)
-                    # choose first metric as representative for ranking
-                    mean_val = metrics[0]["mean"] if metrics else None
-                except Exception:
-                    mean_val = None
-                rows.append({
-                    "Framework": fw_upper,
-                    "Task": task,
-                    "Model": r.embedder_name,
-                    "Mean": mean_val,
-                    "Report Path": str(item.path),
-                })
-        # Zero-shot frameworks contribute as well (e.g., PGYM)
-        for fw_name, zrep in r.zeroshot_results.items():
+                metrics = srep.extract_metrics(task)
+                if len(metrics) > 0:
+                    for metric_dict in metrics:
+                        unique_task_name = metric_dict["task_name"] + "-" + metric_dict["test_set_name"]
+                        metric_value = metric_dict["mean"]
+                        pbc_metrics[unique_task_name] = metric_value
+                else:
+                    print("Warning: no metrics found for task: ", task)
+
+        # Zeroshot PGYM
+        pgym_metrics = {}
+        for fw_name, zrep in report.zeroshot_results.items():
             fw_upper = fw_name.upper()
             if fw_upper not in SUPPORTED_FRAMEWORKS:
                 continue
-            for task in zrep.get_task_names():
-                try:
-                    rr = zrep.aggregated_results[task]
-                    # prefer scc (Spearman) then ndcg; use mean for ranking
-                    mean_val = round(rr.scc.mean, 3) if rr and rr.scc else None
-                except Exception:
-                    mean_val = None
-                rows.append({
-                    "Framework": fw_upper,
-                    "Task": task,
-                    "Model": r.embedder_name,
-                    "Mean": mean_val,
-                    "Report Path": str(item.path),
-                })
+            for _, row in zrep.to_df().iterrows():
+                unique_task_name = row["TaskLabel"]
+                metric_value = row["Mean"]
+                pgym_metrics[unique_task_name] = metric_value
 
-    if not rows:
-        return pd.DataFrame(columns=["Framework", "Model", "Leaderboard Score", "Num Tasks"])
+        pbc_entries.append(RankingEntry(name=item.report.embedder_name, metrics=pbc_metrics))
+        pgym_entries.append(RankingEntry(name=item.report.embedder_name, metrics=pgym_metrics))
 
-    df = pd.DataFrame(rows).dropna(subset=["Mean"])  # drop where mean missing
-    if df.empty:
-        return pd.DataFrame(columns=["Framework", "Model", "Leaderboard Score", "Num Tasks"])
+    return calculate_rankings(pbc_entries=pbc_entries, pgym_entries=pgym_entries)
 
-    # Rank per (Framework, Task) — higher is better (rank 1 is best)
-    df["Rank"] = df.groupby(["Framework", "Task"])['Mean'].rank(ascending=False, method='min')
 
-    # Average rank per (Framework, Model)
-    agg = (
-        df.groupby(["Framework", "Model"], as_index=False)
-        .agg(Avg_Rank=("Rank", "mean"), Num_Tasks=("Task", "nunique"))
-    )
-    agg = agg.sort_values(["Framework", "Avg_Rank"]).reset_index(drop=True)
-    agg.rename(columns={"Avg_Rank": "Leaderboard Score", "Num_Tasks": "Num Tasks"}, inplace=True)
-    return agg
+def calculate_rankings(pbc_entries: List[RankingEntry], pgym_entries: List[RankingEntry]):
+    groups_pbc = [
+        RankingGroup(name="PBC-binding-global",
+                     group_function=lambda categories: {cat for cat in categories if "binding" in cat}),
+        RankingGroup(name="PBC-secondary_structure-total",
+                     group_function=lambda categories: {cat for cat in categories if "secondary_structure" in cat})
+    ]
+    ranking_pbc = Ranking.calculate(entries=pbc_entries, groups=groups_pbc)
+    ranking_pgym = Ranking.calculate(entries=pgym_entries)
+    return ranking_pbc, ranking_pgym
 
 
 def get_training_validation_curves(result_dict: Dict) -> Tuple[

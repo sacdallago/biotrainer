@@ -52,8 +52,8 @@ def run(start_path: Optional[Path] = None):
 
     match view:
         case ViewMode.Leaderboard:
-            df_lb = frontend_utils.leaderboard_dataframe(loaded)
-            render_leaderboard(df_lb, loaded)
+            ranking_pbc, ranking_pgym = frontend_utils.leaderboard_dataframe(loaded)
+            render_leaderboard(ranking_pbc=ranking_pbc, ranking_pgym=ranking_pgym, loaded=loaded)
         case ViewMode.Detailed:
             render_detailed(loaded)
         case ViewMode.Compare:
