@@ -122,11 +122,12 @@ def _tile_for_entry(ranking: Ranking, entry: Tuple[int, object, float]):
     with cols[0]:
         st.markdown(_badge(place), unsafe_allow_html=True)
     with cols[1]:
-        verbose = ranking.verbose_ranking_by_entry(ranking_entry.name) or "No details available."
-        with st.popover(ranking_entry.name):
-            st.text(verbose)
+        st.markdown(f"**{ranking_entry.name}**")
     with cols[2]:
-        st.markdown(f"**{score:.1f}**")
+        verbose = ranking.verbose_ranking_by_entry(ranking_entry.name) or "No details available."
+        score = f"**{score:.1f}**"
+        with st.popover(score):
+            st.text(verbose)
 
 
 def _build_ranking_visualization(ranking: Ranking, ranking_list: List[Tuple[int, object, float]]):

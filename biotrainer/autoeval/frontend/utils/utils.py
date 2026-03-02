@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Tuple
 from .constants import SUPPORTED_FRAMEWORKS
 
 from ...pipelines.autoeval_report import AutoEvalReport, SupervisedFrameworkReport, ZeroShotFrameworkReport
+from ....utilities import MetricEstimate
 
 from ....utilities.ranking import Ranking, RankingGroup, RankingEntry
 
@@ -115,8 +116,13 @@ def leaderboard_dataframe(loaded: List[LoadedReport]) -> Tuple[Ranking, Ranking]
                 if len(metrics) > 0:
                     for metric_dict in metrics:
                         unique_task_name = metric_dict["task_name"] + "-" + metric_dict["test_set_name"]
-                        metric_value = metric_dict["mean"]
-                        pbc_metrics[unique_task_name] = metric_value
+                        metric_mean = metric_dict["mean"]
+                        metric_lower = metric_dict["lower"]
+                        metric_upper = metric_dict["upper"]
+                        metric_est = MetricEstimate(name=metric_dict["evaluation_metric"],
+                                                    mean=metric_mean, lower=metric_lower,
+                                                    upper=metric_upper)
+                        pbc_metrics[unique_task_name] = metric_est
                 else:
                     print("Warning: no metrics found for task: ", task)
 
@@ -128,8 +134,12 @@ def leaderboard_dataframe(loaded: List[LoadedReport]) -> Tuple[Ranking, Ranking]
                 continue
             for _, row in zrep.to_df().iterrows():
                 unique_task_name = row["TaskLabel"]
-                metric_value = row["Mean"]
-                pgym_metrics[unique_task_name] = metric_value
+                metric_mean = row["Mean"]
+                metric_lower = row["Lower"]
+                metric_upper = row["Upper"]
+                metric_est = MetricEstimate(name=row["Metric"], mean=metric_mean, lower=metric_lower,
+                                            upper=metric_upper)
+                pgym_metrics[unique_task_name] = metric_est
 
         pbc_entries.append(RankingEntry(name=item.report.embedder_name, metrics=pbc_metrics))
         pgym_entries.append(RankingEntry(name=item.report.embedder_name, metrics=pgym_metrics))

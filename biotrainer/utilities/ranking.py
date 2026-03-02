@@ -310,7 +310,9 @@ class Ranking:
 
         leaderboard_place = self._result.get_place(entry_name)
         total_score = self._format_ranking_score(self._result.get_score(entry_name))
-
+        n_competitors = int(self._result.number_competitors)
+        max_category_score = self._format_ranking_score(self.max_category_score)
+        maximum_ranking_value = self._format_ranking_score(self.maximum_ranking_value)
         verbose_lines = []
         for category, ranking in self._result.ranking_map.items():
             # Find entry score in this category
@@ -321,8 +323,8 @@ class Ranking:
                     break
 
             metric_val = ranking_entry.metrics.get(category)
-            metric_str = f"Metric: {metric_val}" if metric_val is not None else "Metric: combined"
-            verbose_lines.append(f"{category}: Score: {entry_score} ({metric_str})")
+            metric_str = f"Metric: {metric_val}" if metric_val is not None else "Metric: combined task mean"
+            verbose_lines.append(f"{category}: \n\tScore: {entry_score}/{max_category_score} \n\t{metric_str}")
 
         verbose_rank_string = "\n".join(verbose_lines)
 
@@ -331,9 +333,9 @@ class Ranking:
             f"Global Position: {leaderboard_place}. Place\n\n"
             f"Categories: \n"
             f"{verbose_rank_string}\n\n"
-            f"Number of competitors: {self._result.number_competitors}\n"
+            f"Number of competitors: {n_competitors}\n"
             f"Number of categories: {self._result.number_categories}\n"
-            f"Total score: {total_score}"
+            f"Total score: {total_score}/{maximum_ranking_value}"
         )
 
     def copied_ranking(self) -> str:
@@ -351,10 +353,14 @@ class Ranking:
         return self._result.get_score(entry_name)
 
     @property
+    def max_category_score(self) -> float:
+        return float(self._result.number_competitors)
+
+    @property
     def maximum_ranking_value(self) -> float:
-        max_rank_per_category = float(self._result.number_competitors)
+        max_category_score = self.max_category_score
         return sum(
-            max_rank_per_category * self.get_score_multiplier(self._applied_weights.get(cat, 0))
+            max_category_score * self.get_score_multiplier(self._applied_weights.get(cat, 0))
             for cat in self._result.ranking_categories
         )
 
