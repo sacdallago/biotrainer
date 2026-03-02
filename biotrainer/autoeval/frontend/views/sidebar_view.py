@@ -52,7 +52,7 @@ def _show_view_buttons() -> ViewMode:
     if "view" not in st.session_state:
         st.session_state.view = ViewMode.Leaderboard
 
-    st.sidebar.markdown("### View")
+    st.sidebar.markdown("### Select View")
     if st.sidebar.button("🏆\nLeaderboard", use_container_width=True):
         st.session_state.view = ViewMode.Leaderboard
 
@@ -61,6 +61,12 @@ def _show_view_buttons() -> ViewMode:
 
     if st.sidebar.button("🆚\nCompare", use_container_width=True):
         st.session_state.view = ViewMode.Compare
+
+    if st.sidebar.button("🦾︎\nEvaluate", use_container_width=True):
+        st.session_state.view = ViewMode.Evaluate
+
+    if st.sidebar.button("ℹ️\nAbout", use_container_width=True):
+        st.session_state.view = ViewMode.Info
 
     return st.session_state.view
 

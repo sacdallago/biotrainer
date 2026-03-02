@@ -7,6 +7,8 @@ class ViewMode(Enum):
     Leaderboard = "Leaderboard"
     Detailed = "Detailed"
     Compare = "Compare"
+    Evaluate = "Evaluate"
+    Info = "Info"
 
 
 __all__ = ["ViewMode"]

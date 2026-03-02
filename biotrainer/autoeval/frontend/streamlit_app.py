@@ -14,8 +14,10 @@ except Exception as _e:
 from .types import ViewMode
 from .views.sidebar_view import sidebar
 from .utils import utils as frontend_utils
+from .views.info_view import render_info_view
 from .views.compare_view import render_compare
 from .views.detailed_view import render_detailed
+from .views.evaluate_view import render_evaluate_view
 from .views.leaderboard_view import render_leaderboard
 
 st.set_page_config(page_title="Biotrainer Autoeval Dashboard", layout="wide")
@@ -56,3 +58,7 @@ def run(start_path: Optional[Path] = None):
             render_detailed(loaded)
         case ViewMode.Compare:
             render_compare(loaded)
+        case ViewMode.Evaluate:
+            render_evaluate_view()
+        case ViewMode.Info:
+            render_info_view()
