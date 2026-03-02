@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Optional, Dict
 from pathlib import Path
+from typing import List, Optional
 
 try:
     import streamlit as st
@@ -11,16 +11,22 @@ except Exception as _e:
         f"Import error: {_e}"
     )
 
-from .types import ViewMode
+from .utils.types import ViewMode
 from .views.sidebar_view import sidebar
 from .utils import utils as frontend_utils
+from .state.session_state import SessionState
 from .views.info_view import render_info_view
 from .views.compare_view import render_compare
 from .views.detailed_view import render_detailed
 from .views.evaluate_view import render_evaluate_view
 from .views.leaderboard_view import render_leaderboard
 
-st.set_page_config(page_title="Biotrainer Autoeval Dashboard", layout="wide")
+from ..pipelines import AutoEvalReport
+
+st.set_page_config(page_title="Autoeval Dashboard",
+                   page_icon="🏆",
+                   initial_sidebar_state="expanded",
+                   layout="wide")
 
 # Global CSS to widen content area and reduce top/bottom padding
 st.markdown(
@@ -32,23 +38,22 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+def _init_state():
+    if "state" not in st.session_state:
+        st.session_state.state = SessionState()
+
 
 def run(start_path: Optional[Path] = None):
     st.title("Biotrainer Autoeval Dashboard")
     st.caption("Visualize and compare Autoeval reports (PBC, PGYM).")
 
-    # Initialize session state containers
-    if "reports" not in st.session_state:
-        st.session_state.reports = {}  # uid -> LoadedReport
-    if "report_order" not in st.session_state:
-        st.session_state.report_order = []  # list of uids to preserve order
+    _init_state()
 
     # Render sidebar
     view = sidebar(start_path)
 
     # Compose loaded list for rendering in views from session state
-    loaded: List[frontend_utils.LoadedReport] = [st.session_state.reports[uid] for uid in st.session_state.report_order
-                                                 if uid in st.session_state.reports]
+    loaded: List[AutoEvalReport] = list(st.session_state.state.get_loaded_reports().values())
 
     match view:
         case ViewMode.Leaderboard:

@@ -8,8 +8,10 @@ try:
 except Exception:  # pragma: no cover - runtime import guard
     raise
 
-from ..types import ViewMode
+from ..utils.types import ViewMode
 from ..utils import utils as frontend_utils
+
+from ...pipelines import AutoEvalReport
 
 
 def sidebar(start_path: Optional[Path]) -> ViewMode:
@@ -19,27 +21,15 @@ def sidebar(start_path: Optional[Path]) -> ViewMode:
     Returns the currently selected ViewMode.
     """
     view_mode = _show_view_buttons()
+
     paths = _select_paths_ui(start_path=start_path)
     candidate_files = frontend_utils.discover_report_files(paths)
 
-    # Determine which candidates are new by UID without parsing JSON yet
-    new_files: List[Path] = []
-    uid_for_path: Dict[Path, str] = {}
-    for fp in candidate_files:
-        uid = frontend_utils.compute_report_uid(fp)
-        uid_for_path[fp] = uid
-        if uid not in st.session_state.reports:
-            new_files.append(fp)
-
-    # Load only new files and add them to session state
-    if new_files:
-        freshly_loaded: List[frontend_utils.LoadedReport] = frontend_utils.load_reports_from_paths(new_files)
-        for item in freshly_loaded:
-            uid = uid_for_path.get(item.path) or frontend_utils.compute_report_uid(item.path)
-            if uid in st.session_state.reports:
-                continue
-            st.session_state.reports[uid] = item
-            st.session_state.report_order.append(uid)
+    if candidate_files:
+        freshly_loaded: List[AutoEvalReport] = frontend_utils.load_reports_from_paths(candidate_files)
+        for report in freshly_loaded:
+            uid = report.get_uid()
+            st.session_state.state.add_loaded_report(uid, report)
 
     _show_loaded_buttons()
 
@@ -48,27 +38,25 @@ def sidebar(start_path: Optional[Path]) -> ViewMode:
 
 def _show_view_buttons() -> ViewMode:
     """Render the view buttons."""
-    # View buttons with icons
-    if "view" not in st.session_state:
-        st.session_state.view = ViewMode.Leaderboard
-
     st.sidebar.markdown("### Select View")
+    view_mode = st.session_state.state.get_view_mode()
     if st.sidebar.button("🏆\nLeaderboard", use_container_width=True):
-        st.session_state.view = ViewMode.Leaderboard
+        view_mode = ViewMode.Leaderboard
 
     if st.sidebar.button("📊\nDetailed", use_container_width=True):
-        st.session_state.view = ViewMode.Detailed
+        view_mode = ViewMode.Detailed
 
     if st.sidebar.button("🆚\nCompare", use_container_width=True):
-        st.session_state.view = ViewMode.Compare
+        view_mode = ViewMode.Compare
 
     if st.sidebar.button("🦾︎\nEvaluate", use_container_width=True):
-        st.session_state.view = ViewMode.Evaluate
+        view_mode = ViewMode.Evaluate
 
     if st.sidebar.button("ℹ️\nAbout", use_container_width=True):
-        st.session_state.view = ViewMode.Info
+        view_mode = ViewMode.Info
 
-    return st.session_state.view
+    st.session_state.state.set_view_mode(view_mode)
+    return view_mode
 
 
 def _select_paths_ui(start_path: Optional[Path]) -> List[Path]:
@@ -77,7 +65,7 @@ def _select_paths_ui(start_path: Optional[Path]) -> List[Path]:
     Returns a list of Paths (files or directories) to scan for reports.
     """
     paths: List[Path] = []
-    if start_path is not None:
+    if start_path is not None and len(st.session_state.state.get_loaded_reports()) == 0:
         paths.append(start_path)
 
     st.sidebar.markdown("---")
@@ -88,6 +76,7 @@ def _select_paths_ui(start_path: Optional[Path]) -> List[Path]:
         "Upload autoeval_report_*.json files",
         type=["json"],
         accept_multiple_files=True,
+        max_upload_size=2,
     )
     if uploaded:
         tmp_dir = Path(st.session_state.get("_autoeval_tmp_dir", ".st_autoeval_uploads"))
@@ -100,39 +89,34 @@ def _select_paths_ui(start_path: Optional[Path]) -> List[Path]:
     return paths
 
 
+def _show_public_reports():
+    pass
+
+
 def _show_loaded_buttons():
     """Render the list of loaded reports as nice 'cards' and the view buttons.
-
-    Returns the currently selected ViewMode.
     """
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("#### Loaded reports")
 
-    if "reports" not in st.session_state:
-        st.session_state.reports = {}
-    if "report_order" not in st.session_state:
-        st.session_state.report_order = []
-
-    if not st.session_state.report_order:
+    loaded_reports = st.session_state.state.get_loaded_reports()
+    if len(loaded_reports) == 0:
         st.sidebar.caption("No reports loaded yet.")
     else:
         to_remove: List[str] = []
-        for uid in list(st.session_state.report_order):
-            item: frontend_utils.LoadedReport = st.session_state.reports.get(uid)
-            if not item:
-                continue
+        for uid, report in loaded_reports.items():
             with st.sidebar.container(border=True):
                 cols = st.columns([0.82, 0.18])
                 with cols[0]:
-                    st.markdown(f"**{item.report.embedder_name}**")
-                    st.caption(f"{item.report.training_date} — {item.path}")
+                    st.markdown(f"**{report.embedder_name}**")
+                    st.caption(f"{report.training_date}")
                 with cols[1]:
                     st.write("")
                     if st.button("✖", key=f"rm_{uid}", help="Remove this report", use_container_width=True):
                         to_remove.append(uid)
-        # Apply removals
+        # Apply removals and trigger rerun
         for uid in to_remove:
-            st.session_state.reports.pop(uid, None)
-            if uid in st.session_state.report_order:
-                st.session_state.report_order.remove(uid)
+            st.session_state.state.remove_loaded_report(uid)
+        if to_remove:
+            st.rerun()  # Rerun the app to refresh the sidebar UI

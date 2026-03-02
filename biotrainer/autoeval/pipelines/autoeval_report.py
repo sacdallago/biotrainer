@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import pandas as pd
 
 from ruamel import yaml
@@ -366,6 +367,14 @@ class AutoEvalReport(BaseModel):
         print(f'Writing autoeval report to: {report_name}')
         with open(report_name, 'w') as report_file:
             report_file.write(self.model_dump_json(indent=4))
+
+    def get_uid(self) -> str:
+        h = hashlib.sha1()
+        h.update(self.embedder_name.encode("utf-8"))
+        h.update(self.training_date.encode("utf-8"))
+        h.update(str(len(self.supervised_results)).encode("utf-8"))
+        h.update(str(len(self.zeroshot_results)).encode("utf-8"))
+        return h.hexdigest()
 
     def summary(self):
         print(f"Autoeval report for {self.embedder_name} on {self.training_date}.")

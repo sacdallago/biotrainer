@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-import pandas as pd
+from typing import List
+
+from ... import AutoEvalReport
 
 try:
     import streamlit as st
@@ -15,14 +17,14 @@ from ...pipelines.autoeval_plotting import (
 )
 
 
-def render_compare(loaded):
+def render_compare(active: List[AutoEvalReport]):
     st.subheader("Compare Multiple Reports")
-    if len(loaded) < 2:
+    if len(active) < 2:
         st.info("Load at least two reports to compare.")
         return
 
-    labels = [f"{it.report.embedder_name} ({it.report.training_date}) — {it.path.name}" for it in loaded]
-    options = list(range(len(loaded)))
+    labels = [f"{report.embedder_name} - ({report.training_date})" for report in active]
+    options = list(range(len(active)))
     idxs = st.multiselect("Select reports", default=options, options=options,
                           format_func=lambda i: labels[i])
 
@@ -30,13 +32,13 @@ def render_compare(loaded):
         st.info("Select at least two reports to compare.")
         st.stop()
 
-    chosen = [loaded[i] for i in idxs]
+    chosen = [active[i] for i in idxs]
 
     # Supervised comparison
     st.markdown("#### Supervised (PBC)")
     df_sup = aggregate_dfs([
-        l.report.supervised_results["PBC"].to_df(framework="PBC").assign(Model=l.report.embedder_name)
-        for l in chosen if "PBC" in l.report.supervised_results
+        report.supervised_results["PBC"].to_df(framework="PBC").assign(Model=report.embedder_name)
+        for report in chosen if "PBC" in report.supervised_results
     ])
     if df_sup is None or df_sup.empty:
         st.caption("No overlapping supervised tasks to compare.")
@@ -61,8 +63,8 @@ def render_compare(loaded):
     # Zeroshot comparison
     st.markdown("#### Zero-Shot (PGYM)")
     df_zero = aggregate_dfs([
-        l.report.zeroshot_results["PGYM"].to_df(framework="PGYM").assign(Model=l.report.embedder_name)
-        for l in chosen if "PGYM" in l.report.zeroshot_results
+        report.zeroshot_results["PGYM"].to_df(framework="PGYM").assign(Model=report.embedder_name)
+        for report in chosen if "PGYM" in report.zeroshot_results
     ])
     if df_zero is None or df_zero.empty:
         st.caption("No overlapping zero-shot tasks to compare.")

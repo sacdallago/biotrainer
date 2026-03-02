@@ -32,36 +32,35 @@ def _scale_supervised_metric_df(df_task: pd.DataFrame) -> pd.DataFrame:
 def _metric_domain(metric_name: str) -> Tuple[float, float] | None:
     m = (metric_name or "").lower()
     if any(k in m for k in ["spearman", "scc", "accuracy", "acc", "f1", "auc", "auroc", "mcc"]):
-        return (0.0, 1.0)
+        return 0.0, 1.0
     return None
 
 
-def render_detailed(loaded):
+def render_detailed(active: list[AutoEvalReport]):
     st.subheader("Detailed Report View")
-    if not loaded:
+    if not active:
         st.info("Load reports to inspect details.")
         return
 
-    labels = [f"{it.report.embedder_name} ({it.report.training_date}) — {it.path.name}" for it in loaded]
-    idx = st.selectbox("Select report", options=list(range(len(loaded))), format_func=lambda i: labels[i])
-    item = loaded[idx]
-    rep: AutoEvalReport = item.report
+    labels = [f"{report.embedder_name} ({report.training_date})" for report in active]
+    idx = st.selectbox("Select report", options=list(range(len(active))), format_func=lambda i: labels[i])
+    report = active[idx]
 
     # Summary
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Model", rep.embedder_name)
+        st.metric("Model", report.embedder_name)
     with col2:
-        st.metric("Training date", rep.training_date)
+        st.metric("Training date", report.training_date)
     with col3:
-        fwks = list(rep.supervised_results.keys()) + list(rep.zeroshot_results.keys())
+        fwks = list(report.supervised_results.keys()) + list(report.zeroshot_results.keys())
         st.metric("Frameworks", ", ".join(sorted(set([f.upper() for f in fwks]))) or "-")
 
     st.divider()
     framework_tab_names: List[Tuple[str, str]] = []  # (label, kind)
-    if rep.supervised_results:
+    if report.supervised_results:
         framework_tab_names.append(("Supervised", "supervised"))
-    if rep.zeroshot_results:
+    if report.zeroshot_results:
         framework_tab_names.append(("Zero-Shot", "zeroshot"))
 
     if not framework_tab_names:
@@ -72,9 +71,9 @@ def render_detailed(loaded):
     for tab, (_, kind) in zip(tabs, framework_tab_names):
         with tab:
             if kind == "supervised":
-                fw_names = list(rep.supervised_results.keys())
+                fw_names = list(report.supervised_results.keys())
                 fw_sel = st.selectbox("Framework", options=fw_names)
-                srep: SupervisedFrameworkReport = rep.supervised_results[fw_sel]
+                srep: SupervisedFrameworkReport = report.supervised_results[fw_sel]
                 tasks = srep.get_task_names()
                 if not tasks:
                     st.info("No tasks available.")
@@ -163,9 +162,9 @@ def render_detailed(loaded):
                     st.caption("No training/validation loss curves found in this result.")
 
             else:  # zeroshot
-                fw_names = list(rep.zeroshot_results.keys())
+                fw_names = list(report.zeroshot_results.keys())
                 fw_sel = st.selectbox("Framework", options=fw_names)
-                zrep: ZeroShotFrameworkReport = rep.zeroshot_results[fw_sel]
+                zrep: ZeroShotFrameworkReport = report.zeroshot_results[fw_sel]
                 tasks = zrep.get_task_names()
                 if not tasks:
                     st.info("No tasks available.")
