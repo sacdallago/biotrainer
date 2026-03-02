@@ -1,0 +1,42 @@
+FROM python:3.11-slim
+
+# Environment
+ENV PYTHONUNBUFFERED=1 \
+    PIP_DEFAULT_TIMEOUT=100 \
+    DEBIAN_FRONTEND=noninteractive \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false \
+    STREAMLIT_SERVER_HEADLESS=true \
+    STREAMLIT_SERVER_PORT=8501
+
+WORKDIR /app
+
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential \
+      git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for fast, reliable installs
+RUN pip install --no-cache-dir uv
+
+# Copy only project metadata first to leverage Docker layer caching
+COPY pyproject.toml ./
+# Some build backends expect README to exist when building editable installs
+RUN touch README.md
+
+# Install project dependencies (including the Streamlit frontend extra)
+RUN uv pip install --system -e .[autoeval-frontend]
+
+# Prepare writable caches for numba and others when running as non-root
+RUN mkdir -p /tmp/numba_cache /.cache && chmod -R 777 /tmp/numba_cache /.cache
+ENV NUMBA_CACHE_DIR=/tmp/numba_cache
+
+# Copy application code
+COPY biotrainer ./biotrainer
+COPY run_autoeval-frontend.py ./run-streamlit.py
+
+# Expose Streamlit default port
+EXPOSE 8501
+
+# Run Streamlit in production mode, binding to all interfaces
+CMD ["streamlit", "run", "run_autoeval-frontend.py", "--server.address=0.0.0.0", "--server.port=8501"]
