@@ -5,12 +5,6 @@ from typing import List, Optional, Dict
 
 try:
     import streamlit as st
-
-    # First set page config before anything else
-    st.set_page_config(page_title="Autoeval Dashboard",
-                       page_icon="🏆",
-                       initial_sidebar_state="expanded",
-                       layout="wide")
 except Exception as _e:
     raise SystemExit(
         "Streamlit is required to run this app. Install with `pip install streamlit` - "
@@ -81,6 +75,11 @@ def _init_state():
             st.session_state.state.add_loaded_report(comparison_report.get_uid(), comparison_report)
 
 def run(start_path: Optional[Path] = None):
+    st.set_page_config(page_title="Autoeval Dashboard",
+                       page_icon="🏆",
+                       initial_sidebar_state="expanded",
+                       layout="wide")
+
     st.title("Biotrainer Autoeval Dashboard")
     st.caption("Visualize and compare Autoeval reports (PBC, PGYM).")
 
