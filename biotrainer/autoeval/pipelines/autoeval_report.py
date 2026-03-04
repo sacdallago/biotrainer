@@ -14,6 +14,7 @@ from .autoeval_plotting import plot_comparison, aggregate_dfs
 from ..core import AutoEvalTask
 from ..pbc.pbc_datasets import PBC_DATASETS
 from ..flip.flip_datasets import FLIP_DATASETS
+from ..client.autoeval_service_client import AutoEvalServiceClient
 
 from ...bioengineer import ZeroShotMethod, RankingResult
 
@@ -193,6 +194,8 @@ class SupervisedFrameworkReport(BaseModel, FrameworkReport):
 
 
 class ZeroShotFrameworkReport(BaseModel, FrameworkReport):
+    model_config = {"use_enum_values": True}
+
     method: ZeroShotMethod = Field(description="Scoring method used")
     aggregated_results: Dict[str, RankingResult] = Field(description="Accumulated autoeval task results "
                                                                      "(combined_task_name -> RankingResult)")
@@ -430,3 +433,14 @@ class AutoEvalReport(BaseModel):
         if len(all_zeroshot_reports) > 0:
             ZeroShotFrameworkReport.compare(all_zeroshot_reports, plot=plot,
                                             save_path=save_path_zeroshot)
+
+    def publish(self, name: str, email: str, citation: Optional[str] = None):
+        """
+        Publish this report to the public autoeval dashboard.
+
+        :param name: Name of the publisher
+        :param email: E-Mail of the publisher
+        :param citation: Optional citation for the report. Should have https://doi.org/... format.
+        """
+        client = AutoEvalServiceClient.default_service()
+        client.publish_report(report=self.model_dump(), name=name, email=email, citation=citation)
