@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict
+from typing import Dict, List
 
 from ..utils.types import ViewMode
 from ..utils.constants import SUPPORTED_FRAMEWORKS
@@ -33,8 +33,9 @@ class SessionState:
         self._lb_selected_ranking_category = "global"
         self._lb_weights = {}
 
-    def add_loaded_report(self, report_id: str, report: AutoEvalReport) -> SessionState:
-        self._loaded_reports[report_id] = report
+    def add_loaded_reports(self, reports: List[AutoEvalReport]) -> SessionState:
+        for report in reports:
+            self._loaded_reports[report.get_uid()] = report
         return self
 
     def get_loaded_reports(self) -> Dict:

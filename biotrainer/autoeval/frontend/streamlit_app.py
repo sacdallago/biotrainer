@@ -28,6 +28,7 @@ from .views.evaluate_view import render_evaluate_view
 from .views.leaderboard_view import render_leaderboard
 
 from ..pipelines import AutoEvalReport
+from ..client import AutoEvalServiceClient
 
 # Global CSS to widen content area and reduce top/bottom padding
 st.markdown(
@@ -39,10 +40,26 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+def _download_public_reports():
+    client = AutoEvalServiceClient.default_service()
+    try:
+        response_json = client.get_public_reports()
+        reports = response_json.get("reports")
+        if reports is None or len(reports) == 0:
+            raise Exception("No reports found!")
+        autoeval_reports = [AutoEvalReport.model_validate(report) for report in reports]
+        return autoeval_reports
+    except Exception as e:
+        st.error(f"Error fetching public reports: {e}")
+        return []
+
 def _init_state():
     if "state" not in st.session_state:
         st.session_state.state = SessionState()
-
+        public_reports = _download_public_reports()
+        if len(public_reports) > 0:
+            st.session_state.state.add_loaded_reports(public_reports)
 
 def run(start_path: Optional[Path] = None):
     st.title("Biotrainer Autoeval Dashboard")
