@@ -114,8 +114,12 @@ def leaderboard_dataframe(loaded: List[AutoEvalReport]) -> Tuple[Ranking, Rankin
                                             upper=metric_upper)
                 pgym_metrics[unique_task_name] = metric_est
 
-        pbc_entries.append(RankingEntry(name=report.embedder_name, metrics=pbc_metrics))
-        pgym_entries.append(RankingEntry(name=report.embedder_name, metrics=pgym_metrics))
+        if len(pbc_metrics) > 0:
+            pbc_entries.append(RankingEntry(name=report.embedder_name, metrics=pbc_metrics))
+
+        if len(pgym_metrics) > 0:
+            pgym_entries.append(RankingEntry(name=report.embedder_name, metrics=pgym_metrics))
+
 
     return calculate_rankings(pbc_entries=pbc_entries, pgym_entries=pgym_entries)
 
