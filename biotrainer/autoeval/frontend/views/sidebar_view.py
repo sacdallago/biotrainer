@@ -14,7 +14,7 @@ from ..utils import utils as frontend_utils
 from ...pipelines import AutoEvalReport
 
 
-def sidebar(start_path: Optional[Path]) -> ViewMode:
+def sidebar(start_path: Optional[Path], downloaded: Dict[str, AutoEvalReport]) -> ViewMode:
     """
     Render the sidebar controls for selecting report files or directories.
     Adds loaded reports to session state as a side effect.
@@ -30,6 +30,8 @@ def sidebar(start_path: Optional[Path]) -> ViewMode:
         for report in freshly_loaded:
             uid = report.get_uid()
             st.session_state.state.add_loaded_report(uid, report)
+
+    _show_public_reports(downloaded)
 
     _show_loaded_buttons()
 
@@ -89,8 +91,33 @@ def _select_paths_ui(start_path: Optional[Path]) -> List[Path]:
     return paths
 
 
-def _show_public_reports():
-    pass
+def _show_public_reports(downloaded: Dict[str, AutoEvalReport]):
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("#### Public reports")
+
+    if len(downloaded) == 0:
+        st.sidebar.caption("No reports available yet.")
+    else:
+        toggle_visibility: List[str] = []
+        downloaded_sorted = sorted([(uid, report) for uid, report in downloaded.items()],
+                                   key=lambda t: t[1].embedder_name)
+        for uid, report in downloaded_sorted:
+            report_visible = st.session_state.state.get_public_report_visibility(uid)
+            with st.sidebar.container(border=True):
+                cols = st.columns([0.82, 0.18])
+                with cols[0]:
+                    st.markdown(f"**{report.embedder_name}**")
+                    st.caption(f"{report.training_date}")
+                with cols[1]:
+                    st.write("")
+                    icon = "✖" if report_visible else "👁"
+                    help_msg = "Hide this report" if report_visible else "Show this report"
+                    if st.button("", icon=icon, key=f"invis_{uid}", help=help_msg, use_container_width=True):
+                        toggle_visibility.append(uid)
+        # Apply removals and trigger rerun
+        st.session_state.state.toggle_public_report_visibility(toggle_visibility)
+        if toggle_visibility:
+            st.rerun()  # Rerun the app to refresh the sidebar UI
 
 
 def _show_loaded_buttons():
@@ -113,7 +140,7 @@ def _show_loaded_buttons():
                     st.caption(f"{report.training_date}")
                 with cols[1]:
                     st.write("")
-                    if st.button("✖", key=f"rm_{uid}", help="Remove this report", use_container_width=True):
+                    if st.button("", icon="✖", key=f"rm_{uid}", help="Remove this report", use_container_width=True):
                         to_remove.append(uid)
         # Apply removals and trigger rerun
         for uid in to_remove:

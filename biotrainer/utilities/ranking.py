@@ -377,7 +377,7 @@ class Ranking:
     def get_category_ranking(
         self, category: str, ascending: bool = False
     ) -> Optional[List[Tuple[Place, RankingEntry, Score]]]:
-        category_map = self._result.category_ranking_map.get(category)
+        category_map = self._result.category_ranking_map.get(category) or self._result.group_ranking_map.get(category)
         if category_map is None:
             return None
         category_ranking = _RankingResult.calculate_leaderboard_ranking(category_map)

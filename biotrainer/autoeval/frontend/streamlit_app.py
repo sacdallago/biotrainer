@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 try:
     import streamlit as st
@@ -59,7 +59,7 @@ def _init_state():
         st.session_state.state = SessionState()
         public_reports = _download_public_reports()
         if len(public_reports) > 0:
-            st.session_state.state.add_loaded_reports(public_reports)
+            st.session_state.state.add_public_reports(public_reports)
 
 def run(start_path: Optional[Path] = None):
     st.title("Biotrainer Autoeval Dashboard")
@@ -68,19 +68,24 @@ def run(start_path: Optional[Path] = None):
     _init_state()
 
     # Render sidebar
-    view = sidebar(start_path)
+    downloaded: Dict[str, AutoEvalReport] = st.session_state.state.get_downloaded_public_reports()
+
+    view = sidebar(start_path, downloaded=downloaded)
 
     # Compose loaded list for rendering in views from session state
     loaded: List[AutoEvalReport] = list(st.session_state.state.get_loaded_reports().values())
+    downloaded_visible: List[AutoEvalReport] = [report for uid, report in downloaded.items()
+                                                if st.session_state.state.get_public_report_visibility(uid)]
+    active = [*loaded, *downloaded_visible]
 
     match view:
         case ViewMode.Leaderboard:
-            ranking_pbc, ranking_pgym = frontend_utils.leaderboard_dataframe(loaded)
-            render_leaderboard(ranking_pbc=ranking_pbc, ranking_pgym=ranking_pgym, loaded=loaded)
+            ranking_pbc, ranking_pgym = frontend_utils.leaderboard_dataframe(active)
+            render_leaderboard(ranking_pbc=ranking_pbc, ranking_pgym=ranking_pgym, active=active)
         case ViewMode.Detailed:
-            render_detailed(loaded)
+            render_detailed(active)
         case ViewMode.Compare:
-            render_compare(loaded)
+            render_compare(active)
         case ViewMode.Evaluate:
             render_evaluate_view()
         case ViewMode.Info:

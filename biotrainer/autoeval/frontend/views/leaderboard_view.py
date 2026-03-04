@@ -76,7 +76,7 @@ def _build_information(ranking: Ranking):
 
 
 def _build_ranking_category_selection(ranking: Ranking) -> str:
-    options = ["global"] + list(sorted(ranking.raw_categories))
+    options = ["global"] + list(sorted(ranking.raw_categories | ranking.ranking_categories))
     currently_selected = st.session_state.state.get_lb_ranking_category()
     idx = options.index(currently_selected) if currently_selected in options else 0
     selected_ranking_category = st.selectbox(
@@ -122,7 +122,7 @@ def _tile_for_entry(ranking: Ranking, entry: Tuple[int, object, float]):
         st.markdown(f"**{ranking_entry.name}**")
     with cols[2]:
         verbose = ranking.verbose_ranking_by_entry(ranking_entry.name) or "No details available."
-        score = f"**{score:.1f}**"
+        score = f"**{score:.2f}**"
         with st.popover(score):
             st.text(verbose)
 
@@ -169,7 +169,7 @@ def _copy_ranking_controls(ranking: Ranking):
 # Public entry point
 # =========================
 
-def render_leaderboard(ranking_pbc: Ranking, ranking_pgym: Ranking, loaded: List[AutoEvalReport]):
+def render_leaderboard(ranking_pbc: Ranking, ranking_pgym: Ranking, active: List[AutoEvalReport]):
     # determine active ranking based on framework
     all_categories = sorted(list(ranking_pbc.ranking_categories.union(ranking_pgym.ranking_categories)))
     st.session_state.state.maybe_init_lb_weights(all_categories)
@@ -212,7 +212,7 @@ def render_leaderboard(ranking_pbc: Ranking, ranking_pgym: Ranking, loaded: List
         if fw == "PBC":
             dfs = [
                 report.supervised_results[fw].to_df(framework=fw).assign(Model=report.embedder_name)
-                for report in loaded
+                for report in active
                 if fw in report.supervised_results and report.embedder_name.lower() in best_n_models
             ]
             dfs = sorted(dfs, key=lambda df: best_n_models.index(df["Model"].str.lower().iloc[0]), reverse=True)
@@ -220,7 +220,7 @@ def render_leaderboard(ranking_pbc: Ranking, ranking_pgym: Ranking, loaded: List
         else:
             dfs = [
                     report.zeroshot_results[fw].to_df(framework=fw).assign(Model=report.embedder_name)
-                    for report in loaded
+                    for report in active
                     if fw in report.zeroshot_results and report.embedder_name.lower() in best_n_models
                 ]
             dfs = sorted(dfs, key=lambda df: best_n_models.index(df["Model"].str.lower().iloc[0]), reverse=True)

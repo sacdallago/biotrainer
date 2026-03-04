@@ -27,15 +27,15 @@ class SessionState:
     def __init__(self):
         self._loaded_reports = {}
         self._public_reports = {}
+        self._public_reports_visibility = {}
         self._view_mode = ViewMode.Leaderboard
 
         self._lb_selected_framework = str(SUPPORTED_FRAMEWORKS[0]).upper()
         self._lb_selected_ranking_category = "global"
         self._lb_weights = {}
 
-    def add_loaded_reports(self, reports: List[AutoEvalReport]) -> SessionState:
-        for report in reports:
-            self._loaded_reports[report.get_uid()] = report
+    def add_loaded_report(self, report_id: str, report: AutoEvalReport) -> SessionState:
+        self._loaded_reports[report_id] = report
         return self
 
     def get_loaded_reports(self) -> Dict:
@@ -45,12 +45,23 @@ class SessionState:
         del self._loaded_reports[report_id]
         return self
 
-    def add_public_report(self, report_id: str, report: AutoEvalReport) -> SessionState:
-        self._public_reports[report_id] = report
+    def add_public_reports(self, reports: List[AutoEvalReport]) -> SessionState:
+        for report in reports:
+            self._public_reports[report.get_uid()] = report
         return self
 
-    def get_public_reports(self) -> Dict:
+    def get_downloaded_public_reports(self) -> Dict:
         return dict(self._public_reports)
+
+    def toggle_public_report_visibility(self, report_ids: List[str]) -> None:
+        for report_id in report_ids:
+            current_visibility = self.get_public_report_visibility(report_id)
+            self._public_reports_visibility[report_id] = not current_visibility
+
+    def get_public_report_visibility(self, report_id: str) -> bool:
+        if report_id not in self._public_reports_visibility:
+            self._public_reports_visibility[report_id] = True
+        return self._public_reports_visibility[report_id]
 
     def set_view_mode(self, mode: ViewMode) -> SessionState:
         self._view_mode = mode
