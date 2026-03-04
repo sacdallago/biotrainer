@@ -27,3 +27,25 @@ class AutoevalTests(unittest.TestCase):
             self.assertIsNotNone(current_progress)
             self.assertTrue(current_progress.final_report is not None)
             self.assertTrue(len(current_progress.final_report.results) == current_progress.completed_tasks)
+
+    @unittest.skipUnless(os.getenv('CI'), "Slow test - only run in CI")
+    def test_autoeval_ohe_parallel(self):
+        """ Checks that autoeval pipeline runs correctly with parallel task execution """
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            print("Starting AutoEval pipeline (parallel)...")
+
+            current_progress = None
+            for progress in autoeval_pipeline(embedder_name="one_hot_encoding",
+                                              framework="pbc",
+                                              output_dir=tmp_dir_name,
+                                              min_seq_length=10,
+                                              max_seq_length=450,
+                                              parallel_tasks=4,
+                                              ):
+                print(progress)
+                self.assertTrue(progress.current_framework_name == "pbc")
+                current_progress = progress
+
+            self.assertIsNotNone(current_progress)
+            self.assertTrue(current_progress.final_report is not None)
+            self.assertTrue(len(current_progress.final_report.results) == current_progress.completed_tasks)

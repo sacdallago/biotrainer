@@ -1,9 +1,11 @@
 import os
 import h5py
 import torch
+import traceback
 
 from pathlib import Path
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, Callable, Dict, Tuple, List, Any, Union, Iterable, Generator
 
 from .report_manager import ReportManager
@@ -123,6 +125,23 @@ def _check_h5_file(name: str, h5_path: Optional[Path], expected_length: int) -> 
         raise Exception(f"Could not read {name} h5 file: {str(e)}")
 
 
+def _run_single_task(task_name: str,
+                     config: Dict[str, Any],
+                     custom_pipeline: Optional[Pipeline] = None,
+                     custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
+                     ) -> Tuple[str, Optional[Dict[str, Any]]]:
+    """Execute a single biotrainer training task. Thread-safe helper for parallel execution."""
+    try:
+        result = parse_config_file_and_execute_run(config=config,
+                                                   custom_pipeline=custom_pipeline,
+                                                   custom_output_observers=custom_output_observers)
+        return task_name, result
+    except Exception as e:
+        print(f"[ERROR] Task {task_name} failed: {e}")
+        traceback.print_exc()
+        return task_name, None
+
+
 def _run_pipeline(embedder_name: str,
                   framework: str,
                   embedding_function_per_residue: Optional[Callable[[Iterable[str]], Path]],
@@ -134,6 +153,7 @@ def _run_pipeline(embedder_name: str,
                   custom_storage_path: Optional[str] = None,
                   custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
                   force_download: Optional[bool] = False,
+                  parallel_tasks: Optional[int] = 0,
                   ) -> Generator[AutoEvalProgress, None, None]:
     task_config_tuples, unique_per_residue, unique_per_sequence = get_unique_framework_sequences(framework=framework,
                                                                                                  min_seq_length=min_seq_length,
@@ -167,17 +187,13 @@ def _run_pipeline(embedder_name: str,
     # Execute biotrainer
     task_names = [task.combined_name() for task, _ in task_config_tuples]
     print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
-    completed_tasks = 0
     total_tasks = len(task_config_tuples)
-    current_task_name = ""
-    for task, config in task_config_tuples:
-        current_task_name = task.combined_name()
-        print(f"Running task {current_task_name}...")
-        yield AutoEvalProgress(completed_tasks=completed_tasks, total_tasks=total_tasks,
-                               current_task_name=current_task_name,
-                               current_framework_name=framework)
 
-        task_output_dir = output_dir / current_task_name
+    # Prepare task configs
+    prepared_tasks = []  # (task, task_name, config)
+    for task, config in task_config_tuples:
+        task_name = task.combined_name()
+        task_output_dir = output_dir / task_name
         if custom_pipeline:
             task_embeddings_file = None
         else:
@@ -194,23 +210,68 @@ def _run_pipeline(embedder_name: str,
         # Check if result already exists -> skip (Run was interrupted)
         maybe_result = report_manager.maybe_load_existing_result(task_output_dir=task_output_dir)
         if maybe_result:
-            result = maybe_result
-            print(f"Loaded existing result for task {current_task_name}, skipping execution..")
+            report_manager.add_result(task=task, result_dict=maybe_result)
+            print(f"Loaded existing result for task {task_name}, skipping execution..")
         else:
+            prepared_tasks.append((task, task_name, config))
+
+    completed_tasks = total_tasks - len(prepared_tasks)
+
+    if parallel_tasks and parallel_tasks > 0 and len(prepared_tasks) > 0:
+        # Parallel execution: run all remaining tasks concurrently
+        print(f"Running {len(prepared_tasks)} tasks in parallel with {parallel_tasks} workers...")
+        yield AutoEvalProgress(completed_tasks=completed_tasks, total_tasks=total_tasks,
+                               current_task_name=f"parallel ({len(prepared_tasks)} tasks)",
+                               current_framework_name=framework)
+
+        with ThreadPoolExecutor(max_workers=parallel_tasks) as executor:
+            futures = {
+                executor.submit(_run_single_task,
+                                task_name=task_name,
+                                config=config,
+                                custom_pipeline=custom_pipeline,
+                                custom_output_observers=custom_output_observers): (task, task_name)
+                for task, task_name, config in prepared_tasks
+            }
+            last_task_name = ""
+            for future in as_completed(futures):
+                task, task_name = futures[future]
+                returned_name, result = future.result()
+                if result is not None:
+                    report_manager.add_result(task=task, result_dict=result)
+                    print(f"Finished task {returned_name}!")
+                else:
+                    print(f"Task {returned_name} failed!")
+                completed_tasks += 1
+                last_task_name = returned_name
+                yield AutoEvalProgress(completed_tasks=completed_tasks, total_tasks=total_tasks,
+                                       current_task_name=last_task_name,
+                                       current_framework_name=framework)
+    else:
+        # Sequential execution (default)
+        current_task_name = ""
+        for task, task_name, config in prepared_tasks:
+            current_task_name = task_name
+            print(f"Running task {current_task_name}...")
+            yield AutoEvalProgress(completed_tasks=completed_tasks, total_tasks=total_tasks,
+                                   current_task_name=current_task_name,
+                                   current_framework_name=framework)
+
             result = parse_config_file_and_execute_run(config=config,
                                                        custom_pipeline=custom_pipeline,
                                                        custom_output_observers=custom_output_observers)
 
-        report_manager.add_result(task=task, result_dict=result)
+            report_manager.add_result(task=task, result_dict=result)
 
-        completed_tasks += 1
-        print(f"Finished task {current_task_name}!")
+            completed_tasks += 1
+            print(f"Finished task {current_task_name}!")
 
     report = report_manager.write(output_dir=output_dir.parent)
 
+    last_task = task_names[-1] if task_names else ""
     print(f"Autoeval pipeline for {embedder_name} finished successfully!")
     yield AutoEvalProgress(completed_tasks=total_tasks, total_tasks=total_tasks,
-                           current_task_name=current_task_name,
+                           current_task_name=last_task,
                            current_framework_name=framework,
                            final_report=report)
 
@@ -337,6 +398,7 @@ def autoeval_pipeline(embedder_name: str,
                           Callable[[Iterable[str]], Generator[Tuple[str, torch.tensor], None, None]]] = None,
                       custom_storage_path: Optional[Union[Path, str]] = None,
                       custom_output_observers: List[BiotrainerOutputObserver] = None,
+                      parallel_tasks: Optional[int] = 0,
                       ) -> Generator[AutoEvalProgress, None, None]:
     """
     Run the autoeval pipeline for given embedder_name and framework.
@@ -364,6 +426,9 @@ def autoeval_pipeline(embedder_name: str,
         Takes an iterable of sequence strings as input and must provide the per-sequence embeddings as a generator.
     :param custom_storage_path: Optional path where to store the framework datasets if not downloaded yet.
     :param custom_output_observers: Optional list of custom training output observers.
+    :param parallel_tasks: Number of parallel workers for downstream task training. When set to a value > 0,
+        embeddings are computed first (sequentially on GPU), and then all training tasks are dispatched to a
+        thread pool for concurrent execution. Defaults to 0 (sequential execution).
     :return: A dictionary containing the autoeval pipeline results. Each task result is a biotrainer model output dict.
     """
     _validate_input(framework, min_seq_length, max_seq_length)
@@ -428,5 +493,6 @@ def autoeval_pipeline(embedder_name: str,
                              custom_pipeline=custom_pipeline,
                              custom_storage_path=custom_storage_path,
                              custom_output_observers=custom_output_observers,
-                             force_download=force_download
+                             force_download=force_download,
+                             parallel_tasks=parallel_tasks,
                              )
