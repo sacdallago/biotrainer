@@ -9,8 +9,7 @@ class AutoEvalServiceClient:
 
     @classmethod
     def default_service(cls):
-        return cls("http://localhost:12999")
-        # return cls("https://autoeval.biocentral.cloud")
+        return cls("https://autoeval.biocentral.cloud")
 
     @staticmethod
     def _handle_response(response, expect_field: Optional[str] = None):
