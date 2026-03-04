@@ -24,8 +24,8 @@ COPY pyproject.toml ./
 # Some build backends expect README to exist when building editable installs
 RUN touch README.md
 
-# Install project dependencies (including the Streamlit frontend extra)
-RUN uv pip install --system -e .[autoeval-frontend]
+# Install project dependencies (including the Streamlit frontend extra, use cpu-only PyTorch for dashboard)
+RUN uv pip install --system --extra-index-url https://download.pytorch.org/whl/cpu -e .[autoeval-frontend]
 
 # Prepare writable caches for numba and others when running as non-root
 RUN mkdir -p /tmp/numba_cache /.cache && chmod -R 777 /tmp/numba_cache /.cache
