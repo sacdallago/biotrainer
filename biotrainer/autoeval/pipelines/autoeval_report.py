@@ -434,6 +434,17 @@ class AutoEvalReport(BaseModel):
             ZeroShotFrameworkReport.compare(all_zeroshot_reports, plot=plot,
                                             save_path=save_path_zeroshot)
 
+    def compare_with_public_leaderboard(self):
+        """
+        Compare this report to the public leaderboard. This implies uploading the report to the autoeval service
+        temporarily. The report will automatically be deleted after one day.
+        """
+        client = AutoEvalServiceClient.default_service()
+        uid = client.store_comparison_report(report=self.model_dump())
+        if uid is not None:
+            print(f"Report stored in the autoeval service with UID: {uid}\n"
+                  f"Open https://autoeval.biocentral.cloud/?uid={uid} to compare.")
+
     def publish(self, name: str, email: str, citation: Optional[str] = None):
         """
         Publish this report to the public autoeval dashboard.

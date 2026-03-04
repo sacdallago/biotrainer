@@ -54,12 +54,31 @@ def _download_public_reports():
         st.error(f"Error fetching public reports: {e}")
         return []
 
+
+def _maybe_download_comparison_report() -> Optional[AutoEvalReport]:
+    query_params = st.query_params
+    report_uid = query_params.get("uid")
+    if report_uid is not None and len(report_uid) > 1:
+        client = AutoEvalServiceClient.default_service()
+        try:
+            response_json = client.get_comparison_report(report_uid)
+            report = AutoEvalReport.model_validate(response_json)
+            return report
+        except Exception as e:
+            st.error(f"Error fetching comparison report: {e}")
+            return None
+    return None
+
+
 def _init_state():
     if "state" not in st.session_state:
         st.session_state.state = SessionState()
         public_reports = _download_public_reports()
         if len(public_reports) > 0:
             st.session_state.state.add_public_reports(public_reports)
+        comparison_report = _maybe_download_comparison_report()
+        if comparison_report is not None:
+            st.session_state.state.add_loaded_report(comparison_report.get_uid(), comparison_report)
 
 def run(start_path: Optional[Path] = None):
     st.title("Biotrainer Autoeval Dashboard")
