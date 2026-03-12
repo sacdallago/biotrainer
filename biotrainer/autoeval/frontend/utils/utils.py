@@ -137,14 +137,14 @@ def calculate_rankings(pbc_entries: List[RankingEntry], pgym_entries: List[Ranki
 
 
 def get_training_validation_curves(result_dict: Dict) -> Tuple[
-    Optional[List[float]], Optional[List[float]], Optional[List[int]]]:
+    Optional[List[float]], Optional[List[float]], Optional[List[int]], Optional[float]]:
     """Try to extract training and validation loss curves from a supervised result dict.
 
     The schema may vary; we try common keys.
-    Returns (train_losses, val_losses, epochs)
+    Returns (train_losses, val_losses, epochs, best_epoch)
     """
     if result_dict is None:
-        return None, None, None
+        return None, None, None, None
 
     # Common patterns to try
     train_keys = [
@@ -181,6 +181,7 @@ def get_training_validation_curves(result_dict: Dict) -> Tuple[
             break
 
     # Fallback: look into nested training_results.{split}.training_loss / validation_loss (dict of epoch->loss)
+    best_epoch = None
     if train is None or val is None:
         tr_res = result_dict.get("training_results") if isinstance(result_dict, dict) else None
         if isinstance(tr_res, dict):
@@ -190,6 +191,7 @@ def get_training_validation_curves(result_dict: Dict) -> Tuple[
             if isinstance(split_obj, dict):
                 tr_loss = split_obj.get("training_loss")
                 va_loss = split_obj.get("validation_loss")
+                best_epoch = split_obj.get("best_training_epoch_metrics", {}).get("epoch")
                 if isinstance(tr_loss, dict):
                     # keys are epochs as strings, values floats
                     try:
@@ -205,7 +207,7 @@ def get_training_validation_curves(result_dict: Dict) -> Tuple[
                         pass
 
     epochs = list(range(1, 1 + max(len(train or []), len(val or [])))) if (train or val) else None
-    return train, val, epochs
+    return train, val, epochs, best_epoch
 
 
 def supervised_task_metrics_dataframe(sreport: SupervisedFrameworkReport, task_name: str) -> pd.DataFrame:

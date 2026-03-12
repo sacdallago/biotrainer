@@ -127,7 +127,7 @@ def render_detailed(active: list[AutoEvalReport]):
 
                 # Loss curves if present
                 result_dict = srep.results.get(task)
-                tr, va, epochs = frontend_utils.get_training_validation_curves(result_dict)
+                tr, va, epochs, best_epoch = frontend_utils.get_training_validation_curves(result_dict)
                 if tr or va:
                     st.markdown("#### Training / Validation Loss")
                     plot_df = pd.DataFrame({"epoch": epochs})
@@ -155,7 +155,19 @@ def render_detailed(active: list[AutoEvalReport]):
                             )
                             .properties(height=320)
                         )
-                        st.altair_chart(line, use_container_width=True)
+
+                        # Add vertical line for best epoch
+                        rule = (
+                            alt.Chart(pd.DataFrame({"best_epoch": [best_epoch]}))
+                            .mark_rule(color="black", strokeDash=[5, 5], size=2)
+                            .encode(
+                                x="best_epoch:Q",
+                                tooltip=[alt.Tooltip("best_epoch:Q", title="Best Epoch")]
+                            )
+                        )
+
+                        chart = (line + rule)
+                        st.altair_chart(chart, use_container_width=True)
                     except Exception:
                         st.line_chart(plot_df.set_index("epoch"))
                 else:
