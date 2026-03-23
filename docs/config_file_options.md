@@ -239,10 +239,10 @@ dropout_rate: 0.5  # Default: 0.25
 Specify the loss:
 
 ```yaml
-loss_choice: cross_entropy_loss | mean_squared_error
+loss_choice: cross_entropy_loss | mean_squared_error | smooth_l1_loss
 ```
 
-Note that *mean_squared_error* can only be applied to regression tasks, i.e. *x_to_value*.
+Note that *mean_squared_error* and *smooth_l1_loss* can only be applied to regression tasks, i.e. *x_to_value*.
 
 For classification tasks, the loss can also be calculated with class weights:
 
