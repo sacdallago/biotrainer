@@ -37,6 +37,7 @@ class PBCConfigBank(AutoEvalConfigBank):
             },
             "disorder": {
                 "protocol": "residue_to_value",
+                "loss_choice": "smooth_l1_loss",
             },
             "membrane": {
                 "protocol": "residue_to_class",
