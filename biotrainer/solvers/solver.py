@@ -396,7 +396,8 @@ class Solver(ABC):
             onnx_program.save(onnx_file_name)
 
     def _early_stop(self, current_loss: float, epoch: int) -> bool:
-        if current_loss < (self._min_loss - self.epsilon):
+        threshold = self._min_loss * (1 - self.epsilon)  # Using a relative threshold
+        if current_loss < threshold:
             self._min_loss = current_loss
             self._stop_count = self.patience
             self._best_epoch = epoch
