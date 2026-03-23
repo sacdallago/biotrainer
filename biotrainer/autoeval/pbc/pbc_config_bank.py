@@ -20,7 +20,7 @@ class PBCConfigBank(AutoEvalConfigBank):
             "seed": 42,
             "dropout_rate": 0.0,
             "shuffle": True,
-            "patience": 10,
+            "patience": 5,
             "epsilon": 1e-3,
             "scaling_method": "standard"
         }
