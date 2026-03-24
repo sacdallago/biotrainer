@@ -137,12 +137,13 @@ def render_detailed(active: list[AutoEvalReport]):
                         plot_df["val_loss"] = va
                     try:
                         import altair as alt
+                        plot_df["epoch"] = plot_df["epoch"] - 1
                         plot_dfm = plot_df.melt("epoch", var_name="series", value_name="loss")
                         line = (
                             alt.Chart(plot_dfm)
                             .mark_line()
                             .encode(
-                                x="epoch:Q",
+                                x=alt.X("epoch:Q", axis=alt.Axis(tickMinStep=1, format='d')),
                                 y="loss:Q",
                                 color=alt.Color(
                                     "series:N",
