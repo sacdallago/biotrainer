@@ -26,8 +26,8 @@ class ScalingStep(PipelineStep):
             other_embs = {seq_id: embd for seq_id, embd in id2emb.items() if seq_id not in training_ids}
 
             # Fit on training embeddings
-            feature_scaler = FeatureScaler(method=scaling_method)
-            feature_scaler = feature_scaler.fit(training_embs)
+            feature_scaler = FeatureScaler(method=scaling_method, protocol=context.config["protocol"])
+            feature_scaler = feature_scaler.fit(training_embs, context.target_manager._id2target)
 
             # Transform all embeddings
             training_embs_scaled = feature_scaler.transform(training_embs)
@@ -35,7 +35,7 @@ class ScalingStep(PipelineStep):
             id2emb = {**training_embs_scaled, **other_embs_scaled}
             # Save fitted scaler
             save_dir = context.config["log_dir"]
-            scaling_save_name = f"{scaling_method}_scaling.pkl"
+            scaling_save_name = feature_scaler.get_file_name(feature_scaler.method)
             feature_scaler.save(Path(save_dir) / scaling_save_name)
             logger.info(f"Fitted feature scaling {scaling_method}!")
         else:

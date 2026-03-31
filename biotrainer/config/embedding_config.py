@@ -89,7 +89,6 @@ def embedding_config(protocol: Protocol) -> Tuple[ConfigKey, List[ConfigOption]]
             default=None,
             constraints=ConfigConstraints(
                 type=str,
-                allowed_protocols=Protocol.using_per_sequence_embeddings(),
                 allowed_values=list(FeatureScaler.methods().keys())
             )
         ),

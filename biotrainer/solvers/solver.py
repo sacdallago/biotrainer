@@ -15,9 +15,10 @@ from typing import Callable, Optional, Union, Dict, List, Any
 from .metrics_calculator import MetricsCalculator
 from .solver_utils import get_mean_and_confidence_bounds
 
+from ..protocols import Protocol
 from ..models import BiotrainerModel
 from ..output_files import OutputManager
-from ..utilities import get_logger, EpochMetrics
+from ..utilities import get_logger, EpochMetrics, BiotrainerSequencePrediction, BiotrainerResiduePrediction
 
 logger = get_logger(__name__)
 
@@ -160,17 +161,26 @@ class Solver(ABC):
             'mapped_probabilities': mapped_probabilities
         }
 
+    def model_has_dropout(self):
+        return self._has_dropout(self.network)
+
+    @staticmethod
+    def _has_dropout(model) -> bool:
+        """Check if the model contains any dropout layers with p > 0.0"""
+        for m in model.modules():
+            if m.__class__.__name__.startswith('Dropout') and m.p > 0.0:
+                return True
+        return False
+
     @staticmethod
     def _enable_dropout(model):
         """ Function to enable the dropout layers during test-time """
-        number_dropout_layers = 0
+        if not Solver._has_dropout(model):
+            raise ValueError("Trying to do monte carlo dropout inference on model without dropout!")
+
         for m in model.modules():
             if m.__class__.__name__.startswith('Dropout'):
                 m.train()
-                if m.p > 0.0:
-                    number_dropout_layers += 1
-        if not number_dropout_layers > 0:
-            raise ValueError("Trying to do monte carlo dropout inference on model without dropout!")
 
     def _do_dropout_iterations(self, X, lengths, n_forward_passes):
         dropout_iterations = []
@@ -184,9 +194,11 @@ class Solver(ABC):
 
     def inference_monte_carlo_dropout(self, dataloader: DataLoader,
                                       n_forward_passes: int = 30,
-                                      confidence_level: float = 0.05):
+                                      confidence_level: float = 0.05) -> List[
+        Union[BiotrainerSequencePrediction, BiotrainerResiduePrediction]]:
         """
-        Calculate inference results from existing models for given embeddings
+        Calculate inference results from existing models for given embeddings. Implementation here is for
+        per-sequence protocols. For per-residue, see the residue_solvers script.
 
             dataloader: Dataloader with embeddings
             n_forward_passes: Times to repeat calculation with different dropout nodes enabled
@@ -195,7 +207,7 @@ class Solver(ABC):
         if not 0 < confidence_level < 1:
             raise ValueError(f"Confidence level must be between 0 and 1, given: {confidence_level}!")
 
-        mapped_predictions = {}
+        predictions = []
 
         for i, (seq_ids, X, y, lengths) in enumerate(dataloader):
             dropout_iterations = self._do_dropout_iterations(X, lengths, n_forward_passes)
@@ -203,26 +215,33 @@ class Solver(ABC):
             dropout_raw_values = torch.stack([torch.tensor(dropout_iteration["probabilities"])
                                               for dropout_iteration in dropout_iterations], dim=1)
 
-            dropout_mean, lower_bound, upper_bound = get_mean_and_confidence_bounds(values=dropout_raw_values,
-                                                                            dimension=1,
-                                                                            confidence_level=confidence_level)
+            dropout_mean, dropout_std, lower_bound, upper_bound = get_mean_and_confidence_bounds(
+                values=dropout_raw_values,
+                dimension=1,
+                confidence_level=confidence_level)
             prediction_by_mean = self._probabilities_to_predictions(dropout_mean)
 
-            # Create dict with seq_id: prediction
-            for idx, prediction in enumerate(prediction_by_mean):
-                mapped_predictions[seq_ids[idx]] = {"prediction": prediction.item(),
-                                                    "all_predictions": [dropout_iteration["prediction"][idx] for
-                                                                        dropout_iteration in dropout_iterations],
-                                                    "mcd_mean": dropout_mean[idx],
-                                                    "mcd_lower_bound": (
-                                                            lower_bound[idx]),
-                                                    "mcd_upper_bound": (
-                                                            upper_bound[idx]),
-                                                    }
+            bald_scores = None
+            if self.protocol in Protocol.classification_protocols():
+                bald_scores = self._calculate_bald_score(dropout_raw_values)
 
-        return {
-            'mapped_predictions': mapped_predictions
-        }
+            for idx, prediction in enumerate(prediction_by_mean):
+                predictions.append(BiotrainerSequencePrediction(seq_id=seq_ids[idx],
+                                                                prediction=prediction.item(),
+                                                                mcd_predictions=[dropout_iteration["prediction"][idx]
+                                                                                 for
+                                                                                 dropout_iteration in
+                                                                                 dropout_iterations],
+                                                                mcd_mean=dropout_mean[idx].tolist(),
+                                                                mcd_std=dropout_std[idx].tolist(),
+                                                                mcd_lower_bound=lower_bound[idx].tolist(),
+                                                                mcd_upper_bound=upper_bound[idx].tolist(),
+                                                                bald_score=bald_scores[
+                                                                    idx].item() if bald_scores is not None else None,
+                                                                )
+                                   )
+
+        return predictions
 
     def auto_resume(self, training_dataloader: DataLoader, validation_dataloader: DataLoader,
                     train_wrapper):
@@ -257,7 +276,8 @@ class Solver(ABC):
                     f"Training new model from scratch!")
         return train_wrapper(self)
 
-    def load_checkpoint(self, checkpoint_path: Path = None, resume_training: bool = False, disable_pytorch_compile: bool = True):
+    def load_checkpoint(self, checkpoint_path: Path = None, resume_training: bool = False,
+                        disable_pytorch_compile: bool = True):
         if checkpoint_path:
             checkpoint_file = checkpoint_path
             self.checkpoint_type = checkpoint_path.suffix
@@ -376,7 +396,8 @@ class Solver(ABC):
             onnx_program.save(onnx_file_name)
 
     def _early_stop(self, current_loss: float, epoch: int) -> bool:
-        if current_loss < (self._min_loss - self.epsilon):
+        threshold = self._min_loss * (1 - self.epsilon)  # Using a relative threshold
+        if current_loss < threshold:
             self._min_loss = current_loss
             self._stop_count = self.patience
             self._best_epoch = epoch
@@ -494,3 +515,38 @@ class Solver(ABC):
             prediction = self._probabilities_to_predictions(probabilities)
             return {"prediction": prediction.cpu().tolist(),
                     "probabilities": probabilities.cpu().tolist()}
+
+    @staticmethod
+    def _calculate_bald_score(
+            mc_samples: torch.Tensor,  # Shape: (batch_size, n_mc, n_classes)
+            eps: float = 1e-10
+    ) -> torch.Tensor:
+        """
+        Calculate BALD (Bayesian Active Learning by Disagreement) score.
+
+        BALD = H[E[p(y|x,θ)]] - E[H[p(y|x,θ)]]
+             = Predictive Entropy - Expected Entropy
+
+        Args:
+            mc_samples: MC probability samples, shape (batch_size, n_mc, n_classes)
+            eps: Small constant for numerical stability
+
+        Returns:
+            bald_scores: Shape (batch_size,)
+        """
+        # Predictive entropy: H[E[p]]
+        mean_probs = mc_samples.mean(dim=1)  # (batch_size, n_classes)
+        predictive_entropy = -torch.sum(
+            mean_probs * torch.log(mean_probs + eps), dim=-1
+        )  # (batch_size,)
+
+        # Expected entropy: E[H[p]]
+        # Entropy per sample: -Σ p_i log(p_i)
+        sample_entropies = -torch.sum(
+            mc_samples * torch.log(mc_samples + eps), dim=-1
+        )  # (batch_size, n_mc)
+        expected_entropy = sample_entropies.mean(dim=1)  # (batch_size,)
+
+        # BALD = mutual information
+        bald = predictive_entropy - expected_entropy
+        return bald

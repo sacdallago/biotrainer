@@ -5,7 +5,8 @@ from .revert_mappings import revert_mappings
 from .logging import get_logger, setup_logging
 from .execution_environment import is_running_in_notebook
 from .hashing import calculate_model_hash, calculate_sequence_hash
-from .data_classes import Split, SplitResult, EmbeddingDatasetSample, SequenceDatasetSample, EpochMetrics
+from .data_classes import Split, SplitResult, EmbeddingDatasetSample, SequenceDatasetSample, EpochMetrics, \
+    BiotrainerSequencePrediction, BiotrainerResiduePrediction, MetricEstimate, BootstrappedMetric
 from .cuda_device import get_device, is_device_cpu, is_device_cuda, is_device_mps, get_device_memory
 from .constants import (
     SEQUENCE_PAD_VALUE,
@@ -14,8 +15,8 @@ from .constants import (
     METRICS_WITHOUT_REVERSED_SORTING,
     RESIDUE_TO_VALUE_TARGET_DELIMITER,
     AMINO_ACIDS,
+    STANDARD_AAS,
 )
-
 
 __all__ = [
     'seed_all',
@@ -35,6 +36,7 @@ __all__ = [
     'RESIDUE_TO_VALUE_TARGET_DELIMITER',
     'METRICS_WITHOUT_REVERSED_SORTING',
     'AMINO_ACIDS',
+    'STANDARD_AAS',
     'Split',
     'SplitResult',
     'EmbeddingDatasetSample',
@@ -42,5 +44,9 @@ __all__ = [
     'EpochMetrics',
     'revert_mappings',
     'FeatureScaler',
+    'BiotrainerSequencePrediction',
+    'BiotrainerResiduePrediction',
+    'MetricEstimate',
+    'BootstrappedMetric',
     '__version__'
 ]

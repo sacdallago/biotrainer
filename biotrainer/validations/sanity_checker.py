@@ -118,8 +118,12 @@ class SanityChecker:
                 self._handle_sanity_check_warning(f"Model is only predicting {predictions[0]} for all test samples!")
 
     def _check_baselines(self) -> Dict[str, Any]:
-        baseline_dict = {"random_model": self._random_model_initialization_baseline(),
-                         "random_sampling": self._random_sampling_baseline()}
+        torch.manual_seed(self.training_config["seed"])
+        # TODO Implement random hyperparameter baseline for GP models
+        baseline_dict = {} if self.training_config["model_choice"] == "GP" else {
+            "random_model": self._random_model_initialization_baseline()}
+        baseline_dict.update({
+            "random_sampling": self._random_sampling_baseline()})
 
         if self.protocol in Protocol.classification_protocols():
             # Only for binary classification tasks at the moment:

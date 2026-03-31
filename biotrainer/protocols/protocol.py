@@ -7,12 +7,12 @@ from typing import List
 
 
 class Protocol(Enum):
-    residue_to_value = 0,
-    residue_to_class = 1,
-    residues_to_class = 2,
-    residues_to_value = 3,
-    sequence_to_class = 4,
-    sequence_to_value = 5
+    residue_to_value = "residue_to_value"
+    residue_to_class = "residue_to_class"
+    residues_to_class = "residues_to_class"
+    residues_to_value = "residues_to_value"
+    sequence_to_class = "sequence_to_class"
+    sequence_to_value = "sequence_to_value"
 
     @staticmethod
     def all() -> List[Protocol]:

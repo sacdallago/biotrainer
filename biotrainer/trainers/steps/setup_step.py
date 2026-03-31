@@ -74,7 +74,7 @@ class SetupStep(PipelineStep):
                                           custom_trainer=context.custom_pipeline
                                           )
         context.model_hash = model_hash
-        logger.info(f"Training model with hash: {model_hash}")
+        logger.info(f"Training {context.config['model_choice']} model with hash: {model_hash}")
         context.output_manager.add_derived_values({"model_hash": model_hash})
         # Seed
         seed = context.config["seed"]

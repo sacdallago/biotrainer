@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from ..interfaces import EmbedderInterface
+from ..interfaces import BaselineEmbedder
 
 from ...utilities import AMINO_ACIDS
 
@@ -9,7 +9,7 @@ from ...utilities import AMINO_ACIDS
 AA_TO_INDEX = {aa: i for i, aa in enumerate(AMINO_ACIDS)}
 
 
-class OneHotEncodingEmbedder(EmbedderInterface):
+class OneHotEncodingEmbedder(BaselineEmbedder):
     """
     Baseline embedder: One hot encoding as per-residue embedding, amino acid composition for per-protein
 
@@ -28,8 +28,3 @@ class OneHotEncodingEmbedder(EmbedderInterface):
 
         # Use advanced indexing of identity matrix to create one-hot encoding
         return torch.tensor(self.eye_matrix[indices])
-
-    @staticmethod
-    def reduce_per_protein(embedding: torch.Tensor) -> torch.Tensor:
-        """This returns the amino acid composition of the sequence as vector"""
-        return embedding.mean(axis=0)

@@ -23,6 +23,7 @@ class PipelineContext:
         self.hp_manager = None
         # Input Data
         self.input_data: Optional[Union[Path, List[BiotrainerSequenceRecord]]] = None
+        self.hash2id = None  # Dict to Map from sequence hash to sequence id
         # Embedding + Projection
         self.id2emb = None
         self.embedding_service: Optional[PeftEmbeddingService] = None  # For fine-tuning only

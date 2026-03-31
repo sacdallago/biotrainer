@@ -1,6 +1,7 @@
 from typing import Optional
 
 from .solver import Solver
+from .gp_solver import GPSolver
 from .solver_utils import get_mean_and_confidence_bounds
 from .residue_solvers import ResidueClassificationSolver, ResidueRegressionSolver
 from .residues_solvers import ResiduesClassificationSolver, ResiduesRegressionSolver
@@ -38,7 +39,10 @@ def get_solver(protocol: Protocol, name: str,
                log_dir: Optional = None, n_classes: Optional[int] = 0,
                **kwargs
                ) -> Solver:
-    solver_class = __SOLVERS.get(protocol)
+    if network.__class__.__name__ == "GPModelAdapter":
+        solver_class = GPSolver
+    else:
+        solver_class = __SOLVERS.get(protocol)
     metrics_calc = get_metrics_calculator(protocol=protocol, device=device, n_classes=n_classes)
 
     if not solver_class:

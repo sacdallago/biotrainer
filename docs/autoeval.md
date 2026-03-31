@@ -1,28 +1,34 @@
 # Autoeval Module
 
-The biotrainer `autoeval` module allows automatically evaluating an embedder model on downstream prediction tasks.
+The biotrainer `autoeval` module allows automatically evaluating a protein language model on downstream tasks.
 This can give a better impression of the model performance, and if it is actually creating useful embeddings.
+
+## Getting Started
+
+Please refer to the two tutorial notebooks to get started with [supervised](../examples/autoeval/plm_eval.ipynb)
+and [zero-shot](../examples/autoeval/plm_eval_zeroshot.ipynb) evaluation.
 
 ## Downstream Tasks
 
 All relevant files for the downstream tasks are downloaded before the evaluation to
 `/{user_cache_dir}/biotrainer/autoeval`.
 
-### PBC
+### PBC (Supervised)
 
 The `autoeval` module provides direct support of the [PBC](https://github.com/Rostlab/pbc) framework, namely for the
 supervised tasks.
 
 Quick description of each task, you can find more information in the [PBC Readme](https://github.com/Rostlab/pbc):
 
+* **conservation**: Predict residue conservation scores for proteins.
+* **disorder**: Predict disorder scores for proteins.
 * **scl**: Predict protein subcellular localization for mixed human and non-human proteins.
 * **secondary_structure**: Predict secondary structure of proteins (includes multiple test sets from CASP and the ProtT5
   paper).
 
-### FLIP
+### FLIP (Supervised)
 
-**WARNING: FLIP datasets are currently still supported but not actively maintained.
-Please refer to the [PBC](https://github.com/Rostlab/pbc) framework instead.**
+**WARNING: FLIP datasets are currently still supported but not actively maintained.**
 
 The `autoeval` module provides a curated subset of datasets in [FLIP](https://github.com/J-SNACKKB/FLIP).
 The tasks have been chosen to be as hard as possible for a prediction model.
@@ -47,6 +53,29 @@ the [split descriptions](https://github.com/J-SNACKKB/FLIP/tree/main/splits):
 * **secondary_structure**: Predict secondary structure of proteins
     * *sampled*: Only available FLIP split
 
+### PGYM (Zero-Shot)
+
+The `autoeval` module provides support for the
+[ProteinGym DMS Supervised](https://marks.hms.harvard.edu/proteingym/ProteinGym_v1.3/DMS_ProteinGym_substitutions.zip)
+datasets that include various *deep mutational scanning* (DMS) fitness scores for protein mutations. For a given model,
+a zero-shot method must be selected. Then, it is evaluated on all datasets. The `ProteinGym` datasets were split
+into three tasks (using
+the [reference file](https://marks.hms.harvard.edu/proteingym/ProteinGym_v1.3/DMS_substitutions.csv):
+
+* **virus**: Consists of all datasets for which the taxon in the reference file equals `virus`. PLMs are often trained
+  without or with only limited viral sequences, so this separate evaluation is interesting to see the effect of data
+  distribution shifts after training.
+* **non-virus**: All other datasets.
+* **total**: **virus** and **non-virus** combined.
+
+> [!IMPORTANT]  
+> As ProteinGym does not use a seed for bootstrapping the results, the evaluation results between `autoeval` and
+> the ProteinGym leaderboard can differ. Our experiments showed deviations between `+/- 0.01 to 0.025` points for SCC
+> on the aggregated results. Please consider this when comparing your results to the ProteinGym leaderboard.
+
+*Please use a different output directory for different zero-shot methods, as the report is currently only able to
+capture the results of a single method at once.*
+
 ## How to use
 
 ### CLI
@@ -57,7 +86,7 @@ The `autoeval` pipeline can be run directly through the cli:
 biotrainer autoeval --embedder-name embedder_name --framework framework_name [--min-seq-length min_length] [--max-seq-length max_length] [--use-half-precision]
 ```
 
-### Script
+### Script - Supervised
 
 You can also integrate `autoeval` into your scripts or training pipelines:
 
@@ -114,71 +143,84 @@ Some deeper explanations:
   embedding. This is to make sure that the correct embedding is assigned to the respective sequence.
 * All embeddings are calculated at once at the beginning of the training, to avoid duplicated embedding.
 
+### Script - Zero-Shot
+
+Here is a minimal example on how to use the `autoeval_pipeline` for zero-shot evaluation:
+
+```python
+from biotrainer.autoeval import autoeval_pipeline
+from biotrainer.bioengineer import ZeroShotMethod
+
+print("Starting AutoEval pipeline...")
+
+current_progress = None
+for progress in autoeval_pipeline(embedder_name="facebook/esm2_t6_8M_UR50D",
+                                  framework="pgym",
+                                  zero_shot_method=ZeroShotMethod.MASKED_MARGINALS,
+                                  device="cuda",
+                                  ):
+    print(f"AutoEvalProgress: " + str(progress))
+    current_progress = progress
+
+print("**FINISHED**")
+
+current_progress.final_report.summary()
+```
+
 ## Report
 
 After all tasks have been successfully finished, a report is created in the output directory. All metadata and
-model results are tracked there.
+model results are tracked there. See the [autoeval_report class](../biotrainer/autoeval/pipelines/autoeval_report.py)
+for more details.
 
-Example:
+The report can be summarized:
 
-```json
-{
-  "embedder_name": "your_embedder_name",
-  // Embedder name
-  "training_date": "2025-07-02",
-  // Training date
-  "min_seq_len": 0,
-  // Minimum sequence length
-  "max_seq_len": 2000,
-  // Maximum sequence length
-  "results": {
-    "FLIP-aav-two_vs_many": {
-      "config": {
-      },
-      "database_type": "Protein",
-      "derived_values": {
-      },
-      "training_results": {
-      },
-      "test_results": {
-        "test": {
-          "metrics": {
-            "loss": 12.494811077213766,
-            "mse": 12.501708030700684,
-            "rmse": 3.5357754230499268,
-            "spearmans-corr-coeff": 0.0014577994588762522
-          },
-          "bootstrapping": {
-            "results": {
-              "mse": {
-                "mean": 12.5078125,
-                "error": 0.099365234375
-              },
-              "rmse": {
-                "mean": 3.537109375,
-                "error": 0.01436614990234375
-              },
-              "spearmans-corr-coeff": {
-                "mean": 0.0007982254028320312,
-                "error": 0.00795745849609375
-              }
-            },
-            "iterations": 30,
-            "sample_size": 50767,
-            "confidence_level": 0.05
-          },
-          "test_baselines": {
-          },
-          "predictions": {}
-        }
-      }
-    }
-    // OTHER TASKS
-  }
-}
+```python
+final_report = progress.final_report
+final_report.summary()
 ```
 
-### Visualization and Leaderboard
+and compared to other reports:
 
-You can visualize your results and compare against other embedder
-models using [biocentral](https://app.biocentral.cloud). Simply load the report from file in the pLM Evaluation module.
+```python
+final_report.compare([other_reports], plot=True)
+```
+
+## Visualization and Leaderboard [BETA]
+
+You can visualize and compare `autoeval` reports using the [autoeval dashboard](https://autoeval.biocentral.cloud).
+
+**Features**:
+- Load one or more `autoeval_report_*.json` files by providing directories (scanned recursively) or uploading files.
+- Leaderboard: simple average rank across tasks per framework (PBC, PGYM).
+- Detailed view: per-task metrics and training/validation loss curves (if present in report results).
+- Compare: side-by-side comparison across multiple reports for supervised and zero-shot metrics.
+
+### API Interaction
+
+To directly upload your report from a script to the dashboard, you can use the following function:
+
+```python
+final_report.compare_with_public_leaderboard()
+```
+If successful, this will return a link to the `autoeval` dashboard that includes your report. Note that your report
+is deleted from the [autoeval_service](https://github.com/biocentral/autoeval_service) after 24h.
+
+If you want to make your results public, you can also publish them on the leaderboard. 
+**Your results will then be permanently and publicly available.**
+
+To do so, you can use the following method:
+```python
+final_report.publish(name="Your Name", email="your.mail@example.com", citation="https://doi.org/VALID-DOI_URL")
+```
+Note that your report is internally checked for validity and compliance with the `autoeval` standards. Only reports
+for models publicly available on huggingface are accepted at the moment. We will use your name and email to credit you 
+for your contribution and to reach out to you in case of any questions.
+
+### Local execution
+To run the dashboard locally:
+
+```bash
+pip install streamlit  # if not already installed
+streamlit run run_autoeval-frontend.py
+```

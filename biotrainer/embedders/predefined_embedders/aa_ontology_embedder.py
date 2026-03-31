@@ -1,11 +1,11 @@
 import torch
 import numpy as np
 
-from ..interfaces import EmbedderInterface
+from ..interfaces import BaselineEmbedder
 
 from ...utilities import AMINO_ACIDS
 
-class AAOntologyEmbedder(EmbedderInterface):
+class AAOntologyEmbedder(BaselineEmbedder):
     """
     Baseline embedder: Uses plain scales from AAOntology.
 
@@ -50,8 +50,3 @@ class AAOntologyEmbedder(EmbedderInterface):
 
         # Use advanced indexing to get scale values for each position
         return torch.tensor(self.lookup_matrix[indices])
-
-    @staticmethod
-    def reduce_per_protein(embedding: torch.Tensor) -> torch.Tensor:
-        """Returns the mean of all scale values across the sequence"""
-        return embedding.mean(axis=0)

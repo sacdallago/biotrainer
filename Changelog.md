@@ -1,6 +1,6 @@
 # Biotrainer Changelog
 
-## 13.11.2024 - Version 1.3.0
+## 13.01.2026 - Version 1.3.0
 
 ## Features
 

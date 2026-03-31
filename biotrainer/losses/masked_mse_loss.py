@@ -1,11 +1,15 @@
 import torch
 import torch.nn as nn
 
+from typing import Callable
 
-class MaskedMSELoss(nn.Module):
-    """ Masked MSE Loss capable of ignoring individual residue/target combinations for residue_to_value protocol """
-    def __init__(self, ignore_index: int = -100, reduction: str = 'mean'):
+
+class MaskedRegressionLoss(nn.Module):
+    """ Masked Regression Loss capable of ignoring individual residue/target combinations for residue_to_value protocol """
+
+    def __init__(self, loss_function: Callable, ignore_index: int = -100, reduction: str = 'mean'):
         super().__init__()
+        self.loss_function = loss_function
         self.ignore_index = ignore_index
         self.reduction = reduction
 
@@ -21,6 +25,6 @@ class MaskedMSELoss(nn.Module):
         masked_input = input[mask]
         masked_target = target[mask]
 
-        # Compute MSE loss on valid positions only
-        loss = nn.functional.mse_loss(masked_input, masked_target, reduction=self.reduction)
+        # Compute loss on valid positions only
+        loss = self.loss_function(masked_input, masked_target, reduction=self.reduction)
         return loss

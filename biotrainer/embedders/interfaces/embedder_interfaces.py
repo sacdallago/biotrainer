@@ -11,18 +11,17 @@ import torch
 
 from typing import List, Generator, Optional, Iterable, Any, Union, Callable
 
-from .preprocessing_strategies import preprocess_sequences_without_whitespaces
+from .tokenization_mixin import BiotrainerTokenizerMixin
 
 from ...utilities import get_logger, get_device_memory
 
 logger = get_logger(__name__)
 
 
-class EmbedderInterface(abc.ABC):
+class EmbedderInterface(abc.ABC, BiotrainerTokenizerMixin):
     name: str
     _model: Optional[Any] = None
     _device: Union[None, str, torch.device] = None
-    _preprocessing_strategy: Callable = lambda self, sequences, mask_token: preprocess_sequences_without_whitespaces(sequences, mask_token)
 
     @abc.abstractmethod
     def _embed_single(self, sequence: str) -> torch.Tensor:
@@ -40,7 +39,7 @@ class EmbedderInterface(abc.ABC):
         return None
 
     def _preprocess_sequences(self, sequences: Iterable[str]) -> List[str]:
-        return self._preprocessing_strategy(sequences, self.get_mask_token())
+        return self._find_preprocessing_strategy()(sequences, self.get_mask_token())
 
     def _embed_batch(self, batch: List[str]) -> Generator[torch.Tensor, None, None]:
         """Computes the embeddings from all sequences in the batch
@@ -51,13 +50,19 @@ class EmbedderInterface(abc.ABC):
             yield self._embed_single(sequence)
 
     def estimate_batch_size(self, preprocessed_sequences: List[str]) -> int:
+        # Calculate batch size via memory
         memory_gb = get_device_memory(self._device)
         safety_factor = 0.8
         residues_per_gb = 1024  # Estimating 1MB/residue
         batch_size = int(memory_gb * residues_per_gb * safety_factor)
 
+        # Clamp batch size
+        batch_size_cap = 8192 * 6 # Should provide a good trade-off between speed and stability, even on an H100
+        batch_size = min(batch_size, batch_size_cap)
+        batch_size = max(batch_size, 0)
+
         # Account for separators that are processed by the tokenizer (do not count towards batch_size => double it)
-        first_sequence = preprocessed_sequences[0]
+        first_sequence = set(preprocessed_sequences[0])
         if any([separator in first_sequence for separator in (' ', ',', ';')]):
             batch_size *= 2
 

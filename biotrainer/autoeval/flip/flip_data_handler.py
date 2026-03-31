@@ -1,10 +1,10 @@
 from tqdm import tqdm
-from typing import List
+from typing import List, Optional
 from pathlib import Path
 
 from .flip_datasets import FLIP_DATASETS
 
-from ..data_handler import AutoEvalDataHandler, AutoEvalTask
+from ..core import AutoEvalDataHandler, AutoEvalTask, AutoEvalMode
 
 
 class FLIPDataHandler(AutoEvalDataHandler):
@@ -20,7 +20,7 @@ class FLIPDataHandler(AutoEvalDataHandler):
     def get_download_urls():
         return ["https://nextcloud.cit.tum.de/index.php/s/fqFEeCSpwTHkt8X/download"]
 
-    def preprocess(self, base_path: Path, min_seq_length: int, max_seq_length: int) -> None:
+    def preprocess(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) -> None:
         """ Filters all dataset splits for sequences that fulfill the length requirements """
         for dataset, dataset_info in tqdm(FLIP_DATASETS.items(), desc="Preprocessing datasets"):
             dataset_dir = base_path / dataset
@@ -37,7 +37,7 @@ class FLIPDataHandler(AutoEvalDataHandler):
 
         print("FLIP data preprocessing completed!")
 
-    def get_tasks(self, base_path: Path, min_seq_length: int, max_seq_length: int) -> List[AutoEvalTask]:
+    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) -> List[AutoEvalTask]:
         """Build tasks for all FLIP datasets"""
         print("WARNING: FLIP dataset support is currently deprecated in biotrainer - please refer to the PBC datasets "
               "instead!")
@@ -61,7 +61,8 @@ class FLIPDataHandler(AutoEvalDataHandler):
                     AutoEvalTask(framework_name=self.get_framework_name(),
                                  dataset_name=dataset,
                                  split_name=split_name,
-                                 input_file=input_file,
-                                 type="Protein"))
+                                 input_files=[input_file],
+                                 type="Protein",
+                                 ))
 
         return tasks

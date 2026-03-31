@@ -19,3 +19,4 @@ METRICS_WITHOUT_REVERSED_SORTING: Final[List[str]] = ["loss", "mse", "rmse"]
 
 # AAs
 AMINO_ACIDS: Final[str] = "ACDEFGHIKLMNPQRSTVWXY"
+STANDARD_AAS: Final[str] = "ACDEFGHIKLMNPQRSTVWY"  # No X

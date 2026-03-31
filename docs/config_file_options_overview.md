@@ -33,7 +33,7 @@ model_choice: FNN | CNN | LogReg | LightAttention  # Protocol-dependent default
 optimizer_choice: adam  # Default: adam
 learning_rate: 1e-3  # Default: 1e-3
 dropout_rate: 0.25  # Default: 0.25
-loss_choice: cross_entropy_loss | mean_squared_error  # Protocol-dependent default
+loss_choice: cross_entropy_loss | mean_squared_error | smooth_l1_loss # Protocol-dependent default
 use_class_weights: True | False  # Default: False
 disable_pytorch_compile: True | False  # Default: True
 

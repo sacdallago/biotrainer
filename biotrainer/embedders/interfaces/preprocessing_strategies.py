@@ -35,7 +35,7 @@ def preprocess_sequences_without_whitespaces(sequences: Iterable[str], mask_toke
 
 
 def preprocess_sequences_for_prostt5(sequences: Iterable[str], mask_token: Optional[str]) -> List[str]:
-    preprocessed_sequences = preprocess_sequences_with_whitespaces(sequences, mask_token=mask_token)
+    preprocessed_sequences = preprocess_sequences_with_whitespaces(sequences, mask_token=mask_token) # Adds whitespaces between AAs
 
     # We have AAs, so we need to tell the model we want to translate AA->3Di.
     # To do so, we prepend "<AA2fold>" while keeping residues in upper-case.
