@@ -239,10 +239,10 @@ dropout_rate: 0.5  # Default: 0.25
 Specify the loss:
 
 ```yaml
-loss_choice: cross_entropy_loss | mean_squared_error
+loss_choice: cross_entropy_loss | mean_squared_error | smooth_l1_loss
 ```
 
-Note that *mean_squared_error* can only be applied to regression tasks, i.e. *x_to_value*.
+Note that *mean_squared_error* and *smooth_l1_loss* can only be applied to regression tasks, i.e. *x_to_value*.
 
 For classification tasks, the loss can also be calculated with class weights:
 
@@ -288,7 +288,7 @@ epsilon: 1e-3  # Default: 0.001
 
 <details>
 <summary>Early stop mechanism explanation:</summary>
-If the current loss is smaller than the previous minimum loss minus the epsilon threshold, a stop count is reset to 
+If the current loss is smaller than the previous minimum loss given the epsilon threshold, a stop count is reset to 
 the patience value indicated above. 
 Otherwise, if it is already 0, early stop is triggered and the best previous model loaded.
 If it is still above 0, patience gets decreased by one.
@@ -296,17 +296,17 @@ Expressed in code:
 <code>
 
     def _early_stop(self, current_loss: float, epoch: int) -> bool:
-        if current_loss < (self._min_loss - self.epsilon):
+        threshold = self._min_loss * (1 - self.epsilon)  # Using a relative threshold
+        if current_loss < threshold:
             self._min_loss = current_loss
             self._stop_count = self.patience
-
+            self._best_epoch = epoch
             # Save best model (overwrite if necessary)
-            self._save_checkpoint(epoch)
+            self.save_checkpoint(epoch)
             return False
         else:
             if self._stop_count == 0:
-                # Reload best model
-                self.load_checkpoint()
+                # Trigger early stop
                 return True
             else:
                 self._stop_count = self._stop_count - 1

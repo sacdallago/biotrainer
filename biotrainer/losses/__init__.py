@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from typing import Optional, Union, Dict, Any, Set
 
-from .masked_mse_loss import MaskedMSELoss
+from .masked_mse_loss import MaskedRegressionLoss
 
 from ..protocols import Protocol
 from ..utilities import MASK_AND_LABELS_PAD_VALUE
@@ -13,19 +13,24 @@ __LOSSES = {
         'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
     Protocol.residue_to_value: {
-        'mean_squared_error': lambda **kwargs: MaskedMSELoss(ignore_index=MASK_AND_LABELS_PAD_VALUE)
+        'mean_squared_error': lambda **kwargs: MaskedRegressionLoss(loss_function=nn.functional.mse_loss,
+                                                                    ignore_index=MASK_AND_LABELS_PAD_VALUE),
+        'smooth_l1_loss': lambda **kwargs: MaskedRegressionLoss(loss_function=nn.functional.smooth_l1_loss,
+                                                                ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
     Protocol.residues_to_class: {
         'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
     Protocol.residues_to_value: {
-        'mean_squared_error': lambda **kwargs: nn.MSELoss(**kwargs)
+        'mean_squared_error': lambda **kwargs: nn.MSELoss(**kwargs),
+        'smooth_l1_loss': lambda **kwargs: nn.SmoothL1Loss(**kwargs),
     },
     Protocol.sequence_to_class: {
         'cross_entropy_loss': lambda **kwargs: nn.CrossEntropyLoss(**kwargs, ignore_index=MASK_AND_LABELS_PAD_VALUE)
     },
     Protocol.sequence_to_value: {
-        'mean_squared_error': lambda **kwargs: nn.MSELoss(**kwargs)
+        'mean_squared_error': lambda **kwargs: nn.MSELoss(**kwargs),
+        'smooth_l1_loss': lambda **kwargs: nn.SmoothL1Loss(**kwargs),
     },
 }
 

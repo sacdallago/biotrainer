@@ -7,6 +7,8 @@ from typing import Optional, Dict, Union
 from torchmetrics import Accuracy, Precision, Recall, F1Score, SpearmanCorrCoef, MatthewsCorrCoef, Metric, \
     MeanSquaredError
 
+from .ndcg import NDCG
+
 from ..utilities import MASK_AND_LABELS_PAD_VALUE
 
 
@@ -60,6 +62,8 @@ class ClassificationMetricsCalculator(MetricsCalculator):
         task = "multiclass" if self.n_classes > 2 else "binary"
 
         self.acc = Accuracy(task=task, average="micro", num_classes=self.n_classes)
+        self.acc_per_class = Accuracy(task=task, average="none", num_classes=self.n_classes)
+        self.balanced_acc = Accuracy(task=task, average="macro", num_classes=self.n_classes)
 
         self.macro_precision = Precision(task=task, average="macro", num_classes=self.n_classes)
         self.micro_precision = Precision(task=task, average="micro", num_classes=self.n_classes)
@@ -83,10 +87,17 @@ class ClassificationMetricsCalculator(MetricsCalculator):
             # To shorten the code below, this delegate function is used
             return self._compute_metric(metric, predicted=predicted, labels=labels)
 
-        metrics_dict = {'accuracy': _compute_metric(self.acc).item()}
+        metrics_dict = {'accuracy': _compute_metric(self.acc).item(),
+                        'balanced-accuracy': _compute_metric(self.balanced_acc).item(),
+                        }
 
         # Multi-class prediction
         if self.n_classes > 2:
+            accuracy_per_class = _compute_metric(self.acc_per_class)
+            accuracies = {'- accuracy class {}'.format(i): accuracy_per_class[i].item() for i in
+                          range(self.n_classes)}
+            metrics_dict.update(accuracies)
+
             precision_per_class = _compute_metric(self.precision_per_class)
             precisions = {'- precision class {}'.format(i): precision_per_class[i].item() for i in
                           range(self.n_classes)}
@@ -131,7 +142,7 @@ class RegressionMetricsCalculator(MetricsCalculator):
         return {
             'mse': self._compute_metric(self.mse, predicted, labels).item(),
             'rmse': self._compute_metric(self.rmse, predicted, labels).item(),
-            'spearmans-corr-coeff': self._compute_metric(self.scc, predicted, labels).item()
+            'spearmans-corr-coeff': self._compute_metric(self.scc, predicted, labels).item(),
         }
 
 
@@ -155,11 +166,21 @@ class ResidueClassificationMetricsCalculator(ClassificationMetricsCalculator):
         else:
             return super().compute_metrics(predicted=predicted, labels=labels)
 
-class ResiduesClassificationMetricsCalculator(ClassificationMetricsCalculator):
+class ResiduesClassificationMetricsCalculator(SequenceClassificationMetricsCalculator):
     pass
 
 class SequenceRegressionMetricsCalculator(RegressionMetricsCalculator):
-    pass
+    def __init__(self, device, n_classes: int):
+        super().__init__(device, n_classes)
+        self.ndcg = NDCG(quantile=True, top=10)
+
+    def compute_metrics(
+            self, predicted: Optional[torch.Tensor] = None,
+            labels: Optional[torch.Tensor] = None) -> Dict[str, Union[int, float]]:
+        base_metrics = super().compute_metrics(predicted=predicted, labels=labels)
+
+        ndcg = self._compute_metric(self.ndcg, predicted, labels).item()
+        return {**base_metrics, "ndcg": ndcg}
 
 class ResidueRegressionMetricsCalculator(RegressionMetricsCalculator):
     def compute_metrics(
@@ -190,5 +211,5 @@ class ResidueRegressionMetricsCalculator(RegressionMetricsCalculator):
         }
 
 
-class ResiduesRegressionMetricsCalculator(RegressionMetricsCalculator):
+class ResiduesRegressionMetricsCalculator(SequenceRegressionMetricsCalculator):
     pass

@@ -38,6 +38,8 @@ class Bootstrapper:
                                                              all_predictions_dict=all_predictions_dict,
                                                              all_targets_dict=target_dict,
                                                              metrics_calculator=metrics_calculator.reset())
-        bootstrapping_dict = {"results": bootstrapping_results, "iterations": bootstrapping_iterations,
+        # TODO Improve to only return list of bootstrapping results
+        bootstrapping_dict = {"results": [r.model_dump() for r in bootstrapping_results],
+                              "iterations": bootstrapping_iterations,
                               "sample_size": sample_size, "confidence_level": confidence_level}
         return bootstrapping_dict

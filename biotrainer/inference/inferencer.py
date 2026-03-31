@@ -19,7 +19,8 @@ from ..embedders import EmbeddingService
 from ..output_files import InferenceOutputManager
 from ..datasets import get_dataset, get_embeddings_collate_function
 from ..solvers import get_solver, get_mean_and_confidence_bounds, MetricsCalculator
-from ..utilities import seed_all, EmbeddingDatasetSample, MASK_AND_LABELS_PAD_VALUE, revert_mappings
+from ..utilities import seed_all, EmbeddingDatasetSample, MASK_AND_LABELS_PAD_VALUE, revert_mappings, \
+    BootstrappedMetric, BiotrainerSequencePrediction, BiotrainerResiduePrediction
 
 
 class Inferencer:
@@ -75,13 +76,13 @@ class Inferencer:
             split_config["protocol"] = self.protocol
             split_config["device"] = self.device
             # Positional arguments
-            #model_choice = split_config.pop("model_choice")
-            #n_classes = split_config.pop("n_classes")
-            #loss_choice = split_config.pop("loss_choice")
-            #optimizer_choice = split_config.pop("optimizer_choice")
-            #learning_rate = split_config.pop("learning_rate")
-            #log_dir = split_config.pop("log_dir")
-            #disable_pytorch_compile = split_config.pop("disable_pytorch_compile")
+            # model_choice = split_config.pop("model_choice")
+            # n_classes = split_config.pop("n_classes")
+            # loss_choice = split_config.pop("loss_choice")
+            # optimizer_choice = split_config.pop("optimizer_choice")
+            # learning_rate = split_config.pop("learning_rate")
+            # log_dir = split_config.pop("log_dir")
+            # disable_pytorch_compile = split_config.pop("disable_pytorch_compile")
             checkpoint_path = Path(log_dir) / Path(split_checkpoints[split_name])
 
             model = get_model(**split_config)
@@ -142,15 +143,10 @@ class Inferencer:
                                      device=self.device)
                 for seq_id, prediction in target_dict.items()}
 
-    def _load_solver_and_dataloader(self, embeddings: Union[Iterable, Dict],
+    def _load_solver_and_dataloader(self, embeddings_dict: Dict,
                                     split_name, targets: Optional[List] = None):
         if split_name not in self.solvers_and_loaders_by_split.keys():
             raise ValueError(f"Unknown split_name {split_name} for given configuration!")
-
-        if isinstance(embeddings, Dict):
-            embeddings_dict = embeddings
-        else:
-            embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
 
         # Apply dimensionality reduction if configured
         embeddings_dict = self._apply_saved_reduction_transform(embeddings_dict)
@@ -218,8 +214,24 @@ class Inferencer:
                                                                                      fitted_transform=loaded_transform)
         return reduced_embeddings
 
-    def from_embeddings(self, embeddings: Union[Iterable, Dict], targets: Optional[List] = None,
+    def _preprocess_embeddings(self, embeddings: Union[Iterable, Dict], scale_embeddings: bool) -> Dict:
+        """ Ensures embeddings are a dict and applies feature scaling if required """
+        if isinstance(embeddings, Dict):
+            embeddings_dict = embeddings
+        else:
+            embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
+
+        feature_scaler = self.iom.feature_scaler() if scale_embeddings else None
+        if feature_scaler is not None:
+            print(f"Applying {feature_scaler.method} feature scaling to embeddings..")
+            embeddings_dict = feature_scaler.transform(embeddings_dict)
+        return embeddings_dict
+
+    def from_embeddings(self,
+                        embeddings: Union[Iterable, Dict],
+                        targets: Optional[List] = None,
                         split_name: str = "hold_out",
+                        scale_embeddings: Optional[bool] = True,
                         include_probabilities: bool = False) -> Dict[str, Union[Dict, str, int, float]]:
         """
         Calculate predictions from embeddings.
@@ -227,6 +239,7 @@ class Inferencer:
         :param embeddings: Iterable or dictionary containing the input embeddings to predict on.
         :param targets: Iterable that contains the targets to calculate metrics
         :param split_name: Name of the split to use for prediction. Default is "hold_out".
+        :param scale_embeddings: If True, the feature_scaler fitted during training is used to scale the embeddings.
         :param include_probabilities: If True, the probabilities used to predict classes are also reported.
                                       Is only useful for classification tasks, otherwise the "probabilities" are the
                                       same as the predictions.
@@ -237,7 +250,9 @@ class Inferencer:
                  Predictions and probabilities are either 'mapped' to keys from an embeddings dict or indexes if
                  embeddings are given as a list.
         """
-        solver, dataloader = self._load_solver_and_dataloader(embeddings, split_name, targets)
+        embeddings_dict = self._preprocess_embeddings(embeddings=embeddings, scale_embeddings=scale_embeddings)
+
+        solver, dataloader = self._load_solver_and_dataloader(embeddings_dict, split_name, targets)
 
         inference_dict = solver.inference(dataloader, calculate_test_metrics=targets is not None)
         predictions = inference_dict["mapped_predictions"]
@@ -253,18 +268,21 @@ class Inferencer:
         else:
             return inference_dict
 
-    def from_embeddings_with_bootstrapping(self, embeddings: Union[Iterable, Dict], targets: List,
+    def from_embeddings_with_bootstrapping(self, embeddings: Union[Iterable, Dict],
+                                           targets: List,
                                            split_name: str = "hold_out",
+                                           scale_embeddings: Optional[bool] = True,
                                            iterations: int = 30,
                                            sample_size: int = -1,
                                            confidence_level: float = 0.05,
-                                           seed: int = 42) -> Dict[str, Dict[str, float]]:
+                                           seed: int = 42) -> List[BootstrappedMetric]:
         """
         Calculate predictions from embeddings.
 
         :param embeddings: Iterable or dictionary containing the input embeddings to predict on.
         :param targets: Iterable that contains the targets to calculate metrics
         :param split_name: Name of the split to use for prediction. Default is "hold_out".
+        :param scale_embeddings: If True, the feature_scaler fitted during training is used to scale the embeddings.
         :param iterations: Number of iterations to perform bootstrapping
         :param sample_size: Sample size to use for bootstrapping. -1 defaults to all embeddings which is recommended.
                             It is possible, but not recommended to use a sample size larger or smaller
@@ -284,14 +302,12 @@ class Inferencer:
 
         seed_all(seed)
 
-        if isinstance(embeddings, Dict):
-            embeddings_dict = embeddings
-        else:
-            embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
+        embeddings_dict = self._preprocess_embeddings(embeddings=embeddings, scale_embeddings=scale_embeddings)
 
         seq_ids = list(embeddings_dict.keys())
 
-        all_predictions = self.from_embeddings(embeddings_dict, targets)["mapped_predictions"]
+        all_predictions = self.from_embeddings(embeddings_dict, targets,
+                                               scale_embeddings=scale_embeddings)["mapped_predictions"]
         all_predictions_dict = self._convert_target_dict(all_predictions)
 
         all_targets_dict = {seq_id: targets[idx] for idx, seq_id in enumerate(seq_ids)}
@@ -310,7 +326,7 @@ class Inferencer:
                           seq_ids: List[str],
                           all_predictions_dict: Dict,
                           all_targets_dict: Dict,
-                          metrics_calculator: MetricsCalculator):
+                          metrics_calculator: MetricsCalculator) -> List[BootstrappedMetric]:
         """
 
         :param iterations: Number of iterations to perform bootstrapping
@@ -353,23 +369,28 @@ class Inferencer:
 
         # Process results
         metrics = list(iteration_results[0].keys())
-        result_dict = {}
+        results = []
         for metric in metrics:
             all_metric_values = torch.tensor([res[metric] for res in iteration_results], dtype=torch.float16)
-            mean, lower_bound, upper_bound = get_mean_and_confidence_bounds(
+            mean, _, lower_bound, upper_bound = get_mean_and_confidence_bounds(
                 values=all_metric_values,
                 dimension=0,
                 confidence_level=confidence_level
             )
-            result_dict[metric] = {"mean": mean.item(), "lower": lower_bound.item(), "upper": upper_bound.item()}
+            results.append(BootstrappedMetric(name=metric, mean=mean.item(), lower=lower_bound.item(),
+                                              upper=upper_bound.item(), iterations=iterations, sample_size=sample_size,
+                                              confidence_level=confidence_level))
 
-        return result_dict
+        return results
 
-    def from_embeddings_with_monte_carlo_dropout(self, embeddings: Union[Iterable, Dict],
+    def from_embeddings_with_monte_carlo_dropout(self,
+                                                 embeddings: Union[Iterable, Dict],
                                                  split_name: str = "hold_out",
+                                                 scale_embeddings: Optional[bool] = True,
                                                  n_forward_passes: int = 30,
                                                  confidence_level: float = 0.05,
-                                                 seed: int = 42) -> Dict:
+                                                 seed: int = 42) -> List[
+        Union[BiotrainerSequencePrediction, BiotrainerResiduePrediction]]:
         """
         Calculate predictions by using Monte Carlo dropout.
         Only works if the model has at least one dropout layer employed.
@@ -377,6 +398,7 @@ class Inferencer:
 
         :param embeddings: Iterable or dictionary containing the input embeddings to predict on.
         :param split_name: Name of the split to use for prediction. Default is "hold_out".
+        :param scale_embeddings: If True, the feature_scaler fitted during training is used to scale the embeddings.
         :param n_forward_passes: Number of times to repeat the prediction calculation
                                 with different dropout nodes enabled. Must be > 1.
         :param confidence_level: Confidence level for the result confidence intervals. Default is 0.05,
@@ -403,30 +425,18 @@ class Inferencer:
         # Necessary because dropout layer have a random part by design
         seed_all(seed)
 
-        solver, dataloader = self._load_solver_and_dataloader(embeddings, split_name)
+        embeddings_dict = self._preprocess_embeddings(embeddings=embeddings, scale_embeddings=scale_embeddings)
 
-        predictions = solver.inference_monte_carlo_dropout(dataloader=dataloader,
+        solver, dataloader = self._load_solver_and_dataloader(embeddings_dict, split_name)
+
+        mcd_results = solver.inference_monte_carlo_dropout(dataloader=dataloader,
                                                            n_forward_passes=n_forward_passes,
-                                                           confidence_level=confidence_level)["mapped_predictions"]
-
+                                                           confidence_level=confidence_level)
         # For class predictions, revert from int (model output) to str (class name)
-        if self.protocol in Protocol.per_residue_protocols():
-            for seq_id, prediction_list in predictions.items():
-                for prediction_dict in prediction_list:
-                    prediction_dict["prediction"] = list(revert_mappings(protocol=self.protocol,
-                                                                         test_predictions={
-                                                                             seq_id: prediction_dict["prediction"]
-                                                                         },
-                                                                         class_int2str=self.class_int2str).values())[0]
-        else:
-            for seq_id, prediction_dict in predictions.items():
-                prediction_dict["prediction"] = list(revert_mappings(protocol=self.protocol,
-                                                                     test_predictions={
-                                                                         seq_id: prediction_dict["prediction"]
-                                                                     },
-                                                                     class_int2str=self.class_int2str).values())[0]
-
-        return predictions
+        if self.protocol in Protocol.classification_protocols():
+            mcd_results = [result.revert_mappings(protocol=self.protocol, class_int2str=self.class_int2str)
+                           for result in mcd_results]
+        return mcd_results
 
     @staticmethod
     def from_onnx_with_embeddings(model_path: str, embeddings: Union[Iterable, Dict],

@@ -43,6 +43,12 @@ class FineTuningModel(BiotrainerModel):
         self.downstream_model = self.downstream_model.train()
         return self
 
+    def _apply(self, fn):
+        super()._apply(fn)
+        if self.embedding_service and self.embedding_service._embedder and self.embedding_service._embedder._model:
+            self.embedding_service._embedder._model._apply(fn)
+        return self
+
     def forward(self, sequences, *args, **kwargs) -> Tuple:
         # Compute embeddings with gradients
         targets = kwargs.pop('targets', [])

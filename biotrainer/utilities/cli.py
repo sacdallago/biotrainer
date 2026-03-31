@@ -4,16 +4,15 @@ import tempfile
 import cyclopts
 
 from pathlib import Path
-from typing import Union, Dict, Any, Optional
+from typing import Union, Dict, Any, Optional, List
 
-from .hashing import calculate_sequence_hash
 from .executer import parse_config_file_and_execute_run
 
 from ..trainers import Pipeline
 from ..inference import Inferencer
 from ..autoeval import autoeval_pipeline
 from ..embedders import get_embedding_service
-from ..input_files import convert_deprecated_fastas, read_FASTA
+from ..input_files import convert_deprecated_fastas, read_FASTA, BiotrainerSequenceRecord
 
 app = cyclopts.App()
 
@@ -40,20 +39,12 @@ def train_with_custom_pipeline(config: Union[str, Path, Dict[str, Any]],
     return parse_config_file_and_execute_run(config, custom_pipeline=custom_pipeline)
 
 
-@app.command
-def predict(training_output_file: Union[str, Path], model_input: str,
-            save_embeddings: Optional[bool] = False) -> Dict[str, Any]:
-    if isinstance(model_input, str):
-        if "." in model_input and Path(model_input).exists():
-            model_input = read_FASTA(model_input)
-            input_ids = {seq_record.get_hash(): seq_record.seq_id for seq_record in model_input}
-            model_input = {seq_record.get_hash(): seq_record.seq for seq_record in model_input}
-        else:
-            model_input = [seq for seq in model_input.split(",")]
-            input_ids = {calculate_sequence_hash(seq): f"Seq{idx}" for idx, seq in enumerate(model_input)}
-    else:
-        raise ValueError("model_input must be a Path to an input file or a comma separated list of sequences!")
-
+def predict_from_records(training_output_file: Union[str, Path],
+                         seq_records: List[BiotrainerSequenceRecord],
+                         save_embeddings: Optional[bool] = False,
+                         scale_embeddings: Optional[bool] = True,
+                         ):
+    input_ids = {record.get_id_for_id2emb(): record.seq_id for record in seq_records}
     inferencer, iom = Inferencer.create_from_out_file(out_file_path=training_output_file,
                                                       automatic_path_correction=True)
 
@@ -66,15 +57,16 @@ def predict(training_output_file: Union[str, Path], model_input: str,
         embedding_service.add_finetuned_adapter(adapter_path=adapter_path)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        result_file = embedding_service.compute_embeddings(input_data=model_input,
+        result_file = embedding_service.compute_embeddings(input_data=seq_records,
                                                            output_dir=Path(tmpdir),
                                                            protocol=iom.protocol(),
                                                            )
         embeddings = embedding_service.load_embeddings(result_file)
+
         if save_embeddings:
             shutil.copy(result_file, os.getcwd())
 
-    result = inferencer.from_embeddings(embeddings=embeddings)["mapped_predictions"]
+    result = inferencer.from_embeddings(embeddings=embeddings, scale_embeddings=scale_embeddings)["mapped_predictions"]
 
     sorted_results = []
     for seq_hash, prediction in result.items():
@@ -87,6 +79,28 @@ def predict(training_output_file: Union[str, Path], model_input: str,
         print(f"Prediction for {input_id} (sequence hash {seq_hash}):\n\t{prediction}")
 
     return result
+
+
+@app.command
+def predict(training_output_file: Union[str, Path],
+            model_input: str,
+            save_embeddings: Optional[bool] = False,
+            scale_embeddings: Optional[bool] = True,
+            ) -> Dict[str, Any]:
+    if isinstance(model_input, str):
+        if "." in model_input and Path(model_input).exists():
+            records = read_FASTA(model_input)
+        else:
+            model_input_split = [seq for seq in model_input.split(",")]
+            records = [BiotrainerSequenceRecord(seq_id=f"Seq{idx}",
+                                                seq=seq) for idx, seq in enumerate(model_input_split)]
+    else:
+        raise ValueError("model_input must be a Path to an input file or a comma separated list of sequences!")
+
+    return predict_from_records(training_output_file=training_output_file,
+                                seq_records=records,
+                                save_embeddings=save_embeddings,
+                                scale_embeddings=scale_embeddings)
 
 
 @app.command

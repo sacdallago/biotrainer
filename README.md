@@ -96,6 +96,12 @@ python3
 - Sanity checks and automatic calculation of baselines (such as random, mean...)
 - Docker support for reproducible environments
 
+## Autoeval
+
+The biotrainer `autoeval` module allows automatical evaluation of a protein language model on downstream tasks.
+You can find public results (*wip!*) on the [autoeval dashboard](https://autoeval.biocentral.cloud) and compare them
+to your own. Learn more in the [docs](docs/autoeval.md) or in the [autoeval examples](examples/autoeval).
+
 ## Documentation
 
 ### Tutorials

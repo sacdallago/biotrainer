@@ -3,7 +3,7 @@ import torch
 from pathlib import Path
 from typing import Union, Optional, List, Tuple, Dict, Any
 from transformers import AutoTokenizer, T5Tokenizer, T5EncoderModel, EsmTokenizer, EsmModel, BertTokenizer, \
-    BertForMaskedLM
+    BertForMaskedLM, AutoModel
 
 from .onnx import OnnxEmbedder
 from .interfaces import EmbedderInterface, CustomTokenizer
@@ -76,7 +76,8 @@ def _determine_tokenizer_and_model(embedder_name: str) -> Tuple:
         return EsmTokenizer, EsmModel
     elif "bert" in embedder_class.lower():
         return BertTokenizer, BertForMaskedLM
-
+    elif "modernprost" in embedder_class.lower():
+        return AutoTokenizer, AutoModel
     # Use T5 as default
     return T5Tokenizer, T5EncoderModel
 

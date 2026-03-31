@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
-from ..data_handler import AutoEvalTask
-from ..config_bank import AutoEvalConfigBank
+from ..core import AutoEvalTask, AutoEvalConfigBank
+
 
 class PBCConfigBank(AutoEvalConfigBank):
 
@@ -13,33 +13,27 @@ class PBCConfigBank(AutoEvalConfigBank):
         # Common configuration options shared across most tasks
         base_config = {
             "model_choice": "LogReg",
-            "num_epochs": 50,
-            "learning_rate": 1e-2,
+            "num_epochs": 10,
+            "learning_rate": 1e-3,
             "batch_size": 64,
             "ignore_file_inconsistencies": True,
             "seed": 42,
             "dropout_rate": 0.0,
             "shuffle": True,
-            "patience": 10,
+            "patience": 5,
             "epsilon": 1e-3,
+            "scaling_method": "standard"
         }
 
         # Task-specific configurations that override or extend base config
         task_specific_configs = {
-            "binding": {
-                "protocol": "residue_to_class",
-                "use_class_weights": False,
-            },
             "conservation": {
                 "protocol": "residue_to_class",
                 "use_class_weights": False,
             },
             "disorder": {
                 "protocol": "residue_to_value",
-            },
-            "membrane": {
-                "protocol": "residue_to_class",
-                "use_class_weights": False,
+                "loss_choice": "smooth_l1_loss",
             },
             "scl": {
                 "protocol": "sequence_to_class",
@@ -56,5 +50,5 @@ class PBCConfigBank(AutoEvalConfigBank):
 
         config = base_config.copy()
         config.update(task_specific_configs[dataset_name])
-    
+
         return config

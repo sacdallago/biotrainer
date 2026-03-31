@@ -4,12 +4,12 @@ import torch
 from ruamel import yaml
 from pathlib import Path
 from copy import deepcopy
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List, Optional
 
 from .biotrainer_output_observer import BiotrainerOutputObserver, OutputData
 
 from ..protocols import Protocol
-from ..utilities import EpochMetrics, get_device, get_logger, __version__
+from ..utilities import EpochMetrics, get_device, get_logger, __version__, FeatureScaler
 
 logger = get_logger(__name__)
 
@@ -201,11 +201,25 @@ class InferenceOutputManager(OutputManager):
         config.update(self._training_results[split_name]["split_hyper_params"])
         return deepcopy(config)
 
-    def adapter_path(self) -> Union[Path, None]:
+    def adapter_path(self) -> Optional[Path]:
         if "finetuning_config" in self._input_config:
             finetuning_path = Path(self._input_config["log_dir"])
             if finetuning_path.exists():
                 return finetuning_path
+            raise FileNotFoundError(f"Could not find finetuning checkpoint at {finetuning_path}")
+        return None
+
+    def feature_scaler(self) -> Optional[FeatureScaler]:
+        scaling_method = self._input_config.get("scaling_method", None)
+        if scaling_method is not None:
+            file_name = FeatureScaler.get_file_name(scaling_method)
+            scaler_path = Path(self._input_config["log_dir"]) / file_name
+            if scaler_path.exists():
+                feature_scaler = FeatureScaler.load(method=scaling_method,
+                                                    protocol=self.protocol(),
+                                                    load_path=scaler_path)
+                return feature_scaler
+            raise FileNotFoundError(f"Could not find feature scaling checkpoint at {scaler_path}")
         return None
 
     def class_weights(self):

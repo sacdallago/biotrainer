@@ -137,39 +137,36 @@ class EmbeddingService:
         """
         Use separate process for I/O and run embedding on main process/GPU.
         """
-        # Use manager for shared queue
-        with mp.Manager() as manager:
-            embedding_queue = manager.Queue(maxsize=30)
+        ctx = mp.get_context('spawn')
+        embedding_queue = ctx.Queue(maxsize=30)
 
-            # Start single I/O worker
-            io_process = mp.Process(
-                target=_io_worker_process,
-                args=(embedding_queue, embeddings_file_path, store_by_hash)
-            )
-            io_process.start()
+        # Start single I/O worker
+        io_process = mp.Process(
+            target=_io_worker_process,
+            args=(embedding_queue, embeddings_file_path, store_by_hash)
+        )
+        io_process.start()
 
-            try:
-                for seq_record, embedding in tqdm(
-                        self._embeddings_generator(seq_records, use_reduced_embeddings),
-                        total=len(seq_records),
-                        desc="Computing Embeddings",
-                        disable=is_running_in_notebook()
-                ):
-                    h5_index = seq_record.get_hash() if store_by_hash else seq_record.seq_id
+        try:
+            for seq_record, embedding in tqdm(
+                    self._embeddings_generator(seq_records, use_reduced_embeddings),
+                    total=len(seq_records),
+                    desc="Computing Embeddings",
+                    disable=is_running_in_notebook()
+            ):
+                # Convert to numpy and move to CPU before putting in queue
+                embedding_np = embedding.cpu().numpy()
 
-                    # Convert to numpy and move to CPU before putting in queue
-                    embedding_np = embedding.cpu().numpy()
+                embedding_queue.put((
+                    seq_record,
+                    embedding_np,
+                ))
 
-                    embedding_queue.put((
-                        seq_record,
-                        embedding_np,
-                    ))
+            # Signal worker to stop after embeddings are computed
+            embedding_queue.put(None)
 
-                # Signal worker to stop after embeddings are computed
-                embedding_queue.put(None)
-
-            finally:
-                io_process.join()
+        finally:
+            io_process.join()
 
     @staticmethod
     def store_embedding(embeddings_file_handle, seq_record, embedding, store_by_hash: bool = True):

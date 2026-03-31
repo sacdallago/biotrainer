@@ -9,6 +9,7 @@ from ..input_files import BiotrainerSequenceRecord, read_FASTA
 
 
 class InputValidator:
+    EXCLUDED_SEQS = ["", None]
 
     def __init__(self, protocol: Protocol):
         self.protocol = protocol
@@ -23,7 +24,8 @@ class InputValidator:
         if not isinstance(input_data[0], BiotrainerSequenceRecord):
             raise ValueError(f"Expected BiotrainerSequenceRecord, got {type(input_data[0])}!")
 
-        for error in (self._validate_unique_sequences(input_data),
+        for error in (self._validate_unique_ids(input_data),
+                      self._validate_unique_sequences(input_data),
                       self._validate_sequences(input_data),
                       self._validate_targets(input_data),
                       self._validate_embeddings(input_data)):
@@ -33,9 +35,22 @@ class InputValidator:
         return input_data
 
     @staticmethod
-    def _validate_unique_sequences(input_data: List[BiotrainerSequenceRecord]) -> str:
+    def _validate_unique_ids(input_data: List[BiotrainerSequenceRecord]) -> str:
         len_data = len(input_data)
-        unique_sequence_data = {seq_record.seq: seq_record for seq_record in input_data}
+        ids = {seq_record.get_id_for_id2emb() for seq_record in input_data}
+        len_unique = len(ids)
+        if len_data != len_unique:
+            affected_input = [seq_record.seq_id for seq_record in input_data]
+            return (f"There are {len_data - len_unique} duplicated sequences in the input file!\n"
+                    f"Affected sequences: {affected_input}")
+        return ""
+
+    @staticmethod
+    def _validate_unique_sequences(input_data: List[BiotrainerSequenceRecord]) -> str:
+        filtered_input_data = [seq_record for seq_record in input_data
+                                if seq_record.seq not in InputValidator.EXCLUDED_SEQS]
+        len_data = len(filtered_input_data)
+        unique_sequence_data = {seq_record.seq: seq_record for seq_record in filtered_input_data}
         len_unique = len(unique_sequence_data)
         if len_data != len_unique:
             affected_seqs = [seq_record.seq for seq_record in input_data
@@ -50,6 +65,8 @@ class InputValidator:
         invalid_char_pattern = re.compile(r'[^a-zA-Z]')
 
         for seq_record in input_data:
+            if seq_record.seq in InputValidator.EXCLUDED_SEQS:
+                continue
             # Check if there are any invalid characters in the sequence
             invalid_match = invalid_char_pattern.search(seq_record.seq)
             if invalid_match:
@@ -61,14 +78,18 @@ class InputValidator:
         # Expect float or int for regression
         for seq_record in input_data:
             target = seq_record.get_target()
-            if target is None and seq_record.get_set().lower() != "pred":
+            is_pred_set = seq_record.get_set().lower() == "pred"
+            if target is None and not is_pred_set:
                 return f"No target found for sequence {seq_record.seq_id}!"
+            if is_pred_set:
+                continue
+
             if self.protocol in Protocol.regression_protocols():
                 try:
                     targets = [target]
 
                     # r2v
-                    if RESIDUE_TO_VALUE_TARGET_DELIMITER in target:
+                    if RESIDUE_TO_VALUE_TARGET_DELIMITER in str(target):
                         if self.protocol != Protocol.residue_to_value:
                             return (f"Found {RESIDUE_TO_VALUE_TARGET_DELIMITER} in {target} for "
                                     f"sequence {seq_record.seq_id} - "

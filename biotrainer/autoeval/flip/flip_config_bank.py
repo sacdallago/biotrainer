@@ -1,7 +1,6 @@
 from typing import Dict, Any
 
-from ..data_handler import AutoEvalTask
-from ..config_bank import AutoEvalConfigBank
+from ..core import AutoEvalTask, AutoEvalConfigBank
 
 class FLIPConfigBank(AutoEvalConfigBank):
 
