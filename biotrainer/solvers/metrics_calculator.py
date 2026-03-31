@@ -62,6 +62,8 @@ class ClassificationMetricsCalculator(MetricsCalculator):
         task = "multiclass" if self.n_classes > 2 else "binary"
 
         self.acc = Accuracy(task=task, average="micro", num_classes=self.n_classes)
+        self.acc_per_class = Accuracy(task=task, average="none", num_classes=self.n_classes)
+        self.balanced_acc = Accuracy(task=task, average="macro", num_classes=self.n_classes)
 
         self.macro_precision = Precision(task=task, average="macro", num_classes=self.n_classes)
         self.micro_precision = Precision(task=task, average="micro", num_classes=self.n_classes)
@@ -85,10 +87,17 @@ class ClassificationMetricsCalculator(MetricsCalculator):
             # To shorten the code below, this delegate function is used
             return self._compute_metric(metric, predicted=predicted, labels=labels)
 
-        metrics_dict = {'accuracy': _compute_metric(self.acc).item()}
+        metrics_dict = {'accuracy': _compute_metric(self.acc).item(),
+                        'balanced-accuracy': _compute_metric(self.balanced_acc).item(),
+                        }
 
         # Multi-class prediction
         if self.n_classes > 2:
+            accuracy_per_class = _compute_metric(self.acc_per_class)
+            accuracies = {'- accuracy class {}'.format(i): accuracy_per_class[i].item() for i in
+                          range(self.n_classes)}
+            metrics_dict.update(accuracies)
+
             precision_per_class = _compute_metric(self.precision_per_class)
             precisions = {'- precision class {}'.format(i): precision_per_class[i].item() for i in
                           range(self.n_classes)}
