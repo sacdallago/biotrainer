@@ -56,21 +56,17 @@ def predict_from_records(training_output_file: Union[str, Path],
     if adapter_path is not None:
         embedding_service.add_finetuned_adapter(adapter_path=adapter_path)
 
-    feature_scaler = iom.feature_scaler() if scale_embeddings else None
-
     with tempfile.TemporaryDirectory() as tmpdir:
         result_file = embedding_service.compute_embeddings(input_data=seq_records,
                                                            output_dir=Path(tmpdir),
                                                            protocol=iom.protocol(),
                                                            )
         embeddings = embedding_service.load_embeddings(result_file)
-        if feature_scaler is not None:
-            embeddings = feature_scaler.transform(embeddings)
 
         if save_embeddings:
             shutil.copy(result_file, os.getcwd())
 
-    result = inferencer.from_embeddings(embeddings=embeddings)["mapped_predictions"]
+    result = inferencer.from_embeddings(embeddings=embeddings, scale_embeddings=scale_embeddings)["mapped_predictions"]
 
     sorted_results = []
     for seq_hash, prediction in result.items():
@@ -88,7 +84,9 @@ def predict_from_records(training_output_file: Union[str, Path],
 @app.command
 def predict(training_output_file: Union[str, Path],
             model_input: str,
-            save_embeddings: Optional[bool] = False) -> Dict[str, Any]:
+            save_embeddings: Optional[bool] = False,
+            scale_embeddings: Optional[bool] = True,
+            ) -> Dict[str, Any]:
     if isinstance(model_input, str):
         if "." in model_input and Path(model_input).exists():
             records = read_FASTA(model_input)
@@ -100,9 +98,9 @@ def predict(training_output_file: Union[str, Path],
         raise ValueError("model_input must be a Path to an input file or a comma separated list of sequences!")
 
     return predict_from_records(training_output_file=training_output_file,
-                               seq_records=records,
-                               save_embeddings=save_embeddings)
-
+                                seq_records=records,
+                                save_embeddings=save_embeddings,
+                                scale_embeddings=scale_embeddings)
 
 
 @app.command

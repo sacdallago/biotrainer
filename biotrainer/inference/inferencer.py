@@ -143,15 +143,10 @@ class Inferencer:
                                      device=self.device)
                 for seq_id, prediction in target_dict.items()}
 
-    def _load_solver_and_dataloader(self, embeddings: Union[Iterable, Dict],
+    def _load_solver_and_dataloader(self, embeddings_dict: Dict,
                                     split_name, targets: Optional[List] = None):
         if split_name not in self.solvers_and_loaders_by_split.keys():
             raise ValueError(f"Unknown split_name {split_name} for given configuration!")
-
-        if isinstance(embeddings, Dict):
-            embeddings_dict = embeddings
-        else:
-            embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
 
         # Apply dimensionality reduction if configured
         embeddings_dict = self._apply_saved_reduction_transform(embeddings_dict)
@@ -219,8 +214,24 @@ class Inferencer:
                                                                                      fitted_transform=loaded_transform)
         return reduced_embeddings
 
-    def from_embeddings(self, embeddings: Union[Iterable, Dict], targets: Optional[List] = None,
+    def _preprocess_embeddings(self, embeddings: Union[Iterable, Dict], scale_embeddings: bool) -> Dict:
+        """ Ensures embeddings are a dict and applies feature scaling if required """
+        if isinstance(embeddings, Dict):
+            embeddings_dict = embeddings
+        else:
+            embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
+
+        feature_scaler = self.iom.feature_scaler() if scale_embeddings else None
+        if feature_scaler is not None:
+            print(f"Applying {feature_scaler.method} feature scaling to embeddings..")
+            embeddings_dict = feature_scaler.transform(embeddings_dict)
+        return embeddings_dict
+
+    def from_embeddings(self,
+                        embeddings: Union[Iterable, Dict],
+                        targets: Optional[List] = None,
                         split_name: str = "hold_out",
+                        scale_embeddings: Optional[bool] = True,
                         include_probabilities: bool = False) -> Dict[str, Union[Dict, str, int, float]]:
         """
         Calculate predictions from embeddings.
@@ -228,6 +239,7 @@ class Inferencer:
         :param embeddings: Iterable or dictionary containing the input embeddings to predict on.
         :param targets: Iterable that contains the targets to calculate metrics
         :param split_name: Name of the split to use for prediction. Default is "hold_out".
+        :param scale_embeddings: If True, the feature_scaler fitted during training is used to scale the embeddings.
         :param include_probabilities: If True, the probabilities used to predict classes are also reported.
                                       Is only useful for classification tasks, otherwise the "probabilities" are the
                                       same as the predictions.
@@ -238,7 +250,9 @@ class Inferencer:
                  Predictions and probabilities are either 'mapped' to keys from an embeddings dict or indexes if
                  embeddings are given as a list.
         """
-        solver, dataloader = self._load_solver_and_dataloader(embeddings, split_name, targets)
+        embeddings_dict = self._preprocess_embeddings(embeddings=embeddings, scale_embeddings=scale_embeddings)
+
+        solver, dataloader = self._load_solver_and_dataloader(embeddings_dict, split_name, targets)
 
         inference_dict = solver.inference(dataloader, calculate_test_metrics=targets is not None)
         predictions = inference_dict["mapped_predictions"]
@@ -254,8 +268,10 @@ class Inferencer:
         else:
             return inference_dict
 
-    def from_embeddings_with_bootstrapping(self, embeddings: Union[Iterable, Dict], targets: List,
+    def from_embeddings_with_bootstrapping(self, embeddings: Union[Iterable, Dict],
+                                           targets: List,
                                            split_name: str = "hold_out",
+                                           scale_embeddings: Optional[bool] = True,
                                            iterations: int = 30,
                                            sample_size: int = -1,
                                            confidence_level: float = 0.05,
@@ -266,6 +282,7 @@ class Inferencer:
         :param embeddings: Iterable or dictionary containing the input embeddings to predict on.
         :param targets: Iterable that contains the targets to calculate metrics
         :param split_name: Name of the split to use for prediction. Default is "hold_out".
+        :param scale_embeddings: If True, the feature_scaler fitted during training is used to scale the embeddings.
         :param iterations: Number of iterations to perform bootstrapping
         :param sample_size: Sample size to use for bootstrapping. -1 defaults to all embeddings which is recommended.
                             It is possible, but not recommended to use a sample size larger or smaller
@@ -285,14 +302,12 @@ class Inferencer:
 
         seed_all(seed)
 
-        if isinstance(embeddings, Dict):
-            embeddings_dict = embeddings
-        else:
-            embeddings_dict = {str(idx): embedding for idx, embedding in enumerate(embeddings)}
+        embeddings_dict = self._preprocess_embeddings(embeddings=embeddings, scale_embeddings=scale_embeddings)
 
         seq_ids = list(embeddings_dict.keys())
 
-        all_predictions = self.from_embeddings(embeddings_dict, targets)["mapped_predictions"]
+        all_predictions = self.from_embeddings(embeddings_dict, targets,
+                                               scale_embeddings=scale_embeddings)["mapped_predictions"]
         all_predictions_dict = self._convert_target_dict(all_predictions)
 
         all_targets_dict = {seq_id: targets[idx] for idx, seq_id in enumerate(seq_ids)}
@@ -368,11 +383,13 @@ class Inferencer:
 
         return results
 
-    def from_embeddings_with_monte_carlo_dropout(self, embeddings: Union[Iterable, Dict],
+    def from_embeddings_with_monte_carlo_dropout(self,
+                                                 embeddings: Union[Iterable, Dict],
                                                  split_name: str = "hold_out",
+                                                 scale_embeddings: Optional[bool] = True,
                                                  n_forward_passes: int = 30,
                                                  confidence_level: float = 0.05,
-                                                 seed: int = 42) ->  List[
+                                                 seed: int = 42) -> List[
         Union[BiotrainerSequencePrediction, BiotrainerResiduePrediction]]:
         """
         Calculate predictions by using Monte Carlo dropout.
@@ -381,6 +398,7 @@ class Inferencer:
 
         :param embeddings: Iterable or dictionary containing the input embeddings to predict on.
         :param split_name: Name of the split to use for prediction. Default is "hold_out".
+        :param scale_embeddings: If True, the feature_scaler fitted during training is used to scale the embeddings.
         :param n_forward_passes: Number of times to repeat the prediction calculation
                                 with different dropout nodes enabled. Must be > 1.
         :param confidence_level: Confidence level for the result confidence intervals. Default is 0.05,
@@ -407,7 +425,9 @@ class Inferencer:
         # Necessary because dropout layer have a random part by design
         seed_all(seed)
 
-        solver, dataloader = self._load_solver_and_dataloader(embeddings, split_name)
+        embeddings_dict = self._preprocess_embeddings(embeddings=embeddings, scale_embeddings=scale_embeddings)
+
+        solver, dataloader = self._load_solver_and_dataloader(embeddings_dict, split_name)
 
         mcd_results = solver.inference_monte_carlo_dropout(dataloader=dataloader,
                                                            n_forward_passes=n_forward_passes,
