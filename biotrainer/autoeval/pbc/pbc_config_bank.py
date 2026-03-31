@@ -27,10 +27,6 @@ class PBCConfigBank(AutoEvalConfigBank):
 
         # Task-specific configurations that override or extend base config
         task_specific_configs = {
-            "binding": {
-                "protocol": "residue_to_class",
-                "use_class_weights": False,
-            },
             "conservation": {
                 "protocol": "residue_to_class",
                 "use_class_weights": False,
@@ -38,10 +34,6 @@ class PBCConfigBank(AutoEvalConfigBank):
             "disorder": {
                 "protocol": "residue_to_value",
                 "loss_choice": "smooth_l1_loss",
-            },
-            "membrane": {
-                "protocol": "residue_to_class",
-                "use_class_weights": False,
             },
             "scl": {
                 "protocol": "sequence_to_class",
