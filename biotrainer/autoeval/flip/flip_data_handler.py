@@ -63,6 +63,6 @@ class FLIPDataHandler(AutoEvalDataHandler):
                                  split_name=split_name,
                                  input_files=[input_file],
                                  type="Protein",
-                                 mode=AutoEvalMode.SUPERVISED))
+                                 ))
 
         return tasks
