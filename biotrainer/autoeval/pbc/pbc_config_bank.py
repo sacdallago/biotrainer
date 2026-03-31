@@ -13,7 +13,7 @@ class PBCConfigBank(AutoEvalConfigBank):
         # Common configuration options shared across most tasks
         base_config = {
             "model_choice": "LogReg",
-            "num_epochs": 50,
+            "num_epochs": 10,
             "learning_rate": 1e-3,
             "batch_size": 64,
             "ignore_file_inconsistencies": True,
