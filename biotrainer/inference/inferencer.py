@@ -19,7 +19,8 @@ from ..embedders import EmbeddingService
 from ..output_files import InferenceOutputManager
 from ..datasets import get_dataset, get_embeddings_collate_function
 from ..solvers import get_solver, get_mean_and_confidence_bounds, MetricsCalculator
-from ..utilities import seed_all, EmbeddingDatasetSample, MASK_AND_LABELS_PAD_VALUE, revert_mappings, BootstrappedMetric
+from ..utilities import seed_all, EmbeddingDatasetSample, MASK_AND_LABELS_PAD_VALUE, revert_mappings, \
+    BootstrappedMetric, BiotrainerSequencePrediction, BiotrainerResiduePrediction
 
 
 class Inferencer:
@@ -371,7 +372,8 @@ class Inferencer:
                                                  split_name: str = "hold_out",
                                                  n_forward_passes: int = 30,
                                                  confidence_level: float = 0.05,
-                                                 seed: int = 42) -> Dict:
+                                                 seed: int = 42) ->  List[
+        Union[BiotrainerSequencePrediction, BiotrainerResiduePrediction]]:
         """
         Calculate predictions by using Monte Carlo dropout.
         Only works if the model has at least one dropout layer employed.
@@ -407,28 +409,14 @@ class Inferencer:
 
         solver, dataloader = self._load_solver_and_dataloader(embeddings, split_name)
 
-        predictions = solver.inference_monte_carlo_dropout(dataloader=dataloader,
+        mcd_results = solver.inference_monte_carlo_dropout(dataloader=dataloader,
                                                            n_forward_passes=n_forward_passes,
-                                                           confidence_level=confidence_level)["mapped_predictions"]
-
+                                                           confidence_level=confidence_level)
         # For class predictions, revert from int (model output) to str (class name)
-        if self.protocol in Protocol.per_residue_protocols():
-            for seq_id, prediction_list in predictions.items():
-                for prediction_dict in prediction_list:
-                    prediction_dict["prediction"] = list(revert_mappings(protocol=self.protocol,
-                                                                         test_predictions={
-                                                                             seq_id: prediction_dict["prediction"]
-                                                                         },
-                                                                         class_int2str=self.class_int2str).values())[0]
-        else:
-            for seq_id, prediction_dict in predictions.items():
-                prediction_dict["prediction"] = list(revert_mappings(protocol=self.protocol,
-                                                                     test_predictions={
-                                                                         seq_id: prediction_dict["prediction"]
-                                                                     },
-                                                                     class_int2str=self.class_int2str).values())[0]
-
-        return predictions
+        if self.protocol in Protocol.classification_protocols():
+            mcd_results = [result.revert_mappings(protocol=self.protocol, class_int2str=self.class_int2str)
+                           for result in mcd_results]
+        return mcd_results
 
     @staticmethod
     def from_onnx_with_embeddings(model_path: str, embeddings: Union[Iterable, Dict],

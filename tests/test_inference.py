@@ -211,107 +211,121 @@ class InferencerTests(unittest.TestCase):
 
     def test_from_embeddings_with_dropout(self):
         # Test with different parameters
-        r2c_dict = self.inferencer_r2c.from_embeddings_with_monte_carlo_dropout(
+        r2c_list = self.inferencer_r2c.from_embeddings_with_monte_carlo_dropout(
             self.per_residue_embeddings,
             n_forward_passes=10,
             confidence_level=0.05,
             seed=42
         )
-        r2v_dict = self.inferencer_r2v.from_embeddings_with_monte_carlo_dropout(
+        r2v_list = self.inferencer_r2v.from_embeddings_with_monte_carlo_dropout(
             self.per_residue_embeddings,
             n_forward_passes=10,
             confidence_level=0.05,
             seed=42
         )
-        rs2c_dict = self.inferencer_rs2c.from_embeddings_with_monte_carlo_dropout(
+        rs2c_list = self.inferencer_rs2c.from_embeddings_with_monte_carlo_dropout(
             self.per_residue_embeddings,
             n_forward_passes=15,
             confidence_level=0.5,
             seed=42
         )
-        s2c_dict = self.inferencer_s2c.from_embeddings_with_monte_carlo_dropout(
+        s2c_list = self.inferencer_s2c.from_embeddings_with_monte_carlo_dropout(
             self.per_sequence_embeddings,
             n_forward_passes=2,
             confidence_level=0.01,
             seed=42
         )
-        s2v_dict = self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
+        s2v_list = self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
             self.per_sequence_embeddings,
             n_forward_passes=10,
             confidence_level=0.05,
             seed=42
         )
-        rs2v_dict = self.inferencer_rs2v.from_embeddings_with_monte_carlo_dropout(
+        rs2v_list = self.inferencer_rs2v.from_embeddings_with_monte_carlo_dropout(
             self.per_residue_embeddings,
             n_forward_passes=10,
             confidence_level=0.05,
             seed=42
         )
 
-        # Basic structure tests
-        self.assertTrue(all([len(r2c_dict[seq]) == len(self._test_sequences[idx])
-                             for idx, seq in enumerate(r2c_dict.keys())]),
+        # Basic structure tests - group residue predictions by seq_id
+        from biotrainer.utilities import BiotrainerResiduePrediction
+        r2c_by_seq = {}
+        for pred in r2c_list:
+            if isinstance(pred, BiotrainerResiduePrediction):
+                if pred.seq_id not in r2c_by_seq:
+                    r2c_by_seq[pred.seq_id] = []
+                r2c_by_seq[pred.seq_id].append(pred)
+
+        self.assertTrue(all([len(r2c_by_seq[seq]) == len(self._test_sequences[idx])
+                             for idx, seq in enumerate(r2c_by_seq.keys())]),
                         msg="Missing predictions for r2c!")
 
-        self.assertTrue(all([len(r2v_dict[seq]) == len(self._test_sequences[idx])
-                             for idx, seq in enumerate(r2v_dict.keys())]),
+        r2v_by_seq = {}
+        for pred in r2v_list:
+            if isinstance(pred, BiotrainerResiduePrediction):
+                if pred.seq_id not in r2v_by_seq:
+                    r2v_by_seq[pred.seq_id] = []
+                r2v_by_seq[pred.seq_id].append(pred)
+
+        self.assertTrue(all([len(r2v_by_seq[seq]) == len(self._test_sequences[idx])
+                             for idx, seq in enumerate(r2v_by_seq.keys())]),
                         msg="Missing predictions for r2v!")
 
-        # Check required keys exist
-        required_keys = ["prediction", "all_predictions", "mcd_mean",
-                         "mcd_lower_bound", "mcd_upper_bound"]
-
-        for dict_to_check in [rs2c_dict, s2c_dict, s2v_dict, rs2v_dict]:
-            for key in required_keys:
-                self.assertTrue(key in list(dict_to_check.values())[0].keys(),
-                                f"Missing {key} in predictions!")
+        # Check required attributes exist
+        for pred_list in [rs2c_list, s2c_list, s2v_list, rs2v_list]:
+            for pred in pred_list:
+                self.assertIsNotNone(pred.prediction, "Missing prediction!")
+                self.assertIsNotNone(pred.mcd_predictions, "Missing mcd_predictions!")
+                self.assertIsNotNone(pred.mcd_mean, "Missing mcd_mean!")
+                self.assertIsNotNone(pred.mcd_lower_bound, "Missing mcd_lower_bound!")
+                self.assertIsNotNone(pred.mcd_upper_bound, "Missing mcd_upper_bound!")
 
         # Check confidence bounds
-        for dict_to_check in [rs2c_dict, s2c_dict, s2v_dict, rs2v_dict]:
-            for pred in dict_to_check.values():
-                self.assertTrue(np.all((pred["mcd_lower_bound"] <= pred["mcd_mean"]).numpy()),
+        for pred_list in [rs2c_list, s2c_list, s2v_list, rs2v_list]:
+            for pred in pred_list:
+                self.assertTrue(np.all(np.array(pred.mcd_lower_bound) <= np.array(pred.mcd_mean)),
                                 f"Lower bound greater than mean ({pred})!")
-                self.assertTrue(np.all((pred["mcd_upper_bound"] >= pred["mcd_mean"]).numpy()),
+                self.assertTrue(np.all(np.array(pred.mcd_upper_bound) >= np.array(pred.mcd_mean)),
                                 f"Upper bound less than mean ({pred})!")
 
         # Check number of forward passes
-        self.assertEqual(len(s2c_dict["Seq0"]["all_predictions"]), 2,
+        self.assertEqual(len(s2c_list[0].mcd_predictions), 2,
                          "Incorrect number of forward passes for s2c!")
-        self.assertEqual(len(r2c_dict["Seq0"][0]["all_predictions"]), 10,
+        self.assertEqual(len(r2c_list[0].mcd_predictions), 10,
                          "Incorrect number of forward passes for r2c!")
 
         # Check prediction types
-        self.assertTrue(all([type(s2v_dict[key]["prediction"]) is float for key in s2v_dict.keys()]),
+        self.assertTrue(all([type(pred.prediction) is float for pred in s2v_list]),
                         msg="Regression prediction is not float!")
-        self.assertTrue(all([type(rs2v_dict[key]["prediction"]) is float for key in rs2v_dict.keys()]),
+        self.assertTrue(all([type(pred.prediction) is float for pred in rs2v_list]),
                         msg="Regression prediction is not float!")
 
         # Test reproducibility with same seed
-        s2v_dict_repeat = self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
+        s2v_list_repeat = self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
             self.per_sequence_embeddings,
             n_forward_passes=10,
             confidence_level=0.05,
             seed=42
         )
-        for key in s2v_dict.keys():
+        for pred, pred_repeat in zip(s2v_list, s2v_list_repeat):
             np.testing.assert_array_almost_equal(
-                s2v_dict[key]["all_predictions"],
-                s2v_dict_repeat[key]["all_predictions"],
+                pred.mcd_predictions,
+                pred_repeat.mcd_predictions,
                 decimal=5,
                 err_msg="MC Dropout not reproducible with same seed!"
             )
 
         # Test different seeds give different results
-        s2v_dict_different_seed = self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
+        s2v_list_different_seed = self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
             self.per_sequence_embeddings,
             n_forward_passes=10,
             confidence_level=0.05,
             seed=24
         )
-        for key in s2v_dict.keys():
+        for pred, pred_diff in zip(s2v_list, s2v_list_different_seed):
             self.assertFalse(
-                np.array_equal(s2v_dict[key]["all_predictions"],
-                               s2v_dict_different_seed[key]["all_predictions"]),
+                np.array_equal(pred.mcd_predictions, pred_diff.mcd_predictions),
                 "Different seeds produce identical results!"
             )
 
@@ -331,7 +345,7 @@ class InferencerTests(unittest.TestCase):
                 confidence_level=0.05,
                 seed=42
             )
-
+    
         with self.assertRaises(Exception):
             self.inferencer_s2v.from_embeddings_with_monte_carlo_dropout(
                 self.per_sequence_embeddings,

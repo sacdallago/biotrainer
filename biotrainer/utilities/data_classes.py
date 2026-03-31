@@ -88,12 +88,11 @@ class BiotrainerSequencePrediction(BaseModel):
             return self
 
         pred = self.prediction
-        mcd_preds = self.mcd_predictions  # No remapping for per-residue at the moment
-        if protocol == Protocol.residue_to_class:
-            pred = [class_int2str[int(p)] for p in pred]
-        elif protocol in Protocol.classification_protocols():
+        mcd_preds = self.mcd_predictions
+        if protocol in Protocol.classification_protocols():
             pred = class_int2str[int(pred)]
             mcd_preds = [class_int2str[int(mcd_pred)] for mcd_pred in mcd_preds]
+
         return BiotrainerSequencePrediction(seq_id=self.seq_id, prediction=pred, mcd_predictions=mcd_preds,
                                             mcd_mean=self.mcd_mean, mcd_std=self.mcd_std,
                                             mcd_lower_bound=self.mcd_lower_bound,
