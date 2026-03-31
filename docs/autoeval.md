@@ -20,14 +20,15 @@ supervised tasks.
 
 Quick description of each task, you can find more information in the [PBC Readme](https://github.com/Rostlab/pbc):
 
+* **conservation**: Predict residue conservation scores for proteins.
+* **disorder**: Predict disorder scores for proteins.
 * **scl**: Predict protein subcellular localization for mixed human and non-human proteins.
 * **secondary_structure**: Predict secondary structure of proteins (includes multiple test sets from CASP and the ProtT5
   paper).
 
 ### FLIP (Supervised)
 
-**WARNING: FLIP datasets are currently still supported but not actively maintained.
-Please refer to the [PBC](https://github.com/Rostlab/pbc) framework instead.**
+**WARNING: FLIP datasets are currently still supported but not actively maintained.**
 
 The `autoeval` module provides a curated subset of datasets in [FLIP](https://github.com/J-SNACKKB/FLIP).
 The tasks have been chosen to be as hard as possible for a prediction model.
@@ -185,10 +186,41 @@ and compared to other reports:
 final_report.compare([other_reports], plot=True)
 ```
 
-### Visualization and Leaderboard
+## Visualization and Leaderboard [BETA]
 
-**BETA**
+You can visualize and compare `autoeval` reports using the [autoeval dashboard](https://autoeval.biocentral.cloud).
 
-You can visualize your results and compare against other embedder
-models using [biocentral](https://app.biocentral.cloud). Simply load the report from file in the pLM Evaluation module.
-A leaderboard for common protein language models is currently in development.
+**Features**:
+- Load one or more `autoeval_report_*.json` files by providing directories (scanned recursively) or uploading files.
+- Leaderboard: simple average rank across tasks per framework (PBC, PGYM).
+- Detailed view: per-task metrics and training/validation loss curves (if present in report results).
+- Compare: side-by-side comparison across multiple reports for supervised and zero-shot metrics.
+
+### API Interaction
+
+To directly upload your report from a script to the dashboard, you can use the following function:
+
+```python
+final_report.compare_with_public_leaderboard()
+```
+If successful, this will return a link to the `autoeval` dashboard that includes your report. Note that your report
+is deleted from the [autoeval_service](https://github.com/biocentral/autoeval_service) after 24h.
+
+If you want to make your results public, you can also publish them on the leaderboard. 
+**Your results will then be permanently and publicly available.**
+
+To do so, you can use the following method:
+```python
+final_report.publish(name="Your Name", email="your.mail@example.com", citation="https://doi.org/VALID-DOI_URL")
+```
+Note that your report is internally checked for validity and compliance with the `autoeval` standards. Only reports
+for models publicly available on huggingface are accepted at the moment. We will use your name and email to credit you 
+for your contribution and to reach out to you in case of any questions.
+
+### Local execution
+To run the dashboard locally:
+
+```bash
+pip install streamlit  # if not already installed
+streamlit run run_autoeval-frontend.py
+```
