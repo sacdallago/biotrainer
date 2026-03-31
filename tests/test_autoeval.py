@@ -15,13 +15,13 @@ class AutoevalTests(unittest.TestCase):
 
             current_progress = None
             for progress in autoeval_pipeline(embedder_name="one_hot_encoding",
-                                              framework="pbc",
+                                              framework="PBC",
                                               output_dir=tmp_dir_name,
                                               min_seq_length=10,
                                               max_seq_length=450,
                                               ):
                 print(progress)
-                self.assertTrue(progress.current_framework_name == "pbc")
+                self.assertTrue(progress.current_framework_name == "PBC")
                 current_progress = progress
 
             self.assertIsNotNone(current_progress)
