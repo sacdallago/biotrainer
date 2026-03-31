@@ -6,7 +6,7 @@ import pandas as pd
 from ruamel import yaml
 from pathlib import Path
 from abc import ABC, abstractmethod
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Dict, Any, Union, Optional, List, Tuple
 
 from .autoeval_plotting import plot_comparison, aggregate_dfs
@@ -204,6 +204,12 @@ class ZeroShotFrameworkReport(BaseModel, FrameworkReport):
                                                                      "(combined_task_name -> RankingResult)")
     individual_results: Dict[str, RankingResult] = Field(description="Individual autoeval task results "
                                                                      "(dataset_name -> RankingResult)")
+
+    @model_validator(mode='after')
+    def check_method(self):
+        if isinstance(self.method, str):
+            self.method = ZeroShotMethod(self.method)
+        return self
 
     @classmethod
     def empty(cls, method: ZeroShotMethod) -> ZeroShotFrameworkReport:
