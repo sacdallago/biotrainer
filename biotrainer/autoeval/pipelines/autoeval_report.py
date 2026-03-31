@@ -101,29 +101,32 @@ class SupervisedFrameworkReport(BaseModel, FrameworkReport):
         """Extract metrics for a given task."""
         framework_to_datasets = {"PBC": PBC_DATASETS, "FLIP": FLIP_DATASETS}
 
-        framework_name, dataset_name, split_name = AutoEvalTask.split_combined_name(combined_task_name)
-        datasets = framework_to_datasets[framework_name.upper()]
-        evaluation_metric = datasets[dataset_name]["evaluation_metric"]
-        protocol = datasets[dataset_name]["protocol"].name
-        test_results = self.results[combined_task_name]["test_results"]
-
         metrics = []
-        for test_set_name, test_set_dict in test_results.items():
-            bootstrapping = test_set_dict["bootstrapping"]["results"]
-            bootstrapping = {b_dict["name"]: b_dict for b_dict in bootstrapping}
-            metric_mean = round(bootstrapping[evaluation_metric]["mean"], 3)
-            metric_lower = round(bootstrapping[evaluation_metric]["lower"], 3)
-            metric_upper = round(bootstrapping[evaluation_metric]["upper"], 3)
+        try:
+            framework_name, dataset_name, split_name = AutoEvalTask.split_combined_name(combined_task_name)
+            datasets = framework_to_datasets[framework_name.upper()]
+            evaluation_metric = datasets[dataset_name]["evaluation_metric"]
+            protocol = datasets[dataset_name]["protocol"].name
+            test_results = self.results[combined_task_name]["test_results"]
 
-            metrics.append({
-                "task_name": combined_task_name,
-                "protocol": protocol,
-                "test_set_name": test_set_name,
-                "evaluation_metric": evaluation_metric,
-                "mean": metric_mean,
-                "lower": metric_lower,
-                "upper": metric_upper
-            })
+            for test_set_name, test_set_dict in test_results.items():
+                bootstrapping = test_set_dict["bootstrapping"]["results"]
+                bootstrapping = {b_dict["name"]: b_dict for b_dict in bootstrapping}
+                metric_mean = round(bootstrapping[evaluation_metric]["mean"], 3)
+                metric_lower = round(bootstrapping[evaluation_metric]["lower"], 3)
+                metric_upper = round(bootstrapping[evaluation_metric]["upper"], 3)
+
+                metrics.append({
+                    "task_name": combined_task_name,
+                    "protocol": protocol,
+                    "test_set_name": test_set_name,
+                    "evaluation_metric": evaluation_metric,
+                    "mean": metric_mean,
+                    "lower": metric_lower,
+                    "upper": metric_upper
+                })
+        except KeyError:
+            print(f"Warning: Task {combined_task_name} not found.")
         return metrics
 
     def to_df(self, framework: Optional[str] = None) -> pd.DataFrame:
