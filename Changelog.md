@@ -1,5 +1,29 @@
 # Biotrainer Changelog
 
+## 31.03.2026 - Version 1.4.0
+
+- **Bioengineer**: Adding new bioengineer module with base class, baselines, and tokenizer refactoring
+- **ProteinGym**: Added support for ProteinGym datasets (SC/NDCG calculation) in BioEngineer
+- **Feature Scaling**: Introduced automatic feature scaling for inference methods and added support for feature scaling
+  in PBC tasks with standard and minmax scaling methods for per-sequence and per-residue embeddings
+- Added new metrics NDCG and balanced/per-class accuracy
+- **AutoEval Enhancements**:
+    - Revamped documentation and added a dashboard for better visualization
+    - Implemented new features such as report publishing, comparison of reports, and enhanced dashboard views
+    - Added frontend support for loss curve visualization with indicators for the best epoch and improved ranking
+      utilities
+    - Fixed adaptation of updated PBC datasets with proper configuration handling
+- **Refactoring and Fixes**:
+    - Adapted inference methods for new prediction types and structures with feature scaling support
+    - Improved early stopping logic with a relative threshold method and updated related configurations
+    - Enhanced tokenizer compatibility with Transformers v5 API
+    - Various fixes, including handling deprecated tasks, improving plotting, and resolving minor bugs in the autoeval
+      pipeline
+- Added new examples, such as `plm_eval_zeroshot`, and improved PBC task handling with updated configuration options
+- Refactored multiple components for better performance, consistency, and readability
+- **Active Learning**: Added Gaussian Processes (AL) support (wip)
+- **Uncertainty Quantification**: Added uncertainty to prediction sets for improved model confidence estimation
+
 ## 13.01.2026 - Version 1.3.0
 
 ## Features
