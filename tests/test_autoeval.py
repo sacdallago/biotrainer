@@ -26,4 +26,4 @@ class AutoevalTests(unittest.TestCase):
 
             self.assertIsNotNone(current_progress)
             self.assertTrue(current_progress.final_report is not None)
-            self.assertTrue(len(current_progress.final_report.results) == current_progress.completed_tasks)
+            self.assertTrue(len(current_progress.final_report.supervised_results) == current_progress.completed_tasks)
