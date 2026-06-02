@@ -340,6 +340,7 @@ class AutoEvalReport(BaseModel):
     training_date: str = Field(description="Date of training")
     supervised_results: Dict[str, SupervisedFrameworkReport] = Field(description="Supervised autoeval results")
     zeroshot_results: Dict[str, ZeroShotFrameworkReport] = Field(description="Zero-Shot autoeval results")
+    # TODO: zeroshot_pairwise_results: 
 
     @staticmethod
     def get_file_name(embedder_name):

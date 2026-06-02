@@ -1,10 +1,11 @@
 import torch
+import numpy as np
 
 from tqdm import tqdm
 from typing import List, Optional
 from abc import ABC, abstractmethod
 
-from .bioengineer_utils import compute_windowed_logits, get_optimal_window, MAX_CONTEXT_LENGTH
+from .bioengineer_utils import compute_windowed_logits, get_optimal_window, MAX_CONTEXT_LENGTH, prepare_cat_jac_mutations, convert_cat_jac_to_contacts
 from .bioengineer_data_classes import VariantScore, Variant, SingleMutationScore, ZeroShotMethod
 
 from ..embedders.interfaces import BiotrainerTokenizerMixin
@@ -25,6 +26,11 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
 
     @abstractmethod
     def _model_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        raise NotImplementedError
+
+    @abstractmethod
+    def _model_batched_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """ Batched forward pass separate from single-sequence forward pass. """
         raise NotImplementedError
 
     @abstractmethod
@@ -65,6 +71,17 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
 
     @abstractmethod
     def _compute_perplexity(self, sequence: str) -> float:
+        raise NotImplementedError
+
+    @abstractmethod
+    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
+        """
+        Compute categorical Jacobian from logits per sequence (L x 20 mutations).
+
+        Returns:
+            torch.Tensor (on CPU): [L, 20, L, 20]
+        """
+
         raise NotImplementedError
 
     def _score_variants_from_marginal_probabilities(self,
@@ -191,6 +208,17 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
             results.append(variant_score)
         return results
 
+    def zero_shot_contact_map(self, sequence: str, batch_size: int = 32) -> np.ndarray:
+        """
+        Derive contact map from categorical Jacobian.
+
+        Returns:
+            np.ndarray: [L, L]
+        """
+        categorical_jacobian = self._compute_categorical_jacobian(sequence, batch_size)
+        contacts = convert_cat_jac_to_contacts(categorical_jacobian.numpy().astype(np.float64))
+        return contacts
+
 
 class BertLikeEngineer(BioEngineerModelWrapper, ABC):
     """ Model wrapper for BERT-like models (e.g. ProtBert, ESM-2)
@@ -212,6 +240,12 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
             logits = output.logits
             logits = logits[0]  # [1, seq_len, vocab_size] -> [seq_len, vocab_size]
         return logits
+
+    def _model_batched_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """Helper to standardize model batched forward pass."""
+        with torch.no_grad():
+            output = self._model(input_ids=input_ids, attention_mask=attention_mask)
+            return output.logits
 
     def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor[1:-1]  # Remove BOS and EOS tokens
@@ -308,6 +342,32 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
     def _compute_perplexity(self, sequence: str) -> float:
         raise NotImplementedError
 
+    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
+        # Get the IDs of the amino acids in order of STANDARD_AAS
+        aa_token_ids = torch.tensor(list(self.aa_to_idx().values()), device=self._device)
+        # Tokenize the sequence
+        # TODO: review any max length constraints...
+        input_ids, attention_mask = self._tokenize([sequence], preprocess=True)
+        # For each position in the sequence, prepare the input with all mutations
+        mutated_inputs, mutated_mask = prepare_cat_jac_mutations(input_ids, attention_mask, aa_token_ids)
+
+        # Get the model's logits without mutations
+        ref_logits = self._model_forward_fn(input_ids, attention_mask)
+        # Remove the special tokens and keep only the logits for amino acids
+        ref_logits = ref_logits[1:-1, aa_token_ids].cpu()
+        # Compute the logits for all mutations
+        mutated_logits = []
+        for batch_ids, batch_mask in zip(torch.split(mutated_inputs, batch_size), torch.split(mutated_mask, batch_size)):
+            mut_logits = self._model_batched_forward_fn(batch_ids, batch_mask)
+            mutated_logits.append(mut_logits[:, 1:-1, aa_token_ids].cpu())
+        L = len(sequence)
+        # [L*20, L, 20] -> [L, 20, L, 20] in order of aa_token_ids/STANDARD_AAS
+        mutated_logits = torch.cat(mutated_logits, dim=0).reshape(L, 20, L, 20)
+
+        # Compute the jacobian
+        jac = mutated_logits - ref_logits
+        return jac
+
 
 class GPTLikeEngineer(BioEngineerModelWrapper, ABC):
     def supported_methods(self) -> List[ZeroShotMethod]:
@@ -321,6 +381,12 @@ class GPTLikeEngineer(BioEngineerModelWrapper, ABC):
 
     def _compute_pseudoperplexity(self, sequence: str) -> float:
         raise NotImplementedError("Pseudo-ppl is for masked LMs; use perplexity for causal LMs")
+
+    def _model_batched_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        raise NotImplementedError("Batched forward pass is not defined for causal LMs")
+
+    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
+        raise NotImplementedError("Categorical Jacobian is not defined for causal LMs")
 
     def _model_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         with torch.no_grad():

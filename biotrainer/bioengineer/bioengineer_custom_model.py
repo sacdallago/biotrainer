@@ -66,6 +66,9 @@ class CustomBioEngineerModelWrapper(BertLikeEngineer, GPTLikeEngineer):
     def _model_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         return self._custom_bioengineer.run_model(input_ids, attention_mask)
 
+    def _model_batched_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        return self._custom_bioengineer.run_model(input_ids, attention_mask)
+
     def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
         return self._custom_bioengineer.strip_special_tokens(tensor)
 

@@ -264,3 +264,13 @@ class RankingResult(BaseModel):
 
     def __str__(self) -> str:
         return f"Ranking result - SCC: {self.scc_score()}, NDCG: {self.ndcg_score()}"
+
+
+# ============================================================================
+# Zero-shot pairwise methods
+# ============================================================================
+
+
+class ZeroShotPairwiseMethod(Enum):
+    JACOBIAN_CONTACT = "JACOBIAN_CONTACT" # Categorical Jacobian based Contact Map prediction
+    

@@ -71,3 +71,7 @@ runs/
 
 # large files
 *.h5
+
+# local files
+.venv/
+rough_work/

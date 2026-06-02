@@ -1,7 +1,10 @@
 import math
 import torch
+import numpy as np
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
+
+from ..utilities import STANDARD_AAS
 # ============================================================================
 # Scoring Window Calculation and Constants (from ProteinGym) - WT-Marginals
 # Adapted from ProteinGym Source: https://github.com/OATML-Markslab/ProteinGym/blob/37ea726885452197125f841a33320341d665bc3f/proteingym/baselines/esm/compute_fitness.py#L433
@@ -234,3 +237,62 @@ def get_optimal_window(
     end = min(seq_len_with_special, end)
 
     return start, end
+
+
+def prepare_cat_jac_mutations(
+    orig_ids: torch.Tensor,
+    orig_mask: torch.Tensor,
+    aa_token_ids: torch.Tensor,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Generate L x 20 mutations per sequence in token space.
+
+    Args:
+        orig_ids:      [1, L+2] tokenized original sequence (+2 because BOS/EOS expected!)
+        orig_mask:     [1, L+2] attention mask
+        aa_token_ids:  [20] token IDs in order of STANDARD_AAS
+
+    Returns:
+        Tuple of (input_ids, attention_mask): each [L*20, L+2]
+    """
+    L = orig_ids.shape[1] - 2  # subtract BOS and EOS
+    all_ids  = torch.tile(orig_ids,  (L * 20, 1))
+    #TODO: review - drop the mask since no padding in any case?
+    all_mask = torch.tile(orig_mask, (L * 20, 1))
+    for n in range(L):
+        all_ids[n*20:(n+1)*20, n+1] = aa_token_ids  # n+1 to skip BOS; order of aa_token_ids matters!
+    return all_ids, all_mask
+
+
+def convert_cat_jac_to_contacts(jac: np.ndarray) -> np.ndarray:
+    """
+    Convert categorical Jacobian to contact map.
+    Reference 1: https://github.com/chandar-lab/AMPLIFY/blob/main/examples/contact_prediction.ipynb 
+    Reference 2: https://github.com/zzhangzzhang/pLMs-interpretability/tree/main 
+
+    Returns:
+        np.ndarray: [L, L]
+    """
+    # Symmetrize the jacobian
+    # NOTE: symmetrize before converting to contacts as per Reference 1, but Reference 2 converts to contacts before symmetrizing.
+    jac = (jac + jac.transpose(2, 3, 0, 1)) / 2
+
+    # Center the jacobian
+    for i in range(4):
+        jac -= jac.mean(i, keepdims=True)
+
+    # Collapse (L, 20, L, 20) -> (L, L)
+    contacts = np.sqrt(np.square(jac).sum((1, 3)))
+
+    # Remove diagonal (contacts with itself)
+    np.fill_diagonal(contacts, 0)
+
+    # APC
+    a1 = contacts.sum(0, keepdims=True)
+    a2 = contacts.sum(1, keepdims=True)
+    contacts = contacts - (a1 * a2) / contacts.sum()
+
+    # Remove diagonal (contacts with itself)
+    np.fill_diagonal(contacts, 0)
+
+    return contacts
