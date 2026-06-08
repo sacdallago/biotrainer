@@ -15,6 +15,7 @@ class ZeroShotMethod(Enum):
     MASKED_MARGINALS = "MASKED_MARGINALS"
     PSEUDOPERPLEXITY = "PSEUDOPERPLEXITY"
     PERPLEXITY = "PERPLEXITY"
+    JACOBIAN_CONTACT = "JACOBIAN_CONTACT"
 
 
 class Mutation(BaseModel):
@@ -266,11 +267,21 @@ class RankingResult(BaseModel):
         return f"Ranking result - SCC: {self.scc_score()}, NDCG: {self.ndcg_score()}"
 
 
-# ============================================================================
-# Zero-shot pairwise methods
-# ============================================================================
+# # ============================================================================
+# # Zero-shot pairwise methods
+# # ============================================================================
 
 
-class ZeroShotPairwiseMethod(Enum):
-    JACOBIAN_CONTACT = "JACOBIAN_CONTACT" # Categorical Jacobian based Contact Map prediction
-    
+# class ZeroShotPairwiseMethod(Enum): #TODO: implement this or remove this block as needed!
+#     JACOBIAN_CONTACT = "JACOBIAN_CONTACT" # Categorical Jacobian based Contact Map prediction
+
+
+# ============================================================================
+# Zero-shot contact task and results
+# ============================================================================
+
+class ZeroShotContactTask(BaseModel):
+    pass
+
+class ZeroShotContactResult(BaseModel):
+    pass

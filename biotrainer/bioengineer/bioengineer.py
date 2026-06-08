@@ -237,3 +237,14 @@ class BioEngineer:
         assert scc is not None and ndcg is not None, "Bootstrapping failed!"
 
         return RankingResult(scc=scc, ndcg=ndcg)
+
+    # ============================================================================
+    # Zero-shot contact task and results
+    # ============================================================================
+
+    def zero_shot_contact_map(self, sequence: str) -> np.ndarray:
+        """
+        Score mutations using the contact map strategy.
+        The model predicts the contact map for the sequence.
+        """
+        return self.model_wrapper.zero_shot_contact_map(sequence)

@@ -84,7 +84,7 @@ class RandomEngineerBaseline(BioEngineerModelWrapper):
 
     def supported_methods(self) -> List[ZeroShotMethod]:
         return [ZeroShotMethod.WT_MARGINALS, ZeroShotMethod.MASKED_MARGINALS,
-                ZeroShotMethod.PSEUDOPERPLEXITY, ZeroShotMethod.PERPLEXITY]
+                ZeroShotMethod.PSEUDOPERPLEXITY, ZeroShotMethod.PERPLEXITY, ZeroShotMethod.JACOBIAN_CONTACT]
 
     def _model_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         raise NotImplementedError  # Not necessary for baseline
@@ -153,5 +153,5 @@ class RandomEngineerBaseline(BioEngineerModelWrapper):
 
 
 class LocalContactBaseline(BioEngineerModelWrapper):
-    # TODO: baseline for contact prediction based on local context
+    # TODO: baseline for contact prediction based on local context; add to available_basleines in bioengineer.py
     pass

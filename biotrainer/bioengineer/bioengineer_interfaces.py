@@ -5,7 +5,7 @@ from tqdm import tqdm
 from typing import List, Optional
 from abc import ABC, abstractmethod
 
-from .bioengineer_utils import compute_windowed_logits, get_optimal_window, MAX_CONTEXT_LENGTH, prepare_cat_jac_mutations, convert_cat_jac_to_contacts
+from .bioengineer_utils import compute_windowed_logits, get_optimal_window, MAX_CONTEXT_LENGTH, prepare_cat_jac_mutations, convert_cat_jac_to_contact_map
 from .bioengineer_data_classes import VariantScore, Variant, SingleMutationScore, ZeroShotMethod
 
 from ..embedders.interfaces import BiotrainerTokenizerMixin
@@ -216,8 +216,8 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
             np.ndarray: [L, L]
         """
         categorical_jacobian = self._compute_categorical_jacobian(sequence, batch_size)
-        contacts = convert_cat_jac_to_contacts(categorical_jacobian.numpy().astype(np.float64))
-        return contacts
+        contact_map = convert_cat_jac_to_contact_map(categorical_jacobian.numpy().astype(np.float64))
+        return contact_map
 
 
 class BertLikeEngineer(BioEngineerModelWrapper, ABC):
@@ -228,7 +228,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
     """
 
     def supported_methods(self) -> List[ZeroShotMethod]:
-        return [ZeroShotMethod.WT_MARGINALS, ZeroShotMethod.MASKED_MARGINALS, ZeroShotMethod.PSEUDOPERPLEXITY]
+        return [ZeroShotMethod.WT_MARGINALS, ZeroShotMethod.MASKED_MARGINALS, ZeroShotMethod.PSEUDOPERPLEXITY, ZeroShotMethod.JACOBIAN_CONTACT]
 
     def _model_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Helper to standardize model forward pass."""

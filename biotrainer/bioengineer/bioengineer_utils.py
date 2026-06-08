@@ -264,7 +264,7 @@ def prepare_cat_jac_mutations(
     return all_ids, all_mask
 
 
-def convert_cat_jac_to_contacts(jac: np.ndarray) -> np.ndarray:
+def convert_cat_jac_to_contact_map(jac: np.ndarray) -> np.ndarray:
     """
     Convert categorical Jacobian to contact map.
     Reference 1: https://github.com/chandar-lab/AMPLIFY/blob/main/examples/contact_prediction.ipynb 
