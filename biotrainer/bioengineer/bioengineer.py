@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import torch
 import pandas as pd
+import numpy as np
 
 from pathlib import Path
 from typing import List, Optional, Dict, Union, Tuple
@@ -10,10 +11,12 @@ from .bioengineer_interfaces import BioEngineerModelWrapper
 from .bioengineer_models import ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer
 from .bioengineer_custom_model import CustomBioEngineerModel, CustomBioEngineerModelWrapper
 from .bioengineer_baselines import BioEngineerBaseline, ConstantEngineerBaseline, RandomEngineerBaseline
-from .bioengineer_data_classes import VariantScore, ZeroShotMethod, Variant, RankingResult
+from .bioengineer_data_classes import VariantScore, ZeroShotMethod, Variant, RankingResult, ZeroShotContactSingleProtein, ZeroShotContactDatasetResult
+from .bioengineer_metrics import evaluate_contact_map
 
 from ..utilities import get_device
 from ..inference import Inferencer
+from ..input_files import read_FASTA
 from ..solvers.metrics_calculator import SequenceRegressionMetricsCalculator
 
 
@@ -239,12 +242,84 @@ class BioEngineer:
         return RankingResult(scc=scc, ndcg=ndcg)
 
     # ============================================================================
-    # Zero-shot contact task and results
+    # Zero-shot contact task entry point
     # ============================================================================
 
-    def zero_shot_contact_map(self, sequence: str) -> np.ndarray:
+    def zero_shot_contact_map(self, sequence: str, batch_size: int = 32) -> np.ndarray:
         """
-        Score mutations using the contact map strategy.
-        The model predicts the contact map for the sequence.
+        Derive contact map from categorical Jacobian.
+
+        Returns:
+            np.ndarray: [L, L]
         """
-        return self.model_wrapper.zero_shot_contact_map(sequence)
+        return self.model_wrapper.zero_shot_contact_map(sequence, batch_size)
+
+    def run_contact_dataset(self,
+                          dataset_dir_path: Union[str, Path],
+                          method: ZeroShotMethod) -> Tuple[List[ZeroShotContactSingleProtein], ZeroShotContactDatasetResult]:
+        """
+        Given a dataset, computes and evaluates contact maps for all proteins in the dataset, using the categorical jacobian based zero-shot method. 
+        This function loads the dataset, including the ground truth contact map per protein, and evaluates the predicted contact map per protein.
+        The results (precision scores for topk predicted contacts) are aggregated over the dataset.
+
+        Args:
+            dataset_dir_path: Path to the directory containing the fasta file and all ground truth contact maps.
+                              The fasta file should be named dataset_dir_path/<dataset_name>.fasta 
+                              The ground truth contact map per protine should be named dataset_dir_path/ground_truth/<protein_ID>_contacts.npy
+            method: Zero-shot prediction method to be used for computing contact maps (JACOBIAN_CONTACT).
+
+        Returns:
+            Tuple[List[ZeroShotContactSingleProtein], ZeroShotContactDatasetResult]: List of per protein results and aggregated dataset result.
+
+        Raises:
+            ValueError: If the specified method is not supported by the wrapped model; or if the dataset files are empty or missing.
+        """
+        if method not in self.model_wrapper.supported_methods():
+            raise ValueError(f"Method {method} not supported by this model!")
+
+        if isinstance(dataset_dir_path, str):
+            dataset_dir_path = Path(dataset_dir_path)
+
+        if not dataset_dir_path.exists():
+            raise ValueError(f"Dataset directory {dataset_dir_path} does not exist!")
+        dataset_name = dataset_dir_path.name
+        fasta_file_path = dataset_dir_path / f"{dataset_name}.fasta"
+        ground_truth_dir_path = dataset_dir_path / "ground_truth"
+        if not fasta_file_path.exists() or not ground_truth_dir_path.exists():
+            raise ValueError(f"Fasta file {fasta_file_path} or ground truth directory {ground_truth_dir_path} does not exist!")
+
+        # Read fasta file
+        seq_records = read_FASTA(fasta_file_path)
+        if len(seq_records) == 0:
+            raise ValueError(f"Fasta file {fasta_file_path} is empty!")
+
+        per_protein_results: List[ZeroShotContactSingleProtein] = [] 
+        for record in seq_records:
+            seq_id = record.seq_id
+            sequence = record.seq
+
+            ground_truth_contact_map_path = ground_truth_dir_path / f"{seq_id}_contacts.npy"
+            if not ground_truth_contact_map_path.exists():
+                raise ValueError(f"Ground truth contact map {ground_truth_contact_map_path} does not exist!")
+            ground_truth_contact_map = np.load(ground_truth_contact_map_path)
+            if ground_truth_contact_map.size == 0:
+                raise ValueError(f"Empty ground truth contact map for {seq_id}")
+            if ground_truth_contact_map.shape != (len(sequence), len(sequence)):
+                raise ValueError(f"Shape mismatch for {seq_id}: expected ({len(sequence)}, {len(sequence)}), got {ground_truth_contact_map.shape}")
+
+            predicted_contact_map = None
+            match method:
+                case ZeroShotMethod.JACOBIAN_CONTACT:
+                    predicted_contact_map = self.zero_shot_contact_map(sequence) #TODO: let user specify batch size; for now, default=32!
+            assert predicted_contact_map is not None, "Zero-shot method returned no contact map!"
+
+            precision_scores = evaluate_contact_map(predicted_contact_map, ground_truth_contact_map)
+            single_protein_result = ZeroShotContactSingleProtein(protein_name=seq_id, precision_scores=precision_scores)
+            per_protein_results.append(single_protein_result)
+        assert len(per_protein_results) > 0, "Empty per-protein results!"
+
+        # Aggregate results
+        print(f"Aggregating results for {dataset_name}...")
+        dataset_result = ZeroShotContactDatasetResult.aggregate_results(dataset_name=dataset_name, per_protein_results=per_protein_results)
+        print(f"Result for {dataset_name}: {dataset_result}")
+        return per_protein_results, dataset_result

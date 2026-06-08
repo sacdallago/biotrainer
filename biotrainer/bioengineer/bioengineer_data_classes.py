@@ -4,7 +4,7 @@ import math
 import numpy as np
 
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pydantic import BaseModel, Field, field_validator, computed_field, SerializeAsAny
 
 from ..utilities import MetricEstimate
@@ -267,21 +267,37 @@ class RankingResult(BaseModel):
         return f"Ranking result - SCC: {self.scc_score()}, NDCG: {self.ndcg_score()}"
 
 
-# # ============================================================================
-# # Zero-shot pairwise methods
-# # ============================================================================
-
-
-# class ZeroShotPairwiseMethod(Enum): #TODO: implement this or remove this block as needed!
-#     JACOBIAN_CONTACT = "JACOBIAN_CONTACT" # Categorical Jacobian based Contact Map prediction
-
-
 # ============================================================================
-# Zero-shot contact task and results
+# Zero-shot contact results
 # ============================================================================
 
-class ZeroShotContactTask(BaseModel):
-    pass
+# required for bootstrapping and potentially also for caching and resuming from mid-dataset!
+class ZeroShotContactSingleProtein(BaseModel):  
+    protein_name: str = Field(description="Name of the protein")
+    # TODO: protein sequence, predicted contacts and ground truth not stored to reduce memory usage; add if needed!
+    # protein_sequence: str = Field(description="Protein sequence")
+    # predicted_contact_map: np.ndarray = Field(description="Predicted contact map")
+    # ground_truth_contact_map: np.ndarray = Field(description="Ground truth contact map")
+    precision_scores: Dict[str, float] = Field(description="Precision scores for the protein's predicted contacts")
+    
 
-class ZeroShotContactResult(BaseModel):
-    pass
+class ZeroShotContactDatasetResult(BaseModel):
+    dataset_name: str = Field(description="Name of the dataset")
+    aggregated_result: Dict[str, float] = Field(description="Aggregated precision scores for the dataset")
+
+    def __str__(self) -> str:
+        scores = ", ".join(f"{k}: {v:.3f}" for k, v in self.aggregated_result.items())
+        if not scores:
+            return f"Dataset result [{self.dataset_name}] - No scores available"
+        return f"Dataset result [{self.dataset_name}] - {scores}"
+
+    @classmethod
+    def aggregate_results(cls, dataset_name: str, per_protein_results: List[ZeroShotContactSingleProtein]) -> ZeroShotContactDatasetResult:
+        """
+        Aggregate precision scores for the dataset.
+        TODO: add bootstrapping facility!
+        """
+        aggregated = {}
+        if len(per_protein_results) > 0:
+            aggregated = {metric: float(np.mean([p.precision_scores[metric] for p in per_protein_results])) for metric in per_protein_results[0].precision_scores.keys()}
+        return cls(dataset_name=dataset_name, aggregated_result=aggregated)
