@@ -44,3 +44,36 @@ class BioEngineerTests(unittest.TestCase):
             self.assertTrue(len(mut_seq) == len(wt_sequence))
 
 
+class BioEngineerContactTests(unittest.TestCase):
+
+    def test_baselines(self):
+        """ Test BioEngineer contact prediction with test dataset on applicable baselines"""
+        # extract test_dataset.tar.gz to this location before running tests!
+        dataset_path = "test_input_files/contact/test_dataset"
+        method = ZeroShotMethod.JACOBIAN_CONTACT
+        for baseline in BioEngineerBaseline:
+            bio_engineer = BioEngineer.from_baseline(baseline=baseline)
+            self.assertIsNotNone(bio_engineer.model_wrapper, f"Model wrapper for baseline {baseline} is None!")
+            if method not in bio_engineer.model_wrapper.supported_methods():
+                continue
+            results, aggregated_result = bio_engineer.run_contact_dataset(dataset_dir_path=dataset_path, method=method)
+            self.assertNotEqual(results, None)
+            self.assertNotEqual(aggregated_result, None)
+            # TODO: add additional assertions / tests!
+
+    def test_ESM2_8M_UR50D(self):
+        """ Test BioEngineer contact prediction with test dataset on ESM2_8M_UR50D"""
+        # extract test_dataset.tar.gz to this location before running tests!
+        dataset_path = "test_input_files/contact/test_dataset"
+        method = ZeroShotMethod.JACOBIAN_CONTACT
+        bio_engineer = BioEngineer.from_name(name="facebook/esm2_t6_8M_UR50D")
+        self.assertTrue(bio_engineer.model_wrapper is not None, f"Model wrapper for ESM2_8M_UR50D is None!")
+        self.assertTrue(method in bio_engineer.model_wrapper.supported_methods(), f"Method {method} not supported by ESM2_8M_UR50D!")
+        results, aggregated_result = bio_engineer.run_contact_dataset(dataset_dir_path=dataset_path, method=method)
+        self.assertNotEqual(results, None)
+        self.assertNotEqual(aggregated_result, None)
+        # TODO: add additional assertions / tests!
+
+    # TODO: add other testcases!
+
+
