@@ -278,7 +278,7 @@ class ZeroShotContactSingleProtein(BaseModel):
     # protein_sequence: str = Field(description="Protein sequence")
     # predicted_contact_map: np.ndarray = Field(description="Predicted contact map")
     # ground_truth_contact_map: np.ndarray = Field(description="Ground truth contact map")
-    precision_scores: Dict[str, float] = Field(description="Precision scores for the protein's predicted contacts")
+    precision_scores: Dict[str, float] = Field(description="Precision scores for the protein's predicted contacts") #e.g. {"short_P@L2": 0.83, "short_P@L5": 0.78, "long_P@L2": 0.81, "long_P@L5": 0.76}
     
 
 class ZeroShotContactDatasetResult(BaseModel):

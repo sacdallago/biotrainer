@@ -14,7 +14,7 @@ from .bioengineer_baselines import BioEngineerBaseline, ConstantEngineerBaseline
 from .bioengineer_data_classes import VariantScore, ZeroShotMethod, Variant, RankingResult, ZeroShotContactSingleProtein, ZeroShotContactDatasetResult
 from .bioengineer_metrics import evaluate_contact_map
 
-from ..utilities import get_device
+from ..utilities import get_device, is_device_cuda
 from ..inference import Inferencer
 from ..input_files import read_FASTA
 from ..solvers.metrics_calculator import SequenceRegressionMetricsCalculator
@@ -255,17 +255,20 @@ class BioEngineer:
         return self.model_wrapper.zero_shot_contact_map(sequence, batch_size)
 
     def run_contact_dataset(self,
-                          dataset_dir_path: Union[str, Path],
+                          dataset_name: str,
+                          fasta_file_path: Union[str, Path],
+                          contacts_dir_path: Union[str, Path],
                           method: ZeroShotMethod) -> Tuple[List[ZeroShotContactSingleProtein], ZeroShotContactDatasetResult]:
         """
         Given a dataset, computes and evaluates contact maps for all proteins in the dataset, using the categorical jacobian based zero-shot method. 
-        This function loads the dataset, including the ground truth contact map per protein, and evaluates the predicted contact map per protein.
+        This function loads the dataset, including the ground truth contact maps, and evaluates the predicted contact map per protein.
         The results (precision scores for topk predicted contacts) are aggregated over the dataset.
 
         Args:
-            dataset_dir_path: Path to the directory containing the fasta file and all ground truth contact maps.
-                              The fasta file should be named dataset_dir_path/<dataset_name>.fasta 
-                              The ground truth contact map per protine should be named dataset_dir_path/ground_truth/<protein_ID>_contacts.npy
+            dataset_name: Name of the dataset.
+            fasta_file_path: Path to the fasta file containing the protein sequences.
+            contacts_dir_path: Path to the directory containing the ground truth contact maps.
+                               (expected naming format per protein: <protein_ID>.npy)
             method: Zero-shot prediction method to be used for computing contact maps (JACOBIAN_CONTACT).
 
         Returns:
@@ -277,16 +280,17 @@ class BioEngineer:
         if method not in self.model_wrapper.supported_methods():
             raise ValueError(f"Method {method} not supported by this model!")
 
-        if isinstance(dataset_dir_path, str):
-            dataset_dir_path = Path(dataset_dir_path)
+        if isinstance(fasta_file_path, str):
+            fasta_file_path = Path(fasta_file_path)
 
-        if not dataset_dir_path.exists():
-            raise ValueError(f"Dataset directory {dataset_dir_path} does not exist!")
-        dataset_name = dataset_dir_path.name
-        fasta_file_path = dataset_dir_path / f"{dataset_name}.fasta"
-        ground_truth_dir_path = dataset_dir_path / "ground_truth"
-        if not fasta_file_path.exists() or not ground_truth_dir_path.exists():
-            raise ValueError(f"Fasta file {fasta_file_path} or ground truth directory {ground_truth_dir_path} does not exist!")
+        if not fasta_file_path.exists():
+            raise ValueError(f"Fasta file {fasta_file_path} does not exist!")
+
+        if isinstance(contacts_dir_path, str):
+            contacts_dir_path = Path(contacts_dir_path)
+
+        if not contacts_dir_path.exists():
+            raise ValueError(f"Contacts directory {contacts_dir_path} does not exist!")
 
         # Read fasta file
         seq_records = read_FASTA(fasta_file_path)
@@ -298,12 +302,12 @@ class BioEngineer:
             seq_id = record.seq_id
             sequence = record.seq
 
-            ground_truth_contact_map_path = ground_truth_dir_path / f"{seq_id}_contacts.npy"
+            ground_truth_contact_map_path = contacts_dir_path / f"{seq_id}.npy"
             if not ground_truth_contact_map_path.exists():
-                raise ValueError(f"Ground truth contact map {ground_truth_contact_map_path} does not exist!")
+                raise ValueError(f"Contact map {ground_truth_contact_map_path} does not exist!")
             ground_truth_contact_map = np.load(ground_truth_contact_map_path)
             if ground_truth_contact_map.size == 0:
-                raise ValueError(f"Empty ground truth contact map for {seq_id}")
+                raise ValueError(f"Empty contact map for {seq_id}")
             if ground_truth_contact_map.shape != (len(sequence), len(sequence)):
                 raise ValueError(f"Shape mismatch for {seq_id}: expected ({len(sequence)}, {len(sequence)}), got {ground_truth_contact_map.shape}")
 
@@ -316,6 +320,10 @@ class BioEngineer:
             precision_scores = evaluate_contact_map(predicted_contact_map, ground_truth_contact_map)
             single_protein_result = ZeroShotContactSingleProtein(protein_name=seq_id, precision_scores=precision_scores)
             per_protein_results.append(single_protein_result)
+            # TODO: review if explicit freeing up required or not in between proteins
+            # if is_device_cuda(self.model_wrapper._device):
+            #     torch.cuda.empty_cache()
+
         assert len(per_protein_results) > 0, "Empty per-protein results!"
 
         # Aggregate results
