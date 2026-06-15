@@ -68,7 +68,7 @@ class BioEngineerContactTests(unittest.TestCase):
             self.assertIsNotNone(aggregated_result)
             # TODO: add additional assertions / tests!
 
-    #@pytest.mark.skip(reason="Large test that should only be executed on demand")
+    @unittest.skip(reason="Large test that should only be executed on demand")
     def test_ESM2_8M_UR50D(self):
         """ Test BioEngineer contact prediction with test dataset on ESM2_8M_UR50D"""
         dataset_name = "test_dataset"

@@ -68,6 +68,8 @@ class CustomBioEngineerModelWrapper(BertLikeEngineer, GPTLikeEngineer):
 
     def _model_batched_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         return self._custom_bioengineer.run_model(input_ids, attention_mask)
+        # TODO: as of now burden is on the user to implement run_model as required by the method (single sequence or batched, logits or loss etc.)
+        #       cleanest fix would be to have only _model_forward_fn which handles batches by default, and index [0] to be extracted by the consumer (e.g. _get_log_probabilities)
 
     def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
         return self._custom_bioengineer.strip_special_tokens(tensor)
