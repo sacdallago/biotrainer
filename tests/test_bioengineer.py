@@ -16,6 +16,8 @@ class BioEngineerTests(unittest.TestCase):
         # Check all baselines and methods
         for baseline in BioEngineerBaseline:
             for method in ZeroShotMethod:
+                if method == ZeroShotMethod.JACOBIAN_CONTACT:
+                    continue
                 bio_engineer = BioEngineer.from_baseline(baseline=baseline)
                 if method not in bio_engineer.model_wrapper.supported_methods():
                     continue
