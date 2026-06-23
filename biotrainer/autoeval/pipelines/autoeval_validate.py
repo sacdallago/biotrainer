@@ -5,7 +5,7 @@ from ..autoeval_frameworks import framework_factory
 
 from ...bioengineer import ZeroShotMethod
 
-
+#TODO: review validation for contact frameworks!
 def validate_input(framework,
                    zero_shot_method: Optional[ZeroShotMethod],
                    min_seq_length: Optional[int],

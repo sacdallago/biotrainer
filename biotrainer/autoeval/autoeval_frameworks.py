@@ -4,6 +4,7 @@ from typing import Optional, Union
 from .pbc import PBCFramework
 from .flip import FLIPFramework
 from .pgym import PGYMFramework
+from .contact import ZeroShotContactFramework
 from .core import AutoEvalFramework
 
 
@@ -11,11 +12,13 @@ class AvailableFramework(Enum):
     FLIP = "FLIP"
     PBC = "PBC"
     PGYM = "PGYM"
+    ZEROSHOT_CONTACT = "ZEROSHOT_CONTACT"
 
 
 available_frameworks = {AvailableFramework.FLIP: FLIPFramework(),
                         AvailableFramework.PBC: PBCFramework(),
-                        AvailableFramework.PGYM: PGYMFramework()
+                        AvailableFramework.PGYM: PGYMFramework(),
+                        AvailableFramework.ZEROSHOT_CONTACT: ZeroShotContactFramework()
                         }
 
 

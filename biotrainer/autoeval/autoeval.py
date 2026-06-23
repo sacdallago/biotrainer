@@ -6,7 +6,7 @@ from typing import Optional, Callable, Tuple, List, Union, Iterable, Generator
 
 from .core import AutoEvalFramework, AutoEvalMode
 from .pipelines import (AutoEvalReport, setup_output_dir, validate_input, autoeval_supervised_pipeline,
-                        autoeval_zeroshot_pipeline, AutoEvalProgress)
+                        autoeval_zeroshot_pipeline, autoeval_zeroshot_contact_pipeline, AutoEvalProgress)
 from .autoeval_frameworks import AvailableFramework
 
 from ..trainers import Pipeline
@@ -123,12 +123,23 @@ def autoeval_pipeline(embedder_name: str,
                                                     custom_output_observers=custom_output_observers,
                                                     device=device)
         case AutoEvalMode.ZERO_SHOT:
-            yield from autoeval_zeroshot_pipeline(embedder_name=embedder_name,
-                                                  framework=framework_obj,
-                                                  method=zero_shot_method,
-                                                  autoeval_report=autoeval_report,
-                                                  output_dir=output_dir,
-                                                  force_download=force_download,
-                                                  custom_storage_path=custom_storage_path,
-                                                  custom_bioengineer=custom_bioengineer,
-                                                  device=device)
+            if zero_shot_method == ZeroShotMethod.JACOBIAN_CONTACT:
+                yield from autoeval_zeroshot_contact_pipeline(embedder_name=embedder_name,
+                                                              framework=framework_obj,
+                                                              method=zero_shot_method,
+                                                              autoeval_report=autoeval_report,
+                                                              output_dir=output_dir,
+                                                              force_download=force_download,
+                                                              custom_storage_path=custom_storage_path,
+                                                              custom_bioengineer=custom_bioengineer,
+                                                              device=device)
+            else:
+                yield from autoeval_zeroshot_pipeline(embedder_name=embedder_name,
+                                                    framework=framework_obj,
+                                                    method=zero_shot_method,
+                                                    autoeval_report=autoeval_report,
+                                                    output_dir=output_dir,
+                                                    force_download=force_download,
+                                                    custom_storage_path=custom_storage_path,
+                                                    custom_bioengineer=custom_bioengineer,
+                                                    device=device)

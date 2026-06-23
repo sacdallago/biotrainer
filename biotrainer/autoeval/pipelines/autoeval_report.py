@@ -16,7 +16,7 @@ from ..pbc.pbc_datasets import PBC_DATASETS
 from ..flip.flip_datasets import FLIP_DATASETS
 from ..client.autoeval_service_client import AutoEvalServiceClient
 
-from ...bioengineer import ZeroShotMethod, RankingResult
+from ...bioengineer import ZeroShotMethod, RankingResult, ZeroShotContactSingleProtein, ZeroShotContactDatasetResult
 
 
 def _maybe_metric_abs(metric_name: str, mean: float, lower: float, upper: float) -> Tuple[float, float, float]:
@@ -335,12 +335,21 @@ class ZeroShotCachedResults(BaseModel):
             f.write(self.model_dump_json(indent=4))
 
 
+class ZeroShotContactFrameworkReport(BaseModel):
+    method: ZeroShotMethod = Field(description="Scoring method used")
+    aggregated_results: Dict[str, ZeroShotContactDatasetResult] = Field(description="Accumulated autoeval task result "
+                                                                     "(combined_task_name -> ZeroShotContactDatasetResult)")
+    #individual_results: Dict[str, ZeroShotContactSingleProtein] = Field(description="Individual autoeval task results "
+                                                                     #"(dataset_name -> [ZeroShotContactSingleProtein])")
+    # TODO: Implement this!
+
+
 class AutoEvalReport(BaseModel):
     embedder_name: str = Field(description="Name of the embedder")
     training_date: str = Field(description="Date of training")
     supervised_results: Dict[str, SupervisedFrameworkReport] = Field(description="Supervised autoeval results")
     zeroshot_results: Dict[str, ZeroShotFrameworkReport] = Field(description="Zero-Shot autoeval results")
-    # TODO: zeroshot_contact_results: 
+    zeroshot_contact_results: Dict[str, ZeroShotContactFrameworkReport] = Field(default_factory=dict, description="Zero-Shot contact autoeval results")
 
     @staticmethod
     def get_file_name(embedder_name):
@@ -371,8 +380,11 @@ class AutoEvalReport(BaseModel):
     def add_zeroshot_result(self, framework_name: str, report: ZeroShotFrameworkReport):
         self.zeroshot_results[framework_name] = report
 
+    def add_zeroshot_contact_result(self, framework_name: str, report: ZeroShotContactFrameworkReport):
+        self.zeroshot_contact_results[framework_name] = report
+
     def maybe_framework_result(self, framework_name: str) -> Optional[FrameworkReport]:
-        return self.supervised_results.get(framework_name, self.zeroshot_results.get(framework_name, None))
+        return self.supervised_results.get(framework_name, self.zeroshot_results.get(framework_name, self.zeroshot_contact_results.get(framework_name, None)))
 
     def write(self, output_dir: Path):
         report_name = output_dir / self.get_file_name(self.embedder_name)
@@ -387,6 +399,7 @@ class AutoEvalReport(BaseModel):
         h.update(self.training_date.encode("utf-8"))
         h.update(str(len(self.supervised_results)).encode("utf-8"))
         h.update(str(len(self.zeroshot_results)).encode("utf-8"))
+        h.update(str(len(self.zeroshot_contact_results)).encode("utf-8"))
         return h.hexdigest()
 
     def summary(self):
@@ -397,7 +410,11 @@ class AutoEvalReport(BaseModel):
         for framework_name, report in self.zeroshot_results.items():
             print(f"\n{framework_name} zero-shot results:")
             report.summary()
+        for framework_name, report in self.zeroshot_contact_results.items():
+            print(f"\n{framework_name} zero-shot contact results:")
+            report.summary()
 
+    # TODO: Adapt below for contact results!
     def compare(self, other_reports: list[AutoEvalReport],
                 plot: Optional[bool] = False,
                 save_path: Optional[Union[Path, str]] = None):
