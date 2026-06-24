@@ -335,12 +335,67 @@ class ZeroShotCachedResults(BaseModel):
             f.write(self.model_dump_json(indent=4))
 
 
-class ZeroShotContactFrameworkReport(BaseModel):
-    method: ZeroShotMethod = Field(description="Scoring method used")
-    aggregated_results: Dict[str, ZeroShotContactDatasetResult] = Field(description="Accumulated autoeval task result "
-                                                                     "(combined_task_name -> ZeroShotContactDatasetResult)")
-    #individual_results: Dict[str, ZeroShotContactSingleProtein] = Field(description="Individual autoeval task results "
-                                                                     #"(dataset_name -> [ZeroShotContactSingleProtein])")
+class ZeroShotContactFrameworkReport(BaseModel, FrameworkReport):
+    model_config = {"use_enum_values": True}
+
+    method: ZeroShotMethod = Field(description="Contact method used") #TODO: review if this field needed.. only one applicable zeroshot method as of now!
+    task_results: Dict[str, ZeroShotContactDatasetResult] = Field(description="Results per taks, i.e. per dataset")
+
+    @model_validator(mode='after')
+    def check_method(self):
+        if isinstance(self.method, str):
+            self.method = ZeroShotMethod(self.method)
+        return self
+
+    @classmethod
+    def empty(cls, method: ZeroShotMethod) -> ZeroShotContactFrameworkReport:
+        return cls(method=method, task_results={})
+
+    def update_result(self, task_name: str, dataset_result: ZeroShotContactDatasetResult):
+        self.task_results[task_name] = dataset_result
+
+    def summary(self):
+        print(f"Zero-shot contact method: {self.method.value}")
+        print(f"Total tasks: {len(self.task_results)}")
+        print("Results:")
+        for combined_task_name, result in self.task_results.items():
+            print(f"{combined_task_name}: "
+                  f"\t Results:  {result}"
+                  #TODO: add detailed print of metrics!!
+
+    def to_df(self, framework: Optional[str] = None) -> pd.DataFrame: #TODO: adapt this!!
+        rows = []
+        for task in self.get_task_names():
+            framework_name, _, _ = AutoEvalTask.split_combined_name(task)
+            if framework and framework_name != framework:
+                continue
+            rr = self.task_results.get(task)
+            if rr is None:
+                continue
+            for metric_key, metric_value in rr.aggregated_result.items():
+                name = metric_key
+                mean = metric_value
+                # mean, lower, upper = _maybe_metric_abs(name,
+                #                                        mean=metric.mean, lower=metric.lower, upper=metric.upper)
+                rows.append({
+                    "TaskLabel": f"{task}\n({name})",
+                    "Task": task,
+                    "Metric": name,
+                    "Mean": round(mean, 3),
+                    # "Lower": round(lower, 3),
+                    # "Upper": round(upper, 3),
+                })
+        return pd.DataFrame(rows)
+
+    def number_tasks(self):
+        return len(self.task_results)
+
+    def get_task_names(self) -> List[str]:
+        return list(self.task_results.keys())
+
+
+class ZeroShotContactCachedResults(BaseModel):
+    pass
     # TODO: Implement this!
 
 

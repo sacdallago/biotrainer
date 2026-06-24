@@ -70,6 +70,7 @@ class BioEngineerContactTests(unittest.TestCase):
             self.assertIsNotNone(aggregated_result)
             # TODO: add additional assertions / tests!
 
+
     @unittest.skip(reason="Large test that should only be executed on demand")
     def test_ESM2_8M_UR50D(self):
         """ Test BioEngineer contact prediction with test dataset on ESM2_8M_UR50D"""
@@ -88,7 +89,4 @@ class BioEngineerContactTests(unittest.TestCase):
         self.assertIsNotNone(results)
         self.assertIsNotNone(aggregated_result)
         # TODO: add additional assertions / tests!
-
-    # TODO: add other testcases!
-
 

@@ -17,3 +17,6 @@ class ZeroShotContactFramework(AutoEvalFramework):
 
     def get_config_bank(self):
         return ContactConfigBank()
+
+
+#TODO: Implement SupervisedContactFramework here!

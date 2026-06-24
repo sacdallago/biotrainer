@@ -1,11 +1,10 @@
 from typing import Optional
 
 from ..core import AutoEvalFramework, AutoEvalMode
-from ..autoeval_frameworks import framework_factory
+from ..autoeval_frameworks import framework_factory, AvailableFramework
 
 from ...bioengineer import ZeroShotMethod
 
-#TODO: review validation for contact frameworks!
 def validate_input(framework,
                    zero_shot_method: Optional[ZeroShotMethod],
                    min_seq_length: Optional[int],
@@ -29,5 +28,11 @@ def validate_input(framework,
     else:  # Zero-Shot frameworks
         if zero_shot_method is None:
             raise ValueError("Zero-shot method must be provided for a zero-shot framework!")
+        is_contact_method = zero_shot_method == ZeroShotMethod.JACOBIAN_CONTACT
+        is_contact_framework = framework_obj.get_name() == AvailableFramework.ZEROSHOT_CONTACT.value
+        if is_contact_method != is_contact_framework:
+            raise ValueError(
+                "Zero-shot method JACOBIAN_CONTACT currently only supported together with available framework ZEROSHOT_CONTACT!"
+            )
 
     return framework_obj

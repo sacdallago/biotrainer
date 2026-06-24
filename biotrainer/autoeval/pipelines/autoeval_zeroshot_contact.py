@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional, Union, List
 
 from .autoeval_setup import setup_pipeline
-from .autoeval_report import ZeroShotCachedResults, ZeroShotContactFrameworkReport, AutoEvalReport
+from .autoeval_report import ZeroShotContactCachedResults, ZeroShotContactFrameworkReport, AutoEvalReport
 from .autoeval_progress import AutoEvalProgress
 from ..core import AutoEvalFramework, AutoEvalTask
 
@@ -21,10 +21,11 @@ def _run_contact_tasks(framework: AutoEvalFramework,
     if not bioengineer:
         bioengineer = BioEngineer.from_name(name=embedder_name, device=get_device(device))
 
-    # Load cached results #TODO adapt caching for contact!
-    cached_results = ZeroShotCachedResults.loaded_or_empty(embedder_name=embedder_name,
-                                                           method=zero_shot_method,
-                                                           output_dir=output_dir)
+    # Load cached results 
+    #TODO adapt caching for contact! cache per taks!
+    # cached_results = ZeroShotContactCachedResults.loaded_or_empty(embedder_name=embedder_name,
+    #                                                        method=zero_shot_method,
+    #                                                        output_dir=output_dir)
     # Execute bioengineer
     zero_shot_contact_framework_report = ZeroShotContactFrameworkReport.empty(method=zero_shot_method)
     task_names = [task.combined_name() for task in autoeval_tasks]
@@ -39,26 +40,21 @@ def _run_contact_tasks(framework: AutoEvalFramework,
                                total_tasks=total_tasks,
                                current_task_name=current_task_name,
                                current_framework_name=framework.get_name())
-        individual_results = {}
-        for idx, dataset_dir_path in enumerate(task.input_files): #TODO: review choice of input files/dirs in tandem with data handler!
-            print(f"Running dataset {idx + 1}/{len(task.input_files)} [name: {dataset_dir_path.name}]...")
-            # Check if cached result exists for this dataset
-            file_name = dataset_dir_path.name
-            maybe_cached_result = cached_results.maybe_cached_result(dataset_name=file_name)
-            if maybe_cached_result is not None:
-                print(f"Skipping dataset {file_name} as cached result exists for {file_name}!")
-                individual_results[file_name] = maybe_cached_result
-                continue
-
+        # Check if cached result exists for this dataset
+        maybe_cached_result = None ## cached_results.maybe_cached_result(dataset_name=current_task_name)
+        if maybe_cached_result is not None:
+            print(f"Skipping dataset {current_task_name} as cached result exists for {current_task_name}!")
+        else:
             # Cached result does not exist, run bioengineer
+            #TODO: review choice of input files/dirs in tandem with data handler!
+            if len(task.input_files) != 1:
+                raise ValueError(f"Empty/Multiple input files/dirs not supported for contact tasks! Task: {current_task_name}")
+            dataset_dir_path = task.input_files[0]
             fasta_file_path = dataset_dir_path / "extracted_sequences.fasta"
             contacts_dir_path = dataset_dir_path / "contacts"
-            per_protein_results, dataset_result = bioengineer.run_contact_dataset(dataset_name=current_task_name, fasta_file_path=fasta_file_path, contacts_dir_path=contacts_dir_path, method=zero_shot_method)
-            cached_results.update_and_sync(dataset_name=current_task_name, result=dataset_result, output_dir=output_dir)
-            individual_results[file_name] = per_protein_results
-
-        # Aggregate results
-        zero_shot_contact_framework_report.aggregate(task_name=current_task_name, individual_results=individual_results)
+            _, dataset_result = bioengineer.run_contact_dataset(dataset_name=current_task_name, fasta_file_path=fasta_file_path, contacts_dir_path=contacts_dir_path, method=zero_shot_method)
+            #cached_results.update_and_sync(dataset_name=current_task_name, result=dataset_result, output_dir=output_dir)
+            zero_shot_contact_framework_report.update_result(task_name=current_task_name, dataset_result=dataset_result)
         completed_tasks += 1
         print(f"Finished task {current_task_name}!")
 

@@ -1,6 +1,3 @@
-from .zeroshot_contact_framework import ZeroShotContactFramework
+from .contact_framework import ZeroShotContactFramework
 
-__all__ = ["ZeroShotContactFramework"]
-
-
-# NOTE: SupervisedContactFramework will also be included here later!
+__all__ = ["ZeroShotContactFramework"] # SupervisedContactFramework to be added later if required!

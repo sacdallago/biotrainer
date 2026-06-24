@@ -124,6 +124,7 @@ def autoeval_pipeline(embedder_name: str,
                                                     device=device)
         case AutoEvalMode.ZERO_SHOT:
             if zero_shot_method == ZeroShotMethod.JACOBIAN_CONTACT:
+                #TODO: potentially add a layer of abstraction in bioengineer to make it a single pipeline with special cases handled internally!
                 yield from autoeval_zeroshot_contact_pipeline(embedder_name=embedder_name,
                                                               framework=framework_obj,
                                                               method=zero_shot_method,
