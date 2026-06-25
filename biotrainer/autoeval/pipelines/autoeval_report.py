@@ -360,7 +360,7 @@ class ZeroShotContactFrameworkReport(BaseModel, FrameworkReport):
         print("Results:")
         for combined_task_name, result in self.task_results.items():
             print(f"{combined_task_name}: "
-                  f"\t Results:  {result}"
+                  f"\t Results:  {result}")
                   #TODO: add detailed print of metrics!!
 
     def to_df(self, framework: Optional[str] = None) -> pd.DataFrame: #TODO: adapt this!!
