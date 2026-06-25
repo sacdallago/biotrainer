@@ -338,7 +338,7 @@ class ZeroShotCachedResults(BaseModel):
 class ZeroShotContactFrameworkReport(BaseModel, FrameworkReport):
     model_config = {"use_enum_values": True}
 
-    method: ZeroShotMethod = Field(description="Contact method used") #TODO: review if this field needed.. only one applicable zeroshot method as of now!
+    method: ZeroShotMethod = Field(description="Contact method used") # Note - only one applicable zeroshot contact method as of now!
     task_results: Dict[str, ZeroShotContactDatasetResult] = Field(description="Results per taks, i.e. per dataset")
 
     @model_validator(mode='after')
@@ -395,8 +395,48 @@ class ZeroShotContactFrameworkReport(BaseModel, FrameworkReport):
 
 
 class ZeroShotContactCachedResults(BaseModel):
-    pass
-    # TODO: Implement this!
+    """ Utility class for storing cached results for zero-shot contact evaluation """
+    embedder_name: str = Field(description="Name of the embedder")
+    method: ZeroShotMethod = Field(description="Contact method used") # Note - only one applicable zeroshot contact method as of now!
+    task_results: Dict[str, ZeroShotContactDatasetResult] = Field(description="Results per taks, i.e. per dataset")
+
+    @staticmethod
+    def get_file_name(method: ZeroShotMethod):
+        return f"zero_shot_contact_cached_results_{method.value}.json"
+
+    @classmethod
+    def from_json_file(cls, file_path: Union[Path, str]) -> ZeroShotContactCachedResults:
+        """Load ZeroShotContactCachedResults from a JSON file."""
+        with open(file_path, 'r') as f:
+            return cls.model_validate_json(f.read())
+
+    @classmethod
+    def empty(cls, embedder_name: str, method: ZeroShotMethod) -> ZeroShotContactCachedResults:
+        return cls(embedder_name=embedder_name, method=method, task_results={})
+
+    @classmethod
+    def loaded_or_empty(cls,
+                        embedder_name: str,
+                        method: ZeroShotMethod,
+                        output_dir: Path) -> Optional[ZeroShotContactCachedResults]:
+        report_file_path = output_dir / cls.get_file_name(method)
+        if report_file_path.exists():
+            report = cls.from_json_file(report_file_path)
+            assert report.embedder_name == embedder_name and report.method == method
+            return report
+        return cls.empty(embedder_name, method)
+
+    def maybe_cached_result(self, dataset_name: str) -> Optional[ZeroShotContactDatasetResult]:
+        return self.task_results.get(dataset_name, None)
+
+    def update_and_sync(self, dataset_name: str, result: ZeroShotContactDatasetResult, output_dir: Path):
+        self.task_results[dataset_name] = result
+        self._write_to_file(output_dir=output_dir)
+
+    def _write_to_file(self, output_dir: Union[Path, str]):
+        file_path = output_dir / self.get_file_name(method=self.method)
+        with open(file_path, 'w') as f:
+            f.write(self.model_dump_json(indent=4))
 
 
 class AutoEvalReport(BaseModel):
