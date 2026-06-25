@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import math
 import numpy as np
+import torch
 
 from enum import Enum
 from typing import Optional, List, Dict
 from pydantic import BaseModel, Field, field_validator, computed_field, SerializeAsAny
 
 from ..utilities import MetricEstimate
+from ..solvers.solver_utils import get_mean_and_confidence_bounds
 
 
 class ZeroShotMethod(Enum):
@@ -274,19 +276,15 @@ class RankingResult(BaseModel):
 # required for bootstrapping and potentially also for caching and resuming from mid-dataset!
 class ZeroShotContactSingleProtein(BaseModel):  
     protein_name: str = Field(description="Name of the protein")
-    # TODO: protein sequence, predicted contacts and ground truth not stored to reduce memory usage; add if needed!
-    # protein_sequence: str = Field(description="Protein sequence")
-    # predicted_contact_map: np.ndarray = Field(description="Predicted contact map")
-    # ground_truth_contact_map: np.ndarray = Field(description="Ground truth contact map")
     precision_scores: Dict[str, float] = Field(description="Precision scores for the protein's predicted contacts") #e.g. {"short_P@L2": 0.83, "short_P@L5": 0.78, "long_P@L2": 0.81, "long_P@L5": 0.76}
     
 
 class ZeroShotContactDatasetResult(BaseModel):
     dataset_name: str = Field(description="Name of the dataset")
-    aggregated_result: Dict[str, float] = Field(description="Aggregated precision scores for the dataset")
+    aggregated_result: Dict[str, MetricEstimate] = Field(description="Aggregated precision scores for the dataset")
 
     def __str__(self) -> str:
-        scores = ", ".join(f"{k}: {v:.3f}" for k, v in self.aggregated_result.items())
+        scores = ", ".join(f"{k}: {v.mean:.3f}" for k, v in self.aggregated_result.items())
         if not scores:
             return f"Dataset result [{self.dataset_name}] - No scores available"
         return f"Dataset result [{self.dataset_name}] - {scores}"
@@ -294,10 +292,24 @@ class ZeroShotContactDatasetResult(BaseModel):
     @classmethod
     def aggregate_results(cls, dataset_name: str, per_protein_results: List[ZeroShotContactSingleProtein]) -> ZeroShotContactDatasetResult:
         """
-        Aggregate precision scores for the dataset.
-        TODO: add bootstrapping facility!
+        Aggregate precision scores for the dataset with bootstrapping.
         """
         aggregated = {}
         if len(per_protein_results) > 0:
-            aggregated = {metric: float(np.mean([p.precision_scores[metric] for p in per_protein_results])) for metric in per_protein_results[0].precision_scores.keys()}
+            iterations = 30
+            confidence_level = 0.05
+            seed = 42
+            metric_names = list(per_protein_results[0].precision_scores.keys())
+            n_proteins = len(per_protein_results)
+            values = torch.tensor([[p.precision_scores[m] for m in metric_names] for p in per_protein_results],
+                                  dtype=torch.float32)
+            sample_indices = np.random.RandomState(seed).choice(n_proteins, size=(iterations, n_proteins), replace=True)
+            iteration_means = values[torch.from_numpy(sample_indices)].mean(dim=1)
+            mean, _, lower, upper = get_mean_and_confidence_bounds(values=iteration_means,
+                                                                     dimension=0,
+                                                                     confidence_level=confidence_level)
+            aggregated = {
+                metric: MetricEstimate(name=metric, mean=float(mean[i]), lower=float(lower[i]), upper=float(upper[i]))
+                for i, metric in enumerate(metric_names)
+            }
         return cls(dataset_name=dataset_name, aggregated_result=aggregated)

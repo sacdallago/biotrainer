@@ -44,7 +44,6 @@ class ZeroShotContactDataHandler(ContactDataHandler):
     def _get_all_dataset_dirs(base_path: Path) -> List[Path]:
         dataset_dirs = sorted([base_path / d for d in os.listdir(base_path)
                             if (base_path / d).is_dir()])
-        #TODO: verify folder paths!
         for dataset_dir in dataset_dirs:
             if not (dataset_dir / "extracted_sequences.fasta").exists():
                 raise FileNotFoundError(f"Missing FASTA file in {dataset_dir}")

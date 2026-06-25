@@ -363,7 +363,7 @@ class ZeroShotContactFrameworkReport(BaseModel, FrameworkReport):
                   f"\t Results:  {result}")
                   #TODO: add detailed print of metrics!!
 
-    def to_df(self, framework: Optional[str] = None) -> pd.DataFrame: #TODO: adapt this!!
+    def to_df(self, framework: Optional[str] = None) -> pd.DataFrame:
         rows = []
         for task in self.get_task_names():
             framework_name, _, _ = AutoEvalTask.split_combined_name(task)
@@ -374,16 +374,15 @@ class ZeroShotContactFrameworkReport(BaseModel, FrameworkReport):
                 continue
             for metric_key, metric_value in rr.aggregated_result.items():
                 name = metric_key
-                mean = metric_value
-                # mean, lower, upper = _maybe_metric_abs(name,
-                #                                        mean=metric.mean, lower=metric.lower, upper=metric.upper)
+                mean, lower, upper = _maybe_metric_abs(name,
+                                                       mean=metric_value.mean, lower=metric_value.lower, upper=metric_value.upper)
                 rows.append({
                     "TaskLabel": f"{task}\n({name})",
                     "Task": task,
                     "Metric": name,
                     "Mean": round(mean, 3),
-                    # "Lower": round(lower, 3),
-                    # "Upper": round(upper, 3),
+                    "Lower": round(lower, 3),
+                    "Upper": round(upper, 3),
                 })
         return pd.DataFrame(rows)
 
