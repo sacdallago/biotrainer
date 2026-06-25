@@ -10,6 +10,7 @@ from .autoeval_data_handler import AutoEvalDataHandler
 class AutoEvalMode(Enum):
     SUPERVISED = "SUPERVISED"
     ZERO_SHOT = "ZERO_SHOT"
+    ZERO_SHOT_CONTACT = "ZERO_SHOT_CONTACT"
 
 
 class AutoEvalFramework(ABC):

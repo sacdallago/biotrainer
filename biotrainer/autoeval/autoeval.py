@@ -123,24 +123,22 @@ def autoeval_pipeline(embedder_name: str,
                                                     custom_output_observers=custom_output_observers,
                                                     device=device)
         case AutoEvalMode.ZERO_SHOT:
-            if zero_shot_method == ZeroShotMethod.JACOBIAN_CONTACT:
-                #TODO: potentially add a layer of abstraction in bioengineer to make it a single pipeline with special cases handled internally!
-                yield from autoeval_zeroshot_contact_pipeline(embedder_name=embedder_name,
-                                                              framework=framework_obj,
-                                                              method=zero_shot_method,
-                                                              autoeval_report=autoeval_report,
-                                                              output_dir=output_dir,
-                                                              force_download=force_download,
-                                                              custom_storage_path=custom_storage_path,
-                                                              custom_bioengineer=custom_bioengineer,
-                                                              device=device)
-            else:
-                yield from autoeval_zeroshot_pipeline(embedder_name=embedder_name,
-                                                    framework=framework_obj,
-                                                    method=zero_shot_method,
-                                                    autoeval_report=autoeval_report,
-                                                    output_dir=output_dir,
-                                                    force_download=force_download,
-                                                    custom_storage_path=custom_storage_path,
-                                                    custom_bioengineer=custom_bioengineer,
-                                                    device=device)
+            yield from autoeval_zeroshot_pipeline(embedder_name=embedder_name,
+                                                framework=framework_obj,
+                                                method=zero_shot_method,
+                                                autoeval_report=autoeval_report,
+                                                output_dir=output_dir,
+                                                force_download=force_download,
+                                                custom_storage_path=custom_storage_path,
+                                                custom_bioengineer=custom_bioengineer,
+                                                device=device)
+        case AutoEvalMode.ZERO_SHOT_CONTACT:
+            yield from autoeval_zeroshot_contact_pipeline(embedder_name=embedder_name,
+                                                            framework=framework_obj,
+                                                            method=zero_shot_method,
+                                                            autoeval_report=autoeval_report,
+                                                            output_dir=output_dir,
+                                                            force_download=force_download,
+                                                            custom_storage_path=custom_storage_path,
+                                                            custom_bioengineer=custom_bioengineer,
+                                                            device=device)

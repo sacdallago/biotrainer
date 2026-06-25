@@ -53,7 +53,7 @@ class BioEngineerContactTests(unittest.TestCase):
     def test_baselines(self):
         """ Test BioEngineer contact prediction with test dataset on applicable baselines"""
         dataset_name = "test_dataset"
-        dataset_path = Path("test_input_files/contact/test_dataset")
+        dataset_path = Path("test_input_files/CONTACT/contacts/zeroshot/test_dataset")
         method = ZeroShotMethod.JACOBIAN_CONTACT
         for baseline in BioEngineerBaseline:
             bio_engineer = BioEngineer.from_baseline(baseline=baseline)
@@ -75,7 +75,7 @@ class BioEngineerContactTests(unittest.TestCase):
     def test_ESM2_8M_UR50D(self):
         """ Test BioEngineer contact prediction with test dataset on ESM2_8M_UR50D"""
         dataset_name = "test_dataset"
-        dataset_path = Path("test_input_files/contact/test_dataset")
+        dataset_path = Path("test_input_files/CONTACT/contacts/zeroshot/test_dataset")
         method = ZeroShotMethod.JACOBIAN_CONTACT
         bio_engineer = BioEngineer.from_name(name="facebook/esm2_t6_8M_UR50D")
         self.assertTrue(bio_engineer.model_wrapper is not None, f"Model wrapper for ESM2_8M_UR50D is None!")

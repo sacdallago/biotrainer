@@ -1,6 +1,7 @@
 import os
 import unittest
 import tempfile
+from pathlib import Path
 
 from biotrainer.autoeval import autoeval_pipeline
 from biotrainer.bioengineer import BioEngineer, BioEngineerBaseline, ZeroShotMethod
@@ -35,6 +36,8 @@ class AutoevalTests(unittest.TestCase):
 
     def test_autoeval_zeroshot_contact_baseline(self):
         """ Checks that autoeval pipeline runs correctly with zero-shot contact baseline """
+        TEST_CONTACT_STORAGE = Path(__file__).parent / "test_input_files"
+
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             print("Starting AutoEval pipeline...")
 
@@ -45,6 +48,7 @@ class AutoevalTests(unittest.TestCase):
                                             zero_shot_method=ZeroShotMethod.JACOBIAN_CONTACT,
                                             output_dir=tmp_dir_name,
                                             custom_bioengineer=bio_engineer,
+                                            custom_storage_path=TEST_CONTACT_STORAGE,
                                             ):
                 print(progress)
                 self.assertTrue(progress.current_framework_name == "ZEROSHOT_CONTACT")
@@ -59,6 +63,8 @@ class AutoevalTests(unittest.TestCase):
     @unittest.skip(reason="Large test that should only be executed on demand")
     def test_autoeval_zeroshot_contact_ESM2_8M_UR50D(self):
         """ Checks that autoeval pipeline runs correctly with zero-shot contact ESM2_8M_UR50D """
+        TEST_CONTACT_STORAGE = Path(__file__).parent / "test_input_files"
+
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             print("Starting AutoEval pipeline...")
 
@@ -67,6 +73,7 @@ class AutoevalTests(unittest.TestCase):
                                             framework="ZEROSHOT_CONTACT",
                                             zero_shot_method=ZeroShotMethod.JACOBIAN_CONTACT,
                                             output_dir=tmp_dir_name,
+                                            custom_storage_path=TEST_CONTACT_STORAGE,
                                             ):
                 print(progress)
                 self.assertTrue(progress.current_framework_name == "ZEROSHOT_CONTACT")

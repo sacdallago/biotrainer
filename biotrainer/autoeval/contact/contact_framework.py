@@ -10,7 +10,7 @@ class ZeroShotContactFramework(AutoEvalFramework):
 
     @staticmethod
     def get_mode() -> AutoEvalMode:
-        return AutoEvalMode.ZERO_SHOT
+        return AutoEvalMode.ZERO_SHOT_CONTACT
 
     def get_data_handler(self):
         return ZeroShotContactDataHandler()
