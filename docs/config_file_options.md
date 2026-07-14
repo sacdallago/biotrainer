@@ -345,7 +345,7 @@ This is the default option and specifying it in the config file is optional.
 Additionally, *biotrainer* supports a set of other cross validation methods, which can be configured in the
 configuration file, as shown in the next sections. We assume knowledge of the methods and only provide the available
 configuration options.
-[This article](https://neptune.ai/blog/cross-validation-in-machine-learning-how-to-do-it-right) provides a more
+[This article](https://web.archive.org/web/20251006185719/https://neptune.ai/blog/cross-validation-in-machine-learning-how-to-do-it-right) provides a more
 in-depth description of the implemented cross validation methods.
 
 ### k-fold Cross Validation
