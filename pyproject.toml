@@ -69,6 +69,11 @@ autoeval-frontend = [
     "streamlit>=1.55.0",
     "altair>=6.0.0"
 ]
+esm-c = [
+    "esm>=3.3.0", # This will try to pull from PyPI if available
+    #"flash-attn>=2.8.3.post1,<2.9.0",
+    "xformers>=0.0.35,<0.1.0"
+]
 
 [project.urls]
 Issues = "https://github.com/sacdallago/biotrainer/issues"
@@ -97,3 +102,5 @@ members = [
 
 [tool.uv.sources]
 biotrainer-core = { workspace = true }
+transformers = { git = "https://github.com/Biohub/transformers.git", branch = "main" }
+esm = { git = "https://github.com/Biohub/esm.git", branch = "main" }

@@ -1,8 +1,8 @@
-# Built with ESM (repository: github.com/facebookresearch/esm)
+# Built with ESM (repositories: github.com/facebookresearch/esm, github.com/Biohub/esm)
 import torch
 
 from typing import List, Any, Generator
-from transformers import EsmTokenizer, EsmModel
+from transformers import EsmTokenizer, EsmModel, AutoModel, AutoTokenizer
 
 from .huggingface_transformer_embedder import HuggingfaceTransformerEmbedder
 
@@ -77,3 +77,33 @@ class ESM2(HuggingfaceTransformerEmbedder, BioOptEmbedder):
 
         # Yield all at once
         yield from processed_embeddings
+
+
+_esmc_family_dict = {'biohub/ESMC-300M': 960,
+                     'biohub/ESMC-600M': 1152,
+                     'biohub/ESMC-6B': 2560,
+                     }
+
+class ESMC(ESM2):
+
+    @classmethod
+    def detect(cls, embedder_name: str, use_half_precision: bool, dtype: torch.dtype, device: torch.device):
+        if embedder_name in _esmc_family_dict.keys():
+            # Load the tokenizer
+            tokenizer = AutoTokenizer.from_pretrained(embedder_name, dtype=dtype)
+            # Load the model
+            model = AutoModel.from_pretrained(embedder_name, device_map="auto", dtype=dtype).to(device)
+            tokenizer_name = tokenizer.__class__.__name__
+            model_name = model.__class__.__name__
+            if "ESMC" in model_name.upper() and "ESMC" in tokenizer_name.upper():
+                return cls(name=embedder_name, model=model, tokenizer=tokenizer, use_half_precision=use_half_precision,
+                           device=device)
+            else:
+                raise ImportError(f"Trying to load ESMC model {embedder_name}, but resolved as {model_name}! "
+                                  f"This indicates that you are lacking the correct transformers version for ESM-C. "
+                                  f"Install via `pip install \"transformers @ git+https://github.com/Biohub/transformers.git@main\"`\n"
+                                  f"`pip install biotrainer[esm-c]`")
+        return None
+
+    def embedding_dim(self) -> int:
+        return _esmc_family_dict[self.name]
