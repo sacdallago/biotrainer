@@ -365,12 +365,10 @@ class ContactFrameworkReport(FrameworkReport):
             # TODO: add detailed print of metrics!!
 
     def to_df(self, framework: Optional[str] = None, development_mode: bool = False) -> pd.DataFrame:
+        # TODO Is framework even necessary?
         rows = []
-        for task in self.get_task_names():
-            framework_name, _, _ = AutoEvalTask.split_combined_name(task)
-            if framework and framework_name != framework:
-                continue
-            rr = self.task_results.get(task)
+        for task, rr in self.task_results.items():
+            task = task.split("-")[-1]
             if rr is None:
                 continue
             for metric in rr.aggregated_result:
@@ -392,7 +390,7 @@ class ContactFrameworkReport(FrameworkReport):
         return len(self.task_results)
 
     def get_task_names(self) -> List[str]:
-        return list(self.task_results.keys())
+        return [task_name.split("-")[-1] for task_name in self.task_results.keys()]
 
     def used_development_mode(self) -> bool:
         return self.development_mode

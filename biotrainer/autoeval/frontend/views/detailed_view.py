@@ -5,7 +5,7 @@ import streamlit as st
 
 from typing import List, Tuple, Optional
 from biotrainer_core.data_classes import BiotrainerModelResult
-from biotrainer_core.data_classes.autoeval import AutoEvalReport, SupervisedFrameworkReport, ZeroShotFrameworkReport
+from biotrainer_core.data_classes.autoeval import AutoEvalReport, SupervisedFrameworkReport, ZeroShotFrameworkReport, ContactFrameworkReport
 
 from ..state import AutoevalSessionState
 from ..utils import utils as frontend_utils
@@ -60,6 +60,10 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
         framework_tab_names.append(("Supervised", "supervised"))
     if report.zeroshot_results:
         framework_tab_names.append(("Zero-Shot", "zeroshot"))
+    if report.zeroshot_contact_results:
+        framework_tab_names.append(("Zero-Shot Contact", "zeroshot_contact"))
+    if report.supervised_contact_results:
+        framework_tab_names.append(("Supervised Contact", "supervised_contact"))
 
     if not framework_tab_names:
         st.info("This report has no results.")
@@ -235,7 +239,7 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                 else:
                     st.caption("No training/validation loss curves found in this result.")
 
-            else:  # zeroshot
+            elif kind == "zeroshot":  # zeroshot
                 fw_names = list(report.zeroshot_results.keys())
                 fw_sel = st.selectbox("Framework", options=fw_names)
                 zrep: ZeroShotFrameworkReport = report.zeroshot_results[fw_sel]
@@ -249,3 +253,44 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                 # though zeroshot_task_metrics_dataframe doesn't accept it yet.
                 df_task = frontend_utils.zeroshot_task_metrics_dataframe(zrep, task)
                 st.dataframe(df_task, use_container_width=True, hide_index=True)
+
+            elif kind in ("zeroshot_contact", "supervised_contact"):  # contact
+                if kind == "zeroshot_contact":
+                    contact_results = report.zeroshot_contact_results
+                else:
+                    contact_results = report.supervised_contact_results
+                fw_names = list(contact_results.keys())
+                fw_sel = st.selectbox("Framework", options=fw_names, key=f"fw_selector_contact_{kind}")
+                crep: ContactFrameworkReport = contact_results[fw_sel]
+                tasks = crep.get_task_names()
+                if not tasks:
+                    st.info("No tasks available.")
+                    continue
+                task = st.selectbox("Task", options=tasks, key=f"task_selector_contact_{kind}")
+                dev_mode = state.get_development_mode()
+                df_task = crep.to_df(framework=fw_sel, development_mode=dev_mode)
+                df_task = df_task[df_task["Task"] == task] if not df_task.empty else df_task
+                st.dataframe(df_task[["Task", "Metric", "Mean", "Lower", "Upper"]], use_container_width=True, hide_index=True)
+
+                if not df_task.empty:
+                    try:
+                        import altair as alt
+                        dfp = df_task.copy()
+                        dfp["CI"] = dfp.apply(lambda r: f"[{r['Lower']}, {r['Upper']}]", axis=1)
+                        bars = alt.Chart(dfp).mark_bar().encode(
+                            x=alt.X("Metric:N", title="Metric"),
+                            y=alt.Y("Mean:Q", title="Score"),
+                            tooltip=[
+                                alt.Tooltip("Metric", title="Metric"),
+                                alt.Tooltip("Mean", title="Mean"),
+                                alt.Tooltip("CI", title="95% CI"),
+                            ],
+                        )
+                        error_bars = alt.Chart(dfp).mark_errorbar().encode(
+                            x=alt.X("Metric:N"),
+                            y=alt.Y("Lower:Q", title=""),
+                            y2="Upper:Q",
+                        )
+                        st.altair_chart((bars + error_bars).properties(height=320), use_container_width=True)
+                    except Exception:
+                        pass
