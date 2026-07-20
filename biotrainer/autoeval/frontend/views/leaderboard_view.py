@@ -42,7 +42,7 @@ def _badge(place: int) -> str:
     """
 
 
-def _build_framework_selector(state: AutoevalSessionState) -> str:
+def _build_framework_selector(state: AutoevalSessionState) -> AvailableFramework:
     cols = st.columns([1, 2])
     with cols[0]:
         st.markdown("**Framework**")
@@ -56,7 +56,8 @@ def _build_framework_selector(state: AutoevalSessionState) -> str:
                 index=max(0, all_frameworks.index(currently_selected))
                 if currently_selected in all_frameworks else 0,
             )
-        state.select_lb_framework(str(selected_framework).upper())
+        selected_framework = AvailableFramework[selected_framework.upper()]
+        state.select_lb_framework(selected_framework)
     return state.get_lb_framework()
 
 
@@ -177,7 +178,7 @@ def render_leaderboard(state: AutoevalSessionState,
 
     _build_title()
     fw = _build_framework_selector(state)
-    ranking = ranking_pbc if fw == "PBC" else ranking_pgym
+    ranking = ranking_pbc if fw == AvailableFramework.PBC_SUPERVISED else ranking_pgym  # TODO
 
     # Sync weight keys with current ranking
     state.sync_lb_weights(ranking.ranking_categories)

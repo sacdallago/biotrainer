@@ -19,38 +19,16 @@ from ...pipelines.autoeval_plotting import (
     fig_to_pdf_bytes,
 )
 
+from ...autoeval_frameworks import AvailableFramework
 
-def render_compare(state: AutoevalSessionState, active: List[AutoEvalReport]):
-    st.subheader("Compare Multiple Reports")
-    if len(active) < 2:
-        st.info("Load at least two reports to compare.")
-        return
 
-    # Report Selection
-    default_chosen = state.get_compare_selected_reports()
-    default_chosen = default_chosen if len(default_chosen) > 0 else active
-    default_chosen = sorted(default_chosen, key=lambda report: report.embedder_name)
-    chosen_reports = st.multiselect("Select reports", default=default_chosen, options=active,
-                                    format_func=lambda report: report.embedder_name,
-                                    on_change=lambda: state.set_compare_selected_reports(
-                                        st.session_state.get("multiselect_compare_reports", [])),
-                                    key="multiselect_compare_reports")
-
-    if len(chosen_reports) == 1:
-        st.info("Select at least two reports to compare.")
-        st.stop()
-    dev_mode = state.get_development_mode()
-
-    # Baseline selection
-    baseline_options = [report.embedder_name for report in chosen_reports]
-    baseline_model = st.selectbox("Select baseline model for delta plots", options=baseline_options)
-
-    # Supervised comparison
-    st.markdown("#### Supervised (PBC)")
+def _render_supervised_comparison(chosen_reports: List[AutoEvalReport], baseline_model: str, dev_mode: bool):
+    framework_name = AvailableFramework.PBC_SUPERVISED.name
+    st.markdown(f"#### {framework_name}")
     df_sup = _aggregate_dfs([
-        report.supervised_results["PBC"].to_df(framework="PBC", development_mode=dev_mode).assign(
+        report.supervised_results[framework_name].to_df(framework=framework_name, development_mode=dev_mode).assign(
             Model=report.embedder_name)
-        for report in chosen_reports if "PBC" in report.supervised_results
+        for report in chosen_reports if framework_name in report.supervised_results
     ])
     if df_sup is None or df_sup.empty:
         st.caption("No overlapping supervised tasks to compare.")
@@ -62,7 +40,8 @@ def render_compare(state: AutoevalSessionState, active: List[AutoEvalReport]):
                                       default=task_set, options=task_set,
                                       format_func=lambda
                                           task: f"{df_sup[df_sup['TaskLabel'] == task]['Test Set'].iloc[0]}-"
-                                                f"{df_sup[df_sup['TaskLabel'] == task]['Task'].iloc[0].replace('PBC-', '')}")
+                                                f"{df_sup[df_sup['TaskLabel'] == task]['Task'].iloc[0].replace('PBC-', '')}"
+                                      )
 
         if len(chosen_tasks) == 0:
             st.info("Select at least two tasks to compare.")
@@ -101,12 +80,14 @@ def render_compare(state: AutoevalSessionState, active: List[AutoEvalReport]):
         else:
             st.info("Select a baseline model and ensure overlapping tasks to render the delta plot.")
 
-    # Zeroshot comparison
-    st.markdown("#### Zero-Shot (PGYM)")
+
+def _render_zero_shot_comparison(chosen_reports: List[AutoEvalReport], baseline_model: str, dev_mode: bool):
+    framework_name = AvailableFramework.PGYM.name
+    st.markdown(f"#### Zero-Shot {framework_name}")
     df_zero = _aggregate_dfs([
-        report.zeroshot_results["PGYM"].to_df(framework="PGYM", development_mode=dev_mode).assign(
+        report.zeroshot_results[framework_name].to_df(framework=framework_name, development_mode=dev_mode).assign(
             Model=report.embedder_name)
-        for report in chosen_reports if "PGYM" in report.zeroshot_results
+        for report in chosen_reports if framework_name in report.zeroshot_results
     ])
     if df_zero is None or df_zero.empty:
         st.caption("No overlapping zero-shot tasks to compare.")
@@ -150,3 +131,34 @@ def render_compare(state: AutoevalSessionState, active: List[AutoEvalReport]):
                                mime="application/pdf", key="zero_delta_pdf")
         else:
             st.info("Select a baseline model and ensure overlapping tasks to render the delta plot.")
+
+
+def render_compare(state: AutoevalSessionState, active: List[AutoEvalReport]):
+    st.subheader("Compare Multiple Reports")
+    if len(active) < 2:
+        st.info("Load at least two reports to compare.")
+        return
+
+    # Report Selection
+    default_chosen = state.get_compare_selected_reports()
+    default_chosen = default_chosen if len(default_chosen) > 0 else active
+    default_chosen = sorted(default_chosen, key=lambda report: report.embedder_name)
+    chosen_reports = st.multiselect("Select reports", default=default_chosen, options=active,
+                                    format_func=lambda report: report.embedder_name,
+                                    on_change=lambda: state.set_compare_selected_reports(
+                                        st.session_state.get("multiselect_compare_reports", [])),
+                                    key="multiselect_compare_reports")
+
+    if len(chosen_reports) == 1:
+        st.info("Select at least two reports to compare.")
+        st.stop()
+    dev_mode = state.get_development_mode()
+
+    # Baseline selection
+    baseline_options = [report.embedder_name for report in chosen_reports]
+    baseline_model = st.selectbox("Select baseline model for delta plots", options=baseline_options)
+
+    # Supervised comparison
+    _render_supervised_comparison(chosen_reports, baseline_model, dev_mode)
+    # Zeroshot comparison
+    _render_zero_shot_comparison(chosen_reports, baseline_model, dev_mode)

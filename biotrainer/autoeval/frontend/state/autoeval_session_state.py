@@ -29,7 +29,7 @@ class AutoevalSessionState:
         self._development_mode: bool = False
 
         # Leaderboard
-        self._lb_selected_framework: str = str(AvailableFramework.dashboard_frameworks()[0]).upper()
+        self._lb_selected_framework: AvailableFramework = AvailableFramework.dashboard_frameworks()[0]
         self._lb_selected_ranking_category: str = "global"
         self._lb_weights: Dict = {}
 
@@ -117,11 +117,11 @@ class AutoevalSessionState:
     def get_development_mode(self) -> bool:
         return self._development_mode
 
-    def select_lb_framework(self, framework: str) -> AutoevalSessionState:
+    def select_lb_framework(self, framework: AvailableFramework) -> AutoevalSessionState:
         self._lb_selected_framework = framework
         return self
 
-    def get_lb_framework(self) -> str:
+    def get_lb_framework(self) -> AvailableFramework:
         return self._lb_selected_framework
 
     def select_lb_ranking_category(self, category: str) -> AutoevalSessionState:

@@ -182,7 +182,7 @@ class SupervisedFrameworkReport(FrameworkReport):
         rows = []
 
         for task in self.get_task_names():
-            framework_name, _, _ = AutoEvalTask.split_combined_name(task)
+            framework_name, dataset_name, _ = AutoEvalTask.split_combined_name(task)
             if framework and framework_name != framework:
                 continue
             for m in self.extract_metrics(task, development_mode=development_mode):
@@ -190,9 +190,9 @@ class SupervisedFrameworkReport(FrameworkReport):
                 test_set = m["test_set_name"]
                 metric_name = m["evaluation_metric"]
                 if test_set != "test":
-                    label = f"{task}\n({test_set} - {metric_name})"
+                    label = f"{dataset_name}\n({test_set} - {metric_name})"
                 else:
-                    label = f"{task}\n({metric_name})"
+                    label = f"{dataset_name}\n({metric_name})"
                 mean, lower, upper = _maybe_metric_abs(metric_name,
                                                        mean=m["mean"], lower=m["lower"], upper=m["upper"])
                 rows.append({
