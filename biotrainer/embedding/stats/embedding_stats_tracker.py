@@ -25,7 +25,7 @@ class EmbeddingStatsTracker:
     def track(self, per_residue_embedding):
         # TODO Use torch
         if isinstance(per_residue_embedding, torch.Tensor):
-            per_residue_embedding = per_residue_embedding.numpy()
+            per_residue_embedding = per_residue_embedding.cpu().numpy()
         if isinstance(per_residue_embedding, list):
             per_residue_embedding = np.array(per_residue_embedding)
 
