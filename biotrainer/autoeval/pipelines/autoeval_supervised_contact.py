@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from sklearn.linear_model import LogisticRegression
 from typing import Optional, List, Dict, Any, Tuple
 
-from biotrainer_core.data_classes import SequenceData, ContactDatasetResult
+from biotrainer_core.data_classes import SequenceData, ContactDatasetResult, ContactSingleProteinResult
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, ContactFrameworkReport
 
 from biotrainer_core.input_files import load_contact_map, read_FASTA
@@ -168,9 +168,9 @@ def _train_logistic_regression(current_task_name: str, input_dataset: _InputData
         clf.fit(x_train, y_train)
 
         # Test on Val dataset
-        val_dataset_result = _test_logistic_regression(clf=clf, test_set_name=f"Val-Clf{idx}",
-                                                       per_protein_data=val_dataset,
-                                                       )
+        _, val_dataset_result = _test_logistic_regression(clf=clf, test_set_name=f"Val-Clf{idx}",
+                                                          per_protein_data=val_dataset,
+                                                          )
         long_p_at_l2_val = val_dataset_result.long_PatL2()
         print(f"{current_task_name}: long_P@L2 for hyperparameters {hp}: {long_p_at_l2_val}")
         if long_p_at_l2_val is None:
@@ -186,7 +186,8 @@ def _train_logistic_regression(current_task_name: str, input_dataset: _InputData
 
 def _test_logistic_regression(clf: LogisticRegression, test_set_name: str,
                               per_protein_data: List[_PerProteinData],
-                              embedding_service: Optional = None) -> ContactDatasetResult:
+                              embedding_service: Optional = None) -> Tuple[
+    Dict[str, ContactSingleProteinResult], ContactDatasetResult]:
     def predict_function(data_point: _PerProteinData):
         if data_point.attention_map is not None:
             attention_map = data_point.attention_map
@@ -205,10 +206,12 @@ def _test_logistic_regression(clf: LogisticRegression, test_set_name: str,
                                             get_seq_id_func=lambda d: d.seq_id
                                             )
 
+    single_results = {}
     for maybe_single_result, maybe_dataset_result in evaluate():
-        # No caching for supervised task, so only check for dataset result
+        if maybe_single_result:
+            single_results[maybe_single_result.protein_name] = maybe_single_result
         if maybe_dataset_result is not None:
-            return maybe_dataset_result
+            return single_results, maybe_dataset_result
 
     assert False, "No dataset result returned!"
 
@@ -259,9 +262,10 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
 
     # (2) Data Collection
     input_dataset, development_ids = _load_data_and_generate_attention_maps(dataset_map=dataset_map,
-                                                           embedding_service=embedding_service,
-                                                           development_mode=development_mode)
-    supervised_contact_framework_report = ContactFrameworkReport.empty(development_ids=development_ids)
+                                                                            embedding_service=embedding_service,
+                                                                            development_mode=development_mode)
+    supervised_contact_framework_report = ContactFrameworkReport.empty()
+    supervised_contact_framework_report.update_development_ids(development_ids=development_ids)
 
     # (3) Training
     print(f"{current_task_name}: Training classifiers..")
@@ -270,10 +274,11 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
     # (4) Test
     test_datasets = input_dataset.test_datasets
     for test_set_name, test_data in test_datasets.items():
-        dataset_result = _test_logistic_regression(clf=best_clf, test_set_name=test_set_name,
-                                                   per_protein_data=test_data,
-                                                   embedding_service=embedding_service)
+        per_protein_results, dataset_result = _test_logistic_regression(clf=best_clf, test_set_name=test_set_name,
+                                                                        per_protein_data=test_data,
+                                                                        embedding_service=embedding_service)
         supervised_contact_framework_report.update_result(task_name=test_set_name,
+                                                          per_protein_results=per_protein_results,
                                                           dataset_result=dataset_result)
     print(f"Finished task {current_task_name}!")
 

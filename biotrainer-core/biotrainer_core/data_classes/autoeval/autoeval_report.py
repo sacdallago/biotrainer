@@ -349,7 +349,9 @@ class ContactFrameworkReport(FrameworkReport):
                                              description="Contact method used. "
                                                          "Only applicable for zero-shot contact prediction")
     task_results: Dict[str, ContactDatasetResult] = Field(description="Results per tasks, i.e. per dataset (e.g. casp)")
-    # TODO Per-Protein results for test sets
+    per_protein_results: Dict[str, ContactSingleProteinResult] = Field(
+        description="Cached per protein results, stacking"
+                    " up to the final dataset result (seq_id -> ContactSingleProteinResult)")
     development_ids: List[str] = Field(default=list, description="All protein ids that are used in development mode")
 
     @model_validator(mode='after')
@@ -361,11 +363,17 @@ class ContactFrameworkReport(FrameworkReport):
         return self
 
     @classmethod
-    def empty(cls, development_ids: List[str], method: Optional[ZeroShotMethod] = None) -> ContactFrameworkReport:
-        return cls(method=method, task_results={}, development_ids=development_ids)
+    def empty(cls, method: Optional[ZeroShotMethod] = None) -> ContactFrameworkReport:
+        return cls(method=method, task_results={}, per_protein_results={}, development_ids=[])
 
-    def update_result(self, task_name: str, dataset_result: ContactDatasetResult):
+    def update_result(self, task_name: str,
+                      per_protein_results: Dict[str, ContactSingleProteinResult],
+                      dataset_result: ContactDatasetResult):
         self.task_results[task_name] = dataset_result
+        self.per_protein_results.update(per_protein_results)
+
+    def update_development_ids(self, development_ids: List[str]):
+        self.development_ids.extend(development_ids)
 
     def summary(self, development_mode: bool = False):
         if self.method is not None:
