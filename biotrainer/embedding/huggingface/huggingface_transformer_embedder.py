@@ -136,7 +136,7 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         avg = a1 * a2
         avg.div_(a12)  # in-place to reduce memory
         normalized = x - avg
-        return normalized
+        return torch.nan_to_num(normalized, nan=0.0, posinf=0.0, neginf=0.0)
 
     # From https://github.com/facebookresearch/esm/blob/main/esm/modules.py
     # and https://github.com/chandar-lab/AMPLIFY/blob/main/examples/utils.py

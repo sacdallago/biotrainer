@@ -13,6 +13,8 @@ class PGYMDataHandler(AutoEvalDataHandler):
     """Handles PGYM dataset related operations"""
     DEVELOPMENT_MODE_SUBSAMPLE_RATIO = 0.4
 
+    _file_paths_dev_mode: List[str] = []
+
     @staticmethod
     def get_framework_name() -> str:
         return "PGYM"
@@ -43,6 +45,7 @@ class PGYMDataHandler(AutoEvalDataHandler):
     def _subsample_for_development_mode(self, file_paths: List[Path]) -> List[Path]:
         rng = random.Random(12)
         file_paths_sample = rng.sample(file_paths, int(len(file_paths) * self.DEVELOPMENT_MODE_SUBSAMPLE_RATIO))
+        self._file_paths_dev_mode.extend([fp.stem for fp in file_paths_sample])
         return file_paths_sample
 
     def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int],
@@ -57,9 +60,13 @@ class PGYMDataHandler(AutoEvalDataHandler):
                                  if taxon.lower() != "virus"]
         assert len(virus_taxon_files) + len(non_virus_taxon_files) == len(file2taxon)
 
+        # Always calculate the sample for storing the respective file paths
+        virus_taxon_files_sample = self._subsample_for_development_mode(virus_taxon_files)
+        non_virus_taxon_files_sample = self._subsample_for_development_mode(non_virus_taxon_files)
+
         if development_mode:
-            virus_taxon_files = self._subsample_for_development_mode(virus_taxon_files)
-            non_virus_taxon_files = self._subsample_for_development_mode(non_virus_taxon_files)
+            virus_taxon_files = virus_taxon_files_sample
+            non_virus_taxon_files = non_virus_taxon_files_sample
 
         for dataset in self._get_all_files(base_path):
             dataset_dir = base_path / dataset

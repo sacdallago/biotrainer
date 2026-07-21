@@ -12,8 +12,8 @@ class FLIPFramework(AutoEvalFramework):
     def get_mode() -> AutoEvalMode:
         return AutoEvalMode.SUPERVISED
 
-    def get_data_handler(self):
+    def make_data_handler(self):
         return FLIPDataHandler()
 
-    def get_config_bank(self):
+    def make_config_bank(self):
         return FLIPConfigBank()

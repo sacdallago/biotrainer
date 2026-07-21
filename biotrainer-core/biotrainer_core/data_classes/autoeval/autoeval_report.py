@@ -236,8 +236,7 @@ class ZeroShotFrameworkReport(FrameworkReport):
                                                                  "delta plot pair per-dataset scores between models.")
     individual_results: Dict[str, RankingResult] = Field(description="Individual autoeval task results "
                                                                      "(dataset_name -> RankingResult)")
-    development_mode: bool = Field(default=True, description="Whether development mode "
-                                                             "was used in the autoeval pipeline")
+    development_ids: List[str] = Field(default=list, description="All protein ids that are used in development mode")
 
     @model_validator(mode='after')
     def check_method(self):
@@ -246,9 +245,9 @@ class ZeroShotFrameworkReport(FrameworkReport):
         return self
 
     @classmethod
-    def empty(cls, method: ZeroShotMethod, development_mode: bool = True) -> ZeroShotFrameworkReport:
+    def empty(cls, method: ZeroShotMethod, development_ids: List[str]) -> ZeroShotFrameworkReport:
         return cls(method=method, aggregated_results={}, individual_results={},
-                   aggregated_members={}, development_mode=development_mode)
+                   aggregated_members={}, development_ids=development_ids)
 
     def aggregate(self, task_name: str, individual_results: Dict[str, RankingResult]):
         self.individual_results.update(individual_results)
@@ -294,7 +293,7 @@ class ZeroShotFrameworkReport(FrameworkReport):
         return list(self.aggregated_results.keys())
 
     def used_development_mode(self) -> bool:
-        return self.development_mode
+        return len(self.individual_results) == len(self.development_ids)
 
 
 class ZeroShotCachedResults(BaseModel):
@@ -349,9 +348,9 @@ class ContactFrameworkReport(FrameworkReport):
     method: Optional[ZeroShotMethod] = Field(default=None,
                                              description="Contact method used. "
                                                          "Only applicable for zero-shot contact prediction")
-    task_results: Dict[str, ContactDatasetResult] = Field(description="Results per tasks, i.e. per dataset")
-    development_mode: bool = Field(default=True, description="Whether development mode "
-                                                             "was used in the autoeval pipeline")
+    task_results: Dict[str, ContactDatasetResult] = Field(description="Results per tasks, i.e. per dataset (e.g. casp)")
+    # TODO Per-Protein results for test sets
+    development_ids: List[str] = Field(default=list, description="All protein ids that are used in development mode")
 
     @model_validator(mode='after')
     def check_method(self):
@@ -362,8 +361,8 @@ class ContactFrameworkReport(FrameworkReport):
         return self
 
     @classmethod
-    def empty(cls, method: Optional[ZeroShotMethod] = None, development_mode: bool = True) -> ContactFrameworkReport:
-        return cls(method=method, task_results={}, development_mode=development_mode)
+    def empty(cls, development_ids: List[str], method: Optional[ZeroShotMethod] = None) -> ContactFrameworkReport:
+        return cls(method=method, task_results={}, development_ids=development_ids)
 
     def update_result(self, task_name: str, dataset_result: ContactDatasetResult):
         self.task_results[task_name] = dataset_result
@@ -382,6 +381,8 @@ class ContactFrameworkReport(FrameworkReport):
         rows = []
         primary_evaluation_metric = "long_P@L2"  # TODO Find better place for this constant
         for task, rr in self.task_results.items():
+            if development_mode and task not in self.development_ids:
+                continue
             task = task.split("-")[-1]
             if rr is None:
                 continue
@@ -410,7 +411,7 @@ class ContactFrameworkReport(FrameworkReport):
         return [task_name.split("-")[-1] for task_name in self.task_results.keys()]
 
     def used_development_mode(self) -> bool:
-        return self.development_mode
+        return len(self.task_results) == len(self.development_ids)
 
 
 class ZeroShotContactCachedResults(BaseModel):

@@ -12,10 +12,10 @@ class PBCZeroShotContactFramework(AutoEvalFramework):
     def get_mode() -> AutoEvalMode:
         return AutoEvalMode.ZERO_SHOT_CONTACT
 
-    def get_data_handler(self):
+    def make_data_handler(self):
         return ZeroShotContactDataHandler()
 
-    def get_config_bank(self):
+    def make_config_bank(self):
         return ContactConfigBank()
 
 
@@ -28,8 +28,8 @@ class PBCSupervisedContactFramework(AutoEvalFramework):
     def get_mode() -> AutoEvalMode:
         return AutoEvalMode.SUPERVISED_CONTACT_ATTENTION
 
-    def get_data_handler(self):
+    def make_data_handler(self):
         return SupervisedContactDataHandler()
 
-    def get_config_bank(self):
+    def make_config_bank(self):
         return ContactConfigBank()

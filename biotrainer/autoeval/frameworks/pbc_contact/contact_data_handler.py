@@ -67,7 +67,6 @@ class ZeroShotContactDataHandler(ContactDataHandler):
         return [AutoEvalTask(framework_name=self.get_framework_name(),
                              dataset_name=dataset_dir.name,
                              input_files=[dataset_dir],
-                             #input_files=[fasta_file_path, contacts_dir_path],
                              type="Protein")
                 for dataset_dir in self._get_all_dataset_dirs(base_path)]
 

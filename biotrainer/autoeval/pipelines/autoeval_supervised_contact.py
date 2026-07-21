@@ -114,7 +114,7 @@ def _generate_per_protein_dataset_input(seq_data: List[SequenceData],
 
 
 def _load_data_and_generate_attention_maps(dataset_map: dict, embedding_service,
-                                           development_mode: bool) -> _InputDataset:
+                                           development_mode: bool) -> Tuple[_InputDataset, List[str]]:
     # Train
     dataset_dir_path = dataset_map["train"]
     fasta_file_path = dataset_dir_path / "extracted_sequences.fasta"
@@ -133,19 +133,23 @@ def _load_data_and_generate_attention_maps(dataset_map: dict, embedding_service,
 
     # Test
     test_datasets = {}
+    development_ids = []
     for test_path in dataset_map["test"]:
         test_name = test_path.stem
         test_fasta_file_path = test_path / "extracted_sequences.fasta"
         test_seqs = read_FASTA(test_fasta_file_path)
+        subsampled_test_seqs = subsample_seq_records_for_contact_development_mode(test_seqs)
+        development_ids.extend([seq_record.seq_id for seq_record in subsampled_test_seqs])
         if development_mode:
-            test_seqs = subsample_seq_records_for_contact_development_mode(test_seqs)
+            test_seqs = subsampled_test_seqs
 
         contacts_dir_path = test_path / "contacts"
         # Lazy compute attention maps later
         test_datasets[test_name] = _generate_per_protein_dataset_input(test_seqs, contacts_dir_path,
                                                                        embedding_service=None)
 
-    return _InputDataset(x_train=x_train, y_train=y_train, val_dataset=val_dataset, test_datasets=test_datasets)
+    return (_InputDataset(x_train=x_train, y_train=y_train, val_dataset=val_dataset, test_datasets=test_datasets),
+            development_ids)
 
 
 def _train_logistic_regression(current_task_name: str, input_dataset: _InputDataset) -> LogisticRegression:
@@ -221,58 +225,57 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
         raise ValueError(f"Only HuggingfaceTransformers are supported for supervised contact tasks, "
                          f"but got {embedding_service._embedder}!")
 
-    supervised_contact_framework_report = ContactFrameworkReport.empty(development_mode=development_mode)
     autoeval_tasks = [task for task, _ in autoeval_tasks]  # Ignore config for supervised contact
+    assert len(autoeval_tasks) == 1, "Only one supervised contact task is supported!"
+    task = autoeval_tasks[0]
+
     task_names = [task.combined_name() for task in autoeval_tasks]
     print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
-    completed_tasks = 0
     total_tasks = len(task_names)
-    current_task_name = ""
-    for task in autoeval_tasks:
-        current_task_name = task.combined_name()
-        print(f"Running task {current_task_name}...")
-        yield AutoEvalProgress(completed_tasks=completed_tasks,
-                               total_tasks=total_tasks,
-                               current_task_name=current_task_name,
-                               current_framework_name=framework.get_name())
+    current_task_name = task.combined_name()
+    print(f"Running task {current_task_name}...")
+    yield AutoEvalProgress(completed_tasks=0,
+                           total_tasks=total_tasks,
+                           current_task_name=current_task_name,
+                           current_framework_name=framework.get_name())
 
-        # (1) Set up dataset map from input files
-        print(f"{current_task_name}: Loading data..")
-        dataset_map = {"train": None,
-                       "val": None,
-                       "test": []
-                       }
-        input_dirs = task.input_files
-        for input_dir in input_dirs:
-            dir_name = input_dir.name
-            if dir_name in dataset_map:
-                dataset_map[dir_name] = input_dir
-            else:
-                dataset_map["test"].append(input_dir)
+    # (1) Set up dataset map from input files
+    print(f"{current_task_name}: Loading data..")
+    dataset_map = {"train": None,
+                   "val": None,
+                   "test": []
+                   }
+    input_dirs = task.input_files
+    for input_dir in input_dirs:
+        dir_name = input_dir.name
+        if dir_name in dataset_map:
+            dataset_map[dir_name] = input_dir
+        else:
+            dataset_map["test"].append(input_dir)
 
-        assert dataset_map["train"] is not None, f"Missing train dataset for task: {current_task_name}"
-        assert dataset_map["val"] is not None, f"Missing val dataset for task: {current_task_name}"
-        assert len(dataset_map["test"] or []) > 0, f"Missing test datasets for task: {current_task_name}"
+    assert dataset_map["train"] is not None, f"Missing train dataset for task: {current_task_name}"
+    assert dataset_map["val"] is not None, f"Missing val dataset for task: {current_task_name}"
+    assert len(dataset_map["test"] or []) > 0, f"Missing test datasets for task: {current_task_name}"
 
-        # (2) Data Collection
-        input_dataset = _load_data_and_generate_attention_maps(dataset_map=dataset_map,
-                                                               embedding_service=embedding_service,
-                                                               development_mode=development_mode)
+    # (2) Data Collection
+    input_dataset, development_ids = _load_data_and_generate_attention_maps(dataset_map=dataset_map,
+                                                           embedding_service=embedding_service,
+                                                           development_mode=development_mode)
+    supervised_contact_framework_report = ContactFrameworkReport.empty(development_ids=development_ids)
 
-        # (3) Training
-        print(f"{current_task_name}: Training classifiers..")
-        best_clf = _train_logistic_regression(current_task_name=current_task_name, input_dataset=input_dataset)
+    # (3) Training
+    print(f"{current_task_name}: Training classifiers..")
+    best_clf = _train_logistic_regression(current_task_name=current_task_name, input_dataset=input_dataset)
 
-        # (4) Test
-        test_datasets = input_dataset.test_datasets
-        for test_set_name, test_data in test_datasets.items():
-            dataset_result = _test_logistic_regression(clf=best_clf, test_set_name=test_set_name,
-                                                       per_protein_data=test_data,
-                                                       embedding_service=embedding_service)
-            supervised_contact_framework_report.update_result(task_name=test_set_name,
-                                                              dataset_result=dataset_result)
-        completed_tasks += 1
-        print(f"Finished task {current_task_name}!")
+    # (4) Test
+    test_datasets = input_dataset.test_datasets
+    for test_set_name, test_data in test_datasets.items():
+        dataset_result = _test_logistic_regression(clf=best_clf, test_set_name=test_set_name,
+                                                   per_protein_data=test_data,
+                                                   embedding_service=embedding_service)
+        supervised_contact_framework_report.update_result(task_name=test_set_name,
+                                                          dataset_result=dataset_result)
+    print(f"Finished task {current_task_name}!")
 
     print(f"Autoeval supervised contact pipeline on framework {framework.get_name()} "
           f"for {embedder_name} finished successfully!")

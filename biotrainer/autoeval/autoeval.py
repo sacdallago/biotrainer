@@ -382,7 +382,6 @@ class AutoEval:
                 output_dir=output_dir,
                 bioengineer=bioengineer,
                 device=runner_params.device,
-                development_mode=self.development_mode,
             )
 
         self._frameworks_to_runners[framework_obj] = _AutoEvalTaskRunner(framework=framework_obj,
