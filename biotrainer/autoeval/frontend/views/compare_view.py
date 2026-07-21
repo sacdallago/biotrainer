@@ -17,6 +17,7 @@ from ...pipelines.autoeval_plotting import (
     plot_delta_comparison,
     fig_to_png_bytes,
     fig_to_pdf_bytes,
+    compute_paired_delta_stats,
 )
 
 from ...autoeval_frameworks import AvailableFramework
@@ -68,7 +69,12 @@ def _render_supervised_comparison(chosen_reports: List[AutoEvalReport], baseline
             st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
 
         st.markdown(f"**Delta Comparison (Baseline: {baseline_model})**")
-        fig_delta, ax_delta = plot_delta_comparison(df_sup, baseline_model)
+        paired_stats = compute_paired_delta_stats(
+            {report.embedder_name: report.zeroshot_results[framework_name]
+             for report in chosen_reports if framework_name in report.zeroshot_results},
+            baseline_model,
+        )
+        fig_delta, ax_delta = plot_delta_comparison(df_sup, baseline_model, paired_stats=paired_stats)
         if fig_delta is not None:
             st.pyplot(fig_delta, use_container_width=True)
             st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig_delta),
@@ -120,7 +126,12 @@ def _render_zero_shot_comparison(chosen_reports: List[AutoEvalReport], baseline_
             st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
 
         st.markdown(f"**Delta Comparison (Baseline: {baseline_model})**")
-        fig_delta, ax_delta = plot_delta_comparison(df_zero, baseline_model)
+        paired_stats = compute_paired_delta_stats(
+            {report.embedder_name: report.zeroshot_results[framework_name]
+             for report in chosen_reports if framework_name in report.zeroshot_results},
+            baseline_model,
+        )
+        fig_delta, ax_delta = plot_delta_comparison(df_zero, baseline_model, paired_stats=paired_stats)
         if fig_delta is not None:
             st.pyplot(fig_delta, use_container_width=True)
             st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig_delta),
@@ -172,7 +183,12 @@ def _render_zeroshot_contact_comparison(chosen_reports: List[AutoEvalReport], ba
             st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
 
         st.markdown(f"**Delta Comparison (Baseline: {baseline_model})**")
-        fig_delta, ax_delta = plot_delta_comparison(df_zsc, baseline_model)
+        paired_stats = compute_paired_delta_stats(
+            {report.embedder_name: report.zeroshot_results[framework_name]
+             for report in chosen_reports if framework_name in report.zeroshot_results},
+            baseline_model,
+        )
+        fig_delta, ax_delta = plot_delta_comparison(df_zsc, baseline_model, paired_stats=paired_stats)
         if fig_delta is not None:
             st.pyplot(fig_delta, use_container_width=True)
             st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig_delta),
@@ -224,7 +240,12 @@ def _render_supervised_contact_comparison(chosen_reports: List[AutoEvalReport], 
             st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
 
         st.markdown(f"**Delta Comparison (Baseline: {baseline_model})**")
-        fig_delta, ax_delta = plot_delta_comparison(df_sc, baseline_model)
+        paired_stats = compute_paired_delta_stats(
+            {report.embedder_name: report.zeroshot_results[framework_name]
+             for report in chosen_reports if framework_name in report.zeroshot_results},
+            baseline_model,
+        )
+        fig_delta, ax_delta = plot_delta_comparison(df_sc, baseline_model, paired_stats=paired_stats)
         if fig_delta is not None:
             st.pyplot(fig_delta, use_container_width=True)
             st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig_delta),

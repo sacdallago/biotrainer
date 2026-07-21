@@ -221,6 +221,10 @@ class ZeroShotFrameworkReport(FrameworkReport):
     method: ZeroShotMethod = Field(description="Scoring method used")
     aggregated_results: Dict[str, RankingResult] = Field(description="Accumulated autoeval task results "
                                                                      "(combined_task_name -> RankingResult)")
+    aggregated_members: Dict[str, List[str]] = Field(default_factory=dict,
+                                                     description="Datasets contributing to each aggregated task "
+                                                                 "(combined_task_name -> [dataset_name]). Lets the "
+                                                                 "delta plot pair per-dataset scores between models.")
     individual_results: Dict[str, RankingResult] = Field(description="Individual autoeval task results "
                                                                      "(dataset_name -> RankingResult)")
     development_mode: bool = Field(default=True, description="Whether development mode "
@@ -234,10 +238,12 @@ class ZeroShotFrameworkReport(FrameworkReport):
 
     @classmethod
     def empty(cls, method: ZeroShotMethod, development_mode: bool = True) -> ZeroShotFrameworkReport:
-        return cls(method=method, aggregated_results={}, individual_results={}, development_mode=development_mode)
+        return cls(method=method, aggregated_results={}, individual_results={},
+                   aggregated_members={}, development_mode=development_mode)
 
     def aggregate(self, task_name: str, individual_results: Dict[str, RankingResult]):
         self.individual_results.update(individual_results)
+        self.aggregated_members[task_name] = list(individual_results.keys())
         self.aggregated_results[task_name] = RankingResult.aggregate(list(individual_results.values()))
 
     def summary(self, development_mode: bool = False):
