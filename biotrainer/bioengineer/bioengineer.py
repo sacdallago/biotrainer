@@ -227,8 +227,12 @@ class BioEngineer:
         # Using a dictionary here to avoid python hash indeterminism
         common_variants = list({k: None for k in (list(v_d.keys()) + list(a_s.keys()))}.keys())
 
-        bt_res = Bootstrapper._do_bootstrapping(iterations=30, sample_size=len(common_variants), confidence_level=0.05,
-                                                seq_ids=common_variants, all_predictions_dict=v_d,
+        iterations = 10000  # 10k iterations as in ProteinGym: https://github.com/OATML-Markslab/ProteinGym/blob/144fe22b07dfaeec2b366f2346203a9838a55b4c/proteingym/performance_DMS_benchmarks.py#L84
+        bt_res = Bootstrapper._do_bootstrapping(iterations=iterations,
+                                                sample_size=len(common_variants),
+                                                confidence_level=0.05,
+                                                seq_ids=common_variants,
+                                                all_predictions_dict=v_d,
                                                 all_targets_dict=a_s,
                                                 metrics_calculator=SequenceRegressionMetricsCalculator(device="cpu",
                                                                                                        n_classes=1)
