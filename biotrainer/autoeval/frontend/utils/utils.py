@@ -102,7 +102,7 @@ def leaderboard_dataframe(loaded: List[AutoEvalReport], development_mode: bool =
             fw_upper = fw_name.upper()
             if fw_upper not in AvailableFramework.dashboard_frameworks():
                 continue
-            for _, row in zrep.to_df().iterrows():
+            for _, row in zrep.to_df(all_metrics=False).iterrows():
                 unique_task_name = row["TaskLabel"]
                 metric_mean = row["Mean"]
                 metric_lower = row["Lower"]
@@ -142,39 +142,3 @@ def get_training_validation_curves(model_result: BiotrainerModelResult) -> Tuple
     epochs = [i for i in range(1, 1 + len(training_losses))]
     best_epoch = training_result_split.best_epoch_metrics.epoch
     return training_losses, validation_losses, epochs, best_epoch
-
-
-
-def supervised_task_metrics_dataframe(sreport: SupervisedFrameworkReport, task_name: str,
-                                      development_mode: bool = False) -> pd.DataFrame:
-    metrics = sreport.extract_metrics(task_name, development_mode=development_mode)
-    if not metrics:
-        return pd.DataFrame()
-    return pd.DataFrame(metrics)
-
-
-def zeroshot_task_metrics_dataframe(zreport: ZeroShotFrameworkReport, task_name: str) -> pd.DataFrame:
-    rr = zreport.aggregated_results.get(task_name)
-    if rr is None:
-        return pd.DataFrame()
-    data = []
-    # SCC should be shown as absolute value with domain [0,1]
-    try:
-        data.append({
-            "Metric": rr.scc.name,
-            "Mean": round(abs(rr.scc.mean), 3),
-            "Lower": round(abs(rr.scc.lower), 3),
-            "Upper": round(abs(rr.scc.upper), 3),
-        })
-    except Exception:
-        pass
-    try:
-        data.append({
-            "Metric": rr.ndcg.name,
-            "Mean": round(rr.ndcg.mean, 3),
-            "Lower": round(rr.ndcg.lower, 3),
-            "Upper": round(rr.ndcg.upper, 3),
-        })
-    except Exception:
-        pass
-    return pd.DataFrame(data)

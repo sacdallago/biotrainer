@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import List
+import pandas as pd
+import streamlit as st
+
+from typing import List, Optional, Callable
 from biotrainer_core.data_classes.autoeval import AutoEvalReport
 
 from biotrainer_core.data_classes.autoeval.autoeval_report import _aggregate_dfs
-
-try:
-    import streamlit as st
-except Exception:  # pragma: no cover
-    raise
 
 from ..state import AutoevalSessionState
 
@@ -23,48 +21,48 @@ from ...pipelines.autoeval_plotting import (
 from ...autoeval_frameworks import AvailableFramework
 
 
-def _render_supervised_comparison(chosen_reports: List[AutoEvalReport], baseline_model: str, dev_mode: bool):
-    framework_name = AvailableFramework.PBC_SUPERVISED.name
+def _render_framework_comparison(chosen_reports: List[AutoEvalReport],
+                                 framework_name: str,
+                                 df_fw: Optional[pd.DataFrame],
+                                 baseline_model: str):
     st.markdown(f"#### {framework_name}")
-    df_sup = _aggregate_dfs([
-        report.supervised_results[framework_name].to_df(framework=framework_name, development_mode=dev_mode).assign(
-            Model=report.embedder_name)
-        for report in chosen_reports if framework_name in report.supervised_results
-    ])
-    if df_sup is None or df_sup.empty:
-        st.caption("No overlapping supervised tasks to compare.")
+    if df_fw is None or df_fw.empty:
+        st.caption("No overlapping tasks to compare.")
     else:
         # Task selection
-        task_set = list(set(df_sup["TaskLabel"].unique()))
+        task_set = list(set(df_fw["TaskLabel"].unique()))
         task_set = sorted(task_set)
-        chosen_tasks = st.multiselect("Select tasks", key=f"multiselect_sup_{len(task_set)}",
+        chosen_tasks = st.multiselect("Select tasks", key=f"multiselect_{framework_name}_{len(task_set)}",
                                       default=task_set, options=task_set,
-                                      format_func=lambda
-                                          task: f"{df_sup[df_sup['TaskLabel'] == task]['Test Set'].iloc[0]}-"
-                                                f"{df_sup[df_sup['TaskLabel'] == task]['Task'].iloc[0].replace('PBC-', '')}"
+                                      # format_func=lambda
+                                      #    task: f"{df_fw[df_fw['TaskLabel'] == task]['Test Set'].iloc[0]}-"
+                                      #          f"{df_fw[df_fw['TaskLabel'] == task]['Task'].iloc[0].replace('PBC-', '')}"  #TODO
                                       )
 
         if len(chosen_tasks) == 0:
             st.info("Select at least two tasks to compare.")
             return
-        df_sup = df_sup[df_sup["TaskLabel"].isin(chosen_tasks)]
+        df_fw = df_fw[df_fw["TaskLabel"].isin(chosen_tasks)]
 
         # Wide table
+        index_cols = ["Task", "Test Set", "Metric"] if "Test Set" in df_fw.columns else ["Task", "Metric"]
         pivot = (
-            df_sup.pivot_table(index=["Task", "Test Set", "Metric"], columns="Model", values="Mean", aggfunc="first",
-                               sort=False)
+            df_fw.pivot_table(index=index_cols, columns="Model", values="Mean", aggfunc="first",
+                              sort=False)
             .reset_index()
         )
         st.dataframe(pivot, use_container_width=True)
 
         st.markdown("**Absolute Comparison**")
-        fig, ax = plot_comparison(df_sup)
+        fig, ax = plot_comparison(df_fw)
         if fig is not None:
             st.pyplot(fig, use_container_width=True)
-            st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig), file_name="supervised_comparison.png",
-                               mime="image/png", key="sup_abs_png")
-            st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig), file_name="supervised_comparison.pdf",
-                               mime="application/pdf", key="sup_abs_pdf")
+            st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig),
+                               file_name=f"{framework_name}_absolute_comparison.png",
+                               mime="image/png", key=f"abs_comp_png_{framework_name}")
+            st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig),
+                               file_name=f"{framework_name}_absolute_comparison.pdf",
+                               mime="application/pdf", key=f"abs_comp_pdf_{framework_name}")
         else:
             st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
 
@@ -74,188 +72,27 @@ def _render_supervised_comparison(chosen_reports: List[AutoEvalReport], baseline
              for report in chosen_reports if framework_name in report.zeroshot_results},
             baseline_model,
         )
-        fig_delta, ax_delta = plot_delta_comparison(df_sup, baseline_model, paired_stats=paired_stats)
+        fig_delta, ax_delta = plot_delta_comparison(df_fw, baseline_model, paired_stats=paired_stats)
         if fig_delta is not None:
             st.pyplot(fig_delta, use_container_width=True)
             st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig_delta),
-                               file_name="supervised_delta_comparison.png",
-                               mime="image/png", key="sup_delta_png")
+                               file_name=f"{framework_name}_delta_comparison.png",
+                               mime="image/png", key=f"delta_comp_png_{framework_name}")
             st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig_delta),
-                               file_name="supervised_delta_comparison.pdf",
-                               mime="application/pdf", key="sup_delta_pdf")
+                               file_name=f"{framework_name}_delta_comparison.pdf",
+                               mime="application/pdf", key=f"delta_comp_pdf_{framework_name}")
         else:
             st.info("Select a baseline model and ensure overlapping tasks to render the delta plot.")
 
 
-def _render_zero_shot_comparison(chosen_reports: List[AutoEvalReport], baseline_model: str, dev_mode: bool):
-    framework_name = AvailableFramework.PGYM.name
-    st.markdown(f"#### Zero-Shot {framework_name}")
-    df_zero = _aggregate_dfs([
-        report.zeroshot_results[framework_name].to_df(framework=framework_name, development_mode=dev_mode).assign(
+def _aggregate_for_comparison(get_report_results: Callable, framework_name: str, chosen_reports: List[AutoEvalReport],
+                              dev_mode: bool):
+    df = _aggregate_dfs([
+        get_report_results(report)[framework_name].to_df(all_metrics=False, development_mode=dev_mode).assign(
             Model=report.embedder_name)
-        for report in chosen_reports if framework_name in report.zeroshot_results
+        for report in chosen_reports if framework_name in get_report_results(report)
     ])
-    if df_zero is None or df_zero.empty:
-        st.caption("No overlapping zero-shot tasks to compare.")
-    else:
-        # Task selection
-        task_set_zs = list(set(df_zero["Task"].unique()))
-        chosen_tasks_zs = st.multiselect("Select tasks", key=f"multiselect_zs_{len(task_set_zs)}",
-                                         default=task_set_zs, options=task_set_zs)
-
-        if len(chosen_tasks_zs) == 0:
-            st.info("Select at least two tasks to compare.")
-            return
-        df_zero = df_zero[df_zero["Task"].isin(chosen_tasks_zs)]
-
-        pivot = (
-            df_zero.pivot_table(index=["Task", "Metric"], columns="Model", values="Mean", aggfunc="first", sort=False)
-            .reset_index()
-        )
-        st.dataframe(pivot, use_container_width=True)
-
-        st.markdown("**Absolute Comparison**")
-        fig, ax = plot_comparison(df_zero)
-        if fig is not None:
-            st.pyplot(fig, use_container_width=True)
-            st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig), file_name="zeroshot_comparison.png",
-                               mime="image/png", key="zero_abs_png")
-            st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig), file_name="zeroshot_comparison.pdf",
-                               mime="application/pdf", key="zero_abs_pdf")
-        else:
-            st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
-
-        st.markdown(f"**Delta Comparison (Baseline: {baseline_model})**")
-        paired_stats = compute_paired_delta_stats(
-            {report.embedder_name: report.zeroshot_results[framework_name]
-             for report in chosen_reports if framework_name in report.zeroshot_results},
-            baseline_model,
-        )
-        fig_delta, ax_delta = plot_delta_comparison(df_zero, baseline_model, paired_stats=paired_stats)
-        if fig_delta is not None:
-            st.pyplot(fig_delta, use_container_width=True)
-            st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig_delta),
-                               file_name="zeroshot_delta_comparison.png",
-                               mime="image/png", key="zero_delta_png")
-            st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig_delta),
-                               file_name="zeroshot_delta_comparison.pdf",
-                               mime="application/pdf", key="zero_delta_pdf")
-        else:
-            st.info("Select a baseline model and ensure overlapping tasks to render the delta plot.")
-
-
-def _render_zeroshot_contact_comparison(chosen_reports: List[AutoEvalReport], baseline_model: str, dev_mode: bool):
-    framework_name = AvailableFramework.PBC_ZEROSHOT_CONTACT.name
-    st.markdown(f"#### Zero-Shot Contact {framework_name}")
-    df_zsc = _aggregate_dfs([
-        report.zeroshot_contact_results[framework_name].to_df(framework=framework_name, development_mode=dev_mode).assign(
-            Model=report.embedder_name)
-        for report in chosen_reports if framework_name in report.zeroshot_contact_results
-    ])
-    if df_zsc is None or df_zsc.empty:
-        st.caption("No overlapping zero-shot contact tasks to compare.")
-    else:
-        # Task selection
-        task_set_zsc = list(set(df_zsc["Task"].unique()))
-        chosen_tasks_zsc = st.multiselect("Select tasks", key=f"multiselect_zsc_{len(task_set_zsc)}",
-                                          default=task_set_zsc, options=task_set_zsc)
-
-        if len(chosen_tasks_zsc) == 0:
-            st.info("Select at least two tasks to compare.")
-            return
-        df_zsc = df_zsc[df_zsc["Task"].isin(chosen_tasks_zsc)]
-
-        pivot = (
-            df_zsc.pivot_table(index=["Task", "Metric"], columns="Model", values="Mean", aggfunc="first", sort=False)
-            .reset_index()
-        )
-        st.dataframe(pivot, use_container_width=True)
-
-        st.markdown("**Absolute Comparison**")
-        fig, ax = plot_comparison(df_zsc)
-        if fig is not None:
-            st.pyplot(fig, use_container_width=True)
-            st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig), file_name="zeroshot_contact_comparison.png",
-                               mime="image/png", key="zsc_abs_png")
-            st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig), file_name="zeroshot_contact_comparison.pdf",
-                               mime="application/pdf", key="zsc_abs_pdf")
-        else:
-            st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
-
-        st.markdown(f"**Delta Comparison (Baseline: {baseline_model})**")
-        paired_stats = compute_paired_delta_stats(
-            {report.embedder_name: report.zeroshot_results[framework_name]
-             for report in chosen_reports if framework_name in report.zeroshot_results},
-            baseline_model,
-        )
-        fig_delta, ax_delta = plot_delta_comparison(df_zsc, baseline_model, paired_stats=paired_stats)
-        if fig_delta is not None:
-            st.pyplot(fig_delta, use_container_width=True)
-            st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig_delta),
-                               file_name="zeroshot_contact_delta_comparison.png",
-                               mime="image/png", key="zsc_delta_png")
-            st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig_delta),
-                               file_name="zeroshot_contact_delta_comparison.pdf",
-                               mime="application/pdf", key="zsc_delta_pdf")
-        else:
-            st.info("Select a baseline model and ensure overlapping tasks to render the delta plot.")
-
-
-def _render_supervised_contact_comparison(chosen_reports: List[AutoEvalReport], baseline_model: str, dev_mode: bool):
-    framework_name = AvailableFramework.PBC_SUPERVISED_CONTACT.name
-    st.markdown(f"#### Supervised Contact {framework_name}")
-    df_sc = _aggregate_dfs([
-        report.supervised_contact_results[framework_name].to_df(framework=framework_name, development_mode=dev_mode).assign(
-            Model=report.embedder_name)
-        for report in chosen_reports if framework_name in report.supervised_contact_results
-    ])
-    if df_sc is None or df_sc.empty:
-        st.caption("No overlapping supervised contact tasks to compare.")
-    else:
-        # Task selection
-        task_set_sc = list(set(df_sc["Task"].unique()))
-        chosen_tasks_sc = st.multiselect("Select tasks", key=f"multiselect_sc_{len(task_set_sc)}",
-                                         default=task_set_sc, options=task_set_sc)
-
-        if len(chosen_tasks_sc) == 0:
-            st.info("Select at least two tasks to compare.")
-            return
-        df_sc = df_sc[df_sc["Task"].isin(chosen_tasks_sc)]
-
-        pivot = (
-            df_sc.pivot_table(index=["Task", "Metric"], columns="Model", values="Mean", aggfunc="first", sort=False)
-            .reset_index()
-        )
-        st.dataframe(pivot, use_container_width=True)
-
-        st.markdown("**Absolute Comparison**")
-        fig, ax = plot_comparison(df_sc)
-        if fig is not None:
-            st.pyplot(fig, use_container_width=True)
-            st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig), file_name="supervised_contact_comparison.png",
-                               mime="image/png", key="sc_abs_png")
-            st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig), file_name="supervised_contact_comparison.pdf",
-                               mime="application/pdf", key="sc_abs_pdf")
-        else:
-            st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
-
-        st.markdown(f"**Delta Comparison (Baseline: {baseline_model})**")
-        paired_stats = compute_paired_delta_stats(
-            {report.embedder_name: report.zeroshot_results[framework_name]
-             for report in chosen_reports if framework_name in report.zeroshot_results},
-            baseline_model,
-        )
-        fig_delta, ax_delta = plot_delta_comparison(df_sc, baseline_model, paired_stats=paired_stats)
-        if fig_delta is not None:
-            st.pyplot(fig_delta, use_container_width=True)
-            st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig_delta),
-                               file_name="supervised_contact_delta_comparison.png",
-                               mime="image/png", key="sc_delta_png")
-            st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig_delta),
-                               file_name="supervised_contact_delta_comparison.pdf",
-                               mime="application/pdf", key="sc_delta_pdf")
-        else:
-            st.info("Select a baseline model and ensure overlapping tasks to render the delta plot.")
+    return df
 
 
 def render_compare(state: AutoevalSessionState, active: List[AutoEvalReport]):
@@ -285,10 +122,42 @@ def render_compare(state: AutoevalSessionState, active: List[AutoEvalReport]):
 
     tab_sup, tab_zs, tab_zsc, tab_sc = st.tabs(["Supervised", "Zero-Shot", "Zero-Shot Contact", "Supervised Contact"])
     with tab_sup:
-        _render_supervised_comparison(chosen_reports, baseline_model, dev_mode)
+        framework_name = AvailableFramework.PBC_SUPERVISED.name
+        df_sup = _aggregate_for_comparison(get_report_results=lambda report: report.supervised_results,
+                                           framework_name=framework_name,
+                                           chosen_reports=chosen_reports,
+                                           dev_mode=dev_mode)
+        _render_framework_comparison(chosen_reports=chosen_reports,
+                                     framework_name=framework_name,
+                                     df_fw=df_sup,
+                                     baseline_model=baseline_model)
     with tab_zs:
-        _render_zero_shot_comparison(chosen_reports, baseline_model, dev_mode)
+        framework_name = AvailableFramework.PGYM.name
+        df_zero = _aggregate_for_comparison(get_report_results=lambda report: report.zeroshot_results,
+                                            framework_name=framework_name,
+                                            chosen_reports=chosen_reports,
+                                            dev_mode=dev_mode)
+        _render_framework_comparison(chosen_reports=chosen_reports,
+                                     framework_name=framework_name,
+                                     df_fw=df_zero,
+                                     baseline_model=baseline_model)
     with tab_zsc:
-        _render_zeroshot_contact_comparison(chosen_reports, baseline_model, dev_mode)
+        framework_name = AvailableFramework.PBC_ZEROSHOT_CONTACT.name
+        df_zsc = _aggregate_for_comparison(get_report_results=lambda report: report.zeroshot_contact_results,
+                                           framework_name=framework_name,
+                                           chosen_reports=chosen_reports,
+                                           dev_mode=dev_mode)
+        _render_framework_comparison(chosen_reports=chosen_reports,
+                                     framework_name=framework_name,
+                                     df_fw=df_zsc,
+                                     baseline_model=baseline_model)
     with tab_sc:
-        _render_supervised_contact_comparison(chosen_reports, baseline_model, dev_mode)
+        framework_name = AvailableFramework.PBC_SUPERVISED_CONTACT.name
+        df_sc = _aggregate_for_comparison(get_report_results=lambda report: report.supervised_contact_results,
+                                          framework_name=framework_name,
+                                          chosen_reports=chosen_reports,
+                                          dev_mode=dev_mode)
+        _render_framework_comparison(chosen_reports=chosen_reports,
+                                     framework_name=framework_name,
+                                     df_fw=df_sc,
+                                     baseline_model=baseline_model)

@@ -21,8 +21,10 @@ class AutoEvalTask(BaseModel):
         if "frustration" in combined_name.lower():
             framework_name, dataset_name, split_name = vals[0], vals[1], vals[2]
             dataset_name = f"{dataset_name}-{split_name}"
-        elif len(vals) > 2:
+        elif len(vals) == 3:
             framework_name, dataset_name, split_name = vals[0], vals[1], vals[2]
+        elif len(vals) == 2:
+            framework_name, dataset_name, split_name = vals[0], vals[1], None
         else:
             framework_name, dataset_name, split_name = vals[0], None, None
         return framework_name, dataset_name, split_name

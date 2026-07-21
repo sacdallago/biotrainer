@@ -13,16 +13,20 @@ from ..utils import utils as frontend_utils
 _BIN_METRICS_01 = {"accuracy", "acc", "f1", "f1_score", "auc", "auroc", "mcc"}
 
 
-def _scale_supervised_metric_df(df_task: pd.DataFrame) -> pd.DataFrame:
+def _postprocess_task_df(df_task: pd.DataFrame) -> pd.DataFrame:
     if df_task is None or df_task.empty:
         return df_task
     df = df_task.copy()
     # Normalize Spearman (absolute values, 0..1)
-    mask_scc = df["evaluation_metric"].str.lower().str.contains("spearman") | (
-            df["evaluation_metric"].str.lower() == "scc"
-    ) | df["evaluation_metric"].str.lower().str.contains("spearmans-corr-coeff")
-    for col in ["mean", "lower", "upper"]:
+    mask_scc = df["Metric"].str.lower().str.contains("spearman") | (
+            df["Metric"].str.lower() == "scc"
+    ) | df["Metric"].str.lower().str.contains("spearmans-corr-coeff")
+    for col in ["Mean", "Lower", "Upper"]:
         df.loc[mask_scc, col] = df.loc[mask_scc, col].abs()
+    # Drop "Task" column and rename "TaskLabel" to "Task"
+    df = df.drop(columns=["Task"])
+    df = df.drop(columns=["Protocol"]) if "Protocol" in df.columns else df
+    df = df.rename(columns={"TaskLabel": "Task"})
     return df
 
 
@@ -42,17 +46,16 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
 
     labels = [f"{report.embedder_name} ({report.training_date})" for report in active]
     idx = st.selectbox("Select report", options=list(range(len(active))), format_func=lambda i: labels[i])
-    report = active[idx]
+    report: AutoEvalReport = active[idx]
 
     # Summary
-    col1, col2, col3 = st.columns(3)
+    st.metric("Model", report.embedder_name)
+    col1, col2 = st.columns(2)
     with col1:
-        st.metric("Model", report.embedder_name)
-    with col2:
         st.metric("Training date", report.training_date)
-    with col3:
-        fwks = list(report.supervised_results.keys()) + list(report.zeroshot_results.keys())
-        st.metric("Frameworks", ", ".join(sorted(set([f.upper() for f in fwks]))) or "-")
+    with col2:
+        fwks = report.all_framework_names()
+        st.metric("Frameworks", len(fwks), help=", ".join(fwks))
 
     st.divider()
     framework_tab_names: List[Tuple[str, str]] = []  # (label, kind)
@@ -141,8 +144,9 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
 
                 task = st.selectbox("Task", options=tasks)
                 dev_mode = state.get_development_mode()
-                df_task = frontend_utils.supervised_task_metrics_dataframe(srep, task, development_mode=dev_mode)
-                df_task = _scale_supervised_metric_df(df_task)
+                df_sup = srep.to_df(all_metrics=True, development_mode=dev_mode)
+                df_task = df_sup[df_sup["Task"] == task] if not df_sup.empty else df_sup
+                df_task = _postprocess_task_df(df_task)
                 st.dataframe(df_task, use_container_width=True, hide_index=True)
 
                 # Per-task plot (means with CIs) across test sets/metrics
@@ -251,7 +255,9 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                 dev_mode = state.get_development_mode()
                 # Zero-shot doesn't support development mode yet, but we pass it anyway for consistency
                 # though zeroshot_task_metrics_dataframe doesn't accept it yet.
-                df_task = frontend_utils.zeroshot_task_metrics_dataframe(zrep, task)
+                df_zrep = zrep.to_df(all_metrics=True, development_mode=dev_mode)
+                df_task = df_zrep[df_zrep["Task"] == task] if not df_zrep.empty else df_zrep
+                df_task = _postprocess_task_df(df_task)
                 st.dataframe(df_task, use_container_width=True, hide_index=True)
 
             elif kind in ("zeroshot_contact", "supervised_contact"):  # contact
@@ -268,7 +274,7 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                     continue
                 task = st.selectbox("Task", options=tasks, key=f"task_selector_contact_{kind}")
                 dev_mode = state.get_development_mode()
-                df_task = crep.to_df(framework=fw_sel, development_mode=dev_mode)
+                df_task = crep.to_df(all_metrics=True, development_mode=dev_mode)
                 df_task = df_task[df_task["Task"] == task] if not df_task.empty else df_task
                 st.dataframe(df_task[["Task", "Metric", "Mean", "Lower", "Upper"]], use_container_width=True, hide_index=True)
 

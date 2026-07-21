@@ -59,8 +59,8 @@ class FrameworkReport(ABC, BaseModel):
         raise NotImplementedError
 
     @abstractmethod
-    def to_df(self, framework: Optional[str] = None, development_mode: bool = False) -> pd.DataFrame:
-        """ Convert to pandas dataframe. Optional framework parameter can be used to filter by framework."""
+    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
+        """ Convert to pandas dataframe."""
         raise NotImplementedError
 
     def used_development_mode(self) -> bool:
@@ -110,14 +110,15 @@ class SupervisedFrameworkReport(FrameworkReport):
         print("Results:")
 
         for task_name in task_names:
-            metrics = self.extract_metrics(task_name, development_mode=development_mode)
+            metrics = self.extract_metrics(task_name, development_mode=development_mode, all_metrics=False)
             for metric in metrics:
                 print(
                     f"{metric['task_name']} ({metric['protocol']}) - {metric['test_set_name']} - "
                     f"{metric['evaluation_metric']}: {metric['mean']} ({metric['lower']} - {metric['upper']})"
                 )
 
-    def extract_metrics(self, combined_task_name: str, development_mode: bool = False) -> list[dict]:
+    def extract_metrics(self, combined_task_name: str, development_mode: bool = False,
+                        all_metrics: bool = False) -> list[dict]:
         """Extract metrics for a given task."""
         framework_to_datasets = {"PBC_SUPERVISED": all_pbc_supervised_datasets(), "FLIP": all_flip_datasets()}
 
@@ -125,37 +126,44 @@ class SupervisedFrameworkReport(FrameworkReport):
         try:
             framework_name, dataset_name, split_name = AutoEvalTask.split_combined_name(combined_task_name)
             datasets = framework_to_datasets[framework_name.upper()]
-            evaluation_metric = datasets[dataset_name].evaluation_metric
+            evaluation_metric = datasets[dataset_name].evaluation_metric if not all_metrics else None
             protocol = datasets[dataset_name].protocol.name
             if development_mode:
                 metrics.extend(self._extract_metrics_val_set(combined_task_name, evaluation_metric, protocol))
             else:
-                metrics.extend(self._extract_metrics_test_set(combined_task_name, evaluation_metric, metrics, protocol))
+                metrics.extend(self._extract_metrics_test_set(combined_task_name, evaluation_metric, protocol))
         except KeyError:
             print(f"Warning: Task {combined_task_name} not found.")
         return metrics
 
-    def _extract_metrics_val_set(self, combined_task_name: str, evaluation_metric: str,
+    def _extract_metrics_val_set(self,
+                                 combined_task_name: str,
+                                 evaluation_metric: Optional[str],
                                  protocol: str) -> list[dict]:
         val_results = self.results[combined_task_name].training_results["hold_out"].best_epoch_metrics.validation
-        metric_value = val_results[evaluation_metric]
+        metric_values = {evaluation_metric: val_results[evaluation_metric]} if evaluation_metric else val_results
 
-        # TODO Bootstrapping for validation set on best training result
-        metric_mean = round(metric_value, 3)
-        metric_lower = round(metric_value, 3)
-        metric_upper = round(metric_value, 3)
+        metrics = []
+        for metric_name, metric_value in metric_values.items():
+            # TODO Bootstrapping for validation set on best training result
+            metric_mean = round(metric_value, 3)
+            metric_lower = round(metric_value, 3)
+            metric_upper = round(metric_value, 3)
 
-        return [{
-            "task_name": combined_task_name,
-            "protocol": protocol,
-            "test_set_name": "validation",
-            "evaluation_metric": evaluation_metric,
-            "mean": metric_mean,
-            "lower": metric_lower,
-            "upper": metric_upper
-        }]
+            metrics.append({
+                "task_name": combined_task_name,
+                "protocol": protocol,
+                "test_set_name": "validation",
+                "evaluation_metric": metric_name,
+                "mean": metric_mean,
+                "lower": metric_lower,
+                "upper": metric_upper
+            })
+        return metrics
 
-    def _extract_metrics_test_set(self, combined_task_name: str, evaluation_metric: str, metrics: list[Any],
+    def _extract_metrics_test_set(self,
+                                  combined_task_name: str,
+                                  evaluation_metric: Optional[str],
                                   protocol: str):
         test_results = self.results[combined_task_name].test_results
 
@@ -163,29 +171,30 @@ class SupervisedFrameworkReport(FrameworkReport):
         for test_set_name, test_set_result in test_results.items():
             bootstrapping = test_set_result.bootstrapped_metrics or []
             bootstrapping = {b_res.name: b_res for b_res in bootstrapping}
-            metric_mean = round(bootstrapping[evaluation_metric].mean, 3)
-            metric_lower = round(bootstrapping[evaluation_metric].lower, 3)
-            metric_upper = round(bootstrapping[evaluation_metric].upper, 3)
+            bootstrapping = {
+                evaluation_metric: bootstrapping[evaluation_metric]} if evaluation_metric else bootstrapping
+            for metric_name, metric_value in bootstrapping.items():
+                metric_mean = round(metric_value.mean, 3)
+                metric_lower = round(metric_value.lower, 3)
+                metric_upper = round(metric_value.upper, 3)
 
-            metrics.append({
-                "task_name": combined_task_name,
-                "protocol": protocol,
-                "test_set_name": test_set_name,
-                "evaluation_metric": evaluation_metric,
-                "mean": metric_mean,
-                "lower": metric_lower,
-                "upper": metric_upper
-            })
+                metrics.append({
+                    "task_name": combined_task_name,
+                    "protocol": protocol,
+                    "test_set_name": test_set_name,
+                    "evaluation_metric": metric_name,
+                    "mean": metric_mean,
+                    "lower": metric_lower,
+                    "upper": metric_upper
+                })
         return metrics
 
-    def to_df(self, framework: Optional[str] = None, development_mode: bool = False) -> pd.DataFrame:
+    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
 
         for task in self.get_task_names():
             framework_name, dataset_name, _ = AutoEvalTask.split_combined_name(task)
-            if framework and framework_name != framework:
-                continue
-            for m in self.extract_metrics(task, development_mode=development_mode):
+            for m in self.extract_metrics(task, development_mode=development_mode, all_metrics=all_metrics):
                 # Label like: Task\n(TestSet - Metric) if test set != 'test' else Task\n(Metric)
                 test_set = m["test_set_name"]
                 metric_name = m["evaluation_metric"]
@@ -255,16 +264,15 @@ class ZeroShotFrameworkReport(FrameworkReport):
                   f"\t SCC:  {result.scc_score()}"
                   f"\t NDCG: {result.ndcg_score()}")
 
-    def to_df(self, framework: Optional[str] = None, development_mode: bool = False) -> pd.DataFrame:
+    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
         for task in self.get_task_names():
             framework_name, _, _ = AutoEvalTask.split_combined_name(task)
-            if framework and framework_name != framework:
-                continue
             rr = self.aggregated_results.get(task)
             if rr is None:
                 continue
-            for metric in [rr.scc, rr.ndcg]:
+            all_zs_metrics = [rr.scc, rr.ndcg]  # Only two metrics for zero shot so we always keep both
+            for metric in all_zs_metrics:
                 name = metric.name
                 mean, lower, upper = _maybe_metric_abs(name,
                                                        mean=metric.mean, lower=metric.lower, upper=metric.upper)
@@ -370,14 +378,17 @@ class ContactFrameworkReport(FrameworkReport):
                   f"\t Results:  {result}")
             # TODO: add detailed print of metrics!!
 
-    def to_df(self, framework: Optional[str] = None, development_mode: bool = False) -> pd.DataFrame:
-        # TODO Is framework even necessary?
+    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
+        primary_evaluation_metric = "long_P@L2"  # TODO Find better place for this constant
         for task, rr in self.task_results.items():
             task = task.split("-")[-1]
             if rr is None:
                 continue
-            for metric in rr.aggregated_result:
+            contact_metrics = rr.aggregated_result
+            contact_metrics = contact_metrics if all_metrics else [m for m in contact_metrics
+                                                                   if m.name == primary_evaluation_metric]
+            for metric in contact_metrics:
                 name = metric.name
                 mean, lower, upper = _maybe_metric_abs(name,
                                                        mean=metric.mean, lower=metric.lower,
@@ -400,6 +411,7 @@ class ContactFrameworkReport(FrameworkReport):
 
     def used_development_mode(self) -> bool:
         return self.development_mode
+
 
 class ZeroShotContactCachedResults(BaseModel):
     """ Utility class for storing cached results for zero-shot contact evaluation """
@@ -508,6 +520,9 @@ class AutoEvalReport(BaseModel):
                 self.zeroshot_results,
                 self.zeroshot_contact_results,
                 self.supervised_contact_results]
+
+    def all_framework_names(self):
+        return set(framework_name for results in self._all_results() for framework_name in results)
 
     def maybe_framework_result(self, framework_name: str) -> Optional[FrameworkReport]:
         for results in self._all_results():
