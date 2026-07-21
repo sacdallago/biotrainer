@@ -118,7 +118,7 @@ class Bootstrapper:
         metrics = list(iteration_results[0].keys())
         results = []
         for metric in metrics:
-            all_metric_values = torch.tensor([res[metric] for res in iteration_results], dtype=torch.float16)
+            all_metric_values = torch.tensor([res[metric] for res in iteration_results], dtype=torch.float32)
             mean, _, lower_bound, upper_bound = get_mean_and_confidence_bounds(
                 values=all_metric_values,
                 dimension=0,
