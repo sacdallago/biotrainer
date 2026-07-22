@@ -13,9 +13,14 @@ def metrics_bootstrap(metrics: Dict[str, List[float]],
     """ Directly bootstrap over a set of pre-calculated metrics. """
     bootstrapped_result = []
     for metric_name, metric_values in metrics.items():
+        metric_values_array = np.array(metric_values)  # Necessary for indexing
+
+        if sample_size == -1:
+            sample_size = len(metric_values)
+
         sample_indices = np.random.RandomState(seed).choice(sample_size, size=(iterations, sample_size),
                                                             replace=True)
-        iteration_means = np.mean(metric_values[sample_indices], axis=1)
+        iteration_means = np.mean(metric_values_array[sample_indices], axis=1)
         mean, _, lower, upper = get_mean_and_confidence_bounds(values=iteration_means,
                                                                dimension=0,
                                                                confidence_level=confidence_level)
