@@ -114,6 +114,7 @@ def evaluate_contact_dataset(
         get_seq_id_func: Callable[[Any], str],
         cached_results: Optional[Dict[str, ContactSingleProteinResult]] = None,
 ) -> Generator[ContactSingleProteinResult, None, None]:
+    cached_results = cached_results or {}
     for item in tqdm(items, desc=f"Evaluating {dataset_name} contact dataset..", unit="protein"):
         seq_id = get_seq_id_func(item)
         if seq_id in cached_results:
