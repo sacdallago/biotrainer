@@ -13,11 +13,12 @@ from contextlib import nullcontext as _nullcontext
 from safetensors.torch import load_file, save_file
 from typing import Callable, Optional, Union, Dict, List, Any
 from biotrainer_core.data_classes import EpochMetrics, BiotrainerPrediction, BiotrainerInferenceResult
+from biotrainer_core.functions.bootstrapping import get_mean_and_confidence_bounds
 
 from ..models import BiotrainerModel
 from ..output_files import OutputManager
 
-from ...shared import get_logger, MetricsCalculator, get_mean_and_confidence_bounds
+from ...shared import get_logger, MetricsCalculator
 
 logger = get_logger(__name__)
 
@@ -209,10 +210,10 @@ class Solver(ABC):
                                               for dropout_iteration in dropout_iterations], dim=1)
 
             dropout_mean, dropout_std, lower_bound, upper_bound = get_mean_and_confidence_bounds(
-                values=dropout_raw_values,
+                values=dropout_raw_values.numpy(),
                 dimension=1,
                 confidence_level=confidence_level)
-            prediction_by_mean = self._probabilities_to_predictions(dropout_mean)
+            prediction_by_mean = self._probabilities_to_predictions(torch.from_numpy(dropout_mean))
 
             bald_scores = None
             if self.protocol in Protocol.classification_protocols():

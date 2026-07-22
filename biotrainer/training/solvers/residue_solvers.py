@@ -4,10 +4,10 @@ from torch.utils.data import DataLoader
 from contextlib import nullcontext as _nullcontext
 from typing import Dict, Union, Optional, Callable, List
 from biotrainer_core.data_classes import BiotrainerPrediction
+from biotrainer_core.functions.bootstrapping import get_mean_and_confidence_bounds
 
 from .solver import Solver
 
-from ...shared import get_mean_and_confidence_bounds
 
 
 class ResidueSolver(Solver):
@@ -109,7 +109,7 @@ class ResidueSolver(Solver):
                 stacked_residues_tensor = torch.stack([torch.tensor(outputs) for outputs in dropout_residues], dim=1)
 
                 dropout_mean, dropout_std, lower_bound, upper_bound = get_mean_and_confidence_bounds(
-                    values=stacked_residues_tensor,
+                    values=stacked_residues_tensor.numpy(),
                     dimension=1,
                     confidence_level=confidence_level
                 )

@@ -4,31 +4,12 @@ import numpy as np
 from typing import Dict, List, Union, Any
 from biotrainer_core.utils.constants import MASK_AND_LABELS_PAD_VALUE
 from biotrainer_core.data_classes import Protocol, BiotrainerPrediction, BootstrappedMetric
+from biotrainer_core.functions.bootstrapping import get_mean_and_confidence_bounds
 
-from .metrics import get_mean_and_confidence_bounds, MetricsCalculator
+from .metrics import MetricsCalculator
 
 
 class Bootstrapper:
-
-    @staticmethod
-    def direct_metrics_bootstrap(metrics: Dict[str, torch.Tensor],
-                         iterations: int,
-                         sample_size: int = -1,
-                         confidence_level: float = 0.05,
-                         seed: int = 42) -> List[BootstrappedMetric]:
-        """ Directly bootstrap over a set of pre-calculated metrics. """
-        bootstrapped_result = []
-        for metric_name, metric_values in metrics.items():
-            sample_indices = np.random.RandomState(seed).choice(sample_size, size=(iterations, sample_size),
-                                                                replace=True)
-            iteration_means = metric_values[torch.from_numpy(sample_indices)].mean(dim=1)
-            mean, _, lower, upper = get_mean_and_confidence_bounds(values=iteration_means,
-                                                                   dimension=0,
-                                                                   confidence_level=confidence_level)
-            bt_m = BootstrappedMetric(name=metric_name, mean=float(mean), lower=float(lower), upper=float(upper),
-                                      iterations=iterations, sample_size=sample_size, confidence_level=confidence_level)
-            bootstrapped_result.append(bt_m)
-        return bootstrapped_result
 
     @staticmethod
     def bootstrap(protocol: Protocol, device,
@@ -43,15 +24,15 @@ class Bootstrapper:
 
         all_predictions_dict = {
             pred.seq_id: Bootstrapper._pad_tensor(protocol=protocol,
-                                                target=pred.prediction,
-                                                length_to_pad=max_prediction_length,
-                                                device=device) for pred in predictions
+                                                  target=pred.prediction,
+                                                  length_to_pad=max_prediction_length,
+                                                  device=device) for pred in predictions
         }
         target_dict = {
             idx: Bootstrapper._pad_tensor(protocol=protocol,
-                                        target=target,
-                                        length_to_pad=max_prediction_length,
-                                        device=device)
+                                          target=target,
+                                          length_to_pad=max_prediction_length,
+                                          device=device)
             for idx, target in
             zip(test_loader.dataset.ids, test_loader.dataset.targets)}
         seq_ids = list(target_dict.keys())
@@ -59,12 +40,12 @@ class Bootstrapper:
         sample_size = len(seq_ids)
         confidence_level = 0.05
         return Bootstrapper._do_bootstrapping(iterations=bootstrapping_iterations,
-                                                             sample_size=sample_size,
-                                                             confidence_level=confidence_level,
-                                                             seq_ids=seq_ids,
-                                                             all_predictions_dict=all_predictions_dict,
-                                                             all_targets_dict=target_dict,
-                                                             metrics_calculator=metrics_calculator.reset())
+                                              sample_size=sample_size,
+                                              confidence_level=confidence_level,
+                                              seq_ids=seq_ids,
+                                              all_predictions_dict=all_predictions_dict,
+                                              all_targets_dict=target_dict,
+                                              metrics_calculator=metrics_calculator.reset())
 
     @staticmethod
     def _do_bootstrapping(iterations: int,
@@ -120,7 +101,7 @@ class Bootstrapper:
         for metric in metrics:
             all_metric_values = torch.tensor([res[metric] for res in iteration_results], dtype=torch.float32)
             mean, _, lower_bound, upper_bound = get_mean_and_confidence_bounds(
-                values=all_metric_values,
+                values=all_metric_values.numpy(),
                 dimension=0,
                 confidence_level=confidence_level
             )
