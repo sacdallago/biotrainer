@@ -217,13 +217,29 @@ class VariantScore(BaseModel):
 
 
 class RankingResult(BaseModel):
+    """ Ranking result for variants of a single protein """
     scc: SerializeAsAny[MetricEstimate] = Field(
         description="Spearmans correlation coefficient (overall ranking quality)")
     ndcg: SerializeAsAny[MetricEstimate] = Field(
         description="Normalized discounted cumulative gain (top-k ranking quality)")
 
+    def scc_score(self):
+        """ Rounded SCC mean bootstrapped score """
+        return round(self.scc.mean, 3)
+
+    def ndcg_score(self):
+        """ Rounded NDCG mean bootstrapped score """
+        return round(self.ndcg.mean, 3)
+
+    def __str__(self) -> str:
+        return f"Ranking result - SCC: {self.scc_score()}, NDCG: {self.ndcg_score()}"
+
+
+class AggregatedRankingResult(RankingResult):
+    """ Separate class for aggregated ranking results (i.e. multiple assays) to avoid confusion with individual results """
+
     @classmethod
-    def aggregate(cls, results: List[RankingResult]) -> RankingResult:
+    def aggregate(cls, results: List[RankingResult]) -> AggregatedRankingResult:
         """
         Aggregate ranking results across multiple assays.
         Follows ProteinGym's aggregation approach: simple mean and std across all assays.
@@ -240,7 +256,7 @@ class RankingResult(BaseModel):
         total_ndcg_std = float(np.std(ndcg_scores, ddof=1))
 
         # Create aggregated result with mean ± std bounds
-        overall_ranking_result = RankingResult(
+        overall_ranking_result = AggregatedRankingResult(
             scc=MetricEstimate(
                 name="scc",
                 mean=total_scc_mean,
@@ -256,17 +272,3 @@ class RankingResult(BaseModel):
         )
 
         return overall_ranking_result
-
-    def scc_score(self):
-        """ Rounded SCC mean bootstrapped score """
-        return round(self.scc.mean, 3)
-
-    def ndcg_score(self):
-        """ Rounded NDCG mean bootstrapped score """
-        return round(self.ndcg.mean, 3)
-
-    def __str__(self) -> str:
-        return f"Ranking result - SCC: {self.scc_score()}, NDCG: {self.ndcg_score()}"
-
-
-

@@ -6,7 +6,6 @@ from .metrics_calculator import MetricsCalculator, SimpleTorchMetricsCalculator,
     ResidueClassificationMetricsCalculator, \
     ResidueRegressionMetricsCalculator, ResiduesClassificationMetricsCalculator, ResiduesRegressionMetricsCalculator, \
     SequenceClassificationMetricsCalculator, SequenceRegressionMetricsCalculator
-from .ci_bounds import get_mean_and_confidence_bounds
 
 METRIC_CALCULATORS = {
     Protocol.residue_to_class: ResidueClassificationMetricsCalculator,
@@ -23,7 +22,6 @@ __all__ = [
     "MetricsCalculator",
     "SimpleTorchMetricsCalculator",
     "SimpleCustomMetricsCalculator",
-    "get_mean_and_confidence_bounds",
     "evaluate_contact_map",
     "compute_contact_precision",
     "evaluate_contact_dataset",

@@ -14,9 +14,9 @@ from .autoeval_flip_datasets import all_flip_datasets
 from .autoeval_pbc_datasets import all_pbc_supervised_datasets
 
 from ..embedding_stats import EmbeddingStats
-from ..contact import ContactDatasetResult, ContactSingleProteinResult
-from ..bioengineer_data_classes import ZeroShotMethod, RankingResult
 from ..biotrainer_model_result import BiotrainerModelResult
+from ..contact import ContactDatasetResult, ContactSingleProteinResult
+from ..bioengineer_data_classes import ZeroShotMethod, RankingResult, AggregatedRankingResult
 
 
 def _aggregate_dfs(dfs: List[pd.DataFrame]) -> Optional[pd.DataFrame]:
@@ -100,7 +100,7 @@ class SupervisedFrameworkReport(FrameworkReport):
             if embedding_stats is None:
                 embedding_stats = result_stats
             else:
-                embedding_stats.accumulate_results(result_stats)
+                embedding_stats = embedding_stats.accumulate_results(result_stats)
         return embedding_stats
 
     def summary(self, development_mode: bool = False):
@@ -228,12 +228,12 @@ class ZeroShotFrameworkReport(FrameworkReport):
     model_config = {"use_enum_values": True}
 
     method: ZeroShotMethod = Field(description="Scoring method used")
-    aggregated_results: Dict[str, RankingResult] = Field(description="Accumulated autoeval task results "
-                                                                     "(combined_task_name -> RankingResult)")
-    aggregated_members: Dict[str, List[str]] = Field(default_factory=dict,
-                                                     description="Datasets contributing to each aggregated task "
-                                                                 "(combined_task_name -> [dataset_name]). Lets the "
-                                                                 "delta plot pair per-dataset scores between models.")
+    task_results: Dict[str, AggregatedRankingResult] = Field(description="Aggregated ranking results "
+                                                                         "(task_name -> AggregatedRankingResult)")
+    task_results_dev: Dict[str, AggregatedRankingResult] = Field(description="Aggregated ranking results "
+                                                                             "task results for development mode")
+    task_members: Dict[str, List[str]] = Field(description="Datasets contributing to each aggregated task "
+                                                           "(task_name -> [dataset_name]).")
     individual_results: Dict[str, RankingResult] = Field(description="Individual autoeval task results "
                                                                      "(dataset_name -> RankingResult)")
     development_ids: List[str] = Field(default=list, description="All protein ids that are used in development mode")
@@ -246,31 +246,36 @@ class ZeroShotFrameworkReport(FrameworkReport):
 
     @classmethod
     def empty(cls, method: ZeroShotMethod, development_ids: List[str]) -> ZeroShotFrameworkReport:
-        return cls(method=method, aggregated_results={}, individual_results={},
-                   aggregated_members={}, development_ids=development_ids)
+        return cls(method=method, task_results={}, task_results_dev={}, individual_results={},
+                   task_members={}, development_ids=development_ids)
 
     def aggregate(self, task_name: str, individual_results: Dict[str, RankingResult]):
         self.individual_results.update(individual_results)
-        self.aggregated_members[task_name] = list(individual_results.keys())
-        self.aggregated_results[task_name] = RankingResult.aggregate(list(individual_results.values()))
+        self.task_members[task_name] = list(individual_results.keys())
+        self.task_results[task_name] = AggregatedRankingResult.aggregate(list(individual_results.values()))
+        individual_results_dev = {dataset_name: result for dataset_name, result in individual_results.items()
+                                  if dataset_name in self.development_ids}
+        self.task_results_dev[task_name] = AggregatedRankingResult.aggregate(list(individual_results_dev.values()))
 
     def summary(self, development_mode: bool = False):
         print(f"Zero-shot method: {self.method.value}")
-        print(f"Total tasks: {len(self.aggregated_results)}")
+        print(f"Total tasks: {len(self.task_results)}")
         print("Results:")
-        for combined_task_name, result in self.aggregated_results.items():
+        for combined_task_name, result in self.task_results.items():
             print(f"{combined_task_name}: "
                   f"\t SCC:  {result.scc_score()}"
                   f"\t NDCG: {result.ndcg_score()}")
 
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
+        result_dict = self.task_results_dev if development_mode else self.task_results
         for task in self.get_task_names():
             framework_name, _, _ = AutoEvalTask.split_combined_name(task)
-            rr = self.aggregated_results.get(task)
-            if rr is None:
+            ranking_result = result_dict.get(task)
+            if ranking_result is None:
                 continue
-            all_zs_metrics = [rr.scc, rr.ndcg]  # Only two metrics for zero shot so we always keep both
+            all_zs_metrics = [ranking_result.scc,
+                              ranking_result.ndcg]  # Only two metrics for zero shot so we always keep both
             for metric in all_zs_metrics:
                 name = metric.name
                 mean, lower, upper = _maybe_metric_abs(name,
@@ -287,10 +292,10 @@ class ZeroShotFrameworkReport(FrameworkReport):
         return pd.DataFrame(rows)
 
     def number_tasks(self):
-        return len(self.aggregated_results)
+        return len(self.task_results)
 
     def get_task_names(self) -> List[str]:
-        return list(self.aggregated_results.keys())
+        return list(self.task_results.keys())
 
     def used_development_mode(self) -> bool:
         return len(self.individual_results) == len(self.development_ids)
@@ -349,6 +354,10 @@ class ContactFrameworkReport(FrameworkReport):
                                              description="Contact method used. "
                                                          "Only applicable for zero-shot contact prediction")
     task_results: Dict[str, ContactDatasetResult] = Field(description="Results per tasks, i.e. per dataset (e.g. casp)")
+    task_results_dev: Dict[str, ContactDatasetResult] = Field(description="Results per tasks for development mode, "
+                                                                          "i.e. per dataset (e.g. casp)")
+    task_members: Dict[str, List[str]] = Field(description="Datasets contributing to each "
+                                                           "task (e.g. casp -> protein_id)")
     per_protein_results: Dict[str, ContactSingleProteinResult] = Field(
         description="Cached per protein results, stacking"
                     " up to the final dataset result (seq_id -> ContactSingleProteinResult)")
@@ -364,12 +373,17 @@ class ContactFrameworkReport(FrameworkReport):
 
     @classmethod
     def empty(cls, method: Optional[ZeroShotMethod] = None) -> ContactFrameworkReport:
-        return cls(method=method, task_results={}, per_protein_results={}, development_ids=[])
+        return cls(method=method, task_results={}, task_results_dev={},
+                   task_members={}, per_protein_results={}, development_ids=[])
 
     def update_result(self, task_name: str,
                       per_protein_results: Dict[str, ContactSingleProteinResult],
-                      dataset_result: ContactDatasetResult):
+                      dataset_result: ContactDatasetResult,
+                      dataset_result_dev: ContactDatasetResult):
         self.task_results[task_name] = dataset_result
+        self.task_results_dev[task_name] = dataset_result_dev
+        new_keys = set(per_protein_results.keys()) - set(self.per_protein_results.keys())
+        self.task_members[task_name] = list(new_keys)
         self.per_protein_results.update(per_protein_results)
 
     def update_development_ids(self, development_ids: List[str]):
@@ -574,6 +588,12 @@ class AutoEvalReport(BaseModel):
         for framework_name, report in self.supervised_results.items():
             print(f"\n{framework_name} - embedding stats:")
             print(report.accumulated_embedding_stats())
+
+    def is_development(self) -> bool:
+        """ Checks if any of the reports is in development mode """
+        all_results = self._all_results()
+        all_reports = [r for results in all_results for r in results.values()]
+        return any(rep.used_development_mode() for rep in all_reports)
 
     ## TODO Move to client
     # def compare_with_public_leaderboard(self):

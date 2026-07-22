@@ -45,7 +45,7 @@ class PGYMDataHandler(AutoEvalDataHandler):
     def _subsample_for_development_mode(self, file_paths: List[Path]) -> List[Path]:
         rng = random.Random(12)
         file_paths_sample = rng.sample(file_paths, int(len(file_paths) * self.DEVELOPMENT_MODE_SUBSAMPLE_RATIO))
-        self._file_paths_dev_mode.extend([fp.stem for fp in file_paths_sample])
+        self._file_paths_dev_mode.extend([fp.name for fp in file_paths_sample])
         return file_paths_sample
 
     def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int],

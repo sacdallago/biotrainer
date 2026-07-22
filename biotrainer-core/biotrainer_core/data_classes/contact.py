@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional
 
@@ -15,6 +17,30 @@ class ContactDatasetResult(BaseModel):
     dataset_name: str = Field(description="Name of the dataset")
     aggregated_result: List[BootstrappedMetric] = Field(description="Aggregated and bootstrapped "
                                                                     "precision scores for the dataset")
+
+    @classmethod
+    def aggregate(cls,
+                  dataset_name: str,
+                  per_protein_results: List[ContactSingleProteinResult],
+                  iterations: int = 30,  # Bootstrap iterations
+                  seed: int = 42,  # Bootstrap seed
+                  confidence_level: float = 0.05  # Bootstrap confidence level
+                  ) -> ContactDatasetResult:
+        from ..functions.bootstrapping import metrics_bootstrap
+        first_value = per_protein_results[0]
+        metric_names = list(first_value.precision_scores.keys())
+        values = {metric_name: [p.precision_scores[metric_name] for p in per_protein_results]
+                  for metric_name in metric_names}
+
+        bt_res = metrics_bootstrap(
+            metrics=values,
+            iterations=iterations,
+            sample_size=len(per_protein_results),
+            seed=seed,
+            confidence_level=confidence_level
+        )
+
+        return ContactDatasetResult(dataset_name=dataset_name, aggregated_result=bt_res)
 
     def __str__(self) -> str:
         scores = ", ".join(f"{metric.name}: {metric.mean:.3f}" for metric in self.aggregated_result)

@@ -1,12 +1,13 @@
 from pathlib import Path
-from typing import Tuple, List, Dict, Any, Optional
-from biotrainer_core.data_classes import ZeroShotMethod, ContactSingleProteinResult
+from typing import Tuple, List, Dict, Any, Optional, Generator
+from biotrainer_core.data_classes import ZeroShotMethod, ContactSingleProteinResult, ContactDatasetResult
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, \
     ContactFrameworkReport, ZeroShotContactCachedResults
 
 from biotrainer_core.input_files import read_FASTA, load_contact_map
 
-from .autoeval_pipeline_utils import subsample_seq_records_for_contact_development_mode
+from .autoeval_pipeline_utils import subsample_seq_records_for_contact_development_mode, \
+    get_dataset_and_dev_result_from_single_contact_results
 
 from ..core import AutoEvalFramework
 
@@ -61,7 +62,10 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
 
         seq_records_subsampled = subsample_seq_records_for_contact_development_mode(seq_records)
         development_ids = [seq_record.seq_id for seq_record in seq_records_subsampled]
-        zero_shot_contact_framework_report.update_development_ids(development_ids=development_ids)
+        development_ids_set = set(development_ids)
+        assert len(development_ids_set) == len(development_ids), "Duplicate IDs in development set!"
+        development_ids = development_ids_set
+        zero_shot_contact_framework_report.update_development_ids(development_ids=list(development_ids))
         if development_mode:
             seq_records = seq_records_subsampled
 
@@ -85,7 +89,7 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                     structure_id=seq_id)
 
         # Define evaluation function
-        def evaluate():
+        def evaluate() -> Generator[ContactSingleProteinResult, None, None]:
             yield from evaluate_contact_dataset(dataset_name=dataset_name,
                                                 items=seq_records,
                                                 predict_func=lambda
@@ -98,15 +102,19 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                 )
 
         # Run Evaluation of zero-shot contact maps
-        for maybe_single_result, maybe_dataset_result in evaluate():
-            if maybe_single_result is not None:
-                zero_shot_contact_cached_results.update_and_sync(result=maybe_single_result,
-                                                                 output_dir=output_dir)
-            if maybe_dataset_result is not None:
-                zero_shot_contact_framework_report.update_result(task_name=dataset_name,
-                                                                 per_protein_results=zero_shot_contact_cached_results.per_protein_results,
-                                                                 dataset_result=maybe_dataset_result)
-                break  # Done
+        single_results = []
+        for single_result in evaluate():
+            zero_shot_contact_cached_results.update_and_sync(result=single_result,
+                                                             output_dir=output_dir)
+            single_results.append(single_result)
+
+        dataset_result, dataset_result_dev = get_dataset_and_dev_result_from_single_contact_results(dataset_name=dataset_name,
+                                                                                                    single_results=single_results,
+                                                                                                    development_ids=development_ids)
+        zero_shot_contact_framework_report.update_result(task_name=dataset_name,
+                                                         per_protein_results=zero_shot_contact_cached_results.per_protein_results,
+                                                         dataset_result=dataset_result,
+                                                         dataset_result_dev=dataset_result_dev)
 
         print(f"Finished task {current_task_name}!")
 

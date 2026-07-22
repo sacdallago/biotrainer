@@ -5,7 +5,8 @@ import streamlit as st
 
 from typing import List, Tuple, Optional
 from biotrainer_core.data_classes import BiotrainerModelResult
-from biotrainer_core.data_classes.autoeval import AutoEvalReport, SupervisedFrameworkReport, ZeroShotFrameworkReport, ContactFrameworkReport
+from biotrainer_core.data_classes.autoeval import AutoEvalReport, SupervisedFrameworkReport, ZeroShotFrameworkReport, \
+    ContactFrameworkReport
 
 from ..state import AutoevalSessionState
 from ..utils import utils as frontend_utils
@@ -47,15 +48,24 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
     labels = [f"{report.embedder_name} ({report.training_date})" for report in active]
     idx = st.selectbox("Select report", options=list(range(len(active))), format_func=lambda i: labels[i])
     report: AutoEvalReport = active[idx]
+    report_is_development = report.is_development()
+
+    dev_mode = report_is_development or state.get_development_mode()  # Force development mode if report is in dev mode
 
     # Summary
     st.metric("Model", report.embedder_name)
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Training date", report.training_date)
     with col2:
         fwks = report.all_framework_names()
         st.metric("Frameworks", len(fwks), help=", ".join(fwks))
+    with (col3):
+        development_help = ("At least one of the frameworks "
+                            "has development mode enabled.")if report_is_development else ("All frameworks "
+                                                                                           "used evaluation mode on "
+                                                                                           "the full test sets.")
+        st.metric("Development mode", report_is_development, help=development_help)
 
     st.divider()
     framework_tab_names: List[Tuple[str, str]] = []  # (label, kind)
@@ -143,7 +153,6 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                     st.divider()
 
                 task = st.selectbox("Task", options=tasks)
-                dev_mode = state.get_development_mode()
                 df_sup = srep.to_df(all_metrics=True, development_mode=dev_mode)
                 df_task = df_sup[df_sup["Task"] == task] if not df_sup.empty else df_sup
                 df_task = _postprocess_task_df(df_task)
@@ -252,7 +261,6 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                     st.info("No tasks available.")
                     continue
                 task = st.selectbox("Task", options=tasks)
-                dev_mode = state.get_development_mode()
                 # Zero-shot doesn't support development mode yet, but we pass it anyway for consistency
                 # though zeroshot_task_metrics_dataframe doesn't accept it yet.
                 df_zrep = zrep.to_df(all_metrics=True, development_mode=dev_mode)
@@ -273,10 +281,10 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                     st.info("No tasks available.")
                     continue
                 task = st.selectbox("Task", options=tasks, key=f"task_selector_contact_{kind}")
-                dev_mode = state.get_development_mode()
                 df_task = crep.to_df(all_metrics=True, development_mode=dev_mode)
                 df_task = df_task[df_task["Task"] == task] if not df_task.empty else df_task
-                st.dataframe(df_task[["Task", "Metric", "Mean", "Lower", "Upper"]], use_container_width=True, hide_index=True)
+                st.dataframe(df_task[["Task", "Metric", "Mean", "Lower", "Upper"]], use_container_width=True,
+                             hide_index=True)
 
                 if not df_task.empty:
                     try:

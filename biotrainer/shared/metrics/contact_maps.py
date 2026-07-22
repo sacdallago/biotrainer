@@ -113,19 +113,10 @@ def evaluate_contact_dataset(
         get_ground_truth_func: Callable[[Any], np.ndarray],
         get_seq_id_func: Callable[[Any], str],
         cached_results: Optional[Dict[str, ContactSingleProteinResult]] = None,
-        iterations: int = 30,
-        seed: int = 42,
-        confidence_level: float = 0.05
-) -> Generator[Tuple[Optional[ContactSingleProteinResult], Optional[ContactDatasetResult]], None, None]:
-    from ..bootstrapper import Bootstrapper
-
-    per_protein_results: Dict[str, ContactSingleProteinResult] = {}
-    if cached_results is not None and len(cached_results) > 0:
-        per_protein_results.update(cached_results)
-
+) -> Generator[ContactSingleProteinResult, None, None]:
     for item in tqdm(items, desc=f"Evaluating {dataset_name} contact dataset..", unit="protein"):
         seq_id = get_seq_id_func(item)
-        if seq_id in per_protein_results:
+        if seq_id in cached_results:
             continue  # Cached result exists
 
         ground_truth = get_ground_truth_func(item)
@@ -133,22 +124,4 @@ def evaluate_contact_dataset(
 
         precision_scores = evaluate_contact_map(prediction, ground_truth)
         single_protein_result = ContactSingleProteinResult(protein_name=seq_id, precision_scores=precision_scores)
-        yield single_protein_result, None
-        per_protein_results[seq_id] = single_protein_result
-
-    # Aggregation
-    first_value = list(per_protein_results.values())[0]
-    metric_names = list(first_value.precision_scores.keys())
-    values = {metric_name: torch.tensor([[p.precision_scores[metric_name]] for p in per_protein_results.values()],
-                                        dtype=torch.float32) for metric_name in metric_names}
-
-    bt_res = Bootstrapper.direct_metrics_bootstrap(
-        metrics=values,
-        iterations=iterations,
-        sample_size=len(per_protein_results),
-        seed=seed,
-        confidence_level=confidence_level
-    )
-
-    dataset_result = ContactDatasetResult(dataset_name=dataset_name, aggregated_result=bt_res)
-    yield None, dataset_result
+        yield single_protein_result

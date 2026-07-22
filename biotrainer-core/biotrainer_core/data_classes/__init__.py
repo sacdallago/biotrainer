@@ -6,11 +6,11 @@ from .biotrainer_model_result import BiotrainerModelResult, DerivedValues, Train
 from .biotrainer_prediction import BiotrainerPrediction, BiotrainerInferenceResult
 from .metrics import EpochMetrics, MetricEstimate, BootstrappedMetric
 from .bioengineer_data_classes import ZeroShotMethod, Mutation, SingleMutationScore, VariantScore, Variant, \
-    RankingResult
+    RankingResult, AggregatedRankingResult
 from .contact import ContactDatasetResult, ContactSingleProteinResult
 
 __all__ = ["BiotrainerModelResult", "BiotrainerPrediction", "Protocol", "EmbeddingStats",
            "EpochMetrics", "MetricEstimate", "BootstrappedMetric", "SequenceData", "TestResult", "TrainingResult",
            "DerivedValues", "BiotrainerModelUpdate", "BiotrainerInferenceResult",
            "ZeroShotMethod", "Mutation", "SingleMutationScore", "VariantScore", "Variant", "RankingResult",
-           "ContactDatasetResult", "ContactSingleProteinResult"]
+           "AggregatedRankingResult", "ContactDatasetResult", "ContactSingleProteinResult"]
