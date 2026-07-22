@@ -19,6 +19,10 @@ class ContactDatasetResult(BaseModel):
                                                                     "precision scores for the dataset")
 
     @classmethod
+    def empty(cls, dataset_name: str):
+        return ContactDatasetResult(dataset_name=dataset_name, aggregated_result=[])
+
+    @classmethod
     def aggregate(cls,
                   dataset_name: str,
                   per_protein_results: List[ContactSingleProteinResult],
@@ -27,6 +31,9 @@ class ContactDatasetResult(BaseModel):
                   confidence_level: float = 0.05  # Bootstrap confidence level
                   ) -> ContactDatasetResult:
         from ..functions.bootstrapping import metrics_bootstrap
+        if len(per_protein_results) == 0:
+            return ContactDatasetResult.empty(dataset_name)
+
         first_value = per_protein_results[0]
         metric_names = list(first_value.precision_scores.keys())
         values = {metric_name: [p.precision_scores[metric_name] for p in per_protein_results]
