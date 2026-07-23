@@ -161,9 +161,6 @@ class AutoEval:
 
     def _pre_embed(self, all_unique_per_residue, all_unique_per_sequence,
                    devices: Optional[List[Union[str, torch.device]]] = None):
-        if devices and len(devices) > 1:
-            return self._pre_embed_parallel(all_unique_per_residue, all_unique_per_sequence, devices)
-
         embedder = setup_embedder(embedder_name=self.embedder_name,
                                   output_dir=self.output_dir,
                                   precomputed_per_residue_embeddings=self.precomputed_per_residue_embeddings,
@@ -188,86 +185,6 @@ class AutoEval:
                       expected_length=len(all_unique_per_sequence))
 
         print("Calculated embeddings successfully!")
-        return embeddings_file_per_residue, embeddings_file_per_sequence
-
-    def _pre_embed_parallel(self, all_unique_per_residue, all_unique_per_sequence, devices):
-        print(f"Embedding in parallel across {len(devices)} devices: {devices}")
-
-        def embed_on_device(seqs, protocol, device, output_dir, part_idx):
-            # Use a separate output directory for each process to avoid h5 file locking issues
-            part_output_dir = output_dir / f"parallel_embed_{device}_{part_idx}"
-            part_output_dir.mkdir(parents=True, exist_ok=True)
-            embedder = setup_embedder(embedder_name=self.embedder_name,
-                                      output_dir=part_output_dir,
-                                      precomputed_per_residue_embeddings=self.precomputed_per_residue_embeddings,
-                                      precomputed_per_sequence_embeddings=self.precomputed_per_sequence_embeddings,
-                                      custom_embedder=self.custom_embedder,
-                                      device=device)
-            if protocol == "per_residue":
-                return embedder.per_residue_path(seqs)
-            else:
-                return embedder.per_sequence_path(seqs)
-
-        import h5py
-
-        # Helper to merge h5 files
-        def merge_h5_files(file_paths, target_path):
-            with h5py.File(target_path, 'w') as target_h5:
-                for file_path in file_paths:
-                    with h5py.File(file_path, 'r') as source_h5:
-                        for key in source_h5.keys():
-                            if key not in target_h5:
-                                source_h5.copy(key, target_h5)
-            return target_path
-
-        res_seqs = [seq_record.seq for _, seq_record in all_unique_per_residue.items()]
-        seq_seqs = [seq_record.seq for _, seq_record in all_unique_per_sequence.items()]
-
-        final_paths = []
-        for protocol, seqs, name, expected_len in [
-            ("per_residue", res_seqs, "per-residue", len(all_unique_per_residue)),
-            ("per_sequence", seq_seqs, "per-sequence",
-             len(all_unique_per_sequence))]:
-            if expected_len == 0:
-                final_paths.append(None)
-                continue
-
-            print(f"Embedding {expected_len} sequences {protocol} in parallel across {len(devices)} devices")
-            chunk_size = (expected_len + len(devices) - 1) // len(devices)
-            chunks = [seqs[i:i + chunk_size] for i in range(0, expected_len, chunk_size)]
-
-            with ProcessPoolExecutor(max_workers=len(devices)) as executor:
-                futures = []
-                for i, chunk in enumerate(chunks):
-                    device = devices[i % len(devices)]
-                    futures.append(executor.submit(embed_on_device, chunk, protocol, device, self.output_dir, i))
-
-                part_paths = [future.result() for future in futures]
-
-            # Merge partial h5 files
-            target_name = EmbeddingService.get_embeddings_file_name(
-                embedder_name=self.embedder_name,
-                use_half_precision=self.use_half_precision,
-                use_reduced_embeddings=(protocol == "per_sequence")
-            )
-            target_path = self.output_dir / target_name
-            merge_h5_files(part_paths, target_path)
-            final_paths.append(target_path)
-
-            # Cleanup temporary directories
-            import shutil
-            for p in part_paths:
-                shutil.rmtree(p.parent)
-
-        embeddings_file_per_residue, embeddings_file_per_sequence = final_paths
-        if embeddings_file_per_residue:
-            check_h5_file(name="per-residue", h5_path=embeddings_file_per_residue,
-                          expected_length=len(all_unique_per_residue))
-        if embeddings_file_per_sequence:
-            check_h5_file(name="per-sequence", h5_path=embeddings_file_per_sequence,
-                          expected_length=len(all_unique_per_sequence))
-
-        print("Calculated parallel embeddings successfully!")
         return embeddings_file_per_residue, embeddings_file_per_sequence
 
     def _general_task_setup(self, available_framework: AvailableFramework,
@@ -483,56 +400,4 @@ class AutoEval:
                                                       report=final_report)
             self.autoeval_report.write(self.output_dir)
 
-        return self.autoeval_report
-
-    def run_parallel(self, devices: Optional[List[Union[str, torch.device]]] = None) -> AutoEvalReport:
-        """
-        Execute all configured evaluation tasks in parallel across multiple devices.
-
-        :param devices: Optional list of device specifiers for parallel embedding/model computations
-            (e.g., ['cuda:0', 'cuda:1']). If not specified, all available CUDA devices are used.
-        :return: An AutoEvalReport containing the evaluation results for all frameworks.
-        """
-        if not devices:
-            if torch.cuda.is_available():
-                devices = [f"cuda:{i}" for i in range(torch.cuda.device_count())]
-            else:
-                devices = ["cpu"]
-
-        if len(devices) <= 1:
-            return self.run(device=devices[0] if devices else None)
-
-        devices = [get_device(d) for d in devices]
-        framework_to_params = self._setup_runner_params(devices=devices)
-
-        # Run tasks in parallel using ProcessPoolExecutor
-        # We need to wrap the task execution because task_runner.runner is a generator
-        def run_task(framework_obj, runner_params):
-            task_runner = self._frameworks_to_runners[framework_obj]
-            current_progress = None
-            for progress in task_runner.runner(runner_params):
-                current_progress = progress
-            return framework_obj, current_progress.final_report
-
-        print(f"Running {len(framework_to_params)} tasks in parallel across {len(devices)} devices")
-        with ProcessPoolExecutor(max_workers=len(devices)) as executor:
-            futures = [executor.submit(run_task, framework, params) for framework, params in
-                       framework_to_params.items()]
-            for future in as_completed(futures):
-                try:
-                    framework, final_report = future.result()
-                    if final_report is None:
-                        raise RuntimeError(
-                            f"No final report was returned from autoeval task for {framework.get_name()}!")
-                    self._results[framework] = final_report
-                    print(f"Finished task for framework {framework.get_name()}")
-                except Exception as e:
-                    print(f"Task failed with error: {e}")
-                    raise e
-
-        assert self.autoeval_report is not None, f"Autoeval report is None after task execution!"
-        for framework, report in self._results.items():
-            self.autoeval_report.add_framework_report(framework_name=framework.get_name(),
-                                                      framework_mode=framework.get_mode(),
-                                                      report=report)
         return self.autoeval_report
