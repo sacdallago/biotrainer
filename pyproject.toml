@@ -23,55 +23,54 @@ classifiers = [
 ]
 requires-python = ">=3.11,<3.14"
 dependencies = [
-    "accelerate>=1.13.0",
+    "accelerate>=1.14.0,<2.0.0",
     "h5py>=3.15.0,<4.0.0",
-    "numpy>=2.4.1,<2.5.0",
+    "numpy>=2.4.1,<2.6.0",
     "ruamel.yaml>=0.17.40,<0.18.0",
     "sentencepiece>=0.2.0",
     "scipy>=1.17.1",
     "scikit-learn>=1.5.1",
-    "tensorboard>=2.18.0",
-    "torch>=2.10.0,<3.0.0",
+    "tensorboard>=2.21.0,<2.22.0",
+    "torch>=2.11.0,<3.0.0",
     "gpytorch>=1.15.2,<2.0",
-    "tqdm>=4.67.3",
-    "transformers>=5.4.0",
+    "tqdm>=4.67.3,<5.0.0",
     "torchmetrics>=1.9.0",
     "safetensors>=0.4.4",
-    "onnx==1.20.1",
-    "onnxscript>=0.6.2",
-    "datasets>=4.8.4",
-    "umap-learn>=0.5.7",
-    "llvmlite>=0.44.0",
-    "cyclopts>=4.10.1",
+    "onnx>=1.22.0,<1.23.0",
+    "onnxscript>=0.7.0,<0.8.0",
+    "datasets>=4.8.0,<5.0.0",
+    "umap-learn>=0.5.7,<0.6.0",
+    "llvmlite>=0.46.0,<0.49.0",
+    "cyclopts>=4.22.0,<4.23.0",
     "appdirs>=1.4.4",
-    "peft>=0.15.2",
-    "aaanalysis>=1.0.2",
-    "blosum>=2.0.3",
-    "pydantic>=2.12.3",
+    "peft>=0.18.1,<0.20.0",
+    "aaanalysis>=1.0.3,<1.1.0",
+    "blosum>=2.2.0,<2.3.0",
+    "pydantic>=2.12.0,<2.15.0",
     "biotrainer-core>=0.1.0",
-    "junban>=1.0.3",
+    "junban>=1.0.3,<1.1.0",
+    "einops>=0.8.2,<0.9.0",
 ]
 
 [project.optional-dependencies]
 jupyter = [
-    "jupyter>=1.1.1",
-    "notebook>=7.4.0",
+    "jupyter>=1.1.1,<1.2.0",
+    "notebook>=7.4.0,<7.7.0",
 ]
-onnx-cpu = ["onnxruntime>=1.23.2"]
-onnx-gpu = ["onnxruntime-gpu>=1.23.2"]
-onnx-mac = ["onnxruntime>=1.21.0"]  # Replace with cpu ["onnxruntime>=1.21.0"] if coreml doesn't work on your Mac
+onnx-cpu = ["onnxruntime>=1.25.0,<1.30.0"]
+onnx-gpu = ["onnxruntime>=1.25.0,<1.30.0"]
+onnx-mac = ["onnxruntime>=1.25.0,<1.30.0"]  # Replace with cpu ["onnxruntime>=1.21.0"] if coreml doesn't work on your Mac
 dev = [
-    "pytest>=9.0.2",
-    "build>=1.2.2",
-    "pip-audit>=2.9.0",
+    "pytest>=9.1.1,<9.2.0",
+    "build>=1.5.0,<2.0.0",
+    "pip-audit>=2.10.0,<2.11.0",
 ]
 autoeval-frontend = [
-    "streamlit>=1.55.0",
-    "altair>=6.0.0"
+    "streamlit>=1.60.0,<1.61.0",
+    "altair>=6.2.2,<6.3.0"
 ]
 esm-c = [
-    "esm>=3.3.0", # This will try to pull from PyPI if available
-    #"flash-attn>=2.8.3.post1,<2.9.0",
+    "esm>=3.3.0,<3.4.0", # This will try to pull from PyPI if available, otherwise falls back to git
     "xformers>=0.0.35,<0.1.0"
 ]
 
