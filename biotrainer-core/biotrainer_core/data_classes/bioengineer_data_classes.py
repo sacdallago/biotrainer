@@ -242,33 +242,38 @@ class AggregatedRankingResult(RankingResult):
     def aggregate(cls, results: List[RankingResult]) -> AggregatedRankingResult:
         """
         Aggregate ranking results across multiple assays.
-        Follows ProteinGym's aggregation approach: simple mean and std across all assays.
+        Follows ProteinGym's bootstrapping approach:
+        https://github.com/OATML-Markslab/ProteinGym/blob/main/proteingym/performance_DMS_benchmarks.py
         """
+
+        from ..functions.bootstrapping import metrics_bootstrap
 
         # Extract scores (no absolute values)
         scc_scores = [rr.scc_score() for rr in results]
         ndcg_scores = [rr.ndcg_score() for rr in results]
 
-        # Compute mean and std
-        total_scc_mean = float(np.mean(scc_scores))
-        total_scc_std = float(np.std(scc_scores, ddof=1))  # ddof=1: sample std
-        total_ndcg_mean = float(np.mean(ndcg_scores))
-        total_ndcg_std = float(np.std(ndcg_scores, ddof=1))
+        # Prepare metrics dictionary for bootstrapping
+        values = {
+            "scc": scc_scores,
+            "ndcg": ndcg_scores
+        }
 
-        # Create aggregated result with mean ± std bounds
-        overall_ranking_result = AggregatedRankingResult(
-            scc=MetricEstimate(
-                name="scc",
-                mean=total_scc_mean,
-                lower=total_scc_mean - total_scc_std,
-                upper=total_scc_mean + total_scc_std
-            ),
-            ndcg=MetricEstimate(
-                name="ndcg",
-                mean=total_ndcg_mean,
-                lower=total_ndcg_mean - total_ndcg_std,
-                upper=total_ndcg_mean + total_ndcg_std
-            )
+        # Bootstrap with default parameters (matching contact dataset approach)
+        iterations = 10000  # https://github.com/OATML-Markslab/ProteinGym/blob/144fe22b07dfaeec2b366f2346203a9838a55b4c/proteingym/performance_DMS_benchmarks.py#L95
+        bt_res = metrics_bootstrap(
+            metrics=values,
+            iterations=iterations,
+            sample_size=len(results),
+            seed=44,
+            confidence_level=0.05  # Default confidence level (95% CI)
         )
 
-        return overall_ranking_result
+        # Extract bootstrapped metrics by name
+        scc_metric = next(m for m in bt_res if m.name == "scc")
+        ndcg_metric = next(m for m in bt_res if m.name == "ndcg")
+
+        # Create aggregated result with bootstrapped confidence intervals
+        return AggregatedRankingResult(
+            scc=scc_metric,
+            ndcg=ndcg_metric,
+        )
