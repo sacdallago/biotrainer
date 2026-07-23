@@ -402,12 +402,9 @@ class ContactFrameworkReport(FrameworkReport):
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
         primary_evaluation_metric = "long_P@L2"  # TODO Find better place for this constant
-        for task, rr in self.task_results.items():
-            if development_mode and task not in self.development_ids:
-                continue
+        result_dict = self.task_results_dev if development_mode else self.task_results
+        for task, rr in result_dict.items():
             task = task.split("-")[-1]
-            if rr is None:
-                continue
             contact_metrics = rr.aggregated_result
             contact_metrics = contact_metrics if all_metrics else [m for m in contact_metrics
                                                                    if m.name == primary_evaluation_metric]
