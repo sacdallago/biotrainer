@@ -21,7 +21,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization"
 ]
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "accelerate>=1.14.0,<2.0.0",
     "h5py>=3.15.0,<4.0.0",
