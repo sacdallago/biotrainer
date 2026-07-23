@@ -213,7 +213,11 @@ class Solver(ABC):
                 values=dropout_raw_values.numpy(),
                 dimension=1,
                 confidence_level=confidence_level)
-            prediction_by_mean = self._probabilities_to_predictions(torch.from_numpy(dropout_mean))
+            dropout_mean = torch.from_numpy(dropout_mean)
+            dropout_std = torch.from_numpy(dropout_std)
+            lower_bound = torch.from_numpy(lower_bound)
+            upper_bound = torch.from_numpy(upper_bound)
+            prediction_by_mean = self._probabilities_to_predictions(dropout_mean)
 
             bald_scores = None
             if self.protocol in Protocol.classification_protocols():

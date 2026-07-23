@@ -113,6 +113,10 @@ class ResidueSolver(Solver):
                     dimension=1,
                     confidence_level=confidence_level
                 )
+                dropout_mean = torch.from_numpy(dropout_mean)
+                dropout_std = torch.from_numpy(dropout_std)
+                lower_bound = torch.from_numpy(lower_bound)
+                upper_bound = torch.from_numpy(upper_bound)
 
                 # Different prediction logic for classification vs regression
                 if is_regression:
