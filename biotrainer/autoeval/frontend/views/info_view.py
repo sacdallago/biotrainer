@@ -13,7 +13,7 @@ def render_info_view(state: AutoevalSessionState):
         "language models after training."
     )
     st.markdown("### Supported Datasets")
-    st.markdown("#### PBC (Supervised)")
+    st.markdown("#### PBC-Supervised")
     st.write(
         "- [ProteinBenchmarkCollection](https://github.com/Rostlab/pbc): Supervised tasks such as:\n"
         "  - **scl**: Protein subcellular localization prediction.\n"
@@ -26,3 +26,5 @@ def render_info_view(state: AutoevalSessionState):
         "  - **non-virus**: Non-viral protein datasets.\n"
         "  - **total**: Combination of viral and non-viral datasets."
     )
+    st.markdown("#### PBC-Contact (Zero-Shot Jacobian + Supervised Attention)")
+

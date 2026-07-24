@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from io import BytesIO
-from typing import List, Optional
-
+import numpy as np
 import pandas as pd
 
-
+from io import BytesIO
+from typing import Dict, Union
+from biotrainer_core.data_classes.autoeval import ZeroShotFrameworkReport, ContactFrameworkReport
 
 
 def _get_palette(n_models: int):
@@ -20,7 +20,6 @@ def _get_palette(n_models: int):
         return palette
     except Exception:
         return None
-
 
 
 def plot_comparison(df: pd.DataFrame):
@@ -123,7 +122,23 @@ def plot_comparison(df: pd.DataFrame):
     return fig, ax
 
 
-def compute_paired_delta_stats(reports_by_model: dict, baseline_model: str, z: float = 1.96) -> dict:
+def _get_generic_result_dict(report_by_model: Union[ZeroShotFrameworkReport, ContactFrameworkReport]) -> Dict[
+    str, Dict[str, float]]:
+    """ Convert the framework report to a dict of individual_id -> {metric_name -> metric_value } """
+    if isinstance(report_by_model, ZeroShotFrameworkReport):
+        return {individual_id: {ranking_result.scc.name: ranking_result.scc.mean,
+                                ranking_result.ndcg.name: ranking_result.ndcg.mean} for individual_id, ranking_result in
+                report_by_model.individual_results.items()}
+    elif isinstance(report_by_model, ContactFrameworkReport):
+        return {individual_id: single_result.precision_scores for individual_id, single_result in
+                report_by_model.per_protein_results.items()}
+    else:
+        raise ValueError("Framework not supported for compared_paired_delta_stats!")
+
+
+def compute_paired_delta_stats(reports_by_model: Dict[str, Union[ZeroShotFrameworkReport, ContactFrameworkReport]],
+                               baseline_model: str,
+                               z: float = 1.96) -> dict:
     """Confidence interval of the *paired* per-dataset score difference (model - baseline).
 
     For zero-shot frameworks (e.g. PGYM) every model is scored on the same datasets, so the
@@ -140,36 +155,35 @@ def compute_paired_delta_stats(reports_by_model: dict, baseline_model: str, z: f
     Entries are only produced where >= 2 datasets are shared with the baseline; everything
     else is omitted and the plot falls back to its default whisker.
     """
-    try:
-        import numpy as np
-    except Exception:
-        return {}
-
     stats: dict = {}
     baseline = reports_by_model.get(baseline_model)
     if baseline is None:
         return stats
-    base_members = getattr(baseline, "aggregated_members", {}) or {}
-    base_individual = getattr(baseline, "individual_results", {}) or {}
+
+    base_members = baseline.task_members
+    base_dict = _get_generic_result_dict(baseline)
 
     for model_name, report in reports_by_model.items():
         if model_name == baseline_model:
             continue
-        members_by_task = getattr(report, "aggregated_members", {}) or {}
-        individual = getattr(report, "individual_results", {}) or {}
+        members_by_task = report.task_members
+        individual_dict = _get_generic_result_dict(report)
         for task, members in members_by_task.items():
             base_task_members = set(base_members.get(task, []))
             shared = [d for d in members
-                      if d in base_task_members and d in individual and d in base_individual]
+                      if d in base_task_members and d in individual_dict and d in base_dict]
             if len(shared) < 2:
                 continue
-            for metric in ("scc", "ndcg"):
+            for metric in ("scc", "ndcg", "long_P@L2"):
                 try:
-                    m_scores = np.array([getattr(individual[d], metric).mean for d in shared], dtype=float)
-                    b_scores = np.array([getattr(base_individual[d], metric).mean for d in shared], dtype=float)
-                except Exception:
+                    # Collect all scores for the respective individual members and metric
+                    m_scores = np.array([individual_dict[d][metric] for d in shared], dtype=float)
+                    b_scores = np.array([base_dict[d][metric] for d in shared], dtype=float)
+                except KeyError:
                     continue
+                # Calculate deltas
                 deltas = m_scores - b_scores
+                # Calculate CI based on deltas
                 n = len(deltas)
                 se = float(np.std(deltas, ddof=1)) / (n ** 0.5)
                 stats[(model_name, task, metric)] = {

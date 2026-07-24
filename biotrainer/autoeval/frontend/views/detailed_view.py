@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import altair as alt
 import streamlit as st
 
 from typing import List, Tuple, Optional
@@ -38,6 +39,27 @@ def _metric_domain(metric_name: str) -> Tuple[float, float] | None:
     return None
 
 
+def _build_metrics_chart(df_task: pd.DataFrame):
+    if not df_task.empty:
+        dfp = df_task.copy()
+        dfp["CI"] = dfp.apply(lambda r: f"[{r['Lower']}, {r['Upper']}]", axis=1)
+        bars = alt.Chart(dfp).mark_bar().encode(
+            x=alt.X("Metric:N", title="Metric"),
+            y=alt.Y("Mean:Q", title="Score"),
+            tooltip=[
+                alt.Tooltip("Metric", title="Metric"),
+                alt.Tooltip("Mean", title="Mean"),
+                alt.Tooltip("CI", title="95% CI"),
+            ],
+        )
+        error_bars = alt.Chart(dfp).mark_errorbar().encode(
+            x=alt.X("Metric:N"),
+            y=alt.Y("Lower:Q", title=""),
+            y2="Upper:Q",
+        )
+        st.altair_chart((bars + error_bars).properties(height=320), use_container_width=True)
+
+
 def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
     st.subheader("Detailed Report View")
 
@@ -62,9 +84,9 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
         st.metric("Frameworks", len(fwks), help=", ".join(fwks))
     with (col3):
         development_help = ("At least one of the frameworks "
-                            "has development mode enabled.")if report_is_development else ("All frameworks "
-                                                                                           "used evaluation mode on "
-                                                                                           "the full test sets.")
+                            "has development mode enabled.") if report_is_development else ("All frameworks "
+                                                                                            "used evaluation mode on "
+                                                                                            "the full test sets.")
         st.metric("Development mode", report_is_development, help=development_help)
 
     st.divider()
@@ -107,48 +129,45 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                         st.metric("Max Value", f"{embedding_stats.max:.2f}")
 
                     # Range plot visualization
-                    try:
-                        import altair as alt
-                        # Create a dataframe with a single row representing the range
-                        range_df = pd.DataFrame({
-                            'dummy': [1],
-                            'min': [embedding_stats.min],
-                            'max': [embedding_stats.max]
-                        })
+                    # Create a dataframe with a single row representing the range
+                    range_df = pd.DataFrame({
+                        'dummy': [1],
+                        'min': [embedding_stats.min],
+                        'max': [embedding_stats.max]
+                    })
 
-                        # Create a range plot using a rule mark
-                        range_chart = alt.Chart(range_df).mark_rule(size=8).encode(
-                            x=alt.X('min:Q',
-                                    scale=alt.Scale(domain=[embedding_stats.min - abs(embedding_stats.min) * 0.1,
-                                                            embedding_stats.max + abs(embedding_stats.max) * 0.1]),
-                                    title='Embedding Value Range'),
-                            x2='max:Q',
-                            tooltip=[
-                                alt.Tooltip('min:Q', title='Min', format='.4f'),
-                                alt.Tooltip('max:Q', title='Max', format='.4f')
-                            ]
-                        ).properties(height=80)
+                    # Create a range plot using a rule mark
+                    import altair as alt
+                    range_chart = alt.Chart(range_df).mark_rule(size=8).encode(
+                        x=alt.X('min:Q',
+                                scale=alt.Scale(domain=[embedding_stats.min - abs(embedding_stats.min) * 0.1,
+                                                        embedding_stats.max + abs(embedding_stats.max) * 0.1]),
+                                title='Embedding Value Range'),
+                        x2='max:Q',
+                        tooltip=[
+                            alt.Tooltip('min:Q', title='Min', format='.4f'),
+                            alt.Tooltip('max:Q', title='Max', format='.4f')
+                        ]
+                    ).properties(height=80)
 
-                        # Add tick marks at min and max
-                        ticks = alt.Chart(range_df).transform_fold(
-                            ['min', 'max'],
-                            as_=['position_type', 'value']
-                        ).mark_tick(size=20, thickness=3).encode(
-                            x=alt.X('value:Q', title='Embedding Value Range'),
-                            color=alt.Color('position_type:N',
-                                            scale=alt.Scale(domain=['min', 'max'], range=['blue', 'red']),
-                                            legend=alt.Legend(title='Position')),
-                            tooltip=[
-                                alt.Tooltip('position_type:N', title='Position'),
-                                alt.Tooltip('value:Q', title='Value', format='.4f')
-                            ]
-                        )
+                    # Add tick marks at min and max
+                    ticks = alt.Chart(range_df).transform_fold(
+                        ['min', 'max'],
+                        as_=['position_type', 'value']
+                    ).mark_tick(size=20, thickness=3).encode(
+                        x=alt.X('value:Q', title='Embedding Value Range'),
+                        color=alt.Color('position_type:N',
+                                        scale=alt.Scale(domain=['min', 'max'], range=['blue', 'red']),
+                                        legend=alt.Legend(title='Position')),
+                        tooltip=[
+                            alt.Tooltip('position_type:N', title='Position'),
+                            alt.Tooltip('value:Q', title='Value', format='.4f')
+                        ]
+                    )
 
-                        # Combine range line and ticks
-                        combined_chart = range_chart + ticks
-                        st.altair_chart(combined_chart, use_container_width=True)
-                    except Exception:
-                        pass
+                    # Combine range line and ticks
+                    combined_chart = range_chart + ticks
+                    st.altair_chart(combined_chart, use_container_width=True)
 
                     st.divider()
 
@@ -158,47 +177,7 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                 df_task = _postprocess_task_df(df_task)
                 st.dataframe(df_task, use_container_width=True, hide_index=True)
 
-                # Per-task plot (means with CIs) across test sets/metrics
-                if not df_task.empty:
-                    try:
-                        import altair as alt
-                        dfp = df_task.copy()
-                        dfp["CI"] = dfp.apply(lambda r: f"[{r['lower']}, {r['upper']}]", axis=1)
-                        # Determine if all metrics are in [0,1] family; if yes, enforce domain [0,1]
-                        uniq_metrics = sorted(dfp["evaluation_metric"].astype(str).str.lower().unique())
-                        if all(_metric_domain(m) == (0.0, 1.0) for m in uniq_metrics):
-                            domain = (0.0, 1.0)
-                        else:
-                            domain = None
-                        y_scale = alt.Scale(domain=domain) if domain else alt.Undefined
-                        y_enc = alt.Y("mean:Q", title="Score", scale=y_scale)
-
-                        # Base bar chart
-                        bars = alt.Chart(dfp).mark_bar().encode(
-                            x=alt.X("test_set_name:N", title="Test Set"),
-                            y=y_enc,
-                            color=alt.Color("evaluation_metric:N", title="Metric"),
-                            tooltip=[
-                                alt.Tooltip("evaluation_metric", title="Metric"),
-                                alt.Tooltip("test_set_name", title="Test Set"),
-                                alt.Tooltip("mean", title="Mean"),
-                                alt.Tooltip("CI", title="95% CI"),
-                            ],
-                        )
-
-                        # Adding error bars for confidence intervals
-                        error_bars = alt.Chart(dfp).mark_errorbar().encode(
-                            x=alt.X("test_set_name:N", title="Test Set"),
-                            y=alt.Y("lower:Q", title=""),
-                            y2="upper:Q",
-                            color=alt.Color("evaluation_metric:N", title="Metric")
-                        )
-
-                        # Combine bar chart and error bars
-                        chart = bars + error_bars
-                        st.altair_chart(chart.properties(height=320), use_container_width=True)
-                    except Exception:
-                        pass
+                _build_metrics_chart(df_task)
 
                 # Loss curves if present
                 model_result: Optional[BiotrainerModelResult] = srep.results.get(task)
@@ -267,6 +246,7 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                 df_task = df_zrep[df_zrep["Task"] == task] if not df_zrep.empty else df_zrep
                 df_task = _postprocess_task_df(df_task)
                 st.dataframe(df_task, use_container_width=True, hide_index=True)
+                _build_metrics_chart(df_task)
 
             elif kind in ("zeroshot_contact", "supervised_contact"):  # contact
                 if kind == "zeroshot_contact":
@@ -286,25 +266,4 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                 st.dataframe(df_task[["Task", "Metric", "Mean", "Lower", "Upper"]], use_container_width=True,
                              hide_index=True)
 
-                if not df_task.empty:
-                    try:
-                        import altair as alt
-                        dfp = df_task.copy()
-                        dfp["CI"] = dfp.apply(lambda r: f"[{r['Lower']}, {r['Upper']}]", axis=1)
-                        bars = alt.Chart(dfp).mark_bar().encode(
-                            x=alt.X("Metric:N", title="Metric"),
-                            y=alt.Y("Mean:Q", title="Score"),
-                            tooltip=[
-                                alt.Tooltip("Metric", title="Metric"),
-                                alt.Tooltip("Mean", title="Mean"),
-                                alt.Tooltip("CI", title="95% CI"),
-                            ],
-                        )
-                        error_bars = alt.Chart(dfp).mark_errorbar().encode(
-                            x=alt.X("Metric:N"),
-                            y=alt.Y("Lower:Q", title=""),
-                            y2="Upper:Q",
-                        )
-                        st.altair_chart((bars + error_bars).properties(height=320), use_container_width=True)
-                    except Exception:
-                        pass
+                _build_metrics_chart(df_task)

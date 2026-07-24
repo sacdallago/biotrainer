@@ -22,6 +22,7 @@ from ...autoeval_frameworks import AvailableFramework
 
 
 def _render_framework_comparison(chosen_reports: List[AutoEvalReport],
+                                 get_report_results: Callable,
                                  framework_name: str,
                                  df_fw: Optional[pd.DataFrame],
                                  baseline_model: str):
@@ -66,26 +67,29 @@ def _render_framework_comparison(chosen_reports: List[AutoEvalReport],
         else:
             st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
 
-        st.markdown(f"**Delta Comparison (Baseline: {baseline_model})**")
-        paired_stats = compute_paired_delta_stats(
-            {report.embedder_name: report.zeroshot_results[framework_name]
-             for report in chosen_reports if framework_name in report.zeroshot_results},
-            baseline_model,
-        )
-        fig_delta, ax_delta = plot_delta_comparison(df_fw, baseline_model, paired_stats=paired_stats)
-        if fig_delta is not None:
-            st.pyplot(fig_delta, use_container_width=True)
-            st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig_delta),
-                               file_name=f"{framework_name}_delta_comparison.png",
-                               mime="image/png", key=f"delta_comp_png_{framework_name}")
-            st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig_delta),
-                               file_name=f"{framework_name}_delta_comparison.pdf",
-                               mime="application/pdf", key=f"delta_comp_pdf_{framework_name}")
-        else:
-            st.info("Select a baseline model and ensure overlapping tasks to render the delta plot.")
+        if framework_name != "PBC_SUPERVISED":
+            st.markdown(f"**Delta Comparison (Baseline: {baseline_model})**")
+            paired_stats = compute_paired_delta_stats(
+                {report.embedder_name: get_report_results(report)[framework_name]
+                 for report in chosen_reports if framework_name in get_report_results(report)},
+                baseline_model,
+            )
+            fig_delta, ax_delta = plot_delta_comparison(df_fw, baseline_model, paired_stats=paired_stats)
+            if fig_delta is not None:
+                st.pyplot(fig_delta, use_container_width=True)
+                st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig_delta),
+                                   file_name=f"{framework_name}_delta_comparison.png",
+                                   mime="image/png", key=f"delta_comp_png_{framework_name}")
+                st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig_delta),
+                                   file_name=f"{framework_name}_delta_comparison.pdf",
+                                   mime="application/pdf", key=f"delta_comp_pdf_{framework_name}")
+            else:
+                st.info("Select a baseline model and ensure overlapping tasks to render the delta plot.")
 
 
-def _aggregate_for_comparison(get_report_results: Callable, framework_name: str, chosen_reports: List[AutoEvalReport],
+def _aggregate_for_comparison(get_report_results: Callable,
+                              framework_name: str,
+                              chosen_reports: List[AutoEvalReport],
                               dev_mode: bool):
     df = _aggregate_dfs([
         get_report_results(report)[framework_name].to_df(all_metrics=False, development_mode=dev_mode).assign(
@@ -123,41 +127,49 @@ def render_compare(state: AutoevalSessionState, active: List[AutoEvalReport]):
     tab_sup, tab_zs, tab_zsc, tab_sc = st.tabs(["Supervised", "Zero-Shot", "Zero-Shot Contact", "Supervised Contact"])
     with tab_sup:
         framework_name = AvailableFramework.PBC_SUPERVISED.name
-        df_sup = _aggregate_for_comparison(get_report_results=lambda report: report.supervised_results,
+        grr = lambda report: report.supervised_results
+        df_sup = _aggregate_for_comparison(get_report_results=grr,
                                            framework_name=framework_name,
                                            chosen_reports=chosen_reports,
                                            dev_mode=dev_mode)
         _render_framework_comparison(chosen_reports=chosen_reports,
+                                     get_report_results=grr,
                                      framework_name=framework_name,
                                      df_fw=df_sup,
                                      baseline_model=baseline_model)
     with tab_zs:
         framework_name = AvailableFramework.PGYM.name
-        df_zero = _aggregate_for_comparison(get_report_results=lambda report: report.zeroshot_results,
+        grr = lambda report: report.zeroshot_results
+        df_zero = _aggregate_for_comparison(get_report_results=grr,
                                             framework_name=framework_name,
                                             chosen_reports=chosen_reports,
                                             dev_mode=dev_mode)
         _render_framework_comparison(chosen_reports=chosen_reports,
+                                     get_report_results=grr,
                                      framework_name=framework_name,
                                      df_fw=df_zero,
                                      baseline_model=baseline_model)
     with tab_zsc:
         framework_name = AvailableFramework.PBC_ZEROSHOT_CONTACT.name
-        df_zsc = _aggregate_for_comparison(get_report_results=lambda report: report.zeroshot_contact_results,
+        grr = lambda report: report.zeroshot_contact_results
+        df_zsc = _aggregate_for_comparison(get_report_results=grr,
                                            framework_name=framework_name,
                                            chosen_reports=chosen_reports,
                                            dev_mode=dev_mode)
         _render_framework_comparison(chosen_reports=chosen_reports,
+                                     get_report_results=grr,
                                      framework_name=framework_name,
                                      df_fw=df_zsc,
                                      baseline_model=baseline_model)
     with tab_sc:
         framework_name = AvailableFramework.PBC_SUPERVISED_CONTACT.name
-        df_sc = _aggregate_for_comparison(get_report_results=lambda report: report.supervised_contact_results,
+        grr = lambda report: report.supervised_contact_results
+        df_sc = _aggregate_for_comparison(get_report_results=grr,
                                           framework_name=framework_name,
                                           chosen_reports=chosen_reports,
                                           dev_mode=dev_mode)
         _render_framework_comparison(chosen_reports=chosen_reports,
+                                     get_report_results=grr,
                                      framework_name=framework_name,
                                      df_fw=df_sc,
                                      baseline_model=baseline_model)
