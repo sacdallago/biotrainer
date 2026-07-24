@@ -12,11 +12,11 @@ Biological prediction models made simple.
 
 ## Overview
 *Biotrainer* is an open-source framework that simplifies machine learning model development for protein analysis. 
-It provides:
-- **Easy-to-use** training and inference pipelines for protein feature prediction
-- **Standardized data formats** for various prediction tasks
-- **Built-in support** for protein language models and embeddings
-- **Flexible configuration** through simple YAML files
+It provides the following modules:
+- **Training**: Easy to use training and inference pipelines for protein feature prediction
+- **Embedding**: Built-in support for protein language models (ProtT5, ESM-2, ESM-C, ...) and baselines (blosum62, one_hot_encoding, ...)
+- **BioEngineer**: Zero-shot predictions and mutation generation of protein sequences
+- **AutoEval**: Automated evaluation of protein language models on curated downstream tasks
 
 ## Quick Start
 
@@ -62,11 +62,20 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 # Training
 biotrainer train --config examples/sequence_to_class/config.yml
 
-# Inference
+# Inference after Training
 python3
->>> from biotrainer.inference import Inferencer
->>> inferencer, _ = Inferencer.create_from_out_file('output/out.yml')
->>> predictions = inferencer.from_embeddings(your_embeddings)
+>>> from biotrainer.training import BiotrainerModel
+>>> model = BiotrainerModel.from_training_result("output/out.yml")
+>>> predictions = model.predict("SEQUENCE")
+
+# AutoEval
+autoeval_report = (AutoEval(embedder_name="facebook/esm2_t6_8M_UR50D", development_mode=True).
+                    pbc_supervised_contact().
+                    pbc_zeroshot_contact().
+                    pbc_supervised().
+                    pgym(zero_shot_method=ZeroShotMethod.MASKED_MARGINALS).
+                    run())
+autoeval_report.summary(development_mode=False)
 ```
 
 ### 3. Quick Start Datasets
@@ -80,7 +89,7 @@ python3
 
 ## Features
 
-### Supported Prediction Tasks
+### Supported Training Protocols
 - **Residue-level classification** (`residue_to_class`)
 - **Residue-level regression** (`residue_to_value`) *[BETA]*
 - **Sequence-level classification** (`sequence_to_class`)
@@ -88,25 +97,17 @@ python3
 - **Residues-level classification** (`residues_to_class`, like sequence_to_class with per-residue embeddings)
 - **Residues-level regression** (`residues_to_value`, like sequence_to_value with per-residue embeddings)
 
-### Built-in Capabilities
-- Multiple embedding methods (ProtT5, ESM-2, ONNX, etc.)
-- Various neural network architectures
-- Cross-validation and model evaluation
-- Performance metrics and visualization
-- Sanity checks and automatic calculation of baselines (such as random, mean...)
-- Docker support for reproducible environments
-
 ## Autoeval
 
 The biotrainer `autoeval` module allows automatical evaluation of a protein language model on downstream tasks.
 You can find public results (*wip!*) on the [autoeval dashboard](https://autoeval.biocentral.cloud) and compare them
-to your own. Learn more in the [docs](docs/autoeval.md) or in the [autoeval examples](examples/autoeval).
+to your own. Learn more in the [autoeval examples](examples/autoeval).
 
 ## Documentation
 
 ### Tutorials
 - [First Steps Guide](docs/first_steps.md)
-- [Interactive Tutorials](examples/tutorials)
+- [Interactive Training Tutorial](examples/training/biotrainer_training_tutorial.ipynb)
 - [Config Options Overview](docs/config_file_options_overview.md)
 - [Biocentral Web Interface](https://biocentral.cloud/app)
 
@@ -115,7 +116,7 @@ to your own. Learn more in the [docs](docs/autoeval.md) or in the [autoeval exam
 - [Configuration Options](docs/config_file_options.md)
 - [Troubleshooting](docs/troubleshooting.md)
 
-## Example Configuration
+## Example Training Configuration
 ```yaml
 protocol: residue_to_class
 input_file: input.fasta
