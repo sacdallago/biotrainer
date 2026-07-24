@@ -101,5 +101,4 @@ members = [
 
 [tool.uv.sources]
 biotrainer-core = { workspace = true }
-transformers = { git = "https://github.com/Biohub/transformers.git", branch = "main" }
 esm = { git = "https://github.com/Biohub/esm.git", branch = "main" }
