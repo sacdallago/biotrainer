@@ -257,7 +257,6 @@ class AutoEval:
 
         :param custom_output_observers: Optional list of custom training output observers 
             for monitoring and logging training progress.
-        :param dataset_subset: Optional list of dataset names to execute. If None, all datasets will be executed.
         :return: The AutoEval instance for method chaining.
         """
         return self._supervised_task(AvailableFramework.PBC_SUPERVISED, custom_output_observers)
