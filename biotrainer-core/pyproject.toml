@@ -17,6 +17,9 @@ dependencies = [
     # only lightweight deps here — NO torch, transformers, etc.
 ]
 
+[tool.uv]
+exclude-newer = "7 days"  # Minimum release age of pypi packages: 7 days
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
