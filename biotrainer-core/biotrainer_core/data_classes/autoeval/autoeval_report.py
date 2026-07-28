@@ -430,7 +430,7 @@ class ContactFrameworkReport(FrameworkReport):
         return [task_name.split("-")[-1] for task_name in self.task_results.keys()]
 
     def used_development_mode(self) -> bool:
-        return len(self.task_results) == len(self.development_ids)
+        return len(self.per_protein_results) == len(self.development_ids)
 
 
 class ZeroShotContactCachedResults(BaseModel):
