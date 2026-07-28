@@ -108,14 +108,8 @@ class SupervisedFrameworkReport(FrameworkReport):
         task_names = self.results.keys()
         print(f"Total tasks: {len(task_names)}")
         print("Results:")
-
-        for task_name in task_names:
-            metrics = self.extract_metrics(task_name, development_mode=development_mode, all_metrics=False)
-            for metric in metrics:
-                print(
-                    f"{metric['task_name']} ({metric['protocol']}) - {metric['test_set_name']} - "
-                    f"{metric['evaluation_metric']}: {metric['mean']} ({metric['lower']} - {metric['upper']})"
-                )
+        df = self.to_df(all_metrics=False, development_mode=development_mode)
+        print(df)
 
     def extract_metrics(self, combined_task_name: str, development_mode: bool = False,
                         all_metrics: bool = False) -> list[dict]:
@@ -261,10 +255,8 @@ class ZeroShotFrameworkReport(FrameworkReport):
         print(f"Zero-shot method: {self.method.value}")
         print(f"Total tasks: {len(self.task_results)}")
         print("Results:")
-        for combined_task_name, result in self.task_results.items():
-            print(f"{combined_task_name}: "
-                  f"\t SCC:  {result.scc_score()}"
-                  f"\t NDCG: {result.ndcg_score()}")
+        df = self.to_df(all_metrics=True, development_mode=development_mode)
+        print(df)
 
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
@@ -394,10 +386,8 @@ class ContactFrameworkReport(FrameworkReport):
             print(f"Zero-shot contact method: {self.method.value}")
         print(f"Total tasks: {len(self.task_results)}")
         print("Results:")
-        for combined_task_name, result in self.task_results.items():
-            print(f"{combined_task_name}: "
-                  f"\t Results:  {result}")
-            # TODO: add detailed print of metrics!!
+        df = self.to_df(all_metrics=False, development_mode=development_mode)
+        print(df)
 
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
