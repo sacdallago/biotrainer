@@ -575,10 +575,10 @@ class AutoEvalReport(BaseModel):
             report.summary(development_mode=development_mode)
         for framework_name, report in self.zeroshot_contact_results.items():
             print(f"\n{framework_name} zero-shot contact results:")
-            report.summary()
+            report.summary(development_mode=development_mode)
         for framework_name, report in self.supervised_contact_results.items():
             print(f"\n{framework_name} supervised contact results:")
-            report.summary()
+            report.summary(development_mode=development_mode)
 
     def embedding_stats(self):
         print(f"Embedding stats in autoeval report for {self.embedder_name} on {self.training_date}.")
