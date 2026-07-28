@@ -34,7 +34,7 @@ def is_device_cpu(device: Union[None, str, torch.device] = None) -> bool:
         return False
     if isinstance(device, torch.device):
         return device.type == "cpu"
-    if device is str:
+    if isinstance(device, str):
         return device == "cpu"
     return False
 
@@ -46,7 +46,7 @@ def is_device_cuda(device: Union[None, str, torch.device] = None) -> bool:
         return False
     if isinstance(device, torch.device):
         return device.type == "cuda"
-    if device is str:
+    if isinstance(device, str):
         return "cuda" in device
     return False
 
@@ -58,7 +58,7 @@ def is_device_mps(device: Union[None, str, torch.device] = None) -> bool:
         return False
     if isinstance(device, torch.device):
         return device.type == "mps"
-    if device is str:
+    if isinstance(device, str):
         return "mps" in device
     return False
 
