@@ -219,6 +219,7 @@ class AutoEval:
             elif full_evaluation_desired:
                 print(f"Autoeval report for framework exists, but only in development mode. "
                       f"Running full evaluation now!")
+                maybe_framework_result = None
 
         return framework_obj, maybe_framework_result, output_dir
 
