@@ -5,7 +5,6 @@ import torch
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from biotrainer_core.data_classes import ZeroShotMethod
 from typing import Optional, Callable, Tuple, List, Union, Generator, Dict, Any
 from biotrainer_core.data_classes.autoeval import AutoEvalProgress, AutoEvalReport, FrameworkReport, AutoEvalTask
@@ -358,6 +357,7 @@ class AutoEval:
             autoeval_tasks=task_params.task_config_tuples,
             output_dir=output_dir,
             device=task_params.device,
+            custom_embedder=self.custom_embedder,
             development_mode=self.development_mode)
                                                                          )
         return self
