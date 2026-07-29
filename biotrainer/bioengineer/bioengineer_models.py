@@ -2,7 +2,7 @@ import torch
 
 from typing import Iterable, Optional, Callable, List, Tuple
 from transformers import EsmForMaskedLM, EsmTokenizer, BertTokenizer, BertForMaskedLM, AutoTokenizer, \
-    AutoModelForCausalLM, AutoModel
+    AutoModelForCausalLM, AutoModelForMaskedLM
 
 from .bioengineer_interfaces import BertLikeEngineer, GPTLikeEngineer
 
@@ -28,7 +28,7 @@ class ESMCEngineer(BertLikeEngineer):
     def detect(cls, embedder_name: str, device: torch.device):
         if embedder_name in _esmc_family_dict.keys():
             tokenizer = AutoTokenizer.from_pretrained(embedder_name)
-            model = AutoModel.from_pretrained(embedder_name).to(device)
+            model = AutoModelForMaskedLM.from_pretrained(embedder_name).to(device)
             return cls(name=embedder_name, model=model, tokenizer=tokenizer, device=device)
         return None
 
