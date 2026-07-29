@@ -2,11 +2,11 @@ import torch
 
 from typing import Iterable, Optional, Callable, List, Tuple
 from transformers import EsmForMaskedLM, EsmTokenizer, BertTokenizer, BertForMaskedLM, AutoTokenizer, \
-    AutoModelForCausalLM
+    AutoModelForCausalLM, AutoModel
 
 from .bioengineer_interfaces import BertLikeEngineer, GPTLikeEngineer
 
-from ..embedding.huggingface.ESM2 import _esm2_family_dict
+from ..embedding.huggingface.ESM2 import _esm2_family_dict, _esmc_family_dict
 from ..embedding.interfaces import preprocess_sequences_with_whitespaces, preprocess_sequences_without_whitespaces
 
 
@@ -16,6 +16,19 @@ class ESM2Engineer(BertLikeEngineer):
         if embedder_name in _esm2_family_dict.keys():
             tokenizer = EsmTokenizer.from_pretrained(embedder_name, do_lower_case=False)
             model = EsmForMaskedLM.from_pretrained(embedder_name).to(device).eval()
+            return cls(name=embedder_name, model=model, tokenizer=tokenizer, device=device)
+        return None
+
+    def _find_preprocessing_strategy(self) -> Callable:
+        return preprocess_sequences_without_whitespaces
+
+
+class ESMCEngineer(BertLikeEngineer):
+    @classmethod
+    def detect(cls, embedder_name: str, device: torch.device):
+        if embedder_name in _esmc_family_dict.keys():
+            tokenizer = AutoTokenizer.from_pretrained(embedder_name)
+            model = AutoModel.from_pretrained(embedder_name).to(device)
             return cls(name=embedder_name, model=model, tokenizer=tokenizer, device=device)
         return None
 
@@ -54,6 +67,7 @@ class ProtGPT2Engineer(GPTLikeEngineer):
                 formatted = f"<|endoftext|>\n{seq_60}\n<|endoftext|>"
                 result.append(formatted)
             return result
+
         return protgpt_preprocessing
 
     def _tokenize(self, batch: List[str], preprocess: Optional[bool] = False) -> Tuple[torch.Tensor, torch.Tensor]:
