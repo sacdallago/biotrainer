@@ -51,7 +51,7 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         raise NotImplementedError
 
     @abstractmethod
-    def _get_masked_log_probabilities(self, sequence: str) -> torch.Tensor:
+    def _get_masked_log_probabilities(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
         """
         Get log probabilities for all positions using the masked-marginals strategy.
         Each position is masked independently and scored.
@@ -135,7 +135,8 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
     def zero_shot_masked_marginals(self,
                                    wt_sequence: str,
                                    mutations: List[str],
-                                   one_indexed: Optional[bool] = True) -> List[VariantScore]:
+                                   one_indexed: Optional[bool] = True,
+                                   batch_size: int = 32) -> List[VariantScore]:
         """
         Score mutations using the masked-marginals strategy.
         Each position is independently masked and predicted.
@@ -144,11 +145,12 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
             wt_sequence: Wild-type protein sequence
             mutations: List of mutations to score
             one_indexed: Whether mutation positions are 1-indexed
+            batch_size: Number of masked positions to score per forward pass
 
         Returns:
             List of VariantScore objects
         """
-        log_probs = self._get_masked_log_probabilities(wt_sequence)
+        log_probs = self._get_masked_log_probabilities(wt_sequence, batch_size)
         return self._score_variants_from_marginal_probabilities(wt_sequence, log_probs, mutations, one_indexed,
                                                                 ZeroShotMethod.MASKED_MARGINALS)
 
@@ -289,14 +291,12 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         windowed_mask = attention_mask[:, start:end] if attention_mask is not None else None
         return start, end, windowed_tokens, windowed_mask
 
-    def _get_masked_log_probabilities(self, sequence: str) -> torch.Tensor:
+    def _get_masked_log_probabilities(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
         # Tokenize the sequence
         tokenized_sequences, attention_mask = self._tokenize([sequence], preprocess=True)
 
         # Get mask token ID
         mask_token_id = self.get_mask_token_id()
-
-        all_token_probs = []
 
         # Iterate through all positions (excluding BOS and EOS)
         # tokenized_sequences[0, 0] = BOS
@@ -304,25 +304,46 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         # tokenized_sequences[0, -1] = EOS
         seq_len = tokenized_sequences.size(1)
 
-        for i in tqdm(range(seq_len), desc="Computing masked probabilities", unit="pos", ncols=100, leave=False):
+        # Collect the scoring window of every masked position. get_optimal_window returns windows of uniform width
+        # within a sequence, so all masked variants stack into a single [seq_len, window_size] tensor.
+        windowed_tokens, windowed_masks, masked_positions = [], [], []
+        for i in range(seq_len):
             # Clone and mask position i
             batch_tokens_masked = tokenized_sequences.clone()
             batch_tokens_masked[0, i] = mask_token_id
 
             # Get optimal window
-            start, end, windowed_tokens, windowed_mask = self._get_windowed_tokens(batch_tokens_masked, attention_mask,
-                                                                                   masked_position=i,
-                                                                                   seq_len_with_special=seq_len)
-            logits = self._model_forward_fn(input_ids=windowed_tokens,
-                                            attention_mask=windowed_mask)  # [seq_len, vocab_size] without EOS/BOS
+            start, end, window_tokens, window_mask = self._get_windowed_tokens(batch_tokens_masked, attention_mask,
+                                                                              masked_position=i,
+                                                                              seq_len_with_special=seq_len)
+            windowed_tokens.append(window_tokens[0])
+            windowed_masks.append(window_mask[0] if window_mask is not None else None)
+            masked_positions.append(i - start)
 
-            # Get log probabilities for the masked position
-            token_position = i - start
-            token_logits = logits[token_position]  # [vocab_size]
-            all_token_probs.append(token_logits.cpu())
+        windowed_tokens = torch.stack(windowed_tokens, dim=0)  # [seq_len, window_size]
+        windowed_masks = None if windowed_masks[0] is None else torch.stack(windowed_masks, dim=0)
+        masked_positions = torch.tensor(masked_positions)
 
-        # Stack all position logits: [seq_len, vocab_size]
-        logits = torch.stack(all_token_probs, dim=0)
+        # The masked positions are scored independently of each other, so their forward passes can be batched
+        token_splits = torch.split(windowed_tokens, batch_size)
+        mask_splits = torch.split(windowed_masks, batch_size) if windowed_masks is not None else [None] * len(
+            token_splits)
+        position_splits = torch.split(masked_positions, batch_size)
+
+        all_token_probs = []
+        for batch_tokens, batch_mask, batch_positions in tqdm(zip(token_splits, mask_splits, position_splits),
+                                                              desc="Computing masked probabilities", unit="batch",
+                                                              total=len(token_splits), ncols=100, leave=False):
+            logits = self._model_batched_forward_fn(input_ids=batch_tokens,
+                                                    attention_mask=batch_mask)  # [batch, window_size, vocab_size]
+
+            # Get the logits of every window at its own masked position
+            batch_positions = batch_positions.to(logits.device)
+            batch_indices = torch.arange(batch_positions.size(0), device=logits.device)
+            all_token_probs.append(logits[batch_indices, batch_positions].cpu())  # [batch, vocab_size]
+
+        # Concatenate all position logits: [seq_len, vocab_size]
+        logits = torch.cat(all_token_probs, dim=0)
 
         # Use full vocabulary for probabilities (ProteinGym approach)
         log_probs = torch.log_softmax(logits, dim=-1)
@@ -381,7 +402,7 @@ class GPTLikeEngineer(BioEngineerModelWrapper, ABC):
     def _get_log_probabilities(self, sequence: str):
         raise NotImplementedError("WT marginals are not defined for causal LMs")
 
-    def _get_masked_log_probabilities(self, sequence: str):
+    def _get_masked_log_probabilities(self, sequence: str, batch_size: int = 32):
         raise NotImplementedError("Masked marginals are not defined for causal LMs")
 
     def _compute_pseudoperplexity(self, sequence: str) -> float:

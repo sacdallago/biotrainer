@@ -73,7 +73,8 @@ class BioEngineer:
     def zero_shot_masked_marginals(self,
                                    wt_sequence: str,
                                    mutations: List[str],
-                                   one_indexed: Optional[bool] = True) -> List[VariantScore]:
+                                   one_indexed: Optional[bool] = True,
+                                   batch_size: int = 32) -> List[VariantScore]:
         """
         Compute zero-shot masked marginals for specific mutations in the given sequence.
         All positions in the sequence are masked sequentially.
@@ -83,13 +84,14 @@ class BioEngineer:
         :param mutations: List of mutations: Can be single mutations ('A15G')
                 or multiple mutations separated by ':' ('A15G:L20P')
         :param one_indexed: Offset for mutation positions (1-indexed by default)
+        :param batch_size: Number of masked positions to score per forward pass
 
         :return: List of scores or probabilities associated with the specified
             mutations in the sequence.
         :raises:
             NotImplementedError: If masked logits calculation is not available
         """
-        return self.model_wrapper.zero_shot_masked_marginals(wt_sequence, mutations, one_indexed)
+        return self.model_wrapper.zero_shot_masked_marginals(wt_sequence, mutations, one_indexed, batch_size)
 
     def zero_shot_pseudoperplexity(self,
                                    wt_sequence: str,
