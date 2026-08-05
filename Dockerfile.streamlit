@@ -19,8 +19,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv for fast, reliable installs
 RUN pip install --no-cache-dir uv
 
-# Copy only project metadata first to leverage Docker layer caching
+# Copy only project metadata first to leverage Docker layer caching and the core package
 COPY pyproject.toml ./
+COPY biotrainer-core ./biotrainer-core
+
 # Some build backends expect README to exist when building editable installs
 RUN touch README.md
 
