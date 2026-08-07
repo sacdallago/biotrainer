@@ -8,14 +8,13 @@ authors = [
     {name = "Joaquin Gomez Sanchez", email = "joaquin.gomez@tum.de"},
     {name = "Michael Heinzinger", email = "mheinzinger@rostlab.org"}
 ]
-license = {text = "AFL v3.0"}
+license = { text = "MIT" }
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Academic Free License (AFL)",
     "Operating System :: OS Independent",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
