@@ -5,6 +5,8 @@ from tqdm import tqdm
 from typing import Tuple, Dict, Iterable, Any, Callable, Optional, Generator
 from biotrainer_core.data_classes import ContactSingleProteinResult, ContactDatasetResult
 
+from ..sequence_exception import SequenceTooLongError
+
 
 def compute_contact_precision(
         predictions: np.ndarray,
@@ -121,7 +123,13 @@ def evaluate_contact_dataset(
             continue  # Cached result exists
 
         ground_truth = get_ground_truth_func(item)
-        prediction = predict_func(item)
+        try:
+            prediction = predict_func(item)
+        except SequenceTooLongError as too_long:
+            # Skip rather than raise: contact datasets do not filter by length, cached results resume, so a
+            # raise here would kill the framework run at this protein again on every retry.
+            tqdm.write(f"WARNING: Skipping {seq_id} in {dataset_name} - {too_long}")
+            continue
 
         precision_scores = evaluate_contact_map(prediction, ground_truth)
         single_protein_result = ContactSingleProteinResult(protein_name=seq_id, precision_scores=precision_scores)

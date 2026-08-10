@@ -13,6 +13,9 @@ from typing import Dict, List, Optional, Tuple
 
 from biotrainer_core.utils.constants import STANDARD_AAS
 from biotrainer.bioengineer.bioengineer_interfaces import BertLikeEngineer
+from biotrainer.shared import SequenceTooLongError
+from biotrainer.shared.metrics import evaluate_contact_dataset
+from biotrainer.bioengineer.bioengineer_utils import MAX_CONTEXT_LENGTH
 
 _BOS_TOKEN_ID = 0
 _EOS_TOKEN_ID = 1
@@ -73,6 +76,13 @@ class _WrongStripEngineer(_NoBosEngineer):
 
     def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor[:-1]
+
+
+class _ShortContextEngineer(_NoBosEngineer):
+    """ A model with a tiny context, so the length guard can be tested without a 1000-residue sequence """
+
+    def max_context_length(self) -> int:
+        return 8
 
 
 class _StandardEngineer(_NoBosEngineer):
@@ -185,3 +195,54 @@ class BioEngineerTests(unittest.TestCase):
         message = str(raised.exception)
         self.assertIn(str(len(sequence) + 1), message)  # Positions this strip wrongly kept
         self.assertIn(str(len(sequence)), message)  # Residues actually in the sequence
+
+    def test_categorical_jacobian_rejects_too_long_sequences(self):
+        """ The Jacobian has no windowed variant, so an over-long sequence must be rejected, not truncated """
+        engineer = _ShortContextEngineer()  # 10 residues + 2 special tokens > 8
+
+        with self.assertRaises(SequenceTooLongError):
+            engineer._compute_categorical_jacobian("MAGSMALMKQ", batch_size=8)
+
+    def test_default_max_context_length(self):
+        self.assertEqual(_NoBosEngineer().max_context_length(), MAX_CONTEXT_LENGTH)
+
+
+class ContactDatasetEvaluationTests(unittest.TestCase):
+    """ evaluate_contact_dataset resumes from cache, so one over-long protein must not kill the run forever """
+
+    @staticmethod
+    def _symmetric_target(rng, seq_len: int = 40) -> np.ndarray:
+        target = (rng.random((seq_len, seq_len)) > 0.9).astype(float)
+        return np.maximum(target, target.T)
+
+    def test_too_long_proteins_are_skipped(self):
+        rng = np.random.default_rng(0)
+        target = self._symmetric_target(rng)
+
+        def predict(item):
+            if item == "too_long":
+                raise SequenceTooLongError("2000 tokens exceed the 1024 token context")
+            return rng.random(target.shape)
+
+        results = list(evaluate_contact_dataset(dataset_name="test",
+                                                items=["too_long", "fine"],
+                                                predict_func=predict,
+                                                get_ground_truth_func=lambda item: target,
+                                                get_seq_id_func=lambda item: item))
+
+        self.assertEqual([result.protein_name for result in results], ["fine"])
+
+    def test_other_errors_still_propagate(self):
+        """ The skip must be narrow - a real bug in predict_func may not be swallowed """
+        rng = np.random.default_rng(0)
+        target = self._symmetric_target(rng)
+
+        def predict(item):
+            raise RuntimeError("boom")
+
+        with self.assertRaises(RuntimeError):
+            list(evaluate_contact_dataset(dataset_name="test",
+                                          items=["a"],
+                                          predict_func=predict,
+                                          get_ground_truth_func=lambda item: target,
+                                          get_seq_id_func=lambda item: item))

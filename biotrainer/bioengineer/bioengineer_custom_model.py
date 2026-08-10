@@ -5,6 +5,7 @@ from biotrainer_core.data_classes import ZeroShotMethod
 from typing import List, Optional, Dict, Iterable, Tuple
 
 from .bioengineer_interfaces import BertLikeEngineer, GPTLikeEngineer
+from .bioengineer_utils import MAX_CONTEXT_LENGTH
 
 
 class CustomBioEngineerModel(ABC):
@@ -56,6 +57,13 @@ class CustomBioEngineerModel(ABC):
         """ Return a dictionary mapping amino acids to their indices """
         raise NotImplementedError
 
+    def max_context_length(self) -> int:
+        """ Maximum number of tokens the model can process in one forward pass, including special tokens.
+
+        Override if the model's context is not the ESM-style 1024 tokens.
+        """
+        return MAX_CONTEXT_LENGTH
+
     def run_model_batched(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         Run the model on a batch of sequences.
@@ -101,6 +109,9 @@ class CustomBioEngineerModelWrapper(BertLikeEngineer, GPTLikeEngineer):
 
     def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
         return self._custom_bioengineer.strip_special_tokens(tensor)
+
+    def max_context_length(self) -> int:
+        return self._custom_bioengineer.max_context_length()
 
     def supported_methods(self) -> List[ZeroShotMethod]:
         return self._custom_bioengineer.supported_methods()

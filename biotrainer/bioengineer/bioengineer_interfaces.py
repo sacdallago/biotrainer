@@ -10,6 +10,7 @@ from .bioengineer_utils import compute_windowed_logits, get_optimal_window, MAX_
     prepare_cat_jac_mutations, convert_cat_jac_to_contact_map
 
 from ..embedding.interfaces import BiotrainerTokenizerMixin
+from ..shared.sequence_exception import SequenceTooLongError
 
 
 class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
@@ -19,6 +20,10 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         self._model = model
         self._tokenizer = tokenizer
         self._device = device
+
+    def max_context_length(self) -> int:
+        """ Maximum number of tokens the model can process in one forward pass, including special tokens """
+        return MAX_CONTEXT_LENGTH
 
     @classmethod
     @abstractmethod
@@ -369,10 +374,16 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         # Get the IDs of the amino acids in order of STANDARD_AAS
         aa_token_ids = torch.tensor(list(self.aa_to_idx().values()), device=self._device)
         # Tokenize the sequence
-        # TODO: review any max length constraints...
         input_ids, attention_mask = self._tokenize([sequence], preprocess=True)
+        n_tokens = input_ids.shape[1]
+        if n_tokens > self.max_context_length():
+            raise SequenceTooLongError(
+                f"Sequence of {len(sequence)} residues tokenizes to {n_tokens} tokens, which exceeds the "
+                f"{self.max_context_length()} token context of {self._name}. The categorical Jacobian has no "
+                f"windowed variant - contacts spanning two windows would be missing - so it is not computed."
+            )
         # Which token positions hold the actual residues - no BOS/EOS arrangement is assumed
-        residue_positions = self._residue_token_positions(input_ids.shape[1], sequence)
+        residue_positions = self._residue_token_positions(n_tokens, sequence)
         # For each position in the sequence, prepare the input with all mutations
         mutated_inputs, mutated_mask = prepare_cat_jac_mutations(input_ids, attention_mask, aa_token_ids,
                                                                 residue_positions)
