@@ -121,6 +121,7 @@ class AutoEval:
         # Results
         self.autoeval_report: Optional[AutoEvalReport] = None
         self._frameworks_to_runners: Dict[AutoEvalFramework, Optional[_AutoEvalTaskRunner]] = {}
+        self._framework_task_filters: Dict[AutoEvalFramework, Optional[Callable[[AutoEvalTask], bool]]] = {}
         self._results: Dict[AutoEvalFramework, FrameworkReport] = {}
 
     def _setup_runner_params(self, devices: Optional[List[Union[str, torch.device]]] = None) -> Dict[
@@ -135,7 +136,8 @@ class AutoEval:
                 max_seq_length=self.max_seq_length,
                 custom_storage_path=self.custom_storage_path,
                 force_download=self.force_download,
-                development_mode=self.development_mode)
+                development_mode=self.development_mode,
+                task_filter=self._framework_task_filters.get(framework_obj))
             framework_to_tuples[framework_obj] = task_config_tuples
             all_to_embed_per_res.update(to_embed_per_res)
             all_to_embed_per_seq.update(to_embed_per_seq)
@@ -209,26 +211,35 @@ class AutoEval:
         assert self.autoeval_report is not None
         maybe_framework_result = self.autoeval_report.maybe_framework_result(framework_name=framework_obj.get_name())
         if maybe_framework_result:
-            dev_mode = maybe_framework_result.used_development_mode()
-            full_evaluation_exists = not dev_mode  # Full evaluation always contains development mode so can be skipped
-            full_evaluation_desired = not self.development_mode
-            if full_evaluation_exists:
-                print(f"Autoeval report for framework {available_framework} already exists, "
-                      f"execution will be skipped!")
-                self._results[framework_obj] = maybe_framework_result
-            elif full_evaluation_desired:
-                print(f"Autoeval report for framework exists, but only in development mode. "
-                      f"Running full evaluation now!")
+            if maybe_framework_result.task_filter_applied:
+                # A filtered report only covers a subset of the framework, so it can never stand in for this run.
+                # Predicates cannot be compared, so even an identical subset is run again rather than reused.
+                print(f"Autoeval report for framework {available_framework} exists, but only for a subset of "
+                      f"tasks. Running now!")
                 maybe_framework_result = None
+            else:
+                dev_mode = maybe_framework_result.used_development_mode()
+                full_evaluation_exists = not dev_mode  # Full evaluation always contains development mode so can be skipped
+                full_evaluation_desired = not self.development_mode
+                if full_evaluation_exists:
+                    print(f"Autoeval report for framework {available_framework} already exists, "
+                          f"execution will be skipped!")
+                    self._results[framework_obj] = maybe_framework_result
+                elif full_evaluation_desired:
+                    print(f"Autoeval report for framework exists, but only in development mode. "
+                          f"Running full evaluation now!")
+                    maybe_framework_result = None
 
         return framework_obj, maybe_framework_result, output_dir
 
     def _supervised_task(self,
                          available_framework: AvailableFramework,
-                         custom_output_observers: List[BiotrainerOutputObserver] = None, ):
+                         custom_output_observers: List[BiotrainerOutputObserver] = None,
+                         task_filter: Optional[Callable[[AutoEvalTask], bool]] = None, ):
         framework_obj, maybe_framework_result, output_dir = self._general_task_setup(available_framework)
         if maybe_framework_result:
             return self
+        self._framework_task_filters[framework_obj] = task_filter
 
         def runner_function(runner_params: _AutoEvalTaskRunnerParams):
             # Supervised tasks ignore the development_mode, because it can simply be switched on/off in the dashboard
@@ -251,40 +262,53 @@ class AutoEval:
 
     def pbc_supervised(self,
                        custom_output_observers: List[BiotrainerOutputObserver] = None,
+                       task_filter: Optional[Callable[[AutoEvalTask], bool]] = None,
                        ) -> AutoEval:
         """
         Add PBC supervised evaluation tasks to the AutoEval pipeline.
 
-        :param custom_output_observers: Optional list of custom training output observers 
+        :param custom_output_observers: Optional list of custom training output observers
             for monitoring and logging training progress.
+        :param task_filter: Optional predicate restricting the run to the tasks it selects, e.g.
+            ``lambda task: task.dataset_name == "scl"``. Only the selected tasks are embedded and evaluated.
+            Raises ValueError if it selects no task. One task per dataset and split.
         :return: The AutoEval instance for method chaining.
         """
-        return self._supervised_task(AvailableFramework.PBC_SUPERVISED, custom_output_observers)
+        return self._supervised_task(AvailableFramework.PBC_SUPERVISED, custom_output_observers, task_filter)
 
     def flip(self,
              custom_output_observers: List[BiotrainerOutputObserver] = None,
+             task_filter: Optional[Callable[[AutoEvalTask], bool]] = None,
              ) -> AutoEval:
         """
         Add FLIP supervised evaluation tasks to the AutoEval pipeline.
 
-        :param custom_output_observers: Optional list of custom training output observers 
+        :param custom_output_observers: Optional list of custom training output observers
             for monitoring and logging training progress.
+        :param task_filter: Optional predicate restricting the run to the tasks it selects, e.g.
+            ``lambda task: task.dataset_name == "meltome"``. Only the selected tasks are embedded and
+            evaluated. Raises ValueError if it selects no task. One task per dataset and split.
         :return: The AutoEval instance for method chaining.
         """
-        return self._supervised_task(AvailableFramework.FLIP, custom_output_observers)
+        return self._supervised_task(AvailableFramework.FLIP, custom_output_observers, task_filter)
 
-    def pgym(self, zero_shot_method: ZeroShotMethod):
+    def pgym(self, zero_shot_method: ZeroShotMethod,
+             task_filter: Optional[Callable[[AutoEvalTask], bool]] = None):
         """
         Add PGYM zero-shot evaluation tasks to the AutoEval pipeline.
 
-        :param zero_shot_method: The zero-shot method to use for evaluation 
+        :param zero_shot_method: The zero-shot method to use for evaluation
             (e.g., ZeroShotMethod.WT_MARGINALS, ZeroShotMethod.MASKED_MARGINALS).
+        :param task_filter: Optional predicate restricting the run to the tasks it selects. Raises ValueError
+            if it selects no task. PGYM has only three tasks - "virus", "nonvirus" and "total" - each holding
+            many DMS assays, so individual assays cannot be selected this way.
         :return: The AutoEval instance for method chaining.
         """
         framework_obj, maybe_framework_result, output_dir = self._general_task_setup(AvailableFramework.PGYM,
                                                                                      zero_shot_method=zero_shot_method)
         if maybe_framework_result:
             return self
+        self._framework_task_filters[framework_obj] = task_filter
 
         def runner_function(runner_params: _AutoEvalTaskRunnerParams):
             bioengineer = self.bioengineer
@@ -305,12 +329,16 @@ class AutoEval:
                                                                          )
         return self
 
-    def pbc_zeroshot_contact(self, zero_shot_method: ZeroShotMethod = ZeroShotMethod.JACOBIAN_CONTACT):
+    def pbc_zeroshot_contact(self, zero_shot_method: ZeroShotMethod = ZeroShotMethod.JACOBIAN_CONTACT,
+                             task_filter: Optional[Callable[[AutoEvalTask], bool]] = None):
         """
         Add PBC zero-shot contact prediction evaluation tasks to the AutoEval pipeline.
 
-        :param zero_shot_method: The zero-shot method to use for contact prediction. 
+        :param zero_shot_method: The zero-shot method to use for contact prediction.
             Defaults to ZeroShotMethod.JACOBIAN_CONTACT.
+        :param task_filter: Optional predicate restricting the run to the tasks it selects, e.g.
+            ``lambda task: task.dataset_name == "casp14"``. Raises ValueError if it selects no task.
+            One task per contact dataset.
         :return: The AutoEval instance for method chaining.
         """
         framework_obj, maybe_framework_result, output_dir = self._general_task_setup(
@@ -318,6 +346,7 @@ class AutoEval:
             zero_shot_method=zero_shot_method)
         if maybe_framework_result:
             return self
+        self._framework_task_filters[framework_obj] = task_filter
 
         def runner_function(runner_params: _AutoEvalTaskRunnerParams):
             bioengineer = self.bioengineer
@@ -340,16 +369,20 @@ class AutoEval:
 
         return self
 
-    def pbc_supervised_contact(self):
+    def pbc_supervised_contact(self, task_filter: Optional[Callable[[AutoEvalTask], bool]] = None):
         """
         Add PBC supervised contact prediction evaluation tasks to the AutoEval pipeline.
 
+        :param task_filter: Optional predicate restricting the run to the tasks it selects. Raises ValueError
+            if it selects no task. This framework currently builds a single task holding every dataset, so
+            filtering can only keep or reject the whole framework.
         :return: The AutoEval instance for method chaining.
         """
         framework_obj, maybe_framework_result, output_dir = self._general_task_setup(
             AvailableFramework.PBC_SUPERVISED_CONTACT)
         if maybe_framework_result:
             return self
+        self._framework_task_filters[framework_obj] = task_filter
         self._frameworks_to_runners[framework_obj] = _AutoEvalTaskRunner(framework=framework_obj, runner=
         lambda task_params: autoeval_supervised_contact_pipeline(
             framework=framework_obj,
@@ -395,6 +428,8 @@ class AutoEval:
             final_report = current_progress.final_report
             if final_report is None:
                 raise RuntimeError("No final report was returned from autoeval task!")
+            # Mark subset runs, so that a later unfiltered run does not mistake this report for a complete one
+            final_report.task_filter_applied = self._framework_task_filters.get(framework) is not None
             self.autoeval_report.add_framework_report(framework_name=framework.get_name(),
                                                       framework_mode=framework.get_mode(),
                                                       report=final_report)

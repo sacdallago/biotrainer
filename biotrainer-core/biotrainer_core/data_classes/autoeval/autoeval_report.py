@@ -46,6 +46,10 @@ def _maybe_metric_abs(metric_name: str, mean: float, lower: float, upper: float)
 
 
 class FrameworkReport(ABC, BaseModel):
+    task_filter_applied: bool = Field(default=False,
+                                      description="Whether a task filter reduced this run to a subset of "
+                                                  "the framework's tasks")
+
     @abstractmethod
     def summary(self, development_mode: bool = False):
         raise NotImplementedError
