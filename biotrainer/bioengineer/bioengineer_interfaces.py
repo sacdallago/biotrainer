@@ -282,7 +282,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         tokenized_sequences, attention_mask = self._tokenize([sequence], preprocess=True)
         seq_len = tokenized_sequences.size(1)
 
-        if seq_len > MAX_CONTEXT_LENGTH:
+        if seq_len > self.max_context_length():
             # Returns log probabilities for entire sequence
             log_probs = compute_windowed_logits(
                 sequence_tokens=tokenized_sequences,

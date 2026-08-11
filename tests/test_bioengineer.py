@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple
 
 from biotrainer_core.utils.constants import STANDARD_AAS
 from biotrainer.bioengineer.bioengineer_interfaces import BertLikeEngineer
+from biotrainer.bioengineer.bioengineer_custom_model import CustomBioEngineerModel, CustomBioEngineerModelWrapper
 from biotrainer.shared import SequenceTooLongError
 from biotrainer.shared.metrics import evaluate_contact_dataset
 from biotrainer.bioengineer.bioengineer_utils import MAX_CONTEXT_LENGTH
@@ -97,6 +98,24 @@ class _StandardEngineer(_NoBosEngineer):
         token_ids = [_BOS_TOKEN_ID] + [aa_to_idx[aa] for aa in batch[0]] + [_EOS_TOKEN_ID]
         tokenized = torch.tensor([token_ids])
         return tokenized, torch.ones_like(tokenized)
+
+
+class _MinimalCustomModel(CustomBioEngineerModel):
+    """ A custom model that implements nothing but its name - only the context length is exercised here """
+
+    # Overriding the remaining abstract hooks with None keeps the class instantiable without stub bodies
+    supported_methods = run_model = strip_special_tokens = tokenize = get_mask_token_id = \
+        preprocess_sequences = aa_to_idx = None
+
+    def get_name(self) -> str:
+        return "minimal-custom"
+
+
+class _LongContextCustomModel(_MinimalCustomModel):
+    """ A custom model whose context is not the ESM-style 1024 tokens """
+
+    def max_context_length(self) -> int:
+        return 2048
 
 
 class BioEngineerTests(unittest.TestCase):
@@ -203,8 +222,33 @@ class BioEngineerTests(unittest.TestCase):
         with self.assertRaises(SequenceTooLongError):
             engineer._compute_categorical_jacobian("MAGSMALMKQ", batch_size=8)
 
+    def test_categorical_jacobian_allows_the_exact_context_length(self):
+        """ The guard is exclusive, so a sequence that fills the context exactly must still be computed """
+        engineer = _ShortContextEngineer()  # 6 residues + 2 special tokens == 8
+        jac = engineer._compute_categorical_jacobian("MAGSMA", batch_size=8)
+        self.assertEqual(tuple(jac.shape), (6, 20, 6, 20))
+
     def test_default_max_context_length(self):
         self.assertEqual(_NoBosEngineer().max_context_length(), MAX_CONTEXT_LENGTH)
+
+    def test_random_baseline_rejects_too_long_sequences(self):
+        """ The baseline samples an [L, 20, L, 20] array, so it has to reject before allocating: a MemoryError
+            is not a SequenceTooLongError, so the contact evaluator could not skip the protein """
+        baseline = BioEngineer.from_baseline(baseline=BioEngineerBaseline.RANDOM_BASELINE).model_wrapper
+        sequence = "A" * (baseline.max_context_length() + 1)
+
+        with self.assertRaises(SequenceTooLongError):
+            baseline._compute_categorical_jacobian(sequence)
+
+
+class CustomModelContextLengthTests(unittest.TestCase):
+    """ The Jacobian guard asks the wrapper, so a custom model's declared context has to reach it """
+
+    def test_context_length_defaults_and_overrides_reach_the_wrapper(self):
+        self.assertEqual(_MinimalCustomModel().max_context_length(), MAX_CONTEXT_LENGTH)
+        wrapper = CustomBioEngineerModelWrapper(custom_bioengineer=_LongContextCustomModel(),
+                                                device=torch.device("cpu"))
+        self.assertEqual(wrapper.max_context_length(), 2048)
 
 
 class ContactDatasetEvaluationTests(unittest.TestCase):
@@ -233,16 +277,23 @@ class ContactDatasetEvaluationTests(unittest.TestCase):
         self.assertEqual([result.protein_name for result in results], ["fine"])
 
     def test_other_errors_still_propagate(self):
-        """ The skip must be narrow - a real bug in predict_func may not be swallowed """
+        """ The skip must be narrow - a real bug in predict_func may not be swallowed.
+
+        ValueError is the case that matters: SequenceTooLongError subclasses it and _residue_token_positions
+        raises a plain one on this very call path, so a catch widened to ValueError would silently skip a
+        tokenizer/strip_special_tokens disagreement instead of failing loudly.
+        """
         rng = np.random.default_rng(0)
         target = self._symmetric_target(rng)
 
-        def predict(item):
-            raise RuntimeError("boom")
+        for error in [RuntimeError("boom"), ValueError("strip_special_tokens disagrees with the tokenizer")]:
+            with self.subTest(error=type(error).__name__):
+                def predict(item):
+                    raise error
 
-        with self.assertRaises(RuntimeError):
-            list(evaluate_contact_dataset(dataset_name="test",
-                                          items=["a"],
-                                          predict_func=predict,
-                                          get_ground_truth_func=lambda item: target,
-                                          get_seq_id_func=lambda item: item))
+                with self.assertRaises(type(error)):
+                    list(evaluate_contact_dataset(dataset_name="test",
+                                                  items=["a"],
+                                                  predict_func=predict,
+                                                  get_ground_truth_func=lambda item: target,
+                                                  get_seq_id_func=lambda item: item))
