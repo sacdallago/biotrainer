@@ -16,7 +16,7 @@ from biotrainer.bioengineer.bioengineer_interfaces import BertLikeEngineer
 from biotrainer.bioengineer.bioengineer_custom_model import CustomBioEngineerModel, CustomBioEngineerModelWrapper
 from biotrainer.shared import SequenceTooLongError
 from biotrainer.shared.metrics import evaluate_contact_dataset
-from biotrainer.bioengineer.bioengineer_utils import MAX_CONTEXT_LENGTH
+from biotrainer.bioengineer.bioengineer_utils import MAX_CONTEXT_LENGTH, WINDOW_SIZE
 
 _BOS_TOKEN_ID = 0
 _EOS_TOKEN_ID = 1
@@ -24,6 +24,11 @@ _REGISTER_TOKEN_ID = 2
 _FIRST_AA_TOKEN_ID = 3
 _MASK_TOKEN_ID = 25
 _VOCAB_SIZE = 26
+
+
+# One distinct logit row per token id. A lookup keeps the logits bit-identical whatever the input shape is,
+# so the reference pass and the batched mutation passes can be compared for exact equality
+_TOKEN_LOGITS = torch.sin(torch.arange(_VOCAB_SIZE).unsqueeze(-1) * (torch.arange(_VOCAB_SIZE) + 1.0))
 
 
 class _LocalModel(torch.nn.Module):
@@ -36,9 +41,7 @@ class _LocalModel(torch.nn.Module):
 
     def forward(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None):
         self.calls.append(input_ids.clone())
-        vocab = torch.arange(_VOCAB_SIZE, dtype=torch.float32)
-        logits = torch.sin(input_ids.unsqueeze(-1).float() * (vocab + 1.0))
-        return SimpleNamespace(logits=logits)
+        return SimpleNamespace(logits=_TOKEN_LOGITS[input_ids])
 
 
 class _NoBosEngineer(BertLikeEngineer):
@@ -77,6 +80,40 @@ class _WrongStripEngineer(_NoBosEngineer):
 
     def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor[:-1]
+
+
+class _MisplacedStripEngineer(_NoBosEngineer):
+    """ strip_special_tokens keeps the right number of positions, but the wrong ones: on the no-BOS layout
+        the inherited [1:-1] drops the first residue and keeps the EOS token """
+
+    _strip_special_tokens = BertLikeEngineer._strip_special_tokens
+
+
+class _ReorderingStripEngineer(_NoBosEngineer):
+    """ strip_special_tokens keeps exactly the residue positions, but in reverse order """
+
+    def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
+        return tensor[:-2].flip(0)
+
+
+class _SplitEngineer(_NoBosEngineer):
+    """ Tokenizes as BOS + first half + register + second half + EOS: the residue token positions are
+        not contiguous, and strip_special_tokens is an index select instead of a slice """
+
+    def _tokenize(self, batch: List[str], preprocess: Optional[bool] = False) -> Tuple[torch.Tensor, torch.Tensor]:
+        assert len(batch) == 1, "Test engineer tokenizes one sequence at a time"
+        aa_to_idx = self.aa_to_idx()
+        residue_ids = [aa_to_idx[aa] for aa in batch[0]]
+        half = len(residue_ids) // 2
+        token_ids = ([_BOS_TOKEN_ID] + residue_ids[:half] + [_REGISTER_TOKEN_ID] + residue_ids[half:] +
+                     [_EOS_TOKEN_ID])
+        tokenized = torch.tensor([token_ids])
+        return tokenized, torch.ones_like(tokenized)
+
+    def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
+        half = (tensor.shape[0] - 3) // 2  # n_tokens = BOS + L residues + register + EOS
+        keep = list(range(1, half + 1)) + list(range(half + 2, tensor.shape[0] - 1))
+        return tensor[torch.tensor(keep)]
 
 
 class _ShortContextEngineer(_NoBosEngineer):
@@ -194,6 +231,54 @@ class BioEngineerTests(unittest.TestCase):
             self.assertEqual(masked_positions, [residue_index + 1],  # +1 for the BOS token
                              f"Forward pass {residue_index} masked {masked_positions} instead")
 
+    def test_masked_marginals_reads_the_masked_position_inside_the_window(self):
+        """ Past WINDOW_SIZE tokens the forward pass only sees a window, so the row has to be read at i - start.
+
+        _LocalModel's logits at position p depend only on the token at p, so every returned row must be the
+        row of the mask token: a read at the wrong offset lands on a residue token and yields a different row.
+        """
+        engineer = _NoBosEngineer()
+        sequence = self.jacobian_sequence * 110  # 1100 residues + 2 special tokens, past WINDOW_SIZE
+
+        log_probs = engineer._get_masked_log_probabilities(sequence)
+
+        self.assertEqual(tuple(log_probs.shape), (len(sequence), _VOCAB_SIZE))
+        calls = engineer._model.calls
+        self.assertEqual(len(calls), len(sequence))
+        self.assertEqual(calls[0].shape[1], WINDOW_SIZE, "The windowed path was not exercised!")
+
+        masked_row = _TOKEN_LOGITS[_MASK_TOKEN_ID].log_softmax(dim=-1)
+        misread = (log_probs != masked_row).any(dim=-1).nonzero().flatten().tolist()
+        self.assertEqual(misread, [], "These rows were not read at the masked position of their window!")
+
+    def test_masked_marginals_masks_non_contiguous_residue_positions(self):
+        """ BOS + half + register + half + EOS: the mask has to skip the register token in the middle """
+        engineer = _SplitEngineer()
+        sequence = self.jacobian_sequence
+        half = len(sequence) // 2
+
+        log_probs = engineer._get_masked_log_probabilities(sequence)
+
+        self.assertEqual(tuple(log_probs.shape), (len(sequence), _VOCAB_SIZE))
+        calls = engineer._model.calls
+        self.assertEqual(len(calls), len(sequence))
+        for residue_index, call in enumerate(calls):
+            masked_positions = (call[0] == _MASK_TOKEN_ID).nonzero().flatten().tolist()
+            # +1 for BOS, and one more once the register token in the middle has been passed
+            expected = residue_index + 1 + (1 if residue_index >= half else 0)
+            self.assertEqual(masked_positions, [expected],
+                             f"Forward pass {residue_index} masked {masked_positions} instead")
+
+    def test_wt_marginals_do_not_window_below_the_window_size(self):
+        """ A model whose context is below WINDOW_SIZE must not enter the windowed path: windowing is
+            hardcoded to WINDOW_SIZE tokens and crashes on anything shorter """
+        engineer = _ShortContextEngineer()  # 8-token context, far below WINDOW_SIZE
+        sequence = self.jacobian_sequence
+
+        log_probs = engineer._get_log_probabilities(sequence)
+
+        self.assertEqual(tuple(log_probs.shape), (len(sequence), _VOCAB_SIZE))
+
     def _assert_jacobian_is_aligned(self, engineer: BertLikeEngineer, sequence: str):
         """ Row i of the Jacobian must describe residue i, for any tokenizer layout.
 
@@ -235,6 +320,24 @@ class BioEngineerTests(unittest.TestCase):
     def test_categorical_jacobian_is_aligned_for_the_standard_layout(self):
         """ BOS + residues + EOS through the default strip_special_tokens: the layout real engineers use """
         self._assert_jacobian_is_aligned(_StandardEngineer(), self.jacobian_sequence)
+
+    def test_categorical_jacobian_is_aligned_for_non_contiguous_residues(self):
+        """ BOS + half + register + half + EOS: the residue positions are not a contiguous slice """
+        self._assert_jacobian_is_aligned(_SplitEngineer(), self.jacobian_sequence)
+
+    def test_categorical_jacobian_rejects_misplaced_strip_special_tokens(self):
+        """ The right number of positions taken from the wrong places must fail as loudly as the wrong count,
+            otherwise the contact map is silently misaligned """
+        sequence = self.jacobian_sequence
+
+        for engineer in [_MisplacedStripEngineer(), _ReorderingStripEngineer()]:
+            with self.subTest(engineer=type(engineer).__name__):
+                with self.assertRaises(ValueError) as raised:
+                    engineer._compute_categorical_jacobian(sequence, batch_size=8)
+
+                message = str(raised.exception)
+                self.assertIn("residue 0", message)  # Only the first mismatch is actionable
+                self.assertIn(str(engineer.aa_to_idx()[sequence[0]]), message)  # Token id expected there
 
     def test_categorical_jacobian_rejects_disagreeing_strip_special_tokens(self):
         """ A strip_special_tokens that disagrees with the tokenizer must fail loudly, not silently """

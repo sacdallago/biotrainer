@@ -6,7 +6,7 @@ from typing import List, Optional
 from abc import ABC, abstractmethod
 from biotrainer_core.data_classes import VariantScore, Variant, SingleMutationScore, ZeroShotMethod
 
-from .bioengineer_utils import compute_windowed_logits, get_optimal_window, MAX_CONTEXT_LENGTH, \
+from .bioengineer_utils import compute_windowed_logits, get_optimal_window, MAX_CONTEXT_LENGTH, WINDOW_SIZE, \
     prepare_cat_jac_mutations, convert_cat_jac_to_contact_map
 
 from ..embedding.interfaces import BiotrainerTokenizerMixin
@@ -22,7 +22,11 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         self._device = device
 
     def max_context_length(self) -> int:
-        """ Maximum number of tokens the model can process in one forward pass, including special tokens """
+        """ Maximum number of tokens the model can process in one forward pass, including special tokens
+
+        Only the categorical Jacobian guard honours this: the windowed marginal paths are hardcoded to
+        WINDOW_SIZE-token windows, so a value below WINDOW_SIZE does not shrink them.
+        """
         return MAX_CONTEXT_LENGTH
 
     @classmethod
@@ -62,7 +66,7 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         Each position is masked independently and scored.
 
         Returns:
-            torch.Tensor: [seq_len, vocab_size]
+            torch.Tensor: [len(sequence), vocab_size] - residue positions only, no special tokens
         """
         raise NotImplementedError
 
@@ -259,14 +263,15 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
     def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor[1:-1]  # Remove BOS and EOS tokens
 
-    def _residue_token_positions(self, n_tokens: int, sequence: str) -> torch.Tensor:
+    def _residue_token_positions(self, input_ids: torch.Tensor, sequence: str) -> torch.Tensor:
         """ Token positions holding the real residues, derived from whatever _strip_special_tokens removes.
 
         Keeps every special-token offset in one place: a model that does not tokenize as BOS + residues + EOS
         only has to implement strip_special_tokens correctly, which it already must for the marginal methods.
-        The check below only catches count disagreements, not misplaced ones: a model that needs [:-2] but
-        inherits the default [1:-1] keeps the right number of positions and passes.
+        Checked both by count and by value, so a strip that keeps the right number of positions but takes
+        them from the wrong places - the silent misalignment - fails here instead of in the contact map.
         """
+        n_tokens = input_ids.shape[1]
         # 2-D probe, so a strip written against the [seq_len, vocab] logits (tensor[1:-1, :]) works here too
         probe = torch.arange(n_tokens, device=self._device).unsqueeze(-1)  # [n_tokens, 1]
         positions = self._strip_special_tokens(probe).flatten()
@@ -276,13 +281,25 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
                 f"residue positions, but the sequence has {len(sequence)} residues. strip_special_tokens "
                 f"and the tokenizer disagree about which tokens are special."
             )
+        aa_to_idx = self.aa_to_idx()
+        found_ids = input_ids[0, positions].tolist()
+        for index, residue in enumerate(sequence):
+            # Only standard amino acids have a reliable expectation: preprocessing maps UZOB to X, and
+            # anything outside STANDARD_AAS may well tokenize to the unknown token
+            if residue in aa_to_idx and found_ids[index] != aa_to_idx[residue]:
+                raise ValueError(
+                    f"Tokenizer of {self._name} has token {found_ids[index]} at derived residue position "
+                    f"{positions[index].item()}, but residue {index} of the sequence is '{residue}', which "
+                    f"tokenizes to {aa_to_idx[residue]}. strip_special_tokens and the tokenizer disagree "
+                    f"about which tokens are special."
+                )
         return positions
 
     def _get_log_probabilities(self, sequence: str):
         tokenized_sequences, attention_mask = self._tokenize([sequence], preprocess=True)
         seq_len = tokenized_sequences.size(1)
 
-        if seq_len > self.max_context_length():
+        if seq_len > WINDOW_SIZE:  # windowing is hardcoded to WINDOW_SIZE, so the decision has to match it
             # Returns log probabilities for entire sequence
             log_probs = compute_windowed_logits(
                 sequence_tokens=tokenized_sequences,
@@ -325,7 +342,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         # Iterate the token positions that hold real residues, so no forward pass is spent on a special
         # token whose row would be stripped from the result anyway
         seq_len = tokenized_sequences.size(1)
-        residue_positions = self._residue_token_positions(seq_len, sequence)
+        residue_positions = self._residue_token_positions(tokenized_sequences, sequence)
 
         for i in tqdm(residue_positions.tolist(), desc="Computing masked probabilities", unit="pos", ncols=100,
                       leave=False):
@@ -338,7 +355,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
                                                                                    masked_position=i,
                                                                                    seq_len_with_special=seq_len)
             logits = self._model_forward_fn(input_ids=windowed_tokens,
-                                            attention_mask=windowed_mask)  # [seq_len, vocab_size]
+                                            attention_mask=windowed_mask)  # [n_window_tokens, vocab_size]
 
             # Get log probabilities for the masked position
             token_position = i - start
@@ -354,7 +371,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
 
     def _compute_pseudoperplexity(self, sequence: str) -> float:
         # Get masked probabilities for all positions
-        log_probs = self._get_masked_log_probabilities(sequence)  # [seq_len, vocab_size]
+        log_probs = self._get_masked_log_probabilities(sequence)  # [len(sequence), vocab_size]
 
         # Extract log probabilities for actual amino acids at each position
         aa_to_idx = self.aa_to_idx()
@@ -383,7 +400,7 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
                 f"windowed variant - contacts spanning two windows would be missing - so it is not computed."
             )
         # Which token positions hold the actual residues - no BOS/EOS arrangement is assumed
-        residue_positions = self._residue_token_positions(n_tokens, sequence)
+        residue_positions = self._residue_token_positions(input_ids, sequence)
         # For each position in the sequence, prepare the input with all mutations
         mutated_inputs, mutated_mask = prepare_cat_jac_mutations(input_ids, attention_mask, aa_token_ids,
                                                                 residue_positions)

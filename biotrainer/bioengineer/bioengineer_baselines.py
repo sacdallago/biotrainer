@@ -143,11 +143,10 @@ class RandomEngineerBaseline(BioEngineerModelWrapper):
 
         Note: We seed based on the sequence to ensure determinism.
         """
-        # Reject before allocating: the [L, 20, L, 20] sample costs L^2 * 1600 bytes (plus the float64
-        # intermediate), so a long chain dies with a MemoryError, which the contact evaluator cannot skip.
-        # The threshold is residue-based because this baseline has no tokenizer, while a real model's is
-        # token-based - the two differ by the special-token count exactly at the boundary. That is deliberate:
-        # the point is that the baseline skips the same proteins a real model does and stays comparable to it.
+        # Reject before allocating: the [L, 20, L, 20] sample costs L^2 * 1600 bytes, so a long chain dies
+        # with a MemoryError, which the contact evaluator cannot skip. Residue-based because this baseline
+        # has no tokenizer, so it skips approximately the proteins a real model does, off by its special
+        # token count - close enough to stay comparable.
         if len(sequence) > self.max_context_length():
             raise SequenceTooLongError(
                 f"Sequence of {len(sequence)} residues exceeds the {self.max_context_length()} token context "

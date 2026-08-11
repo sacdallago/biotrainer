@@ -60,7 +60,9 @@ class CustomBioEngineerModel(ABC):
     def max_context_length(self) -> int:
         """ Maximum number of tokens the model can process in one forward pass, including special tokens.
 
-        Override if the model's context is not the ESM-style 1024 tokens.
+        Override if the model's context is not the ESM-style 1024 tokens. Only the categorical Jacobian guard
+        honours this: the windowed marginal paths are hardcoded to WINDOW_SIZE-token windows, so a value
+        below WINDOW_SIZE does not shrink them.
         """
         return MAX_CONTEXT_LENGTH
 

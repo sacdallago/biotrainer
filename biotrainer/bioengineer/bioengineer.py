@@ -253,6 +253,10 @@ class BioEngineer:
 
         Returns:
             np.ndarray: [L, L] (L = sequence length)
+
+        Raises:
+            SequenceTooLongError: If the sequence exceeds the model's context length - the Jacobian has no
+                windowed variant, so it is not computed at all
         """
         if method not in self.model_wrapper.supported_methods():
             raise ValueError(f"Method {method} not supported by this model!")
