@@ -16,7 +16,7 @@ from biotrainer.bioengineer.bioengineer_interfaces import BertLikeEngineer
 from biotrainer.bioengineer.bioengineer_custom_model import CustomBioEngineerModel, CustomBioEngineerModelWrapper
 from biotrainer.shared import SequenceTooLongError
 from biotrainer.shared.metrics import evaluate_contact_dataset
-from biotrainer.bioengineer.bioengineer_utils import MAX_CONTEXT_LENGTH, WINDOW_SIZE
+from biotrainer.bioengineer.bioengineer_utils import MAX_CONTEXT_LENGTH
 
 _BOS_TOKEN_ID = 0
 _EOS_TOKEN_ID = 1
@@ -29,6 +29,8 @@ _VOCAB_SIZE = 26
 # One distinct logit row per token id. A lookup keeps the logits bit-identical whatever the input shape is,
 # so the reference pass and the batched mutation passes can be compared for exact equality
 _TOKEN_LOGITS = torch.sin(torch.arange(_VOCAB_SIZE).unsqueeze(-1) * (torch.arange(_VOCAB_SIZE) + 1.0))
+
+_ACCELERATOR = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else None
 
 
 class _LocalModel(torch.nn.Module):
@@ -51,8 +53,9 @@ class _NoBosEngineer(BertLikeEngineer):
     the Jacobian reshape succeeds while the mutation columns are off by one.
     """
 
-    def __init__(self):
-        super().__init__(name="no-bos", model=_LocalModel(), tokenizer=None, device=torch.device("cpu"))
+    def __init__(self, device: torch.device = torch.device("cpu")):
+        # type(self).__name__ so a subclass's error messages name the subclass, not "no-bos"
+        super().__init__(name=type(self).__name__, model=_LocalModel(), tokenizer=None, device=device)
 
     @classmethod
     def detect(cls, embedder_name: str, device: torch.device):
@@ -245,7 +248,8 @@ class BioEngineerTests(unittest.TestCase):
         self.assertEqual(tuple(log_probs.shape), (len(sequence), _VOCAB_SIZE))
         calls = engineer._model.calls
         self.assertEqual(len(calls), len(sequence))
-        self.assertEqual(calls[0].shape[1], WINDOW_SIZE, "The windowed path was not exercised!")
+        # The width is get_optimal_window's model_window, i.e. MAX_CONTEXT_LENGTH, not WINDOW_SIZE
+        self.assertEqual(calls[0].shape[1], MAX_CONTEXT_LENGTH, "The windowed path was not exercised!")
 
         masked_row = _TOKEN_LOGITS[_MASK_TOKEN_ID].log_softmax(dim=-1)
         misread = (log_probs != masked_row).any(dim=-1).nonzero().flatten().tolist()
@@ -364,6 +368,28 @@ class BioEngineerTests(unittest.TestCase):
         engineer = _ShortContextEngineer()  # 6 residues + 2 special tokens == 8
         jac = engineer._compute_categorical_jacobian("MAGSMA", batch_size=8)
         self.assertEqual(tuple(jac.shape), (6, 20, 6, 20))
+
+    @unittest.skipUnless(_ACCELERATOR, "Needs an accelerator: on CPU every tensor shares one device, so a "
+                                       "self._device / input_ids.device mismatch cannot happen")
+    def test_cpu_tokens_are_indexed_while_the_wrapper_holds_an_accelerator(self):
+        """ A CustomBioEngineerModel's tokenize() may return CPU tensors - nothing in the ABC promises a
+            device - while from_custom_model hands the wrapper get_device(). Every index tensor derived
+            here therefore has to follow input_ids, not self._device.
+        """
+        engineer = _StandardEngineer(device=torch.device(_ACCELERATOR))
+        sequence = self.jacobian_sequence
+
+        input_ids, _ = engineer._tokenize([sequence])
+        self.assertEqual(input_ids.device.type, "cpu", "The fixture must keep its tokens on the CPU")
+
+        positions = engineer._residue_token_positions(input_ids, sequence)
+        self.assertEqual(positions.tolist(), list(range(1, len(sequence) + 1)))  # +1 for BOS
+
+        log_probs = engineer._get_masked_log_probabilities(sequence)
+        self.assertEqual(tuple(log_probs.shape), (len(sequence), _VOCAB_SIZE))
+
+        jac = engineer._compute_categorical_jacobian(sequence, batch_size=8)
+        self.assertEqual(tuple(jac.shape), (len(sequence), 20, len(sequence), 20))
 
     def test_default_max_context_length(self):
         self.assertEqual(_NoBosEngineer().max_context_length(), MAX_CONTEXT_LENGTH)

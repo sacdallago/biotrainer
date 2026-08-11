@@ -272,8 +272,10 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         them from the wrong places - the silent misalignment - fails here instead of in the contact map.
         """
         n_tokens = input_ids.shape[1]
-        # 2-D probe, so a strip written against the [seq_len, vocab] logits (tensor[1:-1, :]) works here too
-        probe = torch.arange(n_tokens, device=self._device).unsqueeze(-1)  # [n_tokens, 1]
+        # 2-D probe, so a strip written against the [seq_len, vocab] logits (tensor[1:-1, :]) works here too.
+        # On input_ids' device, not self._device: the positions exist to index input_ids, and a custom model's
+        # tokenize() is free to return CPU tensors while the wrapper holds an accelerator
+        probe = torch.arange(n_tokens, device=input_ids.device).unsqueeze(-1)  # [n_tokens, 1]
         positions = self._strip_special_tokens(probe).flatten()
         if positions.numel() != len(sequence):
             raise ValueError(
@@ -388,10 +390,11 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         raise NotImplementedError
 
     def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
-        # Get the IDs of the amino acids in order of STANDARD_AAS
-        aa_token_ids = torch.tensor(list(self.aa_to_idx().values()), device=self._device)
         # Tokenize the sequence
         input_ids, attention_mask = self._tokenize([sequence], preprocess=True)
+        # Get the IDs of the amino acids in order of STANDARD_AAS, on input_ids' device: they are written into
+        # a tile of input_ids, and a custom model's tokenize() may well return CPU tensors
+        aa_token_ids = torch.tensor(list(self.aa_to_idx().values()), device=input_ids.device)
         n_tokens = input_ids.shape[1]
         if n_tokens > self.max_context_length():
             raise SequenceTooLongError(
