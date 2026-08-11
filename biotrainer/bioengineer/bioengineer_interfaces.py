@@ -322,13 +322,13 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
 
         all_token_probs = []
 
-        # Iterate through all positions (excluding BOS and EOS)
-        # tokenized_sequences[0, 0] = BOS
-        # tokenized_sequences[0, 1:-1] = actual sequence
-        # tokenized_sequences[0, -1] = EOS
+        # Iterate the token positions that hold real residues, so no forward pass is spent on a special
+        # token whose row would be stripped from the result anyway
         seq_len = tokenized_sequences.size(1)
+        residue_positions = self._residue_token_positions(seq_len, sequence)
 
-        for i in tqdm(range(seq_len), desc="Computing masked probabilities", unit="pos", ncols=100, leave=False):
+        for i in tqdm(residue_positions.tolist(), desc="Computing masked probabilities", unit="pos", ncols=100,
+                      leave=False):
             # Clone and mask position i
             batch_tokens_masked = tokenized_sequences.clone()
             batch_tokens_masked[0, i] = mask_token_id
@@ -338,19 +338,19 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
                                                                                    masked_position=i,
                                                                                    seq_len_with_special=seq_len)
             logits = self._model_forward_fn(input_ids=windowed_tokens,
-                                            attention_mask=windowed_mask)  # [seq_len, vocab_size] without EOS/BOS
+                                            attention_mask=windowed_mask)  # [seq_len, vocab_size]
 
             # Get log probabilities for the masked position
             token_position = i - start
             token_logits = logits[token_position]  # [vocab_size]
             all_token_probs.append(token_logits.cpu())
 
-        # Stack all position logits: [seq_len, vocab_size]
+        # Stack all position logits: [len(sequence), vocab_size]
         logits = torch.stack(all_token_probs, dim=0)
 
         # Use full vocabulary for probabilities (ProteinGym approach)
-        log_probs = torch.log_softmax(logits, dim=-1)
-        return self._strip_special_tokens(log_probs)
+        # No stripping needed: only residue positions were scored
+        return torch.log_softmax(logits, dim=-1)
 
     def _compute_pseudoperplexity(self, sequence: str) -> float:
         # Get masked probabilities for all positions

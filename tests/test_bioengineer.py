@@ -160,6 +160,40 @@ class BioEngineerTests(unittest.TestCase):
             mut_seq = variant.get_mutant_sequence(wt_sequence=wt_sequence)
             self.assertTrue(len(mut_seq) == len(wt_sequence))
 
+    def test_masked_marginals_only_masks_residue_positions(self):
+        """ One forward per residue, each masking that residue - special tokens are never masked """
+        engineer = _NoBosEngineer()
+        sequence = "MAGSMALMKQ"
+
+        log_probs = engineer._get_masked_log_probabilities(sequence)
+
+        self.assertEqual(tuple(log_probs.shape), (len(sequence), _VOCAB_SIZE))
+        calls = engineer._model.calls
+        self.assertEqual(len(calls), len(sequence),
+                         "Special tokens were masked and scored, wasting a forward pass each!")
+        for residue_index, call in enumerate(calls):
+            masked_positions = (call[0] == _MASK_TOKEN_ID).nonzero().flatten().tolist()
+            self.assertEqual(masked_positions, [residue_index],
+                             f"Forward pass {residue_index} masked {masked_positions} instead")
+
+    def test_masked_marginals_masks_the_residues_token_position(self):
+        """ BOS + residues + EOS: the mask follows the residue's token position, not its sequence index.
+
+        _NoBosEngineer cannot catch this - its residues start at token 0, so residue index and token
+        position coincide and a loop over range(len(sequence)) would look correct.
+        """
+        engineer = _StandardEngineer()
+        sequence = "MAGSMALMKQ"
+
+        engineer._get_masked_log_probabilities(sequence)
+
+        calls = engineer._model.calls
+        self.assertEqual(len(calls), len(sequence))
+        for residue_index, call in enumerate(calls):
+            masked_positions = (call[0] == _MASK_TOKEN_ID).nonzero().flatten().tolist()
+            self.assertEqual(masked_positions, [residue_index + 1],  # +1 for the BOS token
+                             f"Forward pass {residue_index} masked {masked_positions} instead")
+
     def _assert_jacobian_is_aligned(self, engineer: BertLikeEngineer, sequence: str):
         """ Row i of the Jacobian must describe residue i, for any tokenizer layout.
 
