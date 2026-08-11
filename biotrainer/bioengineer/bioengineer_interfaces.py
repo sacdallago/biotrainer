@@ -254,6 +254,25 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
     def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
         return tensor[1:-1]  # Remove BOS and EOS tokens
 
+    def _residue_token_positions(self, n_tokens: int, sequence: str) -> torch.Tensor:
+        """ Token positions holding the real residues, derived from whatever _strip_special_tokens removes.
+
+        Keeps every special-token offset in one place: a model that does not tokenize as BOS + residues + EOS
+        only has to implement strip_special_tokens correctly, which it already must for the marginal methods.
+        The check below only catches count disagreements, not misplaced ones: a model that needs [:-2] but
+        inherits the default [1:-1] keeps the right number of positions and passes.
+        """
+        # 2-D probe, so a strip written against the [seq_len, vocab] logits (tensor[1:-1, :]) works here too
+        probe = torch.arange(n_tokens, device=self._device).unsqueeze(-1)  # [n_tokens, 1]
+        positions = self._strip_special_tokens(probe).flatten()
+        if positions.numel() != len(sequence):
+            raise ValueError(
+                f"Tokenizer of {self._name} produced {n_tokens} tokens, of which {positions.numel()} are "
+                f"residue positions, but the sequence has {len(sequence)} residues. strip_special_tokens "
+                f"and the tokenizer disagree about which tokens are special."
+            )
+        return positions
+
     def _get_log_probabilities(self, sequence: str):
         tokenized_sequences, attention_mask = self._tokenize([sequence], preprocess=True)
         seq_len = tokenized_sequences.size(1)
@@ -352,20 +371,23 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         # Tokenize the sequence
         # TODO: review any max length constraints...
         input_ids, attention_mask = self._tokenize([sequence], preprocess=True)
+        # Which token positions hold the actual residues - no BOS/EOS arrangement is assumed
+        residue_positions = self._residue_token_positions(input_ids.shape[1], sequence)
         # For each position in the sequence, prepare the input with all mutations
-        mutated_inputs, mutated_mask = prepare_cat_jac_mutations(input_ids, attention_mask, aa_token_ids)
+        mutated_inputs, mutated_mask = prepare_cat_jac_mutations(input_ids, attention_mask, aa_token_ids,
+                                                                residue_positions)
 
         # Get the model's logits without mutations
         ref_logits = self._model_forward_fn(input_ids, attention_mask)
         # Remove the special tokens and keep only the logits for amino acids
-        ref_logits = ref_logits[1:-1, aa_token_ids].cpu()
+        ref_logits = ref_logits[residue_positions][:, aa_token_ids].cpu()
         # Compute the logits for all mutations
         mutated_logits = []
         for batch_ids, batch_mask in zip(torch.split(mutated_inputs, batch_size),
                                          torch.split(mutated_mask, batch_size)):
             mut_logits = self._model_batched_forward_fn(batch_ids, batch_mask)
-            mutated_logits.append(mut_logits[:, 1:-1, aa_token_ids].cpu())
-        L = len(sequence)
+            mutated_logits.append(mut_logits[:, residue_positions][:, :, aa_token_ids].cpu())
+        L = residue_positions.numel()
         # [L*20, L, 20] -> [L, 20, L, 20] in order of aa_token_ids/STANDARD_AAS
         mutated_logits = torch.cat(mutated_logits, dim=0).reshape(L, 20, L, 20)
 

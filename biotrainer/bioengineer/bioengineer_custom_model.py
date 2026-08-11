@@ -29,7 +29,11 @@ class CustomBioEngineerModel(ABC):
 
     @abstractmethod
     def strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
-        """ Remove special tokens from output (if necessary) """
+        """ Remove special tokens from output (if necessary)
+
+        Also called with an index tensor of shape [n_tokens, 1] to derive which token positions hold the
+        residues, so select along the first axis and do not depend on the trailing dimensions.
+        """
         return tensor
 
     @abstractmethod
