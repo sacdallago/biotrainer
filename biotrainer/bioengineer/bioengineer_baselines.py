@@ -39,7 +39,7 @@ class ConstantEngineerBaseline(BioEngineerModelWrapper):
     def _get_log_probabilities(self, sequence: str) -> torch.Tensor:
         return torch.full((len(sequence), 20), fill_value=self._log_prob, device=torch.device("cpu"))
 
-    def _get_masked_log_probabilities(self, sequence: str) -> torch.Tensor:
+    def _get_masked_log_probabilities(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
         return torch.full((len(sequence), 20), fill_value=self._log_prob, device=torch.device("cpu"))
 
     def _compute_pseudoperplexity(self, sequence: str) -> float:
@@ -110,7 +110,7 @@ class RandomEngineerBaseline(BioEngineerModelWrapper):
 
         return log_probs
 
-    def _get_masked_log_probabilities(self, sequence: str) -> torch.Tensor:
+    def _get_masked_log_probabilities(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
         """
         For random baseline, masked-marginals same as wt-marginals.
         (No actual model to condition on context)
