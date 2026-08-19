@@ -23,6 +23,7 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                        bioengineer: Optional[BioEngineer],
                                        development_mode: bool,
                                        device=None,
+                                       batch_size: int = 32,
                                        ):
     assert bioengineer is not None, f"BioEngineer could not be initialized for embedder {embedder_name}!"
 
@@ -95,24 +96,27 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                 predict_func=lambda
                                                     seq_record: bioengineer.zero_shot_contact_map(
                                                     method=zero_shot_method,
-                                                    sequence=seq_record.seq),
+                                                    sequence=seq_record.seq,
+                                                    batch_size=batch_size),
                                                 get_ground_truth_func=load_gt_contact_map,
                                                 get_seq_id_func=lambda d: d.seq_id,
                                                 cached_results=cached_results,
                                                 )
 
         # Run Evaluation of zero-shot contact maps
-        single_results = []
+        # Start from this dataset's cached results and add newly computed ones,
+        # so that aggregation is correct and uses previous cache-hits too (e.g. re-run, or ids overlapping across datasets).
+        dataset_protein_results: Dict[str, ContactSingleProteinResult] = dict(cached_results)
         for single_result in evaluate():
             zero_shot_contact_cached_results.update_and_sync(result=single_result,
                                                              output_dir=output_dir)
-            single_results.append(single_result)
+            dataset_protein_results[single_result.protein_name] = single_result
 
         dataset_result, dataset_result_dev = get_dataset_and_dev_result_from_single_contact_results(dataset_name=dataset_name,
-                                                                                                    single_results=single_results,
+                                                                                                    single_results=list(dataset_protein_results.values()),
                                                                                                     development_ids=development_ids)
         zero_shot_contact_framework_report.update_result(task_name=dataset_name,
-                                                         per_protein_results=zero_shot_contact_cached_results.per_protein_results,
+                                                         per_protein_results=dataset_protein_results,
                                                          dataset_result=dataset_result,
                                                          dataset_result_dev=dataset_result_dev)
 

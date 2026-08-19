@@ -305,12 +305,13 @@ class AutoEval:
                                                                          )
         return self
 
-    def pbc_zeroshot_contact(self, zero_shot_method: ZeroShotMethod = ZeroShotMethod.JACOBIAN_CONTACT):
+    def pbc_zeroshot_contact(self, zero_shot_method: ZeroShotMethod = ZeroShotMethod.JACOBIAN_CONTACT, batch_size: int = 32):
         """
         Add PBC zero-shot contact prediction evaluation tasks to the AutoEval pipeline.
 
         :param zero_shot_method: The zero-shot method to use for contact prediction. 
             Defaults to ZeroShotMethod.JACOBIAN_CONTACT.
+        :param batch_size: Batch size to be used when computing the categorical Jacobian.
         :return: The AutoEval instance for method chaining.
         """
         framework_obj, maybe_framework_result, output_dir = self._general_task_setup(
@@ -332,6 +333,7 @@ class AutoEval:
                 bioengineer=bioengineer,
                 device=runner_params.device,
                 development_mode=self.development_mode,
+                batch_size=batch_size,
             )
 
         self._frameworks_to_runners[framework_obj] = _AutoEvalTaskRunner(framework=framework_obj,
