@@ -1,5 +1,5 @@
-from .autoeval_service_client import AutoEvalServiceClient
+from .autoeval_client import AutoEvalClient
 
 __all__ = [
-    "AutoEvalServiceClient",
+    "AutoEvalClient",
 ]
