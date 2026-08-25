@@ -7,11 +7,12 @@ from .autoeval_report import (AutoEvalReport, SupervisedFrameworkReport, Contact
 from .autoeval_supervised_dataset import AutoEvalSupervisedDataset
 from .autoeval_task import AutoEvalTask
 from .autoeval_mode import AutoEvalMode
+from .autoeval_published_report import AutoEvalPublishedReport
 
 __all__ = [
     "AutoEvalProgress", "AutoEvalReport", "SupervisedFrameworkReport", "ContactFrameworkReport",
     "ZeroShotFrameworkReport",
     "ZeroShotCachedResults", "AutoEvalSupervisedDataset", "AutoEvalTask", "FLIPDatasetName", "all_flip_datasets",
     "PBCSupervisedDatasetName", "all_pbc_supervised_datasets", "AutoEvalMode", "ZeroShotContactCachedResults",
-    "FrameworkReport"
+    "FrameworkReport", "AutoEvalPublishedReport"
 ]

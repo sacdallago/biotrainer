@@ -11,6 +11,7 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
     "pandas>=2.3.3",
     "pydantic>=2.12.3",
+    "email-validator>=2.3.0,<2.4.0",
     "ruamel.yaml>=0.17.40,<0.18.0",
     "numpy>=2.4.1,<2.5.0",
     "h5py>=3.15.0,<4.0.0",

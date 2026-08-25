@@ -589,28 +589,3 @@ class AutoEvalReport(BaseModel):
         all_results = self._all_results()
         all_reports = [r for results in all_results for r in results.values()]
         return any(rep.used_development_mode() for rep in all_reports)
-
-    ## TODO Move to client
-    # def compare_with_public_leaderboard(self):
-    #    """
-    #    Compare this report to the public leaderboard. This implies uploading the report to the autoeval service
-    #    temporarily. The report will automatically be deleted after one day.
-    #    """
-    #    client = AutoEvalServiceClient.default_service()
-    #    uid = client.store_comparison_report(report=self.model_dump())
-    #    if uid is not None:
-    #        print(f"Report stored in the autoeval service with UID: {uid}\n"
-    #              f"Open https://autoeval.biocentral.cloud/?uid={uid} to compare.")
-#
-## TODO Move to client
-# def publish(self, name: str, email: str, citation: Optional[str] = None):
-#    """
-#    Publish this report to the public autoeval dashboard.
-#
-#    :param name: Name of the publisher
-#    :param email: E-Mail of the publisher
-#    :param citation: Optional citation for the report. Should have https://doi.org/... format.
-#    """
-#    client = AutoEvalServiceClient.default_service()
-#    client.publish_report(report=self.model_dump(), name=name, email=email, citation=citation)
-#
