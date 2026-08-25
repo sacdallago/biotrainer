@@ -10,7 +10,7 @@ class AutoEvalPublishedReport(BaseModel):
     report: AutoEvalReport = Field(description="Report to publish")
     name: str = Field(description="Name of the publisher", min_length=3)
     email: EmailStr = Field(description="Email of the publisher", min_length=5)
-    official: bool = Field(description="Whether the report is part of the official leaderboard or not")
+    official: bool = Field(default=False, description="Whether the report is part of the official leaderboard or not")
     citation: Optional[str] = Field(default=None, description="Citation to be used for the model, must be a valid DOI")
 
     @field_validator('citation')
