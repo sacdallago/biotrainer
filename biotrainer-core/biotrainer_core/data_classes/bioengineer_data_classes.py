@@ -125,6 +125,9 @@ class Variant(BaseModel):
 
         return ''.join(mutant_seq)
 
+    def mutation_depth(self) -> int:
+        return len(self.mutations)
+
     def __str__(self) -> str:
         return self.to_string()
 
