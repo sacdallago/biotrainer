@@ -5,14 +5,16 @@ import streamlit as st
 from pathlib import Path
 from typing import List, Optional, Dict
 from biotrainer_core.data_classes.autoeval import AutoEvalReport
+from ..model import DashboardReport
 
 from ..state import AutoevalSessionState
 from ..utils.types import ViewMode
 from ..utils import utils as frontend_utils
 
 
-def render_sidebar(state: AutoevalSessionState, start_path: Optional[Path],
-                   downloaded: Dict[str, AutoEvalReport]) -> ViewMode:
+def render_sidebar(state: AutoevalSessionState,
+                   start_path: Optional[Path],
+                   published_reports: Dict[str, DashboardReport]) -> ViewMode:
     """
     Render the sidebar controls for selecting report files or directories.
     Adds loaded reports to session state as a side effect.
@@ -31,14 +33,14 @@ def render_sidebar(state: AutoevalSessionState, start_path: Optional[Path],
         if candidate_files:
             freshly_loaded: List[AutoEvalReport] = frontend_utils.load_reports_from_paths(candidate_files)
             for report in freshly_loaded:
-                uid = report.get_uid()
-                state.add_loaded_report(uid, report)
+                state.add_loaded_report(report)
             if len(freshly_loaded) > 0:
                 st.rerun()
 
-    _show_public_reports(state, downloaded)
 
-    _show_loaded_buttons(state)
+    _show_loaded_reports(state)
+
+    _show_public_reports(state, published_reports)
 
     return view_mode
 
@@ -108,25 +110,27 @@ def _select_paths_ui(state: AutoevalSessionState, start_path: Optional[Path]) ->
     return paths
 
 
-def _show_public_reports(state: AutoevalSessionState, downloaded: Dict[str, AutoEvalReport]):
+def _show_public_reports(state: AutoevalSessionState, published_reports: Dict[str, DashboardReport]):
     st.sidebar.markdown("---")
     st.sidebar.markdown("#### Public reports")
 
-    if len(downloaded) == 0:
+    if len(published_reports) == 0:
         st.sidebar.caption("No reports available yet.")
     else:
         # Trigger visibility all at once
-        overall_visibility = state.get_overall_public_report_visibility()
+        overall_visibility = state.get_overall_published_report_visibility()
         icon = "✖" if overall_visibility else "👁"
         button_msg = "Hide all public reports" if overall_visibility else "Show all public reports"
         st.sidebar.button(button_msg, icon=icon, key=f"invis_public_overall", use_container_width=True,
-                          on_click=lambda: state.set_overall_public_report_visibility(not overall_visibility))
+                          on_click=lambda: state.set_overall_published_report_visibility(not overall_visibility))
 
         toggle_visibility: List[str] = []
-        downloaded_sorted = sorted([(uid, report) for uid, report in downloaded.items()],
-                                   key=lambda t: t[1].embedder_name)
-        for uid, report in downloaded_sorted:
-            report_visible = state.get_public_report_visibility(uid)
+        published_reports_sorted = sorted([(uid, report) for uid, report in published_reports.items()],
+                                   key=lambda t: t[1].report.embedder_name)
+        for uid, dashboard_report in published_reports_sorted:
+            report_visible = state.get_published_report_visibility(uid)
+            report = dashboard_report.report
+            # TODO Tooltip with name/citation
             with st.sidebar.container(border=True):
                 cols = st.columns([0.82, 0.18])
                 with cols[0]:
@@ -144,7 +148,7 @@ def _show_public_reports(state: AutoevalSessionState, downloaded: Dict[str, Auto
             st.rerun()  # Rerun the app to refresh the sidebar UI
 
 
-def _show_loaded_buttons(state: AutoevalSessionState):
+def _show_loaded_reports(state: AutoevalSessionState):
     """Render the list of loaded reports as nice 'cards' and the view buttons.
     """
 
@@ -164,8 +168,9 @@ def _show_loaded_buttons(state: AutoevalSessionState):
         to_remove: List[str] = []
         toggle_visibility: List[str] = []
 
-        for uid, report in loaded_reports.items():
+        for uid, dashboard_report in loaded_reports.items():
             report_visible = state.get_loaded_report_visibility(uid)
+            report = dashboard_report.report
             with st.sidebar.container(border=True):
                 cols = st.columns([0.64, 0.18, 0.18])
                 with cols[0]:

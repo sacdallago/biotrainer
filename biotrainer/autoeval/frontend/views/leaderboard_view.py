@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 from biotrainer_core.functions.ranking import Ranking
 from biotrainer_core.data_classes.autoeval import AutoEvalReport
 from biotrainer_core.data_classes.autoeval.autoeval_report import _aggregate_dfs
-
+from ..model import DashboardReport
 
 from ..state import AutoevalSessionState
 
@@ -170,9 +170,11 @@ def _copy_ranking_controls(ranking: Ranking):
 def render_leaderboard(state: AutoevalSessionState,
                        ranking_pbc: Ranking,
                        ranking_pgym: Ranking,
-                       active: List[AutoEvalReport],
+                       active: List[DashboardReport],
                        development_mode: bool):
     # determine active ranking based on framework
+    active = [db_report.report for db_report in active]  # TODO: Add tooltips
+
     all_categories = sorted(list(ranking_pbc.ranking_categories.union(ranking_pgym.ranking_categories)))
     state.maybe_init_lb_weights(all_categories)
 
@@ -213,7 +215,7 @@ def render_leaderboard(state: AutoevalSessionState,
     try:
         if fw == "PBC":
             dfs = [
-                report.supervised_results[fw].to_df(framework=fw, development_mode=development_mode).assign(
+                report.supervised_results[fw].to_df(all_metrics=False, development_mode=development_mode).assign(
                     Model=report.embedder_name)
                 for report in active
                 if fw in report.supervised_results and report.embedder_name.lower() in best_n_models
@@ -222,7 +224,7 @@ def render_leaderboard(state: AutoevalSessionState,
             df_plot = _aggregate_dfs(dfs)
         else:
             dfs = [
-                report.zeroshot_results[fw].to_df(framework=fw, development_mode=development_mode).assign(
+                report.zeroshot_results[fw].to_df(all_metrics=False, development_mode=development_mode).assign(
                     Model=report.embedder_name)
                 for report in active
                 if fw in report.zeroshot_results and report.embedder_name.lower() in best_n_models

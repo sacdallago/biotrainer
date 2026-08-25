@@ -8,6 +8,7 @@ from typing import List, Tuple, Optional
 from biotrainer_core.data_classes import BiotrainerModelResult
 from biotrainer_core.data_classes.autoeval import AutoEvalReport, SupervisedFrameworkReport, ZeroShotFrameworkReport, \
     ContactFrameworkReport
+from ..model import DashboardReport
 
 from ..state import AutoevalSessionState
 from ..utils import utils as frontend_utils
@@ -60,27 +61,28 @@ def _build_metrics_chart(df_task: pd.DataFrame):
         st.altair_chart((bars + error_bars).properties(height=320), use_container_width=True)
 
 
-def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
+def render_detailed(state: AutoevalSessionState, active: list[DashboardReport]):
     st.subheader("Detailed Report View")
 
     if not active:
         st.info("Load reports to inspect details.")
         return
 
-    labels = [f"{report.embedder_name} ({report.training_date})" for report in active]
+    labels = [f"{db_report.report.embedder_name} ({db_report.report.training_date})" for db_report in active]
     idx = st.selectbox("Select report", options=list(range(len(active))), format_func=lambda i: labels[i])
-    report: AutoEvalReport = active[idx]
-    report_is_development = report.is_development()
+    db_report: DashboardReport = active[idx]
+    autoeval_report: AutoEvalReport = db_report.report
 
+    report_is_development = autoeval_report.is_development()
     dev_mode = report_is_development or state.get_development_mode()  # Force development mode if report is in dev mode
 
     # Summary
-    st.metric("Model", report.embedder_name)
+    st.metric("Model", autoeval_report.embedder_name)
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Training date", report.training_date)
+        st.metric("Training date", autoeval_report.training_date)
     with col2:
-        fwks = report.all_framework_names()
+        fwks = autoeval_report.all_framework_names()
         st.metric("Frameworks", len(fwks), help=", ".join(fwks))
     with (col3):
         development_help = ("At least one of the frameworks "
@@ -89,15 +91,24 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                                                                                             "the full test sets.")
         st.metric("Development mode", report_is_development, help=development_help)
 
+    if db_report.official:
+        st.divider()
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("Official Report", help="This report is officially approved "
+                                                "and part of the official leaderboard.")
+        with col2:
+            st.markdown(f"[Citation]({db_report.citation})")
+
     st.divider()
     framework_tab_names: List[Tuple[str, str]] = []  # (label, kind)
-    if report.supervised_results:
+    if autoeval_report.supervised_results:
         framework_tab_names.append(("Supervised", "supervised"))
-    if report.zeroshot_results:
+    if autoeval_report.zeroshot_results:
         framework_tab_names.append(("Zero-Shot", "zeroshot"))
-    if report.zeroshot_contact_results:
+    if autoeval_report.zeroshot_contact_results:
         framework_tab_names.append(("Zero-Shot Contact", "zeroshot_contact"))
-    if report.supervised_contact_results:
+    if autoeval_report.supervised_contact_results:
         framework_tab_names.append(("Supervised Contact", "supervised_contact"))
 
     if not framework_tab_names:
@@ -108,9 +119,9 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
     for tab, (_, kind) in zip(tabs, framework_tab_names):
         with tab:
             if kind == "supervised":
-                fw_names = list(report.supervised_results.keys())
+                fw_names = list(autoeval_report.supervised_results.keys())
                 fw_sel = st.selectbox("Framework", options=fw_names)
-                srep: SupervisedFrameworkReport = report.supervised_results[fw_sel]
+                srep: SupervisedFrameworkReport = autoeval_report.supervised_results[fw_sel]
                 tasks = srep.get_task_names()
                 if not tasks:
                     st.info("No tasks available.")
@@ -232,9 +243,9 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
                     st.caption("No training/validation loss curves found in this result.")
 
             elif kind == "zeroshot":  # zeroshot
-                fw_names = list(report.zeroshot_results.keys())
+                fw_names = list(autoeval_report.zeroshot_results.keys())
                 fw_sel = st.selectbox("Framework", options=fw_names)
-                zrep: ZeroShotFrameworkReport = report.zeroshot_results[fw_sel]
+                zrep: ZeroShotFrameworkReport = autoeval_report.zeroshot_results[fw_sel]
                 tasks = zrep.get_task_names()
                 if not tasks:
                     st.info("No tasks available.")
@@ -250,9 +261,9 @@ def render_detailed(state: AutoevalSessionState, active: list[AutoEvalReport]):
 
             elif kind in ("zeroshot_contact", "supervised_contact"):  # contact
                 if kind == "zeroshot_contact":
-                    contact_results = report.zeroshot_contact_results
+                    contact_results = autoeval_report.zeroshot_contact_results
                 else:
-                    contact_results = report.supervised_contact_results
+                    contact_results = autoeval_report.supervised_contact_results
                 fw_names = list(contact_results.keys())
                 fw_sel = st.selectbox("Framework", options=fw_names, key=f"fw_selector_contact_{kind}")
                 crep: ContactFrameworkReport = contact_results[fw_sel]

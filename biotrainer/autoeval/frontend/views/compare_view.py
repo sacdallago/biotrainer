@@ -7,6 +7,7 @@ from typing import List, Optional, Callable
 from biotrainer_core.data_classes.autoeval import AutoEvalReport
 
 from biotrainer_core.data_classes.autoeval.autoeval_report import _aggregate_dfs
+from ..model import DashboardReport
 
 from ..state import AutoevalSessionState
 
@@ -99,7 +100,9 @@ def _aggregate_for_comparison(get_report_results: Callable,
     return df
 
 
-def render_compare(state: AutoevalSessionState, active: List[AutoEvalReport]):
+def render_compare(state: AutoevalSessionState, active: List[DashboardReport]):
+    active = [db_report.report for db_report in active]
+
     st.subheader("Compare Multiple Reports")
     if len(active) < 2:
         st.info("Load at least two reports to compare.")
