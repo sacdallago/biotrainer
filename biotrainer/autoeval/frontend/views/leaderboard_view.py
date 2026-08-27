@@ -105,7 +105,7 @@ def _group_by_place(ranking_list: List[Tuple[int, object, float]]):
     return grouped
 
 
-def _tile_for_entry(ranking: Ranking, entry: Tuple[int, object, float]):
+def _ranking_entry_tile(ranking: Ranking, entry: Tuple[int, object, float]):
     place, ranking_entry, score = entry
     # Layout: badge | name | score
     cols = st.columns([0.2, 0.6, 0.2], gap="small")
@@ -117,7 +117,7 @@ def _tile_for_entry(ranking: Ranking, entry: Tuple[int, object, float]):
         verbose = ranking.verbose_ranking_by_entry(ranking_entry.name) or "No details available."
         score = f"**{score:.2f}**"
         with st.popover(score):
-            st.text(verbose)
+            st.markdown(verbose)
 
 
 def _build_ranking_visualization(ranking: Ranking, ranking_list: List[Tuple[int, object, float]]):
@@ -134,7 +134,7 @@ def _build_ranking_visualization(ranking: Ranking, ranking_list: List[Tuple[int,
         if len(entries) > 1:
             st.markdown(f"— Tie for place {place} —", help="Multiple entries tied.")
         for e in entries:
-            _tile_for_entry(ranking, e)
+            _ranking_entry_tile(ranking, e)
         # Use a thinner divider or conditional spacing for the next row
         if place < len(grouped):
             st.markdown("<hr style='margin:4px 0;'>", unsafe_allow_html=True)  # Minimal divider spacing
