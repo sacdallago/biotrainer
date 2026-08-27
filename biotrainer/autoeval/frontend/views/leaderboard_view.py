@@ -12,7 +12,7 @@ from ..state import AutoevalSessionState
 
 from ...autoeval_frameworks import AvailableFramework
 
-from ...pipelines.autoeval_plotting import (
+from ..plots import (
     plot_comparison,
     fig_to_png_bytes,
     fig_to_pdf_bytes,

@@ -11,7 +11,7 @@ from ..model import DashboardReport
 
 from ..state import AutoevalSessionState
 
-from ...pipelines.autoeval_plotting import (
+from ..plots import (
     plot_comparison,
     plot_delta_comparison,
     fig_to_png_bytes,
