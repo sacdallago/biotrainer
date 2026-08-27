@@ -3,12 +3,13 @@ from __future__ import annotations
 import pandas as pd
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from biotrainer_core.data_classes.autoeval import AutoEvalReport, SupervisedFrameworkReport, ZeroShotFrameworkReport
 from biotrainer_core.data_classes import MetricEstimate, BiotrainerModelResult
 from biotrainer_core.functions.ranking import Ranking, RankingGroup, RankingEntry
 
 from ...autoeval_frameworks import AvailableFramework
+
 
 def discover_report_files(paths: List[Path]) -> List[Path]:
     """Return a list of candidate report files from a mix of files/directories.
@@ -68,71 +69,54 @@ def load_reports_from_paths(paths: List[Path]) -> List[AutoEvalReport]:
     return unique
 
 
-def leaderboard_dataframe(loaded: List[AutoEvalReport], development_mode: bool = False) -> Tuple[Ranking, Ranking]:
-    """Compute leaderboard divided by framework (PBC and PGYM)."""
-    pbc_entries = []
-    pgym_entries = []
-    # Build a dict: framework -> task -> list of (model, mean)
-    for report in loaded:
-        # Supervised PBC
-        pbc_metrics = {}
-        for fw_name, srep in report.supervised_results.items():
-            fw_upper = fw_name.upper()
-            if fw_upper not in AvailableFramework.dashboard_frameworks():
-                continue
-            for task in srep.get_task_names():
-                # Extract the primary metric mean for the task (first test set/metric)
-                metrics = srep.extract_metrics(task, development_mode=development_mode)
-                if len(metrics) > 0:
-                    for metric_dict in metrics:
-                        unique_task_name = metric_dict["task_name"] + "-" + metric_dict["test_set_name"]
-                        metric_mean = metric_dict["mean"]
-                        metric_lower = metric_dict["lower"]
-                        metric_upper = metric_dict["upper"]
-                        metric_est = MetricEstimate(name=metric_dict["evaluation_metric"],
-                                                    mean=metric_mean, lower=metric_lower,
-                                                    upper=metric_upper)
-                        pbc_metrics[unique_task_name] = metric_est
-                else:
-                    print("Warning: no metrics found for task: ", task)
+def leaderboard_rankings(loaded: List[AutoEvalReport], development_mode: bool = False) -> Dict[str, Ranking]:
+    """Compute leaderboard divided by framework."""
+    ranking_entries_dict = {fw.name: [] for fw in AvailableFramework.dashboard_frameworks()}
 
-        # Zeroshot PGYM
-        pgym_metrics = {}
-        for fw_name, zrep in report.zeroshot_results.items():
-            fw_upper = fw_name.upper()
-            if fw_upper not in AvailableFramework.dashboard_frameworks():
+    # Extract Metric Estimates from Framework Results
+    for report in loaded:
+        for fw in AvailableFramework.dashboard_frameworks():
+            fw_report = report.maybe_framework_result(fw.name)
+
+            if fw_report is None:
                 continue
-            for _, row in zrep.to_df(all_metrics=False).iterrows():
-                unique_task_name = row["TaskLabel"]
+
+            fw_df = fw_report.to_df(all_metrics=False, development_mode=development_mode)
+            fw_metrics = {}
+            for _, row in fw_df.iterrows():
+                metric_name = row["Metric"]
                 metric_mean = row["Mean"]
                 metric_lower = row["Lower"]
                 metric_upper = row["Upper"]
-                metric_est = MetricEstimate(name=row["Metric"], mean=metric_mean, lower=metric_lower,
+                task_name = row["TaskLabel"]
+                metric_est = MetricEstimate(name=metric_name,
+                                            mean=metric_mean, lower=metric_lower,
                                             upper=metric_upper)
-                pgym_metrics[unique_task_name] = metric_est
+                fw_metrics[task_name] = metric_est
 
-        if len(pbc_metrics) > 0:
-            pbc_entries.append(RankingEntry(name=report.embedder_name, metrics=pbc_metrics))
+            if len(fw_metrics) > 0:
+                ranking_entry = RankingEntry(name=report.embedder_name, metrics=fw_metrics)
+                ranking_entries_dict[fw.name].append(ranking_entry)
 
-        if len(pgym_metrics) > 0:
-            pgym_entries.append(RankingEntry(name=report.embedder_name, metrics=pgym_metrics))
-
-    return calculate_rankings(pbc_entries=pbc_entries, pgym_entries=pgym_entries)
+    return calculate_rankings(ranking_entries_dict=ranking_entries_dict)
 
 
-def calculate_rankings(pbc_entries: List[RankingEntry], pgym_entries: List[RankingEntry]):
-    groups_pbc = [
-        RankingGroup(name="PBC-binding-global",
-                     group_function=lambda categories: {cat for cat in categories if "binding" in cat}),
-        RankingGroup(name="PBC-secondary_structure-total",
-                     group_function=lambda categories: {cat for cat in categories if "secondary_structure" in cat})
-    ]
-    ranking_pbc = Ranking.calculate(entries=pbc_entries, groups=groups_pbc)
-    ranking_pgym = Ranking.calculate(entries=pgym_entries)
-    return ranking_pbc, ranking_pgym
+def calculate_rankings(ranking_entries_dict: Dict[str, List[RankingEntry]]) -> Dict[str, Ranking]:
+    groups = {
+        AvailableFramework.PBC_SUPERVISED.name:
+            [RankingGroup(name="PBC-secondary_structure-total",
+                          group_function=lambda categories: {cat for cat in categories if
+                                                             "secondary_structure" in cat})]
+    }
+    ranking_dict = {}
+    for fw_name, ranking_entries in ranking_entries_dict.items():
+        ranking = Ranking.calculate(entries=ranking_entries, groups=groups.get(fw_name))
+        ranking_dict[fw_name] = ranking
+    return ranking_dict
 
 
-def get_training_validation_curves(model_result: BiotrainerModelResult) -> Tuple[List[float], List[float], List[int], float]:
+def get_training_validation_curves(model_result: BiotrainerModelResult) -> Tuple[
+    List[float], List[float], List[int], float]:
     """ Get training losses, validation losses, list of epochs and best epoch from training """
     training_results = model_result.training_results
     split_key = "hold_out"  # Only one split for now

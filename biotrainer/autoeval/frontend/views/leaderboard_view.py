@@ -4,19 +4,14 @@ import streamlit as st
 
 from typing import Dict, List, Tuple
 from biotrainer_core.functions.ranking import Ranking
-from biotrainer_core.data_classes.autoeval import AutoEvalReport
-from biotrainer_core.data_classes.autoeval.autoeval_report import _aggregate_dfs
+
+from .compare_view import _render_framework_comparison, _aggregate_for_comparison
+
 from ..model import DashboardReport
 
 from ..state import AutoevalSessionState
 
 from ...autoeval_frameworks import AvailableFramework
-
-from ..plots import (
-    plot_comparison,
-    fig_to_png_bytes,
-    fig_to_pdf_bytes,
-)
 
 # =========================
 # Helper functions
@@ -50,12 +45,12 @@ def _build_framework_selector(state: AutoevalSessionState) -> AvailableFramework
         currently_selected = state.get_lb_framework()
         all_frameworks = list(map(lambda fw: fw.value.upper(), AvailableFramework.dashboard_frameworks()))
         selected_framework = st.selectbox(
-                label="Framework",
-                label_visibility="collapsed",
-                options=all_frameworks,
-                index=max(0, all_frameworks.index(currently_selected))
-                if currently_selected in all_frameworks else 0,
-            )
+            label="Framework",
+            label_visibility="collapsed",
+            options=all_frameworks,
+            index=max(0, all_frameworks.index(currently_selected))
+            if currently_selected in all_frameworks else 0,
+        )
         selected_framework = AvailableFramework[selected_framework.upper()]
         state.select_lb_framework(selected_framework)
     return state.get_lb_framework()
@@ -168,25 +163,29 @@ def _copy_ranking_controls(ranking: Ranking):
 # =========================
 
 def render_leaderboard(state: AutoevalSessionState,
-                       ranking_pbc: Ranking,
-                       ranking_pgym: Ranking,
+                       ranking_dict: Dict[str, Ranking],
                        active: List[DashboardReport],
                        development_mode: bool):
     # determine active ranking based on framework
     active = [db_report.report for db_report in active]  # TODO: Add tooltips
 
-    all_categories = sorted(list(ranking_pbc.ranking_categories.union(ranking_pgym.ranking_categories)))
+    all_rankings = list(ranking_dict.values())
+    all_categories = sorted(list(set().union(*[ranking.ranking_categories for ranking in all_rankings])))
     state.maybe_init_lb_weights(all_categories)
 
     _build_title()
     fw = _build_framework_selector(state)
-    ranking = ranking_pbc if fw == AvailableFramework.PBC_SUPERVISED else ranking_pgym  # TODO
+    selected_ranking = ranking_dict.get(fw.name)
+
+    if selected_ranking is None:
+        st.markdown("**No ranking available for selected framework**")
+        return
 
     # Sync weight keys with current ranking
-    state.sync_lb_weights(ranking.ranking_categories)
+    state.sync_lb_weights(selected_ranking.ranking_categories)
 
     # Apply weights to current ranking object
-    weighted_ranking = ranking.update_weights(state.get_lb_weights())
+    weighted_ranking = selected_ranking.update_weights(state.get_lb_weights())
 
     selected_ranking_category = _build_ranking_category_selection(state, weighted_ranking)
 
@@ -211,47 +210,14 @@ def render_leaderboard(state: AutoevalSessionState,
     # Comparison plot section
     st.markdown("#### Overall task comparison")
     plot_maximum = st.slider("Select the maximum number of models to compare:", min_value=1, max_value=6, value=6)
-    best_n_models = [entry[1].name.lower() for entry in leaderboard[:plot_maximum]]
-    try:
-        if fw == "PBC":
-            dfs = [
-                report.supervised_results[fw].to_df(all_metrics=False, development_mode=development_mode).assign(
-                    Model=report.embedder_name)
-                for report in active
-                if fw in report.supervised_results and report.embedder_name.lower() in best_n_models
-            ]
-            dfs = sorted(dfs, key=lambda df: best_n_models.index(df["Model"].str.lower().iloc[0]), reverse=True)
-            df_plot = _aggregate_dfs(dfs)
-        else:
-            dfs = [
-                report.zeroshot_results[fw].to_df(all_metrics=False, development_mode=development_mode).assign(
-                    Model=report.embedder_name)
-                for report in active
-                if fw in report.zeroshot_results and report.embedder_name.lower() in best_n_models
-            ]
-            dfs = sorted(dfs, key=lambda df: best_n_models.index(df["Model"].str.lower().iloc[0]), reverse=True)
-            df_plot = _aggregate_dfs(dfs)
-
-        if df_plot is None or df_plot.empty:
-            st.caption("No overlapping tasks available for a comparison plot.")
-        else:
-            fig, _ = plot_comparison(df_plot)
-            if fig is None:
-                st.info("Install 'matplotlib' and 'seaborn' to see the comparison plot.")
-            else:
-                st.pyplot(fig, use_container_width=True)
-                st.download_button(
-                    "⬇️ Download PNG",
-                    data=fig_to_png_bytes(fig),
-                    file_name="comparison.png",
-                    mime="image/png",
-                )
-                st.download_button(
-                    "⬇️ Download PDF",
-                    data=fig_to_pdf_bytes(fig),
-                    file_name="comparison.pdf",
-                    mime="application/pdf",
-                )
-    except Exception as e:
-        st.caption("Unable to render comparison plot.")
-        print(e)
+    best_n_models = [entry[1].name for entry in leaderboard[:plot_maximum]]
+    best_reports = [report for report in active if report.embedder_name in set(best_n_models)]
+    framework_name = fw.name
+    df_sup = _aggregate_for_comparison(
+        framework_name=framework_name,
+        chosen_reports=best_reports,
+        dev_mode=development_mode)
+    _render_framework_comparison(chosen_reports=best_reports,
+                                 framework_name=framework_name,
+                                 df_fw=df_sup,
+                                 baseline_model=best_n_models[0] if len(best_n_models) > 1 else None)

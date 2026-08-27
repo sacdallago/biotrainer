@@ -103,9 +103,10 @@ def run(start_path: Optional[Path] = None):
     match view_mode:
         case ViewMode.Leaderboard:
             dev_mode = state.get_development_mode()
-            ranking_pbc, ranking_pgym = frontend_utils.leaderboard_dataframe([db_report.report for db_report in active],
-                                                                             development_mode=dev_mode)
-            render_leaderboard(state=state, ranking_pbc=ranking_pbc, ranking_pgym=ranking_pgym,
+            ranking_dict = frontend_utils.leaderboard_rankings([db_report.report for db_report in active],
+                                                                            development_mode=dev_mode)
+            render_leaderboard(state=state,
+                               ranking_dict=ranking_dict,
                                active=active,
                                development_mode=dev_mode)
         case ViewMode.Detailed:
