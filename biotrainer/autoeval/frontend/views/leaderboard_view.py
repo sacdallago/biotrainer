@@ -3,7 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from typing import Dict, List, Tuple, Optional
-from biotrainer_core.data_classes.autoeval import AutoEvalReport
+from .publish_dialog import publish_dialog
 from biotrainer_core.functions.ranking import Ranking, RankingEntry
 
 from .compare_view import _render_framework_comparison, _aggregate_for_comparison
@@ -112,95 +112,6 @@ def _ranking_row_cols_spec(any_local_reports: bool):
     return [0.2, 0.5, 0.2, 0.1] if any_local_reports else [0.2, 0.6, 0.2]
 
 
-@st.dialog("Publish Report")
-def _publish_dialog(report: AutoEvalReport,
-                    state: Optional[AutoevalSessionState] = None,
-                    client: Optional[AutoEvalClient] = None):
-    if client is None:
-        client = AutoEvalClient()
-    if state is None and "state" in st.session_state:
-        state = st.session_state.state
-
-    st.markdown(f"#### Publish `{report.embedder_name}`")
-
-    name = st.text_input("Name*", placeholder="Your full name", key=f"pub_name_{report.get_uid()}")
-    email = st.text_input("Email*", placeholder="Your email address", key=f"pub_email_{report.get_uid()}")
-    citation = st.text_input("Citation (optional DOI)", placeholder="https://doi.org/...", key=f"pub_citation_{report.get_uid()}")
-
-    st.info(
-        "Publishing this report will make it publicly visible on the public leaderboard. "
-        "Your name and the citation will be displayed on the leaderboard. Your e-mail is used in case of questions "
-        "that might come up when we add your results to the official leaderboard. "
-        "Your data will only be used for the purpose of the autoeval dashboard and not be shared with third parties. "
-        "Published reports might be removed anytime from the leaderboard."
-    )
-
-    terms = st.checkbox("I understand these terms and conditions and agree "
-                        "to the storing of my data for the purpose of the leaderboard.",
-                        key=f"pub_terms_{report.get_uid()}")
-
-    published_key = f"published_status_{report.get_uid()}"
-    is_published = st.session_state.get(published_key, False)
-
-    if is_published:
-        st.success("Report published successfully!")
-        if st.button("Close", key=f"close_btn_{report.get_uid()}", use_container_width=True):
-            st.session_state[published_key] = False
-            st.rerun()
-        return
-
-    cols = st.columns(2)
-    with cols[0]:
-        publish_clicked = st.button("Publish now", type="primary", use_container_width=True, key=f"pub_now_{report.get_uid()}")
-    with cols[1]:
-        cancel_clicked = st.button("Cancel", use_container_width=True, key=f"pub_cancel_{report.get_uid()}")
-
-    if cancel_clicked:
-        st.rerun()
-
-    if publish_clicked:
-        if not terms:
-            st.error("Please accept the terms and conditions to publish.")
-            return
-
-        if not name or len(name.strip()) < 3:
-            st.error("Please provide a valid publisher name (at least 3 characters).")
-            return
-
-        if not email or "@" not in email or len(email.strip()) < 5:
-            st.error("Please provide a valid email address.")
-            return
-
-        citation_clean = citation.strip() if citation and citation.strip() else None
-        if citation_clean and not citation_clean.lower().startswith("https://doi.org/"):
-            st.error("Citation must be a valid DOI URL starting with 'https://doi.org/'")
-            return
-
-        maybe_error = client.publish_report(
-            report=report,
-            name=name.strip(),
-            email=email.strip(),
-            citation=citation_clean
-        )
-
-        if maybe_error:
-            st.error(f"Error publishing report: {maybe_error}")
-        else:
-            st.session_state[published_key] = True
-            if state is not None:
-                state.remove_loaded_report(report.get_uid())
-                try:
-                    public_reports = client.get_public_reports()
-                    if public_reports:
-                        state.add_published_reports(public_reports)
-                except Exception as e:
-                    st.error(f"Error fetching updated public reports: {e}")
-            st.success("Report published successfully!")
-            if st.button("Close", key=f"close_after_pub_{report.get_uid()}", use_container_width=True):
-                st.session_state[published_key] = False
-                st.rerun()
-
-
 def _ranking_entry_tile(ranking: Ranking, entry: Tuple[int, RankingEntry, float],
                         embedder_name_to_db_report: Dict[str, DashboardReport],
                         any_local_reports: bool,
@@ -228,8 +139,9 @@ def _ranking_entry_tile(ranking: Ranking, entry: Tuple[int, RankingEntry, float]
     if any_local_reports:
         with cols[3]:
             if db_report and db_report.is_loaded:
-                if st.button("Publish", key=f"publish_btn_{place}_{embedder_name}_{db_report.report.get_uid()}", use_container_width=True):
-                    _publish_dialog(db_report.report, state=state, client=client)
+                if st.button("Publish", key=f"publish_btn_{place}_{embedder_name}_{db_report.report.get_uid()}",
+                             use_container_width=True):
+                    publish_dialog(db_report.report, state=state, client=client)
             else:
                 st.markdown("")
 
@@ -323,9 +235,11 @@ def render_leaderboard(state: AutoevalSessionState,
     leaderboard = weighted_ranking.get_leaderboard_ranking()
 
     if selected_ranking_category == "global":
-        _build_leaderboard_visualization(weighted_ranking, leaderboard, embedder_name_to_db_report, state=state, client=client)
+        _build_leaderboard_visualization(weighted_ranking, leaderboard, embedder_name_to_db_report, state=state,
+                                         client=client)
     else:
-        _build_category_visualization(selected_ranking_category, weighted_ranking, embedder_name_to_db_report, state=state, client=client)
+        _build_category_visualization(selected_ranking_category, weighted_ranking, embedder_name_to_db_report,
+                                      state=state, client=client)
 
     if selected_ranking_category == "global":
         cols = st.columns([1, 1])
