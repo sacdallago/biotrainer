@@ -108,7 +108,8 @@ def run(start_path: Optional[Path] = None):
             render_leaderboard(state=state,
                                ranking_dict=ranking_dict,
                                active=active,
-                               development_mode=dev_mode)
+                               development_mode=dev_mode,
+                               client=_make_autoeval_client())
         case ViewMode.Detailed:
             render_detailed(state=state, active=active)
         case ViewMode.Compare:

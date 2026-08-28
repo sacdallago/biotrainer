@@ -1,6 +1,6 @@
 import requests
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from biotrainer_core.data_classes.autoeval import AutoEvalReport, AutoEvalPublishedReport
 
 
@@ -44,7 +44,8 @@ class _AutoEvalServiceClient:
         json = self._handle_response(response, expect_field="reports")
         return json
 
-    def publish_report(self, report: Dict, name: str, email: str, citation: Optional[str] = None) -> None:
+    def publish_report(self, report: Dict, name: str, email: str,
+                       citation: Optional[str] = None) -> Optional[str]:
         """Publish a new autoeval report
         
         Args:
@@ -57,12 +58,17 @@ class _AutoEvalServiceClient:
             "report": report,
             "name": name,
             "email": email,
-            "citation": citation
+            "citation": citation,
+            "official": False,
         }
 
         response = requests.post(f"{self.api_url}/publish/", json=payload)
-        _ = self._handle_response(response)
-        print("You can now view the report at: https://autoeval.biocentral.cloud/")
+        try:
+            _ = self._handle_response(response)
+            print("You can now view the report at: https://autoeval.biocentral.cloud/")
+            return None
+        except Exception as e:
+            return str(e)
 
     def store_comparison_report(self, report: Dict) -> str:
         """Store a report temporarily for comparison
@@ -90,9 +96,10 @@ class AutoEvalClient:
     def __init__(self, base_url: Optional[str] = None):
         self._client = _AutoEvalServiceClient(base_url) if base_url else _AutoEvalServiceClient.default_service()
 
-    def publish_report(self, report: AutoEvalReport, name: str, email: str, citation: Optional[str] = None):
+    def publish_report(self, report: AutoEvalReport, name: str, email: str, citation: Optional[str] = None) -> Optional[str]:
         """
-        Publish this report to the public autoeval dashboard.
+        Publish this report to the public autoeval dashboard. Returns an error as
+        string if publishing was not successful
 
         :param report: AutoEval Report to publish
         :param name: Name of the publisher
@@ -100,8 +107,9 @@ class AutoEvalClient:
         :param citation: Optional citation for the report. Must have https://doi.org/... format.
         """
 
-        report_dict = report.model_dump()
-        self._client.publish_report(report=report_dict, name=name, email=email, citation=citation)
+        report_dict = report.model_dump(mode="json")
+        maybe_error = self._client.publish_report(report=report_dict, name=name, email=email, citation=citation)
+        return maybe_error
 
     def get_comparison_report(self, uid: str) -> AutoEvalReport:
         """ Retrieve a stored comparison report by uid from the autoeval service. """

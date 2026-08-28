@@ -56,7 +56,8 @@ class AutoevalSessionState:
         return dict(self._loaded_reports)
 
     def remove_loaded_report(self, report_id: str) -> AutoevalSessionState:
-        del self._loaded_reports[report_id]
+        if report_id in self._loaded_reports:
+            del self._loaded_reports[report_id]
         return self
 
     def add_published_reports(self, reports: List[AutoEvalPublishedReport]) -> AutoevalSessionState:
