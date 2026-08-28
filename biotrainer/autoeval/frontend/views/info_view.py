@@ -28,3 +28,9 @@ def render_info_view(state: AutoevalSessionState):
     )
     st.markdown("#### PBC-Contact (Zero-Shot Jacobian + Supervised Attention)")
 
+    st.markdown("### Imprint")
+    st.markdown("The `autoeval` module is currently developed by the [Rostlab](https://rostlab.org/) team "
+                "at the [Technische Universität München](https://www.tum.de/).")
+    st.markdown("*Built with esm* and other open source projects and models. "
+                "Thank you to all contributors of this and other open-source projects.")
+
