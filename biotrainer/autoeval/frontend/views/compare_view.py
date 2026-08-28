@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from typing import List, Optional, Callable
+from typing import List, Optional
 from biotrainer_core.data_classes.autoeval import AutoEvalReport
 
 from biotrainer_core.data_classes.autoeval.autoeval_report import _aggregate_dfs
@@ -36,12 +36,12 @@ def _render_framework_comparison(chosen_reports: List[AutoEvalReport],
     task_set = list(set(df_fw["TaskLabel"].unique()))
     task_set = sorted(task_set)
     if choose_tasks_manually:
-        chosen_tasks = st.multiselect("Select tasks", key=f"multiselect_{framework_name}_{len(task_set)}",
-                                  default=task_set, options=task_set,
-                                  # format_func=lambda
-                                  #    task: f"{df_fw[df_fw['TaskLabel'] == task]['Test Set'].iloc[0]}-"
-                                  #          f"{df_fw[df_fw['TaskLabel'] == task]['Task'].iloc[0].replace('PBC-', '')}"  #TODO
-                                  )
+        chosen_tasks = st.multiselect("Select tasks", key=f"multiselect_{framework_name}_{str(df_fw)}",
+                                      default=task_set, options=task_set,
+                                      # format_func=lambda
+                                      #    task: f"{df_fw[df_fw['TaskLabel'] == task]['Test Set'].iloc[0]}-"
+                                      #          f"{df_fw[df_fw['TaskLabel'] == task]['Task'].iloc[0].replace('PBC-', '')}"  #TODO
+                                      )
     else:
         chosen_tasks = list(task_set)
 
@@ -66,10 +66,10 @@ def _render_framework_comparison(chosen_reports: List[AutoEvalReport],
         st.pyplot(fig, use_container_width=True)
         st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig),
                            file_name=f"{framework_name}_absolute_comparison.png",
-                           mime="image/png", key=f"abs_comp_png_{framework_name}")
+                           mime="image/png", key=f"abs_comp_png_{framework_name}_{str(df_fw)}")
         st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig),
                            file_name=f"{framework_name}_absolute_comparison.pdf",
-                           mime="application/pdf", key=f"abs_comp_pdf_{framework_name}")
+                           mime="application/pdf", key=f"abs_comp_pdf_{framework_name}_{str(df_fw)}")
     else:
         st.info("Install 'matplotlib' and 'seaborn' to render the comparison plot.")
 
@@ -89,10 +89,10 @@ def _render_framework_comparison(chosen_reports: List[AutoEvalReport],
             st.pyplot(fig_delta, use_container_width=True)
             st.download_button("⬇️ Download PNG", data=fig_to_png_bytes(fig_delta),
                                file_name=f"{framework_name}_delta_comparison.png",
-                               mime="image/png", key=f"delta_comp_png_{framework_name}")
+                               mime="image/png", key=f"delta_comp_png_{framework_name}_{str(df_fw)}")
             st.download_button("⬇️ Download PDF", data=fig_to_pdf_bytes(fig_delta),
                                file_name=f"{framework_name}_delta_comparison.pdf",
-                               mime="application/pdf", key=f"delta_comp_pdf_{framework_name}")
+                               mime="application/pdf", key=f"delta_comp_pdf_{framework_name}_{str(df_fw)}")
         else:
             st.info("Select a baseline model and ensure overlapping tasks to render the delta plot.")
 

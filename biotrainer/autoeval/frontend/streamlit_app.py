@@ -15,7 +15,6 @@ except Exception as _e:
 from .utils.types import ViewMode
 from .model import DashboardReport
 from .views.sidebar_view import render_sidebar
-from .utils import utils as frontend_utils
 from .state.autoeval_session_state import AutoevalSessionState
 from .views.info_view import render_info_view
 from .views.compare_view import render_compare
@@ -103,10 +102,7 @@ def run(start_path: Optional[Path] = None):
     match view_mode:
         case ViewMode.Leaderboard:
             dev_mode = state.get_development_mode()
-            ranking_dict = frontend_utils.leaderboard_rankings([db_report.report for db_report in active],
-                                                                            development_mode=dev_mode)
             render_leaderboard(state=state,
-                               ranking_dict=ranking_dict,
                                active=active,
                                development_mode=dev_mode,
                                client=_make_autoeval_client())

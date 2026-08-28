@@ -59,7 +59,7 @@ def _show_global_settings(state: AutoevalSessionState):
 
 def _show_view_buttons(state: AutoevalSessionState) -> ViewMode:
     """Render the view buttons."""
-    st.sidebar.markdown("### Select View")
+    st.sidebar.markdown("### Menu")
     view_mode = state.get_view_mode()
     if st.sidebar.button("🏆\nLeaderboard", use_container_width=True):
         view_mode = ViewMode.Leaderboard

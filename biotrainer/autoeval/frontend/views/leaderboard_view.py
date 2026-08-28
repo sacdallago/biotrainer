@@ -3,14 +3,14 @@ from __future__ import annotations
 import streamlit as st
 
 from typing import Dict, List, Tuple, Optional
-from .publish_dialog import publish_dialog
 from biotrainer_core.functions.ranking import Ranking, RankingEntry
 
+from .publish_dialog import publish_dialog
 from .compare_view import _render_framework_comparison, _aggregate_for_comparison
 
 from ..model import DashboardReport
-
 from ..state import AutoevalSessionState
+from ..utils import utils as frontend_utils
 
 from ...autoeval_frameworks import AvailableFramework
 from ...client import AutoEvalClient
@@ -22,7 +22,10 @@ from ...client import AutoEvalClient
 
 
 def _build_title():
-    st.subheader("Leaderboard")
+    st.subheader("Protein Language Model Leaderboard",
+                 help=f"This leaderboard displays the best performing protein language models "
+                      f"on the autoeval benchmark. The leaderboard contains and accepts development-only reports "
+                      f"as well at the moment. Please note that this is still under heavy development.")
 
 
 def _get_rank_color(place: int) -> str:
@@ -40,20 +43,20 @@ def _badge(place: int) -> str:
     """
 
 
-def _build_framework_selector(state: AutoevalSessionState) -> AvailableFramework:
+def _build_framework_selector(state: AutoevalSessionState, scope: str) -> AvailableFramework:
     cols = st.columns([1, 2])
     with cols[0]:
         st.markdown("**Framework**")
     with cols[1]:
-        currently_selected = state.get_lb_framework()
+        currently_selected = state.get_lb_framework().value.upper()
         all_frameworks = list(map(lambda fw: fw.value.upper(), AvailableFramework.dashboard_frameworks()))
         selected_framework = st.selectbox(
             label="Framework",
             label_visibility="collapsed",
             options=all_frameworks,
-            index=max(0, all_frameworks.index(currently_selected))
-            if currently_selected in all_frameworks else 0,
+            key=f"fw_selector_{scope}",
         )
+        selected_framework = selected_framework or currently_selected
         selected_framework = AvailableFramework[selected_framework.upper()]
         state.select_lb_framework(selected_framework)
     return state.get_lb_framework()
@@ -70,7 +73,7 @@ def _build_information(ranking: Ranking):
             st.caption(cat)
 
 
-def _build_ranking_category_selection(state: AutoevalSessionState, ranking: Ranking) -> str:
+def _build_ranking_category_selection(state: AutoevalSessionState, ranking: Ranking, scope: str) -> str:
     options = ["global"] + list(sorted(ranking.raw_categories | ranking.ranking_categories))
     currently_selected = state.get_lb_ranking_category()
     idx = options.index(currently_selected) if currently_selected in options else 0
@@ -78,12 +81,13 @@ def _build_ranking_category_selection(state: AutoevalSessionState, ranking: Rank
         "Select ranking category",
         options=options,
         index=idx,
+        key=f"ranking_category_selector_{ranking.__hash__()}_{scope}"
     )
     state.select_lb_ranking_category(selected_ranking_category)
     return selected_ranking_category
 
 
-def _build_weights_selection(state: AutoevalSessionState, ranking: Ranking):
+def _build_weights_selection(state: AutoevalSessionState, ranking: Ranking, scope: str):
     with st.expander("Change weights", expanded=False):
         cols = st.columns(2)
         for i, cat in enumerate(sorted(ranking.ranking_categories)):
@@ -93,7 +97,8 @@ def _build_weights_selection(state: AutoevalSessionState, ranking: Ranking):
                     f"Weight for {cat}: {current}"
                 )
                 new_val = st.number_input(
-                    f"{cat}", min_value=0, max_value=10, step=1, value=int(current), key=f"w_{cat}"
+                    f"{cat}", min_value=0, max_value=10, step=1, value=int(current),
+                    key=f"w_{cat}_{ranking.__hash__()}_{scope}"
                 )
                 new_val = int(str(new_val))
                 state.set_lb_weight(cat, new_val)
@@ -139,7 +144,7 @@ def _ranking_entry_tile(ranking: Ranking, entry: Tuple[int, RankingEntry, float]
     if any_local_reports:
         with cols[3]:
             if db_report and db_report.is_loaded:
-                if st.button("Publish", key=f"publish_btn_{place}_{embedder_name}_{db_report.report.get_uid()}",
+                if st.button("Publish!", key=f"publish_btn_{place}_{embedder_name}_{db_report.report.get_uid()}",
                              use_container_width=True):
                     publish_dialog(db_report.report, state=state, client=client)
             else:
@@ -193,21 +198,23 @@ def _build_category_visualization(category: str, ranking: Ranking,
     _build_ranking_visualization(ranking, category_ranking, embedder_name_to_db_report, state=state, client=client)
 
 
-def _copy_ranking_controls(ranking: Ranking):
+def _copy_ranking_controls(ranking: Ranking, scope: str):
     # Clipboard access is restricted in browsers; provide a download + selectable text
     text = ranking.copied_ranking()
-    st.download_button("⬇️ Download ranking.txt", data=text, file_name="ranking.txt", mime="text/plain")
+    st.download_button("⬇️ Download ranking.txt", data=text, file_name="ranking.txt", mime="text/plain",
+                       key=f"download_ranking_{ranking.__hash__()}_{scope}")
 
 
 # =========================
 # Public entry point
 # =========================
 
-def render_leaderboard(state: AutoevalSessionState,
-                       ranking_dict: Dict[str, Ranking],
-                       active: List[DashboardReport],
-                       development_mode: bool,
-                       client: Optional[AutoEvalClient] = None):
+def _build_leaderboard_by_scope(state: AutoevalSessionState,
+                                ranking_dict: Dict[str, Ranking],
+                                active: List[DashboardReport],
+                                development_mode: bool,
+                                scope: str,
+                                client: Optional[AutoEvalClient] = None, ):
     # determine active ranking based on framework
     embedder_name_to_db_report = {db_report.report.embedder_name: db_report for db_report in active}
     active = [db_report.report for db_report in active]
@@ -216,8 +223,7 @@ def render_leaderboard(state: AutoevalSessionState,
     all_categories = sorted(list(set().union(*[ranking.ranking_categories for ranking in all_rankings])))
     state.maybe_init_lb_weights(all_categories)
 
-    _build_title()
-    fw = _build_framework_selector(state)
+    fw = _build_framework_selector(state, scope)
     selected_ranking = ranking_dict.get(fw.name)
 
     if selected_ranking is None:
@@ -230,7 +236,7 @@ def render_leaderboard(state: AutoevalSessionState,
     # Apply weights to current ranking object
     weighted_ranking = selected_ranking.update_weights(state.get_lb_weights())
 
-    selected_ranking_category = _build_ranking_category_selection(state, weighted_ranking)
+    selected_ranking_category = _build_ranking_category_selection(state, weighted_ranking, scope)
 
     leaderboard = weighted_ranking.get_leaderboard_ranking()
 
@@ -246,15 +252,17 @@ def render_leaderboard(state: AutoevalSessionState,
         with cols[0]:
             _build_information(weighted_ranking)
         with cols[1]:
-            _build_weights_selection(state, weighted_ranking)
+            _build_weights_selection(state, weighted_ranking, scope)
     else:
         _build_information(weighted_ranking)
 
-    _copy_ranking_controls(weighted_ranking)
+    _copy_ranking_controls(weighted_ranking, scope)
 
     # Comparison plot section
     st.markdown("#### Overall task comparison")
-    plot_maximum = st.slider("Select the maximum number of models to compare:", min_value=1, max_value=6, value=6)
+    plot_maximum = st.slider("Select the maximum number of models to compare:", min_value=1,
+                             max_value=6, value=6,
+                             key=f"plot_maximum_{hash(ranking_dict.values())}")
     best_n_models = [entry[1].name for entry in leaderboard[:plot_maximum]]
     best_reports = [report for report in active if report.embedder_name in set(best_n_models)]
     framework_name = fw.name
@@ -266,3 +274,29 @@ def render_leaderboard(state: AutoevalSessionState,
                                  framework_name=framework_name,
                                  df_fw=df_sup,
                                  baseline_model=best_n_models[0] if len(best_n_models) > 1 else None)
+
+
+def render_leaderboard(state: AutoevalSessionState,
+                       active: List[DashboardReport],
+                       development_mode: bool,
+                       client: Optional[AutoEvalClient] = None):
+    _build_title()
+
+    if not development_mode:
+        # Filter out development mode reports for evaluation_mode
+        active = [db_report for db_report in active if not db_report.report.is_development()]
+
+    scopes = ["Official", "All"]
+    tabs = st.tabs(scopes)
+    official_reports = [db_report for db_report in active if db_report.official]
+    all_reports = active
+    with tabs[0]:
+        scope = scopes[0]
+        ranking_dict = frontend_utils.leaderboard_rankings([db_report.report for db_report in official_reports],
+                                                           development_mode=development_mode)
+        _build_leaderboard_by_scope(state, ranking_dict, official_reports, development_mode, scope, client)
+    with tabs[1]:
+        scope = scopes[1]
+        ranking_dict = frontend_utils.leaderboard_rankings([db_report.report for db_report in all_reports],
+                                                           development_mode=development_mode)
+        _build_leaderboard_by_scope(state, ranking_dict, all_reports, development_mode, scope, client)

@@ -26,7 +26,7 @@ class AutoevalSessionState:
         self._loaded_reports: Dict[str, DashboardReport] = {}  # UID -> Report
         self._published_reports: Dict[str, DashboardReport] = {}
         self._view_mode: ViewMode = ViewMode.Leaderboard
-        self._development_mode: bool = False
+        self._development_mode: bool = True
 
         # Leaderboard
         self._lb_selected_framework: AvailableFramework = AvailableFramework.dashboard_frameworks()[0]

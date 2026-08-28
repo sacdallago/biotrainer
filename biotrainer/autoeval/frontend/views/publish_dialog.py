@@ -40,7 +40,7 @@ def publish_dialog(report: AutoEvalReport,
     is_published = st.session_state.get(published_key, False)
 
     if is_published:
-        st.success("Report published successfully!")
+        st.success("Report published successfully! You might need to reload the page to see it.")
         if st.button("Close", key=f"close_btn_{report.get_uid()}", use_container_width=True):
             st.session_state[published_key] = False
             st.rerun()
@@ -93,7 +93,7 @@ def publish_dialog(report: AutoEvalReport,
                         state.add_published_reports(public_reports)
                 except Exception as e:
                     st.error(f"Error fetching updated public reports: {e}")
-            st.success("Report published successfully!")
+            st.success("Report published successfully! You might need to reload the page to see it.")
             if st.button("Close", key=f"close_after_pub_{report.get_uid()}", use_container_width=True):
                 st.session_state[published_key] = False
                 st.rerun()
