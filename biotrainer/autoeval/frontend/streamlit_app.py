@@ -36,7 +36,7 @@ st.markdown(
 
 
 def _make_autoeval_client() -> AutoEvalClient:
-    return AutoEvalClient(base_url="http://localhost:12999")  # TODO DEBUG
+    return AutoEvalClient()
 
 def _download_public_reports() -> List[AutoEvalPublishedReport]:
     client = _make_autoeval_client()
