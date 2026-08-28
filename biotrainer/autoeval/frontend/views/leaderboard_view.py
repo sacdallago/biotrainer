@@ -273,6 +273,7 @@ def _build_leaderboard_by_scope(state: AutoevalSessionState,
     _render_framework_comparison(chosen_reports=best_reports,
                                  framework_name=framework_name,
                                  df_fw=df_sup,
+                                 scope=scope,
                                  baseline_model=best_n_models[0] if len(best_n_models) > 1 else None)
 
 
