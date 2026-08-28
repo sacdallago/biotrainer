@@ -11,7 +11,7 @@ class DashboardReport(AutoEvalPublishedReport):
 
     @classmethod
     def from_loaded_report(cls, loaded_report: AutoEvalReport):
-        return DashboardReport(report=loaded_report, is_visible=True, is_loaded=True,
+        return DashboardReport(report=loaded_report.model_dump(mode="json"), is_visible=True, is_loaded=True,
                                name="user", email="user@example.com", citation=None, official=False)
 
     def tooltip(self) -> str:
