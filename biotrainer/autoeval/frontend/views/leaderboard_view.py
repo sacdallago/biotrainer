@@ -3,7 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from typing import Dict, List, Tuple
-from biotrainer_core.functions.ranking import Ranking
+from biotrainer_core.functions.ranking import Ranking, RankingEntry
 
 from .compare_view import _render_framework_comparison, _aggregate_for_comparison
 
@@ -12,6 +12,7 @@ from ..model import DashboardReport
 from ..state import AutoevalSessionState
 
 from ...autoeval_frameworks import AvailableFramework
+
 
 # =========================
 # Helper functions
@@ -97,31 +98,53 @@ def _build_weights_selection(state: AutoevalSessionState, ranking: Ranking):
                 st.caption(f"{Ranking.get_score_multiplier(new_val):.1f}x counted")
 
 
-def _group_by_place(ranking_list: List[Tuple[int, object, float]]):
-    grouped: Dict[int, List[Tuple[int, object, float]]] = {}
+def _group_by_place(ranking_list: List[Tuple[int, RankingEntry, float]]):
+    grouped: Dict[int, List[Tuple[int, RankingEntry, float]]] = {}
     for entry in ranking_list:
         place = entry[0]
         grouped.setdefault(place, []).append(entry)
     return grouped
 
 
-def _ranking_entry_tile(ranking: Ranking, entry: Tuple[int, object, float]):
+def _ranking_row_cols_spec(any_local_reports: bool):
+    return [0.2, 0.5, 0.2, 0.1] if any_local_reports else [0.2, 0.6, 0.2]
+
+
+def _ranking_entry_tile(ranking: Ranking, entry: Tuple[int, RankingEntry, float],
+                        embedder_name_to_db_report: Dict[str, DashboardReport],
+                        any_local_reports: bool):
     place, ranking_entry, score = entry
+    embedder_name = ranking_entry.name
+    db_report = embedder_name_to_db_report.get(embedder_name, None)
+
     # Layout: badge | name | score
-    cols = st.columns([0.2, 0.6, 0.2], gap="small")
+    cols = st.columns(_ranking_row_cols_spec(any_local_reports), gap="small")
     with cols[0]:
         st.markdown(_badge(place), unsafe_allow_html=True)
     with cols[1]:
-        st.markdown(f"**{ranking_entry.name}**")
+        tooltip = None
+        if db_report:
+            tooltip = db_report.tooltip()
+        st.markdown(f"**{embedder_name}**", help=tooltip)
     with cols[2]:
         verbose = ranking.verbose_ranking_by_entry(ranking_entry.name) or "No details available."
         score = f"**{score:.2f}**"
         with st.popover(score):
             st.markdown(verbose)
 
+    if any_local_reports:
+        with cols[3]:
+            if db_report and db_report.is_loaded:
+                st.markdown("**Publish**")
+            else:
+                st.markdown("")
 
-def _build_ranking_visualization(ranking: Ranking, ranking_list: List[Tuple[int, object, float]]):
-    cols = st.columns([0.2, 0.6, 0.2], gap="small")
+
+def _build_ranking_visualization(ranking: Ranking, ranking_list: List[Tuple[int, RankingEntry, float]],
+                                 embedder_name_to_db_report: Dict[str, DashboardReport]):
+    any_local_reports = any([db_report.is_loaded for db_report in embedder_name_to_db_report.values()])
+
+    cols = st.columns(_ranking_row_cols_spec(any_local_reports), gap="small")
     with cols[0]:
         st.markdown("**Rank**")
     with cols[1]:
@@ -129,27 +152,33 @@ def _build_ranking_visualization(ranking: Ranking, ranking_list: List[Tuple[int,
     with cols[2]:
         st.markdown("**Score**")
 
+    if any_local_reports:
+        with cols[3]:
+            st.markdown("**Publish**")
+
     grouped = _group_by_place(ranking_list)
     for place, entries in grouped.items():
         if len(entries) > 1:
             st.markdown(f"— Tie for place {place} —", help="Multiple entries tied.")
         for e in entries:
-            _ranking_entry_tile(ranking, e)
+            _ranking_entry_tile(ranking, e, embedder_name_to_db_report, any_local_reports)
         # Use a thinner divider or conditional spacing for the next row
         if place < len(grouped):
             st.markdown("<hr style='margin:4px 0;'>", unsafe_allow_html=True)  # Minimal divider spacing
 
 
-def _build_leaderboard_visualization(ranking: Ranking, leaderboard):
-    _build_ranking_visualization(ranking, leaderboard)
+def _build_leaderboard_visualization(ranking: Ranking, leaderboard,
+                                     embedder_name_to_db_report: Dict[str, DashboardReport]):
+    _build_ranking_visualization(ranking, leaderboard, embedder_name_to_db_report)
 
 
-def _build_category_visualization(category: str, ranking: Ranking):
+def _build_category_visualization(category: str, ranking: Ranking,
+                                  embedder_name_to_db_report: Dict[str, DashboardReport]):
     category_ranking = ranking.get_category_ranking(category=category)
     if category_ranking is None:
         st.warning(f"ERROR: No ranking found for category {category}!")
         return
-    _build_ranking_visualization(ranking, category_ranking)
+    _build_ranking_visualization(ranking, category_ranking, embedder_name_to_db_report)
 
 
 def _copy_ranking_controls(ranking: Ranking):
@@ -167,7 +196,8 @@ def render_leaderboard(state: AutoevalSessionState,
                        active: List[DashboardReport],
                        development_mode: bool):
     # determine active ranking based on framework
-    active = [db_report.report for db_report in active]  # TODO: Add tooltips
+    embedder_name_to_db_report = {db_report.report.embedder_name: db_report for db_report in active}
+    active = [db_report.report for db_report in active]
 
     all_rankings = list(ranking_dict.values())
     all_categories = sorted(list(set().union(*[ranking.ranking_categories for ranking in all_rankings])))
@@ -192,9 +222,9 @@ def render_leaderboard(state: AutoevalSessionState,
     leaderboard = weighted_ranking.get_leaderboard_ranking()
 
     if selected_ranking_category == "global":
-        _build_leaderboard_visualization(weighted_ranking, leaderboard)
+        _build_leaderboard_visualization(weighted_ranking, leaderboard, embedder_name_to_db_report)
     else:
-        _build_category_visualization(selected_ranking_category, weighted_ranking)
+        _build_category_visualization(selected_ranking_category, weighted_ranking, embedder_name_to_db_report)
 
     if selected_ranking_category == "global":
         cols = st.columns([1, 1])
