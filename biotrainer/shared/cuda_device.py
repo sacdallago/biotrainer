@@ -7,9 +7,8 @@ from typing import Union
 def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
     """Returns what the user specified, or auto-selects the best available device.
 
-    Auto-selection (device=None) falls back to CPU when no accelerator is present. An explicitly requested device
-    is never silently downgraded - a run that was asked for a GPU should fail loudly rather than spend hours on
-    the CPU."""
+    Auto-selection (device=None) falls back to CPU when no accelerator is present. An explicitly requested
+    device that is not available raises ValueError instead of falling back."""
     if device is None:
         if torch.cuda.is_available():
             return torch.device("cuda")
