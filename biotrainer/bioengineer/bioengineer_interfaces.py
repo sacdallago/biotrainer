@@ -227,7 +227,7 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
             np.ndarray: [L, L]
         """
         categorical_jacobian = self._compute_categorical_jacobian(sequence, batch_size)
-        contact_map = convert_cat_jac_to_contact_map(categorical_jacobian.numpy().astype(np.float64))
+        contact_map = convert_cat_jac_to_contact_map(categorical_jacobian.double().numpy())
         return contact_map
 
 

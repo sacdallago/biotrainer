@@ -46,6 +46,14 @@ class _LocalModel(torch.nn.Module):
         return SimpleNamespace(logits=_TOKEN_LOGITS[input_ids])
 
 
+class _Bf16LocalModel(_LocalModel):
+    """ Returns the same logits in bfloat16, as a forward pass under bfloat16 autocast does """
+
+    def forward(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None):
+        outputs = super().forward(input_ids, attention_mask)
+        return SimpleNamespace(logits=outputs.logits.to(torch.bfloat16))
+
+
 class _NoBosEngineer(BertLikeEngineer):
     """ Tokenizes as residues + EOS + one register token: no BOS, both special tokens at the end.
 
@@ -138,6 +146,14 @@ class _StandardEngineer(_NoBosEngineer):
         token_ids = [_BOS_TOKEN_ID] + [aa_to_idx[aa] for aa in batch[0]] + [_EOS_TOKEN_ID]
         tokenized = torch.tensor([token_ids])
         return tokenized, torch.ones_like(tokenized)
+
+
+class _Bf16Engineer(_StandardEngineer):
+    """ The standard layout, but the model's logits come back in bfloat16 """
+
+    def __init__(self, device: torch.device = torch.device("cpu")):
+        super().__init__(device=device)
+        self._model = _Bf16LocalModel()
 
 
 class _MinimalCustomModel(CustomBioEngineerModel):
@@ -328,6 +344,18 @@ class BioEngineerTests(unittest.TestCase):
     def test_categorical_jacobian_is_aligned_for_non_contiguous_residues(self):
         """ BOS + half + register + half + EOS: the residue positions are not a contiguous slice """
         self._assert_jacobian_is_aligned(_SplitEngineer(), self.jacobian_sequence)
+
+    def test_categorical_jacobian_contact_map_for_bfloat16_logits(self):
+        """ numpy() has no bfloat16 support, so the conversion to float64 has to happen inside torch """
+        engineer = _Bf16Engineer()
+        sequence = self.jacobian_sequence
+
+        contact_map = engineer.zero_shot_contact_map_jacobian(sequence, batch_size=8)
+
+        self.assertIsInstance(contact_map, np.ndarray)
+        self.assertEqual(contact_map.shape, (len(sequence), len(sequence)))
+        self.assertEqual(contact_map.dtype, np.float64)
+        self.assertTrue(np.isfinite(contact_map).all(), "The contact map holds non-finite values!")
 
     def test_categorical_jacobian_rejects_misplaced_strip_special_tokens(self):
         """ The right number of positions taken from the wrong places must fail as loudly as the wrong count,
