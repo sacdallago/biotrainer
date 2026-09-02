@@ -46,6 +46,10 @@ def _maybe_metric_abs(metric_name: str, mean: float, lower: float, upper: float)
 
 
 class FrameworkReport(ABC, BaseModel):
+    task_filter_applied: bool = Field(default=False,
+                                      description="Whether a task filter reduced this run to a subset of "
+                                                  "the framework's tasks")
+
     @abstractmethod
     def summary(self, development_mode: bool = False):
         raise NotImplementedError
@@ -290,7 +294,9 @@ class ZeroShotFrameworkReport(FrameworkReport):
         return list(self.task_results.keys())
 
     def used_development_mode(self) -> bool:
-        return len(self.individual_results) == len(self.development_ids)
+        # Compare identity, not counts: a full run that was interrupted after len(development_ids) datasets would
+        # otherwise be mistaken for a development run and never re-run.
+        return set(self.individual_results.keys()) == set(self.development_ids)
 
 
 class ZeroShotCachedResults(BaseModel):
@@ -420,7 +426,9 @@ class ContactFrameworkReport(FrameworkReport):
         return [task_name.split("-")[-1] for task_name in self.task_results.keys()]
 
     def used_development_mode(self) -> bool:
-        return len(self.per_protein_results) == len(self.development_ids)
+        # Compare identity, not counts: a full run that was interrupted after len(development_ids) proteins would
+        # otherwise be mistaken for a development run and never re-run.
+        return set(self.per_protein_results.keys()) == set(self.development_ids)
 
 
 class ZeroShotContactCachedResults(BaseModel):

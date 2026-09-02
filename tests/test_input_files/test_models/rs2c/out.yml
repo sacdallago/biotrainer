@@ -1,5 +1,5 @@
 config:
-  device: cuda
+  device: cpu
   seed: 42
   save_split_ids: false
   sanity_check: true

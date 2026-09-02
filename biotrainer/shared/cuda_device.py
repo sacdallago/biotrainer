@@ -5,28 +5,32 @@ from typing import Union
 
 
 def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
-    """Returns what the user specified, or defaults to the GPU,
-    with a fallback to CPU if no GPU is available."""
-    if isinstance(device, torch.device):
-        if device.type == "cuda" and torch.cuda.is_available():
-            return device
-        elif device.type == "mps" and torch.backends.mps.is_available():
-            return device
-        else:
-            return torch.device("cpu")
-    elif isinstance(device, str):
-        if "cuda" in device and torch.cuda.is_available():
-            return torch.device(device)
-        elif "mps" in device and torch.backends.mps.is_available():
-            return torch.device(device)
-        else:
-            return torch.device("cpu")
-    elif torch.cuda.is_available():
-        return torch.device("cuda")
-    elif torch.backends.mps.is_available():
-        return torch.device("mps")
-    else:
+    """Returns what the user specified, or auto-selects the best available device.
+
+    Auto-selection (device=None) falls back to CPU when no accelerator is present. An explicitly requested
+    device that is not available raises ValueError instead of falling back."""
+    if device is None:
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        if torch.backends.mps.is_available():
+            return torch.device("mps")
         return torch.device("cpu")
+
+    if isinstance(device, str):
+        try:
+            device = torch.device(device)
+        except RuntimeError as e:
+            raise ValueError(f"Device '{device}' could not be understood: {e}") from e
+
+    if device.type == "cpu":
+        return device
+    if device.type == "cuda" and torch.cuda.is_available():
+        return device
+    if device.type == "mps" and torch.backends.mps.is_available():
+        return device
+    raise ValueError(f"Device '{device}' was requested, but it is not available on this machine "
+                     f"(cuda: {torch.cuda.is_available()}, mps: {torch.backends.mps.is_available()}). "
+                     f"Pass device=None to select the best available device, or 'cpu' to force it.")
 
 
 def is_device_cpu(device: Union[None, str, torch.device] = None) -> bool:

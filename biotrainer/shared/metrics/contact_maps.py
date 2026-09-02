@@ -5,6 +5,8 @@ from tqdm import tqdm
 from typing import Tuple, Dict, Iterable, Any, Callable, Optional, Generator
 from biotrainer_core.data_classes import ContactSingleProteinResult, ContactDatasetResult
 
+from ..sequence_exception import SequenceTooLongError
+
 
 def compute_contact_precision(
         predictions: np.ndarray,
@@ -113,6 +115,7 @@ def evaluate_contact_dataset(
         get_ground_truth_func: Callable[[Any], np.ndarray],
         get_seq_id_func: Callable[[Any], str],
         cached_results: Optional[Dict[str, ContactSingleProteinResult]] = None,
+        on_skip: Optional[Callable[[str], None]] = None,
 ) -> Generator[ContactSingleProteinResult, None, None]:
     cached_results = cached_results or {}
     for item in tqdm(items, desc=f"Evaluating {dataset_name} contact dataset..", unit="protein"):
@@ -120,9 +123,18 @@ def evaluate_contact_dataset(
         if seq_id in cached_results:
             continue  # Cached result exists
 
-        ground_truth = get_ground_truth_func(item)
-        prediction = predict_func(item)
+        try:
+            prediction = predict_func(item)
+        except SequenceTooLongError as too_long:
+            # Skip rather than raise: contact datasets do not filter by length, cached results resume, so a
+            # raise here would kill the framework run at this protein again on every retry.
+            tqdm.write(f"WARNING: Skipping {seq_id} in {dataset_name} - {too_long}")
+            if on_skip is not None:
+                on_skip(seq_id)  # Callers tracking which proteins they expected results for
+            continue
 
+        # After the prediction, so a resumed run does not re-read the ground truth of every protein it skips
+        ground_truth = get_ground_truth_func(item)
         precision_scores = evaluate_contact_map(prediction, ground_truth)
         single_protein_result = ContactSingleProteinResult(protein_name=seq_id, precision_scores=precision_scores)
         yield single_protein_result

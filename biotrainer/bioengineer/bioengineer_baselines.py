@@ -8,6 +8,8 @@ from biotrainer_core.utils.constants import STANDARD_AAS
 
 from .bioengineer_interfaces import BioEngineerModelWrapper
 
+from ..shared.sequence_exception import SequenceTooLongError
+
 
 class BioEngineerBaseline(Enum):
     CONSTANT_BASELINE = "bioengineer_constant_baseline"
@@ -141,6 +143,16 @@ class RandomEngineerBaseline(BioEngineerModelWrapper):
 
         Note: We seed based on the sequence to ensure determinism.
         """
+        # Reject before allocating: the [L, 20, L, 20] sample costs L^2 * 1600 bytes, so a long chain dies
+        # with a MemoryError, which the contact evaluator cannot skip. Residue-based because this baseline
+        # has no tokenizer, so it skips approximately the proteins a real model does, off by its special
+        # token count - close enough to stay comparable.
+        if len(sequence) > self.max_context_length():
+            raise SequenceTooLongError(
+                f"Sequence of {len(sequence)} residues exceeds the {self.max_context_length()} token context "
+                f"of {self._name}. The categorical Jacobian has no windowed variant - contacts spanning two "
+                f"windows would be missing - so it is not computed."
+            )
         seq_seed = hash(sequence) % (2 ** 32)
         local_rng = np.random.RandomState(self._seed ^ seq_seed)
 

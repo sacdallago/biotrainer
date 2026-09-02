@@ -242,24 +242,28 @@ def prepare_cat_jac_mutations(
     orig_ids: torch.Tensor,
     orig_mask: torch.Tensor,
     aa_token_ids: torch.Tensor,
+    residue_positions: torch.Tensor,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Generate L x 20 mutations per sequence in token space.
 
     Args:
-        orig_ids:      [1, L+2] tokenized original sequence (+2 because BOS/EOS expected!)
-        orig_mask:     [1, L+2] attention mask
-        aa_token_ids:  [20] token IDs in order of STANDARD_AAS
+        orig_ids:          [1, n_tokens] tokenized original sequence
+        orig_mask:         [1, n_tokens] attention mask
+        aa_token_ids:      [20] token IDs in order of STANDARD_AAS
+        residue_positions: [L] token positions holding the real residues. Passed in rather than assumed,
+                           because special tokens are not necessarily one BOS plus one trailing EOS.
 
     Returns:
-        Tuple of (input_ids, attention_mask): each [L*20, L+2]
+        Tuple of (input_ids, attention_mask): each [L*20, n_tokens]
     """
-    L = orig_ids.shape[1] - 2  # subtract BOS and EOS
+    L = residue_positions.numel()
     all_ids  = torch.tile(orig_ids,  (L * 20, 1))
     #TODO: review - drop the mask since no padding in any case?
     all_mask = torch.tile(orig_mask, (L * 20, 1))
-    for n in range(L):
-        all_ids[n*20:(n+1)*20, n+1] = aa_token_ids  # n+1 to skip BOS; order of aa_token_ids matters!
+    # .tolist() so the column index is a Python int: indexing with a 0-d tensor would launch L index_put_ ops
+    for n, position in enumerate(residue_positions.tolist()):
+        all_ids[n*20:(n+1)*20, position] = aa_token_ids  # order of aa_token_ids matters!
     return all_ids, all_mask
 
 

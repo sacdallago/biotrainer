@@ -5,6 +5,7 @@ from biotrainer_core.data_classes import ZeroShotMethod
 from typing import List, Optional, Dict, Iterable, Tuple
 
 from .bioengineer_interfaces import BertLikeEngineer, GPTLikeEngineer
+from .bioengineer_utils import MAX_CONTEXT_LENGTH
 
 
 class CustomBioEngineerModel(ABC):
@@ -29,7 +30,11 @@ class CustomBioEngineerModel(ABC):
 
     @abstractmethod
     def strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
-        """ Remove special tokens from output (if necessary) """
+        """ Remove special tokens from output (if necessary)
+
+        Also called with an index tensor of shape [n_tokens, 1] to derive which token positions hold the
+        residues, so select along the first axis and do not depend on the trailing dimensions.
+        """
         return tensor
 
     @abstractmethod
@@ -51,6 +56,15 @@ class CustomBioEngineerModel(ABC):
     def aa_to_idx(self) -> Dict[str, int]:
         """ Return a dictionary mapping amino acids to their indices """
         raise NotImplementedError
+
+    def max_context_length(self) -> int:
+        """ Maximum number of tokens the model can process in one forward pass, including special tokens.
+
+        Override if the model's context is not the ESM-style 1024 tokens. Only the categorical Jacobian guard
+        honours this: the windowed marginal paths are hardcoded to WINDOW_SIZE-token windows, so a value
+        below WINDOW_SIZE does not shrink them.
+        """
+        return MAX_CONTEXT_LENGTH
 
     def run_model_batched(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
@@ -97,6 +111,9 @@ class CustomBioEngineerModelWrapper(BertLikeEngineer, GPTLikeEngineer):
 
     def _strip_special_tokens(self, tensor: torch.Tensor) -> torch.Tensor:
         return self._custom_bioengineer.strip_special_tokens(tensor)
+
+    def max_context_length(self) -> int:
+        return self._custom_bioengineer.max_context_length()
 
     def supported_methods(self) -> List[ZeroShotMethod]:
         return self._custom_bioengineer.supported_methods()

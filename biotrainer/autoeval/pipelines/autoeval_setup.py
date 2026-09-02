@@ -2,7 +2,7 @@ import os
 
 from pathlib import Path
 from biotrainer_core.input_files import read_FASTA
-from typing import List, Optional, Union, Any, Dict, Tuple
+from typing import Callable, List, Optional, Union, Any, Dict, Tuple
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalMode
 from biotrainer_core.data_classes import ZeroShotMethod, SequenceData, Protocol
 
@@ -57,12 +57,29 @@ def validate_input(framework,
 
     return framework_obj
 
+
+def _apply_task_filter(tasks: List[AutoEvalTask],
+                       task_filter: Callable[[AutoEvalTask], bool],
+                       framework_name: str) -> List[AutoEvalTask]:
+    """ Keep only the tasks the filter selects, refusing to run nothing at all.
+
+    A filter that matches no task would otherwise produce an empty but successful run, which then gets written
+    as a framework report and reused - so fail here, naming what could have been selected.
+    """
+    selected = [task for task in tasks if task_filter(task)]
+    if not selected:
+        raise ValueError(f"task_filter selected none of the {len(tasks)} tasks of framework {framework_name}. "
+                         f"Available: {[task.combined_name() for task in tasks]}")
+    return selected
+
+
 def get_unique_framework_sequences(framework: Union[str, AvailableFramework, AutoEvalFramework],
                                    min_seq_length: int,
                                    max_seq_length: int,
                                    custom_storage_path: Optional[Union[Path, str]] = None,
                                    force_download: Optional[bool] = False,
                                    development_mode: bool = True,
+                                   task_filter: Optional[Callable[[AutoEvalTask], bool]] = None,
                                    ) -> Tuple[
     List[Tuple[AutoEvalTask, Dict[str, Any]]], Dict[str, SequenceData],
     Dict[str, SequenceData]]:
@@ -81,6 +98,12 @@ def get_unique_framework_sequences(framework: Union[str, AvailableFramework, Aut
                                      custom_storage_path=custom_storage_path,
                                      force_download=force_download,
                                      development_mode=development_mode,)
+    if task_filter:
+        # Filter before the configs and the unique sequences are collected, so that pre-embedding shrinks with
+        # the selection instead of covering the whole framework
+        auto_eval_tasks = _apply_task_filter(tasks=auto_eval_tasks,
+                                             task_filter=task_filter,
+                                             framework_name=framework_obj.get_name())
     task_config_tuples = []
     for task in auto_eval_tasks:
         config = config_bank.get_task_config(task=task)

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Tuple, List, Dict, Any, Optional, Generator
+from typing import Tuple, List, Dict, Any, Optional, Set, Generator
 from biotrainer_core.data_classes import ZeroShotMethod, ContactSingleProteinResult, ContactDatasetResult
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, \
     ContactFrameworkReport, ZeroShotContactCachedResults
@@ -65,7 +65,6 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
         development_ids_set = set(development_ids)
         assert len(development_ids_set) == len(development_ids), "Duplicate IDs in development set!"
         development_ids = development_ids_set
-        zero_shot_contact_framework_report.update_development_ids(development_ids=list(development_ids))
         if development_mode:
             seq_records = seq_records_subsampled
 
@@ -89,6 +88,8 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                     structure_id=seq_id)
 
         # Define evaluation function
+        skipped_ids: Set[str] = set()  # Proteins the bioengineer cannot process, e.g. because they are too long
+
         def evaluate() -> Generator[ContactSingleProteinResult, None, None]:
             yield from evaluate_contact_dataset(dataset_name=dataset_name,
                                                 items=seq_records,
@@ -99,6 +100,7 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                 get_ground_truth_func=load_gt_contact_map,
                                                 get_seq_id_func=lambda d: d.seq_id,
                                                 cached_results=cached_results,
+                                                on_skip=skipped_ids.add,
                                                 )
 
         # Run Evaluation of zero-shot contact maps
@@ -107,6 +109,12 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
             zero_shot_contact_cached_results.update_and_sync(result=single_result,
                                                              output_dir=output_dir)
             single_results.append(single_result)
+
+        # A skipped protein never reaches the results, so it may not stay a development id either:
+        # used_development_mode() compares the two as sets, and a development report holding one id too many
+        # reads as a full evaluation and is served instead of running one.
+        development_ids -= skipped_ids
+        zero_shot_contact_framework_report.update_development_ids(development_ids=list(development_ids))
 
         dataset_result, dataset_result_dev = get_dataset_and_dev_result_from_single_contact_results(dataset_name=dataset_name,
                                                                                                     single_results=single_results,
