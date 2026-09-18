@@ -221,9 +221,11 @@ class BioEngineerTests(unittest.TestCase):
 
     def test_baselines(self):
         """ Test BioEngineer baselines on protein gym dataset """
-        dataset_path = Path("tests/test_input_files/pgym/B2L11_HUMAN_Dutta_2010_binding-Mcl-1.csv").absolute()
+        dataset_path = Path("test_input_files/pgym/B2L11_HUMAN_Dutta_2010_binding-Mcl-1.csv")
         if not dataset_path.exists():
-            raise FileNotFoundError(f"Dataset file {dataset_path} not found!")
+            dataset_path = Path("tests/") / dataset_path
+            if not dataset_path.exists():
+                raise FileNotFoundError(f"Dataset file {dataset_path} not found!")
 
         # Check all baselines and methods
         for baseline in BioEngineerBaseline:
