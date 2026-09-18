@@ -1,15 +1,32 @@
 import torch
 import unittest
+import numpy as np
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple
 
+from biotrainer_core.utils.constants import STANDARD_AAS
+from biotrainer.bioengineer.bioengineer_interfaces import BertLikeEngineer
+from biotrainer.bioengineer.bioengineer_custom_model import CustomBioEngineerModel, CustomBioEngineerModelWrapper
+from biotrainer.shared import SequenceTooLongError
 from biotrainer_core.data_classes import ZeroShotMethod, Variant
 from biotrainer.bioengineer import BioEngineer, BioEngineerBaseline
-from biotrainer.bioengineer.bioengineer_interfaces import BertLikeEngineer
+from biotrainer.bioengineer.bioengineer_utils import MAX_CONTEXT_LENGTH
 
-_VOCAB_SIZE = 25
-_MASK_TOKEN_ID = 24
+_BOS_TOKEN_ID = 0
+_EOS_TOKEN_ID = 1
+_REGISTER_TOKEN_ID = 2
+_FIRST_AA_TOKEN_ID = 3
+_MASK_TOKEN_ID = 25
+_VOCAB_SIZE = 26
+
+# One distinct logit row per token id. A lookup keeps the logits bit-identical whatever the input shape is,
+# so the reference pass and the batched mutation passes can be compared for exact equality
+_TOKEN_LOGITS = torch.sin(torch.arange(_VOCAB_SIZE).unsqueeze(-1) * (torch.arange(_VOCAB_SIZE) + 1.0))
+
+_ACCELERATOR = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else None
+
 
 
 class _DeterministicModel(torch.nn.Module):
@@ -42,32 +59,6 @@ class _DeterministicEngineer(BertLikeEngineer):
 
     def aa_to_idx(self) -> Dict[str, int]:
         return {}
-
-import torch
-import numpy as np
-
-from types import SimpleNamespace
-from typing import Dict, List, Optional, Tuple
-
-from biotrainer_core.utils.constants import STANDARD_AAS
-from biotrainer.bioengineer.bioengineer_interfaces import BertLikeEngineer
-from biotrainer.bioengineer.bioengineer_custom_model import CustomBioEngineerModel, CustomBioEngineerModelWrapper
-from biotrainer.shared import SequenceTooLongError
-from biotrainer.bioengineer.bioengineer_utils import MAX_CONTEXT_LENGTH
-
-_BOS_TOKEN_ID = 0
-_EOS_TOKEN_ID = 1
-_REGISTER_TOKEN_ID = 2
-_FIRST_AA_TOKEN_ID = 3
-_MASK_TOKEN_ID = 25
-_VOCAB_SIZE = 26
-
-
-# One distinct logit row per token id. A lookup keeps the logits bit-identical whatever the input shape is,
-# so the reference pass and the batched mutation passes can be compared for exact equality
-_TOKEN_LOGITS = torch.sin(torch.arange(_VOCAB_SIZE).unsqueeze(-1) * (torch.arange(_VOCAB_SIZE) + 1.0))
-
-_ACCELERATOR = "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else None
 
 
 class _LocalModel(torch.nn.Module):
@@ -230,7 +221,10 @@ class BioEngineerTests(unittest.TestCase):
 
     def test_baselines(self):
         """ Test BioEngineer baselines on protein gym dataset """
-        dataset_path = "test_input_files/pgym/B2L11_HUMAN_Dutta_2010_binding-Mcl-1.csv"
+        dataset_path = Path("tests/test_input_files/pgym/B2L11_HUMAN_Dutta_2010_binding-Mcl-1.csv").absolute()
+        if not dataset_path.exists():
+            raise FileNotFoundError(f"Dataset file {dataset_path} not found!")
+
         # Check all baselines and methods
         for baseline in BioEngineerBaseline:
             for method in ZeroShotMethod:
@@ -270,7 +264,7 @@ class BioEngineerTests(unittest.TestCase):
         engineer = _NoBosEngineer()
         sequence = "MAGSMALMKQ"
 
-        log_probs = engineer._get_masked_log_probabilities(sequence)
+        log_probs = engineer._get_masked_log_probabilities(sequence, batch_size=1)
 
         self.assertEqual(tuple(log_probs.shape), (len(sequence), _VOCAB_SIZE))
         calls = engineer._model.calls
@@ -290,7 +284,7 @@ class BioEngineerTests(unittest.TestCase):
         engineer = _StandardEngineer()
         sequence = "MAGSMALMKQ"
 
-        engineer._get_masked_log_probabilities(sequence)
+        engineer._get_masked_log_probabilities(sequence, batch_size=1)
 
         calls = engineer._model.calls
         self.assertEqual(len(calls), len(sequence))
@@ -308,7 +302,7 @@ class BioEngineerTests(unittest.TestCase):
         engineer = _NoBosEngineer()
         sequence = self.jacobian_sequence * 110  # 1100 residues + 2 special tokens, past WINDOW_SIZE
 
-        log_probs = engineer._get_masked_log_probabilities(sequence)
+        log_probs = engineer._get_masked_log_probabilities(sequence, batch_size=1)
 
         self.assertEqual(tuple(log_probs.shape), (len(sequence), _VOCAB_SIZE))
         calls = engineer._model.calls
@@ -326,7 +320,7 @@ class BioEngineerTests(unittest.TestCase):
         sequence = self.jacobian_sequence
         half = len(sequence) // 2
 
-        log_probs = engineer._get_masked_log_probabilities(sequence)
+        log_probs = engineer._get_masked_log_probabilities(sequence, batch_size=1)
 
         self.assertEqual(tuple(log_probs.shape), (len(sequence), _VOCAB_SIZE))
         calls = engineer._model.calls
