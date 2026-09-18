@@ -330,7 +330,9 @@ class AutoEval:
         return self
 
     def pbc_zeroshot_contact(self, zero_shot_method: ZeroShotMethod = ZeroShotMethod.JACOBIAN_CONTACT,
-                             task_filter: Optional[Callable[[AutoEvalTask], bool]] = None):
+                             task_filter: Optional[Callable[[AutoEvalTask], bool]] = None,
+                             batch_size: int = 32,
+                             ):
         """
         Add PBC zero-shot contact prediction evaluation tasks to the AutoEval pipeline.
 
@@ -339,6 +341,7 @@ class AutoEval:
         :param task_filter: Optional predicate restricting the run to the tasks it selects, e.g.
             ``lambda task: task.dataset_name == "casp14"``. Raises ValueError if it selects no task.
             One task per contact dataset.
+        :param batch_size: Batch size to be used when computing the categorical Jacobian.
         :return: The AutoEval instance for method chaining.
         """
         framework_obj, maybe_framework_result, output_dir = self._general_task_setup(
@@ -361,6 +364,7 @@ class AutoEval:
                 bioengineer=bioengineer,
                 device=runner_params.device,
                 development_mode=self.development_mode,
+                batch_size=batch_size,
             )
 
         self._frameworks_to_runners[framework_obj] = _AutoEvalTaskRunner(framework=framework_obj,
