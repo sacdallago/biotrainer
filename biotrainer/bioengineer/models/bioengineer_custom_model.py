@@ -4,8 +4,8 @@ from abc import ABC, abstractmethod
 from biotrainer_core.data_classes import ZeroShotMethod
 from typing import List, Optional, Dict, Iterable, Tuple
 
-from .bioengineer_interfaces import BertLikeEngineer, GPTLikeEngineer
-from .bioengineer_utils import MAX_CONTEXT_LENGTH
+from ..interfaces import BertLikeEngineer, GPTLikeEngineer
+from ..bioengineer_utils import MAX_CONTEXT_LENGTH
 
 
 class CustomBioEngineerModel(ABC):

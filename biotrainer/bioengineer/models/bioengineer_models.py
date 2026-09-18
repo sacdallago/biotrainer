@@ -4,10 +4,10 @@ from typing import Iterable, Optional, Callable, List, Tuple
 from transformers import EsmForMaskedLM, EsmTokenizer, BertTokenizer, BertForMaskedLM, AutoTokenizer, \
     AutoModelForCausalLM, AutoModelForMaskedLM
 
-from .bioengineer_interfaces import BertLikeEngineer, GPTLikeEngineer
+from ..interfaces import BertLikeEngineer, GPTLikeEngineer
 
-from ..embedding.huggingface.ESM2 import _esm2_family_dict, _esmc_family_dict
-from ..embedding.interfaces import preprocess_sequences_with_whitespaces, preprocess_sequences_without_whitespaces
+from ...embedding.huggingface.ESM2 import _esm2_family_dict, _esmc_family_dict
+from ...embedding.interfaces import preprocess_sequences_with_whitespaces, preprocess_sequences_without_whitespaces
 
 
 class ESM2Engineer(BertLikeEngineer):

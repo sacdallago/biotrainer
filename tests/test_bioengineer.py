@@ -7,8 +7,8 @@ from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple
 
 from biotrainer_core.utils.constants import STANDARD_AAS
-from biotrainer.bioengineer.bioengineer_interfaces import BertLikeEngineer
-from biotrainer.bioengineer.bioengineer_custom_model import CustomBioEngineerModel, CustomBioEngineerModelWrapper
+from biotrainer.bioengineer.interfaces import BertLikeEngineer
+from biotrainer.bioengineer.models import CustomBioEngineerModel, CustomBioEngineerModelWrapper
 from biotrainer.shared import SequenceTooLongError
 from biotrainer_core.data_classes import ZeroShotMethod, Variant
 from biotrainer.bioengineer import BioEngineer, BioEngineerBaseline

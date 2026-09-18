@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import List, Optional, Dict, Union, Tuple
 from biotrainer_core.data_classes import Variant, VariantScore, RankingResult, ZeroShotMethod
 
-from .bioengineer_interfaces import BioEngineerModelWrapper
-from .bioengineer_models import ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer, ESMCEngineer
-from .bioengineer_custom_model import CustomBioEngineerModel, CustomBioEngineerModelWrapper
-from .bioengineer_baselines import BioEngineerBaseline, ConstantEngineerBaseline, RandomEngineerBaseline
+from .interfaces import BioEngineerModelWrapper
+from .models import (ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer, ESMCEngineer, CustomBioEngineerModel,
+                     CustomBioEngineerModelWrapper)
+from .baselines import BioEngineerBaseline, ConstantEngineerBaseline, RandomEngineerBaseline
 
 from ..shared import get_device, Bootstrapper
 from ..shared.metrics.metrics_calculator import SequenceRegressionMetricsCalculator
