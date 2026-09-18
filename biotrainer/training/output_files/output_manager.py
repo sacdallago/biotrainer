@@ -237,7 +237,16 @@ class InferenceOutputManager(OutputManager):
         return self._input_config["log_dir"]
 
     def device(self):
-        return get_device(self._input_config["device"])
+        # The stored device records what the training run used, not what the caller is asking for now, so a model
+        # trained on cuda has to stay loadable on a machine without one.
+        stored_device = self._input_config["device"]
+        try:
+            return get_device(stored_device)
+        except ValueError:
+            device = get_device()
+            logger.warning(f"Model was trained on device {stored_device}, which is not available here. "
+                           f"Using {device} instead.")
+            return device
 
     def dimension_reduction_method(self):
         return self._input_config.get("dimension_reduction_method", None)

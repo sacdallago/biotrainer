@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Union, Tuple
 from biotrainer_core.data_classes import Variant, VariantScore, RankingResult, ZeroShotMethod
 
 from .bioengineer_interfaces import BioEngineerModelWrapper
-from .bioengineer_models import ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer
+from .bioengineer_models import ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer, ESMCEngineer
 from .bioengineer_custom_model import CustomBioEngineerModel, CustomBioEngineerModelWrapper
 from .bioengineer_baselines import BioEngineerBaseline, ConstantEngineerBaseline, RandomEngineerBaseline
 
@@ -18,7 +18,7 @@ from ..shared.metrics.metrics_calculator import SequenceRegressionMetricsCalcula
 
 
 class BioEngineer:
-    __available_models = [ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer]
+    __available_models = [ESM2Engineer, ESMCEngineer, ProtBertEngineer, ProtGPT2Engineer]
     __available_baselines = [ConstantEngineerBaseline, RandomEngineerBaseline]
 
     def __init__(self, model_wrapper: BioEngineerModelWrapper):
@@ -255,6 +255,10 @@ class BioEngineer:
 
         Returns:
             np.ndarray: [L, L] (L = sequence length)
+
+        Raises:
+            SequenceTooLongError: If the sequence exceeds the model's context length - the Jacobian has no
+                windowed variant, so it is not computed at all
         """
         if method not in self.model_wrapper.supported_methods():
             raise ValueError(f"Method {method} not supported by this model!")

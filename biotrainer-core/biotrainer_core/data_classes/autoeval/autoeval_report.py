@@ -46,6 +46,10 @@ def _maybe_metric_abs(metric_name: str, mean: float, lower: float, upper: float)
 
 
 class FrameworkReport(ABC, BaseModel):
+    task_filter_applied: bool = Field(default=False,
+                                      description="Whether a task filter reduced this run to a subset of "
+                                                  "the framework's tasks")
+
     @abstractmethod
     def summary(self, development_mode: bool = False):
         raise NotImplementedError
@@ -108,14 +112,8 @@ class SupervisedFrameworkReport(FrameworkReport):
         task_names = self.results.keys()
         print(f"Total tasks: {len(task_names)}")
         print("Results:")
-
-        for task_name in task_names:
-            metrics = self.extract_metrics(task_name, development_mode=development_mode, all_metrics=False)
-            for metric in metrics:
-                print(
-                    f"{metric['task_name']} ({metric['protocol']}) - {metric['test_set_name']} - "
-                    f"{metric['evaluation_metric']}: {metric['mean']} ({metric['lower']} - {metric['upper']})"
-                )
+        df = self.to_df(all_metrics=False, development_mode=development_mode)
+        print(df)
 
     def extract_metrics(self, combined_task_name: str, development_mode: bool = False,
                         all_metrics: bool = False) -> list[dict]:
@@ -261,10 +259,8 @@ class ZeroShotFrameworkReport(FrameworkReport):
         print(f"Zero-shot method: {self.method.value}")
         print(f"Total tasks: {len(self.task_results)}")
         print("Results:")
-        for combined_task_name, result in self.task_results.items():
-            print(f"{combined_task_name}: "
-                  f"\t SCC:  {result.scc_score()}"
-                  f"\t NDCG: {result.ndcg_score()}")
+        df = self.to_df(all_metrics=True, development_mode=development_mode)
+        print(df)
 
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
@@ -298,7 +294,9 @@ class ZeroShotFrameworkReport(FrameworkReport):
         return list(self.task_results.keys())
 
     def used_development_mode(self) -> bool:
-        return len(self.individual_results) == len(self.development_ids)
+        # Compare identity, not counts: a full run that was interrupted after len(development_ids) datasets would
+        # otherwise be mistaken for a development run and never re-run.
+        return set(self.individual_results.keys()) == set(self.development_ids)
 
 
 class ZeroShotCachedResults(BaseModel):
@@ -394,10 +392,8 @@ class ContactFrameworkReport(FrameworkReport):
             print(f"Zero-shot contact method: {self.method.value}")
         print(f"Total tasks: {len(self.task_results)}")
         print("Results:")
-        for combined_task_name, result in self.task_results.items():
-            print(f"{combined_task_name}: "
-                  f"\t Results:  {result}")
-            # TODO: add detailed print of metrics!!
+        df = self.to_df(all_metrics=False, development_mode=development_mode)
+        print(df)
 
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
@@ -430,7 +426,9 @@ class ContactFrameworkReport(FrameworkReport):
         return [task_name.split("-")[-1] for task_name in self.task_results.keys()]
 
     def used_development_mode(self) -> bool:
-        return len(self.task_results) == len(self.development_ids)
+        # Compare identity, not counts: a full run that was interrupted after len(development_ids) proteins would
+        # otherwise be mistaken for a development run and never re-run.
+        return set(self.per_protein_results.keys()) == set(self.development_ids)
 
 
 class ZeroShotContactCachedResults(BaseModel):
@@ -575,10 +573,10 @@ class AutoEvalReport(BaseModel):
             report.summary(development_mode=development_mode)
         for framework_name, report in self.zeroshot_contact_results.items():
             print(f"\n{framework_name} zero-shot contact results:")
-            report.summary()
+            report.summary(development_mode=development_mode)
         for framework_name, report in self.supervised_contact_results.items():
             print(f"\n{framework_name} supervised contact results:")
-            report.summary()
+            report.summary(development_mode=development_mode)
 
     def embedding_stats(self):
         print(f"Embedding stats in autoeval report for {self.embedder_name} on {self.training_date}.")

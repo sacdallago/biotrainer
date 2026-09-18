@@ -15,6 +15,7 @@ def get_predefined_embedder_names() -> List[str]:
 
 __all__ = [
     "EmbeddingAPI",
+    "EmbedderInterface",
     "EmbeddingService",
     "PeftEmbeddingService",
     "EmbeddingStatsTracker",

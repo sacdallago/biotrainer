@@ -92,7 +92,7 @@ class ESMC(ESM2):
             # Load the tokenizer
             tokenizer = AutoTokenizer.from_pretrained(embedder_name, dtype=dtype)
             # Load the model
-            model = AutoModel.from_pretrained(embedder_name, device_map="auto", dtype=dtype).to(device)
+            model = AutoModel.from_pretrained(embedder_name, dtype=dtype).to(device)
             tokenizer_name = tokenizer.__class__.__name__
             model_name = model.__class__.__name__
             if "ESMC" in model_name.upper() and "ESMC" in tokenizer_name.upper():

@@ -13,10 +13,9 @@ from dataclasses import dataclass
 from sklearn.linear_model import LogisticRegression
 from typing import Optional, List, Dict, Any, Tuple, Generator, Set
 
+from biotrainer_core.input_files import load_contact_map, read_FASTA
 from biotrainer_core.data_classes import SequenceData, ContactDatasetResult, ContactSingleProteinResult
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, ContactFrameworkReport
-
-from biotrainer_core.input_files import load_contact_map, read_FASTA
 
 from .autoeval_pipeline_utils import subsample_seq_records_for_contact_development_mode, \
     get_dataset_and_dev_result_from_single_contact_results
@@ -24,9 +23,9 @@ from .autoeval_pipeline_utils import subsample_seq_records_for_contact_developme
 from ..core import AutoEvalFramework
 
 from ...shared import get_device
-from ...embedding import get_embedding_service
 from ...shared.metrics import evaluate_contact_dataset
 from ...embedding.huggingface import HuggingfaceTransformerEmbedder
+from ...embedding import get_embedding_service, CustomEmbedder, EmbedderInterface
 
 
 @dataclass
@@ -60,7 +59,7 @@ class _InputDataset:
     test_datasets: Dict[str, List[_PerProteinData]]  # [(seq_id, attention_map, ground_truth_contact_map)]
 
 
-def _generate_flat_pairwise_dataset_input(seq_data: List[SequenceData], embedding_service, contacts_dir_path):
+def _generate_flat_pairwise_dataset_input(seq_data: List[SequenceData], embedder: EmbedderInterface, contacts_dir_path):
     min_sep = 6  # https://github.com/chandar-lab/AMPLIFY/blob/main/examples/contact_prediction.ipynb
 
     x = []
@@ -76,7 +75,7 @@ def _generate_flat_pairwise_dataset_input(seq_data: List[SequenceData], embeddin
         pos = np.arange(ground_truth_contact_map.shape[0])
         diag_idx = np.expand_dims(pos, axis=0) - np.expand_dims(pos, axis=1) >= min_sep
 
-        attention_map = embedding_service._embedder.compute_attention_map(sequence=sequence)
+        attention_map = embedder.compute_attention_map(sequence=sequence)
 
         x.extend(attention_map[diag_idx, :].reshape(-1, attention_map.shape[-1]).to(torch.float32))
         y.extend(ground_truth_contact_map[diag_idx].reshape(-1))
@@ -88,7 +87,7 @@ def _generate_flat_pairwise_dataset_input(seq_data: List[SequenceData], embeddin
 
 def _generate_per_protein_dataset_input(seq_data: List[SequenceData],
                                         contacts_dir_path,
-                                        embedding_service: Optional = None) -> List[_PerProteinData]:
+                                        embedder: Optional[EmbedderInterface] = None) -> List[_PerProteinData]:
     """ Generate per protein dataset input (val/test). If embedding_service is None (test),
         attention maps need to be computed lazily later """
     protein_inputs = []
@@ -101,8 +100,8 @@ def _generate_per_protein_dataset_input(seq_data: List[SequenceData],
                                                     sequence=sequence,
                                                     structure_id=seq_id)
         attention_map = None
-        if embedding_service is not None:
-            attention_map = embedding_service._embedder.compute_attention_map(sequence=sequence)
+        if embedder is not None:
+            attention_map = embedder.compute_attention_map(sequence=sequence)
 
         per_protein_data = _PerProteinData(seq_id=seq_id,
                                            sequence=sequence,
@@ -114,7 +113,8 @@ def _generate_per_protein_dataset_input(seq_data: List[SequenceData],
     return protein_inputs
 
 
-def _load_data_and_generate_attention_maps(dataset_map: dict, embedding_service,
+def _load_data_and_generate_attention_maps(dataset_map: dict,
+                                           embedder: EmbedderInterface,
                                            development_mode: bool) -> Tuple[_InputDataset, List[str]]:
     # Train
     dataset_dir_path = dataset_map["train"]
@@ -122,7 +122,7 @@ def _load_data_and_generate_attention_maps(dataset_map: dict, embedding_service,
     train_seqs = read_FASTA(fasta_file_path)
 
     contacts_dir_path = dataset_dir_path / "contacts"
-    x_train, y_train = _generate_flat_pairwise_dataset_input(train_seqs, embedding_service, contacts_dir_path)
+    x_train, y_train = _generate_flat_pairwise_dataset_input(train_seqs, embedder, contacts_dir_path)
 
     # Val
     dataset_dir_path = dataset_map["val"]
@@ -130,7 +130,7 @@ def _load_data_and_generate_attention_maps(dataset_map: dict, embedding_service,
     val_seqs = read_FASTA(fasta_file_path)
 
     contacts_dir_path = dataset_dir_path / "contacts"
-    val_dataset = _generate_per_protein_dataset_input(val_seqs, contacts_dir_path, embedding_service=embedding_service)
+    val_dataset = _generate_per_protein_dataset_input(val_seqs, contacts_dir_path, embedder=embedder)
 
     # Test
     test_datasets = {}
@@ -147,7 +147,7 @@ def _load_data_and_generate_attention_maps(dataset_map: dict, embedding_service,
         contacts_dir_path = test_path / "contacts"
         # Lazy compute attention maps later
         test_datasets[test_name] = _generate_per_protein_dataset_input(test_seqs, contacts_dir_path,
-                                                                       embedding_service=None)
+                                                                       embedder=None)
 
     return (_InputDataset(x_train=x_train, y_train=y_train, val_dataset=val_dataset, test_datasets=test_datasets),
             development_ids)
@@ -189,14 +189,14 @@ def _train_logistic_regression(current_task_name: str, input_dataset: _InputData
 def _test_logistic_regression(clf: LogisticRegression, test_set_name: str,
                               per_protein_data: List[_PerProteinData],
                               development_ids: Set[str],
-                              embedding_service: Optional = None) -> Tuple[
+                              embedder: Optional[EmbedderInterface] = None) -> Tuple[
     Dict[str, ContactSingleProteinResult], ContactDatasetResult, ContactDatasetResult]:
     def predict_function(data_point: _PerProteinData):
         if data_point.attention_map is not None:
             attention_map = data_point.attention_map
         else:
-            assert embedding_service is not None, "Attention map not provided, but embedding service is None!"
-            attention_map = embedding_service._embedder.compute_attention_map(sequence=data_point.sequence)
+            assert embedder is not None, "Attention map not provided, but embedding service is None!"
+            attention_map = embedder.compute_attention_map(sequence=data_point.sequence)
 
         return (clf.predict_proba(attention_map.reshape(-1, attention_map.shape[-1]))[:, 1]
                 .reshape(data_point.ground_truth_contact_map.shape))
@@ -226,12 +226,16 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
                                          output_dir: Path,
                                          autoeval_tasks: List[Tuple[AutoEvalTask, Dict[str, Any]]],
                                          development_mode: bool,
+                                         custom_embedder: Optional[CustomEmbedder] = None,
                                          device=None):
-    embedding_service = get_embedding_service(embedder_name=embedder_name, device=get_device(device),
+    embedder = custom_embedder
+    if not embedder:  # Load via embedder_name
+        embedding_service = get_embedding_service(embedder_name=embedder_name, device=get_device(device),
                                               custom_tokenizer_config=None)
-    if not isinstance(embedding_service._embedder, HuggingfaceTransformerEmbedder):
-        raise ValueError(f"Only HuggingfaceTransformers are supported for supervised contact tasks, "
+        if not isinstance(embedding_service._embedder, HuggingfaceTransformerEmbedder):
+            raise ValueError(f"Only HuggingfaceTransformers are supported for supervised contact tasks, "
                          f"but got {embedding_service._embedder}!")
+        embedder = embedding_service._embedder
 
     autoeval_tasks = [task for task, _ in autoeval_tasks]  # Ignore config for supervised contact
     assert len(autoeval_tasks) == 1, "Only one supervised contact task is supported!"
@@ -267,7 +271,7 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
 
     # (2) Data Collection
     input_dataset, development_ids = _load_data_and_generate_attention_maps(dataset_map=dataset_map,
-                                                                            embedding_service=embedding_service,
+                                                                            embedder=embedder,
                                                                             development_mode=development_mode)
     assert len(set(development_ids)) == len(development_ids), \
         f"Development IDs are not unique for task: {current_task_name}"
@@ -284,7 +288,7 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
         per_protein_results, dataset_result, dataset_result_dev = _test_logistic_regression(clf=best_clf,
                                                                                             test_set_name=test_set_name,
                                                                                             per_protein_data=test_data,
-                                                                                            embedding_service=embedding_service,
+                                                                                            embedder=embedder,
                                                                                             development_ids=set(
                                                                                                 development_ids))
         supervised_contact_framework_report.update_result(task_name=test_set_name,
