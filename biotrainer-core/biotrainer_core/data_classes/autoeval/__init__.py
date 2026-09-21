@@ -2,8 +2,8 @@ from .autoeval_flip_datasets import all_flip_datasets, FLIPDatasetName
 from .autoeval_pbc_datasets import all_pbc_supervised_datasets, PBCSupervisedDatasetName
 from .autoeval_progress import AutoEvalProgress
 from .autoeval_report import (AutoEvalReport, SupervisedFrameworkReport, ContactFrameworkReport,
-                              ZeroShotFrameworkReport,
-                              ZeroShotCachedResults, ZeroShotContactCachedResults, FrameworkReport)
+                              ZeroShotFrameworkReport, FrameworkReport)
+from .autoeval_cache import ZeroShotCachedResults, ZeroShotContactCachedResults
 from .autoeval_supervised_dataset import AutoEvalSupervisedDataset
 from .autoeval_task import AutoEvalTask
 from .autoeval_mode import AutoEvalMode
