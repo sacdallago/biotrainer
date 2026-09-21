@@ -18,7 +18,7 @@ from biotrainer_core.data_classes import SequenceData, ContactDatasetResult, Con
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, ContactFrameworkReport, \
     DEV_MODE_INDICATOR
 
-from .autoeval_pipeline_utils import get_dataset_and_dev_result_from_single_contact_results
+from .autoeval_pipeline_utils import get_dataset_result_from_single_contact_results
 
 from ..core import AutoEvalFramework
 
@@ -211,7 +211,7 @@ def _test_logistic_regression(clf: LogisticRegression, test_set_name: str,
     for single_result in evaluate():
         single_results[single_result.protein_name] = single_result
 
-    dataset_result = get_dataset_and_dev_result_from_single_contact_results(
+    dataset_result = get_dataset_result_from_single_contact_results(
         dataset_name=test_set_name,
         single_results=list(single_results.values()),
     )

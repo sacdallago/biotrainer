@@ -6,7 +6,7 @@ from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress
 
 from biotrainer_core.input_files import read_FASTA, load_contact_map
 
-from .autoeval_pipeline_utils import get_dataset_and_dev_result_from_single_contact_results
+from .autoeval_pipeline_utils import get_dataset_result_from_single_contact_results
 
 from ..core import AutoEvalFramework
 
@@ -106,9 +106,9 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                              output_dir=output_dir)
             single_results.append(single_result)
 
-        dataset_result = get_dataset_and_dev_result_from_single_contact_results(dataset_name=dataset_name,
-                                                                                single_results=single_results,
-                                                                                )
+        dataset_result = get_dataset_result_from_single_contact_results(dataset_name=dataset_name,
+                                                                        single_results=single_results,
+                                                                        )
         zero_shot_contact_framework_report.update_result(task_name=current_task_name,
                                                          per_protein_results=zero_shot_contact_cached_results.per_protein_results,
                                                          dataset_result=dataset_result,

@@ -1,11 +1,10 @@
-import random
+from typing import List
+from biotrainer_core.data_classes import ContactDatasetResult, ContactSingleProteinResult
 
-from typing import List, Set
-from biotrainer_core.data_classes import SequenceData, ContactDatasetResult, ContactSingleProteinResult
 
-def get_dataset_and_dev_result_from_single_contact_results(dataset_name: str,
-                                                           single_results: List[ContactSingleProteinResult],
-                                                           ):
+def get_dataset_result_from_single_contact_results(dataset_name: str,
+                                                   single_results: List[ContactSingleProteinResult],
+                                                   ):
     bootstrap_iterations = 10000  # High K because of cheap evaluation
     bootstrap_seed = 44
     confidence_level = 0.05
