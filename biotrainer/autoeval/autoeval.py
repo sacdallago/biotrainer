@@ -425,7 +425,7 @@ class AutoEval:
             assert task_runner is not None, f"Runner for framework {framework.get_name()} is None!"
             current_progress = None
             for progress in task_runner.runner(params):
-                print(progress)
+                print(progress.pipeline_progress_info())
                 current_progress = progress
             if current_progress is None:
                 raise RuntimeError("No progress was returned from autoeval task!")
