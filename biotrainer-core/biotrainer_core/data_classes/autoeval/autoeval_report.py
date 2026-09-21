@@ -66,7 +66,12 @@ class FrameworkReport(ABC, BaseModel):
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         """ Convert to pandas dataframe."""
         raise NotImplementedError
-
+    
+    @staticmethod
+    def is_task_dev(task: str):
+        # Does not apply for the Supervised Framework
+        return DEV_MODE_INDICATOR in task
+    
     def used_development_mode(self) -> bool:
         """ Whether development mode was used in the autoeval pipeline"""
         return False
@@ -256,7 +261,8 @@ class ZeroShotFrameworkReport(FrameworkReport):
         rows = []
 
         for task in self.task_results.keys():
-            if development_mode and DEV_MODE_INDICATOR not in task:
+            task_is_dev = self.is_task_dev(task)
+            if development_mode != task_is_dev:  # Only get results for tasks that match the mode
                 continue
 
             ranking_result = self.task_results.get(task)
@@ -334,7 +340,8 @@ class ContactFrameworkReport(FrameworkReport):
         rows = []
         primary_evaluation_metric = "long_P@L2"  # TODO Find better place for this constant
         for task, rr in self.task_results.items():
-            if development_mode and DEV_MODE_INDICATOR not in task:
+            task_is_dev = self.is_task_dev(task)
+            if development_mode != task_is_dev:  # Only get results for tasks that match the mode
                 continue
 
             task = task.split("-")[-1]
