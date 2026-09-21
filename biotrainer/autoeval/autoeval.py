@@ -124,6 +124,43 @@ class AutoEval:
         self._framework_task_filters: Dict[AutoEvalFramework, Optional[Callable[[AutoEvalTask], bool]]] = {}
         self._results: Dict[AutoEvalFramework, FrameworkReport] = {}
 
+    @classmethod
+    def recommended_development_pipeline(cls,
+                                         embedder_name: str,
+                 output_dir: Union[Path, str] = "autoeval_output",
+                 force_download: bool = False,
+                 use_half_precision: bool = False,
+                 custom_storage_path: Optional[Union[Path, str]] = None,
+                 precomputed_per_residue_embeddings: Optional[Path] = None,
+                 precomputed_per_sequence_embeddings: Optional[Path] = None,
+                 custom_embedder: Optional[CustomEmbedder] = None,
+                 custom_bioengineer: Optional[BioEngineer] = None,
+                 ):
+        """
+        Use the recommended development pipeline for AutoEval.
+
+        Uses PBC_Supervised for supervised structure and function task prediction.
+        Uses PGYM for zeroshot variant effect prediction.
+        Uses PBC_Supervised_contact for supervised contact prediction (faster and similarly accuracte as zeroshot contact prediction).
+
+        For docs of the parameters, see the AutoEval() constructor.
+        """
+        return (AutoEval(embedder_name=embedder_name,
+                        output_dir=output_dir,
+                        force_download=force_download,
+                        use_half_precision=use_half_precision,
+                        min_seq_length=0,
+                        max_seq_length=2000,
+                        custom_storage_path=custom_storage_path,
+                        precomputed_per_residue_embeddings=precomputed_per_residue_embeddings,
+                        precomputed_per_sequence_embeddings=precomputed_per_sequence_embeddings,
+                        custom_embedder=custom_embedder,
+                        custom_bioengineer=custom_bioengineer,
+                        development_mode=True).
+                pbc_supervised().
+                pgym(zero_shot_method=ZeroShotMethod.MASKED_MARGINALS).
+                pbc_supervised_contact())
+
     def _setup_runner_params(self, devices: Optional[List[Union[str, torch.device]]] = None) -> Dict[
         AutoEvalFramework, _AutoEvalTaskRunnerParams]:
         all_to_embed_per_res = {}
@@ -136,7 +173,6 @@ class AutoEval:
                 max_seq_length=self.max_seq_length,
                 custom_storage_path=self.custom_storage_path,
                 force_download=self.force_download,
-                development_mode=self.development_mode,
                 task_filter=self._framework_task_filters.get(framework_obj))
             framework_to_tuples[framework_obj] = task_config_tuples
             all_to_embed_per_res.update(to_embed_per_res)
@@ -321,6 +357,7 @@ class AutoEval:
                 zero_shot_method=zero_shot_method,
                 output_dir=output_dir,
                 bioengineer=bioengineer,
+                development_mode=self.development_mode,
                 device=runner_params.device,
             )
 

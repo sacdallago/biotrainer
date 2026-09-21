@@ -145,8 +145,8 @@ class AutoEvalDataHandler(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int],
-                  development_mode: bool) -> List[AutoEvalTask]:
+    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) \
+            -> List[AutoEvalTask]:
         """
         Get tasks to execute in the autoeval pipeline via biotrainer.
 

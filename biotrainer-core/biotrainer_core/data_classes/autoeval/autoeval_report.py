@@ -6,11 +6,11 @@ import pandas as pd
 from pathlib import Path
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field, model_validator
-from typing import Dict, Any, Union, Optional, List, Tuple
+from typing import Dict, Union, Optional, List, Tuple
 
-from .autoeval_mode import AutoEvalMode
 from .autoeval_task import AutoEvalTask
 from .autoeval_flip_datasets import all_flip_datasets
+from .autoeval_mode import AutoEvalMode, DEV_MODE_INDICATOR
 from .autoeval_pbc_datasets import all_pbc_supervised_datasets
 
 from ..embedding_stats import EmbeddingStats
@@ -228,13 +228,8 @@ class ZeroShotFrameworkReport(FrameworkReport):
     method: ZeroShotMethod = Field(description="Scoring method used")
     task_results: Dict[str, AggregatedRankingResult] = Field(description="Aggregated ranking results "
                                                                          "(task_name -> AggregatedRankingResult)")
-    task_results_dev: Dict[str, AggregatedRankingResult] = Field(description="Aggregated ranking results "
-                                                                             "task results for development mode")
-    task_members: Dict[str, List[str]] = Field(description="Datasets contributing to each aggregated task "
-                                                           "(task_name -> [dataset_name]).")
     individual_results: Dict[str, RankingResult] = Field(description="Individual autoeval task results "
                                                                      "(dataset_name -> RankingResult)")
-    development_ids: List[str] = Field(default=list, description="All protein ids that are used in development mode")
 
     @model_validator(mode='after')
     def check_method(self):
@@ -243,17 +238,12 @@ class ZeroShotFrameworkReport(FrameworkReport):
         return self
 
     @classmethod
-    def empty(cls, method: ZeroShotMethod, development_ids: List[str]) -> ZeroShotFrameworkReport:
-        return cls(method=method, task_results={}, task_results_dev={}, individual_results={},
-                   task_members={}, development_ids=development_ids)
+    def empty(cls, method: ZeroShotMethod) -> ZeroShotFrameworkReport:
+        return cls(method=method, task_results={}, individual_results={})
 
     def aggregate(self, task_name: str, individual_results: Dict[str, RankingResult]):
         self.individual_results.update(individual_results)
-        self.task_members[task_name] = list(individual_results.keys())
         self.task_results[task_name] = AggregatedRankingResult.aggregate(list(individual_results.values()))
-        individual_results_dev = {dataset_name: result for dataset_name, result in individual_results.items()
-                                  if dataset_name in self.development_ids}
-        self.task_results_dev[task_name] = AggregatedRankingResult.aggregate(list(individual_results_dev.values()))
 
     def summary(self, development_mode: bool = False):
         print(f"Zero-shot method: {self.method.value}")
@@ -264,10 +254,12 @@ class ZeroShotFrameworkReport(FrameworkReport):
 
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
-        result_dict = self.task_results_dev if development_mode else self.task_results
-        for task in self.get_task_names():
-            framework_name, _, _ = AutoEvalTask.split_combined_name(task)
-            ranking_result = result_dict.get(task)
+
+        for task in self.task_results.keys():
+            if development_mode and DEV_MODE_INDICATOR not in task:
+                continue
+
+            ranking_result = self.task_results.get(task)
             if ranking_result is None:
                 continue
             all_zs_metrics = [ranking_result.scc,
@@ -275,7 +267,9 @@ class ZeroShotFrameworkReport(FrameworkReport):
             for metric in all_zs_metrics:
                 name = metric.name
                 mean, lower, upper = _maybe_metric_abs(name,
-                                                       mean=metric.mean, lower=metric.lower, upper=metric.upper)
+                                                       mean=metric.mean,
+                                                       lower=metric.lower,
+                                                       upper=metric.upper)
                 rows.append({
                     "TaskLabel": f"{task}\n({name})",
                     "Task": task,
@@ -291,12 +285,12 @@ class ZeroShotFrameworkReport(FrameworkReport):
         return len(self.task_results)
 
     def get_task_names(self) -> List[str]:
+        # TODO Check how this function is used
         return list(self.task_results.keys())
 
     def used_development_mode(self) -> bool:
-        # Compare identity, not counts: a full run that was interrupted after len(development_ids) datasets would
-        # otherwise be mistaken for a development run and never re-run.
-        return set(self.individual_results.keys()) == set(self.development_ids)
+        # TODO Maybe delete
+        return all([DEV_MODE_INDICATOR in task_name for task_name in self.task_results.keys()])
 
 
 class ContactFrameworkReport(FrameworkReport):
@@ -306,14 +300,9 @@ class ContactFrameworkReport(FrameworkReport):
                                              description="Contact method used. "
                                                          "Only applicable for zero-shot contact prediction")
     task_results: Dict[str, ContactDatasetResult] = Field(description="Results per tasks, i.e. per dataset (e.g. casp)")
-    task_results_dev: Dict[str, ContactDatasetResult] = Field(description="Results per tasks for development mode, "
-                                                                          "i.e. per dataset (e.g. casp)")
-    task_members: Dict[str, List[str]] = Field(description="Datasets contributing to each "
-                                                           "task (e.g. casp -> protein_id)")
     per_protein_results: Dict[str, ContactSingleProteinResult] = Field(
         description="Cached per protein results, stacking"
                     " up to the final dataset result (seq_id -> ContactSingleProteinResult)")
-    development_ids: List[str] = Field(default=list, description="All protein ids that are used in development mode")
 
     @model_validator(mode='after')
     def check_method(self):
@@ -325,21 +314,13 @@ class ContactFrameworkReport(FrameworkReport):
 
     @classmethod
     def empty(cls, method: Optional[ZeroShotMethod] = None) -> ContactFrameworkReport:
-        return cls(method=method, task_results={}, task_results_dev={},
-                   task_members={}, per_protein_results={}, development_ids=[])
+        return cls(method=method, task_results={}, per_protein_results={})
 
     def update_result(self, task_name: str,
                       per_protein_results: Dict[str, ContactSingleProteinResult],
-                      dataset_result: ContactDatasetResult,
-                      dataset_result_dev: ContactDatasetResult):
+                      dataset_result: ContactDatasetResult):
         self.task_results[task_name] = dataset_result
-        self.task_results_dev[task_name] = dataset_result_dev
-        new_keys = set(per_protein_results.keys()) - set(self.per_protein_results.keys())
-        self.task_members[task_name] = list(new_keys)
         self.per_protein_results.update(per_protein_results)
-
-    def update_development_ids(self, development_ids: List[str]):
-        self.development_ids.extend(development_ids)
 
     def summary(self, development_mode: bool = False):
         if self.method is not None:
@@ -352,8 +333,10 @@ class ContactFrameworkReport(FrameworkReport):
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
         primary_evaluation_metric = "long_P@L2"  # TODO Find better place for this constant
-        result_dict = self.task_results_dev if development_mode else self.task_results
-        for task, rr in result_dict.items():
+        for task, rr in self.task_results.items():
+            if development_mode and DEV_MODE_INDICATOR not in task:
+                continue
+
             task = task.split("-")[-1]
             contact_metrics = rr.aggregated_result
             contact_metrics = contact_metrics if all_metrics else [m for m in contact_metrics
@@ -380,9 +363,8 @@ class ContactFrameworkReport(FrameworkReport):
         return [task_name.split("-")[-1] for task_name in self.task_results.keys()]
 
     def used_development_mode(self) -> bool:
-        # Compare identity, not counts: a full run that was interrupted after len(development_ids) proteins would
-        # otherwise be mistaken for a development run and never re-run.
-        return set(self.per_protein_results.keys()) == set(self.development_ids)
+        # TODO Maybe delete
+        return all([DEV_MODE_INDICATOR in task_name for task_name in self.task_results.keys()])
 
 
 class AutoEvalReport(BaseModel):

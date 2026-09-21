@@ -35,8 +35,8 @@ class ContactDataHandler(AutoEvalDataHandler, ABC):
     # Override method from AutoEvalDataHandler to return the common base path for contact datasets
     def get_framework_base_path(self, custom_storage_path: Optional[Union[str, Path]] = None) -> Path:
         if custom_storage_path:
-            return Path(custom_storage_path) / "CONTACT" #self.get_framework_name()
-        return Path(user_cache_dir('biotrainer')) / "autoeval" / "CONTACT" #self.get_framework_name()
+            return Path(custom_storage_path) / "CONTACT"
+        return Path(user_cache_dir('biotrainer')) / "autoeval" / "CONTACT"
 
     @staticmethod
     def _get_zero_shot_base_path(base_path: Path) -> Path:
@@ -56,8 +56,8 @@ class ZeroShotContactDataHandler(ContactDataHandler):
     def get_framework_name() -> str:
         return "PBC_ZEROSHOT_CONTACT"
 
-    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int],
-                  development_mode: bool) -> List[AutoEvalTask]:
+    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) \
+            -> List[AutoEvalTask]:
         """Build tasks for all contact datasets"""
         # Development mode is handled in the pipeline itself
         base_path = self._get_zero_shot_base_path(base_path)
@@ -77,8 +77,8 @@ class SupervisedContactDataHandler(ContactDataHandler):
     def get_framework_name() -> str:
         return "PBC_SUPERVISED_CONTACT"
 
-    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int],
-                  development_mode: bool) -> List[AutoEvalTask]:
+    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) \
+            -> List[AutoEvalTask]:
         """Build tasks for all contact datasets"""
         # Development mode is handled in the pipeline itself
         base_path = self._get_supervised_base_path(base_path)

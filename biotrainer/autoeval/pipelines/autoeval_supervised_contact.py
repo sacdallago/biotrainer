@@ -15,10 +15,10 @@ from typing import Optional, List, Dict, Any, Tuple, Generator, Set
 
 from biotrainer_core.input_files import load_contact_map, read_FASTA
 from biotrainer_core.data_classes import SequenceData, ContactDatasetResult, ContactSingleProteinResult
-from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, ContactFrameworkReport
+from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, ContactFrameworkReport, \
+    DEV_MODE_INDICATOR
 
-from .autoeval_pipeline_utils import subsample_seq_records_for_contact_development_mode, \
-    get_dataset_and_dev_result_from_single_contact_results
+from .autoeval_pipeline_utils import get_dataset_and_dev_result_from_single_contact_results
 
 from ..core import AutoEvalFramework
 
@@ -115,7 +115,7 @@ def _generate_per_protein_dataset_input(seq_data: List[SequenceData],
 
 def _load_data_and_generate_attention_maps(dataset_map: dict,
                                            embedder: EmbedderInterface,
-                                           development_mode: bool) -> Tuple[_InputDataset, List[str]]:
+                                           development_mode: bool) -> _InputDataset:
     # Train
     dataset_dir_path = dataset_map["train"]
     fasta_file_path = dataset_dir_path / "extracted_sequences.fasta"
@@ -134,14 +134,14 @@ def _load_data_and_generate_attention_maps(dataset_map: dict,
 
     # Test
     test_datasets = {}
-    development_ids = []
     for test_path in dataset_map["test"]:
         test_name = test_path.stem
         test_fasta_file_path = test_path / "extracted_sequences.fasta"
         test_seqs = read_FASTA(test_fasta_file_path)
-        subsampled_test_seqs = subsample_seq_records_for_contact_development_mode(test_seqs)
-        development_ids.extend([seq_record.seq_id for seq_record in subsampled_test_seqs])
         if development_mode:
+            subsampled_test_seqs = [test_seq for test_seq in test_seqs if test_seq.get_attribute("DEV_MODE") == "True"]
+            assert len(subsampled_test_seqs) > 0, "No sequences found in development mode!"
+            assert len(subsampled_test_seqs) < len(test_seqs), "All sequences are in development mode!"
             test_seqs = subsampled_test_seqs
 
         contacts_dir_path = test_path / "contacts"
@@ -149,8 +149,7 @@ def _load_data_and_generate_attention_maps(dataset_map: dict,
         test_datasets[test_name] = _generate_per_protein_dataset_input(test_seqs, contacts_dir_path,
                                                                        embedder=None)
 
-    return (_InputDataset(x_train=x_train, y_train=y_train, val_dataset=val_dataset, test_datasets=test_datasets),
-            development_ids)
+    return _InputDataset(x_train=x_train, y_train=y_train, val_dataset=val_dataset, test_datasets=test_datasets)
 
 
 def _train_logistic_regression(current_task_name: str, input_dataset: _InputDataset) -> LogisticRegression:
@@ -162,6 +161,7 @@ def _train_logistic_regression(current_task_name: str, input_dataset: _InputData
     best_clf = None
     best_long_p_at_l_val = -np.inf
     for idx, hp in enumerate(hyper_params):
+        idx = idx + 1  # One-indexed for easier log reading
         print(f"{current_task_name}: Training classifier {idx} (Total: {len(hyper_params)})")
         # Train classifier on training data
         # Logistic Regression (careful, liblinear does not support int64!)
@@ -169,10 +169,9 @@ def _train_logistic_regression(current_task_name: str, input_dataset: _InputData
         clf.fit(x_train, y_train)
 
         # Test on Val dataset
-        _, val_dataset_result, _ = _test_logistic_regression(clf=clf, test_set_name=f"Val-Clf{idx}",
-                                                             per_protein_data=val_dataset,
-                                                             development_ids=set(),
-                                                             )
+        _, val_dataset_result = _test_logistic_regression(clf=clf, test_set_name=f"Val-Clf{idx}",
+                                                          per_protein_data=val_dataset,
+                                                          )
         long_p_at_l2_val = val_dataset_result.long_PatL2()
         print(f"{current_task_name}: long_P@L2 for hyperparameters {hp}: {long_p_at_l2_val}")
         if long_p_at_l2_val is None:
@@ -188,9 +187,8 @@ def _train_logistic_regression(current_task_name: str, input_dataset: _InputData
 
 def _test_logistic_regression(clf: LogisticRegression, test_set_name: str,
                               per_protein_data: List[_PerProteinData],
-                              development_ids: Set[str],
                               embedder: Optional[EmbedderInterface] = None) -> Tuple[
-    Dict[str, ContactSingleProteinResult], ContactDatasetResult, ContactDatasetResult]:
+    Dict[str, ContactSingleProteinResult], ContactDatasetResult]:
     def predict_function(data_point: _PerProteinData):
         if data_point.attention_map is not None:
             attention_map = data_point.attention_map
@@ -213,12 +211,12 @@ def _test_logistic_regression(clf: LogisticRegression, test_set_name: str,
     for single_result in evaluate():
         single_results[single_result.protein_name] = single_result
 
-    dataset_result, dataset_result_dev = get_dataset_and_dev_result_from_single_contact_results(
+    dataset_result = get_dataset_and_dev_result_from_single_contact_results(
         dataset_name=test_set_name,
         single_results=list(single_results.values()),
-        development_ids=development_ids)
+    )
 
-    return single_results, dataset_result, dataset_result_dev
+    return single_results, dataset_result
 
 
 def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
@@ -231,20 +229,19 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
     embedder = custom_embedder
     if not embedder:  # Load via embedder_name
         embedding_service = get_embedding_service(embedder_name=embedder_name, device=get_device(device),
-                                              custom_tokenizer_config=None)
+                                                  custom_tokenizer_config=None)
         if not isinstance(embedding_service._embedder, HuggingfaceTransformerEmbedder):
             raise ValueError(f"Only HuggingfaceTransformers are supported for supervised contact tasks, "
-                         f"but got {embedding_service._embedder}!")
+                             f"but got {embedding_service._embedder}!")
         embedder = embedding_service._embedder
 
     autoeval_tasks = [task for task, _ in autoeval_tasks]  # Ignore config for supervised contact
     assert len(autoeval_tasks) == 1, "Only one supervised contact task is supported!"
+    total_tasks = 1
     task = autoeval_tasks[0]
+    current_task_name = task.combined_name() + ("_dev" if development_mode else "")
+    print(f"The following tasks will be executed in order: {current_task_name} (total {total_tasks})")
 
-    task_names = [task.combined_name() for task in autoeval_tasks]
-    print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
-    total_tasks = len(task_names)
-    current_task_name = task.combined_name()
     print(f"Running task {current_task_name}...")
     yield AutoEvalProgress(completed_tasks=0,
                            total_tasks=total_tasks,
@@ -269,14 +266,12 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
     assert dataset_map["val"] is not None, f"Missing val dataset for task: {current_task_name}"
     assert len(dataset_map["test"] or []) > 0, f"Missing test datasets for task: {current_task_name}"
 
-    # (2) Data Collection
-    input_dataset, development_ids = _load_data_and_generate_attention_maps(dataset_map=dataset_map,
-                                                                            embedder=embedder,
-                                                                            development_mode=development_mode)
-    assert len(set(development_ids)) == len(development_ids), \
-        f"Development IDs are not unique for task: {current_task_name}"
     supervised_contact_framework_report = ContactFrameworkReport.empty()
-    supervised_contact_framework_report.update_development_ids(development_ids=development_ids)
+
+    # (2) Data Collection
+    input_dataset = _load_data_and_generate_attention_maps(dataset_map=dataset_map,
+                                                           embedder=embedder,
+                                                           development_mode=development_mode)
 
     # (3) Training
     print(f"{current_task_name}: Training classifiers..")
@@ -285,16 +280,16 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
     # (4) Test
     test_datasets = input_dataset.test_datasets
     for test_set_name, test_data in test_datasets.items():
-        per_protein_results, dataset_result, dataset_result_dev = _test_logistic_regression(clf=best_clf,
-                                                                                            test_set_name=test_set_name,
-                                                                                            per_protein_data=test_data,
-                                                                                            embedder=embedder,
-                                                                                            development_ids=set(
-                                                                                                development_ids))
+        per_protein_results, dataset_result = _test_logistic_regression(clf=best_clf,
+                                                                        test_set_name=test_set_name,
+                                                                        per_protein_data=test_data,
+                                                                        embedder=embedder,
+                                                                        )
+        test_set_name = test_set_name + DEV_MODE_INDICATOR if development_mode else test_set_name
         supervised_contact_framework_report.update_result(task_name=test_set_name,
                                                           per_protein_results=per_protein_results,
                                                           dataset_result=dataset_result,
-                                                          dataset_result_dev=dataset_result_dev)
+                                                          )
     print(f"Finished task {current_task_name}!")
 
     print(f"Autoeval supervised contact pipeline on framework {framework.get_name()} "

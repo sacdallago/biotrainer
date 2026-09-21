@@ -1,19 +1,15 @@
 import os
-import random
 import pandas as pd
 
 from pathlib import Path
 from typing import List, Optional
-from biotrainer_core.data_classes.autoeval import AutoEvalTask
+from biotrainer_core.data_classes.autoeval import AutoEvalTask, DEV_MODE_INDICATOR
 
 from ...core import AutoEvalDataHandler
 
 
 class PGYMDataHandler(AutoEvalDataHandler):
     """Handles PGYM dataset related operations"""
-    DEVELOPMENT_MODE_SUBSAMPLE_RATIO = 0.4
-
-    _file_paths_dev_mode: List[str] = []
 
     @staticmethod
     def get_framework_name() -> str:
@@ -42,31 +38,30 @@ class PGYMDataHandler(AutoEvalDataHandler):
     def preprocess(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) -> None:
         print("PGYM data preprocessing completed (nothing to do)!")
 
-    def _subsample_for_development_mode(self, file_paths: List[Path]) -> List[Path]:
-        rng = random.Random(12)
-        file_paths_sample = rng.sample(file_paths, int(len(file_paths) * self.DEVELOPMENT_MODE_SUBSAMPLE_RATIO))
-        self._file_paths_dev_mode.extend([fp.name for fp in file_paths_sample])
-        return file_paths_sample
-
-    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int],
-                  development_mode: bool) -> List[AutoEvalTask]:
+    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) \
+            -> List[AutoEvalTask]:
         """Build tasks for all PGYM datasets"""
+        virus_identifier = "virus"
         substitutions_path = base_path / "DMS_ProteinGym_substitutions"
         reference_df = pd.read_csv(self.get_reference_file_path(base_path))
+
         file2taxon = {row["DMS_id"] + ".csv": row["taxon"] for _, row in reference_df.iterrows()}
+        file2devmode = {row["DMS_id"] + ".csv": row["pbc_dev_mode"] for _, row in reference_df.iterrows()}
+
+        # Full mode (evaluation)
         virus_taxon_files = [substitutions_path / file for file, taxon in file2taxon.items()
-                             if taxon.lower() == "virus"]
+                             if taxon.lower() == virus_identifier]
         non_virus_taxon_files = [substitutions_path / file for file, taxon in file2taxon.items()
-                                 if taxon.lower() != "virus"]
+                                 if taxon.lower() != virus_identifier]
         assert len(virus_taxon_files) + len(non_virus_taxon_files) == len(file2taxon)
 
-        # Always calculate the sample for storing the respective file paths
-        virus_taxon_files_sample = self._subsample_for_development_mode(virus_taxon_files)
-        non_virus_taxon_files_sample = self._subsample_for_development_mode(non_virus_taxon_files)
-
-        if development_mode:
-            virus_taxon_files = virus_taxon_files_sample
-            non_virus_taxon_files = non_virus_taxon_files_sample
+        # Dev mode
+        total_samples_dev_mode = sum([1 for mode in file2devmode.values() if mode])
+        virus_taxon_files_dev_mode = [substitutions_path / file for file, devmode in file2devmode.items()
+                                      if file2taxon[file].lower() == virus_identifier and devmode]
+        non_virus_taxon_files_dev_mode = [substitutions_path / file for file, devmode in file2devmode.items()
+                                          if file2taxon[file].lower() != virus_identifier and devmode]
+        assert len(virus_taxon_files_dev_mode) + len(non_virus_taxon_files_dev_mode) == total_samples_dev_mode
 
         for dataset in self._get_all_files(base_path):
             dataset_dir = base_path / dataset
@@ -81,13 +76,25 @@ class PGYMDataHandler(AutoEvalDataHandler):
                                   dataset_name="virus",
                                   input_files=list(virus_taxon_files),
                                   type="Protein")
+        virus_task_dev = AutoEvalTask(framework_name=self.get_framework_name(),
+                                      dataset_name="virus" + DEV_MODE_INDICATOR,
+                                      input_files=list(virus_taxon_files_dev_mode),
+                                      type="Protein")
         non_virus_task = AutoEvalTask(framework_name=self.get_framework_name(),
                                       dataset_name="nonvirus",
                                       input_files=list(non_virus_taxon_files),
                                       type="Protein")
-        # Total task contains all datasets and will re-use cached results
+        non_virus_task_dev = AutoEvalTask(framework_name=self.get_framework_name(),
+                                          dataset_name="nonvirus" + DEV_MODE_INDICATOR,
+                                          input_files=list(non_virus_taxon_files_dev_mode),
+                                          type="Protein")
+        # Total tasks contain all datasets and will re-use cached results
         total_task = AutoEvalTask(framework_name=self.get_framework_name(),
                                   dataset_name="total",
                                   input_files=list(virus_taxon_files) + list(non_virus_taxon_files),
                                   type="Protein")
-        return [virus_task, non_virus_task, total_task]
+        total_task_dev = AutoEvalTask(framework_name=self.get_framework_name(),
+                                      dataset_name="total" +  DEV_MODE_INDICATOR,
+                                      input_files=list(virus_taxon_files_dev_mode) + list(non_virus_taxon_files_dev_mode),
+                                      type="Protein")
+        return [virus_task, non_virus_task, total_task, virus_task_dev, non_virus_task_dev, total_task_dev]

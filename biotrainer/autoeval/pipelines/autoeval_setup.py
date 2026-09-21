@@ -78,7 +78,6 @@ def get_unique_framework_sequences(framework: Union[str, AvailableFramework, Aut
                                    max_seq_length: int,
                                    custom_storage_path: Optional[Union[Path, str]] = None,
                                    force_download: Optional[bool] = False,
-                                   development_mode: bool = True,
                                    task_filter: Optional[Callable[[AutoEvalTask], bool]] = None,
                                    ) -> Tuple[
     List[Tuple[AutoEvalTask, Dict[str, Any]]], Dict[str, SequenceData],
@@ -97,7 +96,7 @@ def get_unique_framework_sequences(framework: Union[str, AvailableFramework, Aut
                                      max_seq_length=max_seq_length,
                                      custom_storage_path=custom_storage_path,
                                      force_download=force_download,
-                                     development_mode=development_mode,)
+                                     )
     if task_filter:
         # Filter before the configs and the unique sequences are collected, so that pre-embedding shrinks with
         # the selection instead of covering the whole framework
@@ -138,7 +137,6 @@ def setup_pipeline(data_handler: AutoEvalDataHandler,
                    max_seq_length: Optional[int] = None,
                    custom_storage_path: Optional[Union[Path, str]] = None,
                    force_download: Optional[bool] = False,
-                   development_mode: bool = True,
                    ) -> List[AutoEvalTask]:
     framework_base_path = data_handler.get_framework_base_path(
         custom_storage_path=custom_storage_path)
@@ -157,6 +155,6 @@ def setup_pipeline(data_handler: AutoEvalDataHandler,
     auto_eval_tasks = data_handler.get_tasks(base_path=framework_base_path,
                                              min_seq_length=min_seq_length,
                                              max_seq_length=max_seq_length,
-                                             development_mode=development_mode)
+                                             )
 
     return auto_eval_tasks
