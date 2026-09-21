@@ -113,7 +113,7 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                          per_protein_results=zero_shot_contact_cached_results.per_protein_results,
                                                          dataset_result=dataset_result,
                                                          )
-
+        completed_tasks += 1
         print(f"Finished task {current_task_name}!")
 
     print(f"Autoeval zeroshot contact pipeline on framework {framework.get_name()} "
