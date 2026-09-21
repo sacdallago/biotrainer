@@ -141,7 +141,7 @@ class AutoEval:
 
         Uses PBC_Supervised for supervised structure and function task prediction.
         Uses PGYM for zeroshot variant effect prediction.
-        Uses PBC_Supervised_contact for supervised contact prediction (faster and similarly accuracte as zeroshot contact prediction).
+        Uses PBC_Supervised_contact for supervised contact prediction (faster and similarly accurate as zeroshot contact prediction).
 
         For docs of the parameters, see the AutoEval() constructor.
         """
@@ -265,6 +265,11 @@ class AutoEval:
                     print(f"Autoeval report for framework exists, but only in development mode. "
                           f"Running full evaluation now!")
                     maybe_framework_result = None
+                else:  # Dev mode requested and exists
+                    print(
+                        f"Autoeval development report for framework {available_framework} already exists, "
+                        f"execution will be skipped!")
+                    self._results[framework_obj] = maybe_framework_result
 
         return framework_obj, maybe_framework_result, output_dir
 
