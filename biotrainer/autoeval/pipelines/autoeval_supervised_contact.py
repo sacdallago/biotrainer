@@ -239,7 +239,7 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
     assert len(autoeval_tasks) == 1, "Only one supervised contact task is supported!"
     total_tasks = 1
     task = autoeval_tasks[0]
-    current_task_name = task.combined_name() + ("_dev" if development_mode else "")
+    current_task_name = task.combined_name() + (DEV_MODE_INDICATOR if development_mode else "")
     print(f"The following tasks will be executed in order: {current_task_name} (total {total_tasks})")
 
     print(f"Running task {current_task_name}...")

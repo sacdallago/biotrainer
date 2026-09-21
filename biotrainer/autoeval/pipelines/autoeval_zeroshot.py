@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional, List, Tuple, Dict, Any
 from biotrainer_core.data_classes import ZeroShotMethod
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, \
-    ZeroShotFrameworkReport, ZeroShotCachedResults
+    ZeroShotFrameworkReport, ZeroShotCachedResults, DEV_MODE_INDICATOR
 
 from ..core import AutoEvalFramework
 
@@ -30,9 +30,9 @@ def autoeval_zeroshot_pipeline(framework: AutoEvalFramework,
 
     autoeval_tasks = [task for task, _ in autoeval_tasks]  # Ignore config for zeroshot contact
     if development_mode:
-        autoeval_tasks = [task for task in autoeval_tasks if "_dev" in task.combined_name()]
+        autoeval_tasks = [task for task in autoeval_tasks if DEV_MODE_INDICATOR in task.combined_name()]
     else:
-        autoeval_tasks = [task for task in autoeval_tasks if "_dev" not in task.combined_name()]
+        autoeval_tasks = [task for task in autoeval_tasks if DEV_MODE_INDICATOR not in task.combined_name()]
 
     task_names = [task.combined_name() for task in autoeval_tasks]
     print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
