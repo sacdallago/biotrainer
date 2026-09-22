@@ -75,7 +75,7 @@ class FrameworkReport(ABC, BaseModel):
 
     def used_development_mode(self) -> bool:
         """ Whether development mode was used in the autoeval pipeline"""
-        return False
+        return False  # Default for supervised and unsupervised, as they always evaluate both (val/test sets)
 
 
 class SupervisedFrameworkReport(FrameworkReport):
