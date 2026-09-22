@@ -3,6 +3,7 @@ import h5py
 from pathlib import Path
 from abc import ABC, abstractmethod
 from biotrainer_core.data_classes import Protocol, SequenceData
+from biotrainer_core.functions.hashing import calculate_sequence_hash
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, SupervisedFrameworkReport
 
 from typing import Optional, Callable, Dict, Tuple, List, Any, Generator
@@ -34,17 +35,26 @@ class CustomEmbedderWrapper(_PipelineEmbedder):
 
     @staticmethod
     def _wrap(embeddings_file_path: Path, sequences: List[str], custom_embedding_function: Callable):
-        with h5py.File(embeddings_file_path, "a") as embeddings_file:
-            idx = 0
-            for sequence, embedding in custom_embedding_function(sequences):
-                if len(embedding.shape) > 1 and embedding.shape[0] != len(sequence):
-                    raise Exception(f"Per-residue embedding shape does not match sequence length - "
-                                    f"Embedding Shape: {embedding.shape}, Sequence Length: {len(sequence)}!")
-                emb_record = SequenceData(seq_id=f"Seq{idx}", seq=sequence, embedding=embedding)
-                EmbeddingService.store_embedding(embeddings_file_handle=embeddings_file,
-                                                 emb_record=emb_record,
-                                                 store_by_hash=True)
-                idx += 1
+        existing_hashes = set()
+        if embeddings_file_path.is_file():
+            with h5py.File(embeddings_file_path, "r") as embeddings_file:
+                existing_hashes = set(embeddings_file.keys())
+
+        # Filter out already existing sequences by hash
+        seqs_to_compute = [seq for seq in sequences if calculate_sequence_hash(seq) not in existing_hashes]
+
+        if len(seqs_to_compute) > 0:
+            with h5py.File(embeddings_file_path, "a") as embeddings_file:
+                idx = 0
+                for sequence, embedding in custom_embedding_function(seqs_to_compute):
+                    if len(embedding.shape) > 1 and embedding.shape[0] != len(sequence):
+                        raise Exception(f"Per-residue embedding shape does not match sequence length - "
+                                        f"Embedding Shape: {embedding.shape}, Sequence Length: {len(sequence)}!")
+                    emb_record = SequenceData(seq_id=f"Seq{idx}", seq=sequence, embedding=embedding)
+                    EmbeddingService.store_embedding(embeddings_file_handle=embeddings_file,
+                                                     emb_record=emb_record,
+                                                     store_by_hash=True)
+                    idx += 1
 
         return embeddings_file_path
 
