@@ -33,7 +33,7 @@ def validate_input(framework,
         raise ValueError(f"Unsupported framework: {framework}")
 
     match framework_obj.get_mode():
-        case AutoEvalMode.SUPERVISED:  # Supervised frameworks
+        case AutoEvalMode.SUPERVISED | AutoEvalMode.UNSUPERVISED:  # (Un)Supervised frameworks
             if zero_shot_method is not None:
                 raise ValueError("Zero-shot method must not be provided for a supervised framework!")
             if min_seq_length is None or max_seq_length is None:
@@ -111,7 +111,7 @@ def get_unique_framework_sequences(framework: Union[str, AvailableFramework, Aut
     # Get unique sequences for supervised tasks for pre-embedding
     unique_per_residue = {}
     unique_per_sequence = {}
-    if framework_obj.get_mode() == AutoEvalMode.SUPERVISED:
+    if framework_obj.get_mode() in [AutoEvalMode.SUPERVISED, AutoEvalMode.UNSUPERVISED]:
         unique_per_residue, unique_per_sequence = _get_unique_sequences_for_all_tasks(
             {str(t.input_files[0]): Protocol.from_string(c["protocol"]) for t, c in task_config_tuples}
         )

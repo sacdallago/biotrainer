@@ -11,7 +11,7 @@ from ...core import AutoEvalDataHandler
 
 class ContactDataHandler(AutoEvalDataHandler, ABC):
     """
-    Base class to handles contact datasets (common to both zero-shot and supervised)
+    Base class to handle contact datasets (common to both zero-shot and supervised)
     Not to be instantiated or called directly; not all methods implemented.
     Use inherited classes ZeroShotContactDataHandler or SupervisedContactDataHandler instead.
     """

@@ -1,5 +1,5 @@
-from .pbc_config_bank import PBCConfigBank
-from .pbc_data_handler import PBCDataHandler
+from .pbc_supervised_config_bank import PBCConfigBank
+from .pbc_supervised_data_handler import PBCSupervisedDataHandler
 
 from ...core import AutoEvalFramework, AutoEvalMode
 
@@ -14,7 +14,7 @@ class PBCSupervisedFramework(AutoEvalFramework):
         return AutoEvalMode.SUPERVISED
 
     def make_data_handler(self):
-        return PBCDataHandler()
+        return PBCSupervisedDataHandler()
 
     def make_config_bank(self):
         return PBCConfigBank()

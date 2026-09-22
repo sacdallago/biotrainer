@@ -3,12 +3,13 @@ from typing import Optional, Union
 
 from .core import AutoEvalFramework
 from .frameworks import PBCSupervisedFramework, FLIPFramework, PGYMFramework, PBCZeroShotContactFramework, \
-    PBCSupervisedContactFramework
+    PBCSupervisedContactFramework, PBCUnsupervisedFramework
 
 
 class AvailableFramework(Enum):
     FLIP = "FLIP"
     PBC_SUPERVISED = "PBC_SUPERVISED"
+    PBC_UNSUPERVISED = "PBC_UNSUPERVISED"
     PGYM = "PGYM"
     PBC_ZEROSHOT_CONTACT = "PBC_ZEROSHOT_CONTACT"
     PBC_SUPERVISED_CONTACT = "PBC_SUPERVISED_CONTACT"
@@ -16,6 +17,7 @@ class AvailableFramework(Enum):
     @staticmethod
     def all():
         return [AvailableFramework.PBC_SUPERVISED,
+                AvailableFramework.PBC_UNSUPERVISED,
                 AvailableFramework.PGYM,
                 AvailableFramework.PBC_ZEROSHOT_CONTACT,
                 AvailableFramework.PBC_SUPERVISED_CONTACT,
@@ -32,6 +34,7 @@ class AvailableFramework(Enum):
 
 available_frameworks = {AvailableFramework.FLIP: FLIPFramework(),
                         AvailableFramework.PBC_SUPERVISED: PBCSupervisedFramework(),
+                        AvailableFramework.PBC_UNSUPERVISED: PBCUnsupervisedFramework(),
                         AvailableFramework.PGYM: PGYMFramework(),
                         AvailableFramework.PBC_ZEROSHOT_CONTACT: PBCZeroShotContactFramework(),
                         AvailableFramework.PBC_SUPERVISED_CONTACT: PBCSupervisedContactFramework(),

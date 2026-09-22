@@ -1,13 +1,16 @@
 from tqdm import tqdm
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, all_pbc_supervised_datasets
 
 from ...core import AutoEvalDataHandler
 
 
-class PBCDataHandler(AutoEvalDataHandler):
+class PBCSupervisedDataHandler(AutoEvalDataHandler):
     """Handles PBC dataset related operations"""
+
+    def __init__(self, mode: str = "supervised"):
+        self.mode = mode
 
     @staticmethod
     def get_framework_name() -> str:
@@ -17,8 +20,7 @@ class PBCDataHandler(AutoEvalDataHandler):
     def get_download_urls():
         return ["https://nextcloud.cit.tum.de/index.php/s/gLGarZgmBEDPFJE/download"]
 
-    @staticmethod
-    def _get_all_dataset_and_split_names():
+    def _get_all_dataset_and_split_names(self) -> List[Tuple[str, Optional[str]]]:
         dataset_and_split_names = []
         for dataset, dataset_info in all_pbc_supervised_datasets().items():
             splits = dataset_info.splits
@@ -42,7 +44,7 @@ class PBCDataHandler(AutoEvalDataHandler):
         """ Filters all dataset splits for sequences that fulfill the length requirements """
         for dataset, split_name in tqdm(self._get_all_dataset_and_split_names(), desc="Preprocessing datasets"):
             dataset_name, split_file_name = self._get_dataset_dir_name_and_split_file_name(dataset, split_name)
-            dataset_dir = base_path / "supervised" / dataset_name
+            dataset_dir = base_path / self.mode / dataset_name
             self._ensure_preprocessed_file(dataset_dir=dataset_dir,
                                            name=split_file_name,
                                            min_seq_length=min_seq_length,
@@ -56,7 +58,7 @@ class PBCDataHandler(AutoEvalDataHandler):
         tasks = []
 
         for dataset, split_name in self._get_all_dataset_and_split_names():
-            dataset_dir = base_path / "supervised"
+            dataset_dir = base_path / self.mode
             dataset_name, split_file_name = self._get_dataset_dir_name_and_split_file_name(dataset, split_name)
             dataset_dir /= dataset_name
 

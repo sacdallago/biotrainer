@@ -38,6 +38,48 @@ class MetricEstimate(BaseModel):
             return False
         return self.overlaps_with(other)
 
+    def get_error_margin(self) -> float:
+        """Calculate the symmetric error margin from the confidence interval."""
+        return (self.upper - self.lower) / 2.0
+
+    def get_asymmetric_errors(self) -> tuple[float, float]:
+        """Get asymmetric error bounds (lower_error, upper_error)."""
+        return (self.mean - self.lower, self.upper - self.mean)
+
+    def format_value(self, precision: int = 3) -> str:
+        """
+        Format the metric as 'Name: Mean +/- Error'.
+        
+        Args:
+            precision: Number of decimal places to display
+            
+        Returns:
+            Formatted string representation
+        """
+        error = self.get_error_margin()
+        return f"{self.name}: {self.mean:.{precision}f} +/- {error:.{precision}f}"
+
+    def format_value_with_ci(self, precision: int = 3) -> str:
+        """
+        Format the metric with explicit confidence interval bounds.
+        
+        Args:
+            precision: Number of decimal places to display
+            
+        Returns:
+            Formatted string with CI: 'Name: Mean +/- Error [Lower, Upper]'
+        """
+        error = self.get_error_margin()
+        return (f"{self.name}: {self.mean:.{precision}f} +/- {error:.{precision}f} "
+                f"[{self.lower:.{precision}f}, {self.upper:.{precision}f}]")
+
+    def __str__(self) -> str:
+        return self.format_value()
+
+    def __repr__(self) -> str:
+        """Detailed representation including confidence interval bounds."""
+        return self.format_value_with_ci()
+
 
 class BootstrappedMetric(MetricEstimate):
     iterations: int = Field(description="Number of iterations used for bootstrapping")

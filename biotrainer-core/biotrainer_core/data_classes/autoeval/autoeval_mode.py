@@ -3,6 +3,7 @@ from enum import Enum
 
 class AutoEvalMode(Enum):
     SUPERVISED = "SUPERVISED"
+    UNSUPERVISED = "UNSUPERVISED"  # E(mbedding)A(nnotation)T(ransfer)
     ZERO_SHOT = "ZERO_SHOT"
     ZERO_SHOT_CONTACT = "ZERO_SHOT_CONTACT"
     SUPERVISED_CONTACT_ATTENTION = "SUPERVISED_CONTACT_ATTENTION"

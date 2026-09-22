@@ -12,6 +12,7 @@ from biotrainer_core.data_classes.autoeval import AutoEvalProgress, AutoEvalRepo
 from .core import AutoEvalFramework
 from .pipelines import (setup_output_dir, validate_input, autoeval_supervised_pipeline,
                         autoeval_zeroshot_pipeline, autoeval_zeroshot_contact_pipeline,
+                        autoeval_unsupervised_pipeline,
                         autoeval_supervised_contact_pipeline, get_unique_framework_sequences,
                         check_h5_file, setup_embedder)
 from .autoeval_frameworks import AvailableFramework
@@ -127,15 +128,15 @@ class AutoEval:
     @classmethod
     def recommended_development_pipeline(cls,
                                          embedder_name: str,
-                 output_dir: Union[Path, str] = "autoeval_output",
-                 force_download: bool = False,
-                 use_half_precision: bool = False,
-                 custom_storage_path: Optional[Union[Path, str]] = None,
-                 precomputed_per_residue_embeddings: Optional[Path] = None,
-                 precomputed_per_sequence_embeddings: Optional[Path] = None,
-                 custom_embedder: Optional[CustomEmbedder] = None,
-                 custom_bioengineer: Optional[BioEngineer] = None,
-                 ):
+                                         output_dir: Union[Path, str] = "autoeval_output",
+                                         force_download: bool = False,
+                                         use_half_precision: bool = False,
+                                         custom_storage_path: Optional[Union[Path, str]] = None,
+                                         precomputed_per_residue_embeddings: Optional[Path] = None,
+                                         precomputed_per_sequence_embeddings: Optional[Path] = None,
+                                         custom_embedder: Optional[CustomEmbedder] = None,
+                                         custom_bioengineer: Optional[BioEngineer] = None,
+                                         ):
         """
         Use the recommended development pipeline for AutoEval.
 
@@ -146,17 +147,17 @@ class AutoEval:
         For docs of the parameters, see the AutoEval() constructor.
         """
         return (AutoEval(embedder_name=embedder_name,
-                        output_dir=output_dir,
-                        force_download=force_download,
-                        use_half_precision=use_half_precision,
-                        min_seq_length=0,
-                        max_seq_length=2000,
-                        custom_storage_path=custom_storage_path,
-                        precomputed_per_residue_embeddings=precomputed_per_residue_embeddings,
-                        precomputed_per_sequence_embeddings=precomputed_per_sequence_embeddings,
-                        custom_embedder=custom_embedder,
-                        custom_bioengineer=custom_bioengineer,
-                        development_mode=True).
+                         output_dir=output_dir,
+                         force_download=force_download,
+                         use_half_precision=use_half_precision,
+                         min_seq_length=0,
+                         max_seq_length=2000,
+                         custom_storage_path=custom_storage_path,
+                         precomputed_per_residue_embeddings=precomputed_per_residue_embeddings,
+                         precomputed_per_sequence_embeddings=precomputed_per_sequence_embeddings,
+                         custom_embedder=custom_embedder,
+                         custom_bioengineer=custom_bioengineer,
+                         development_mode=True).
                 pbc_supervised().
                 pgym(zero_shot_method=ZeroShotMethod.MASKED_MARGINALS).
                 pbc_supervised_contact())
@@ -205,23 +206,34 @@ class AutoEval:
                                   custom_embedder=self.custom_embedder,
                                   device=devices[0] if devices else None
                                   )
-        # Embed
-        print(f"Embedding {len(all_unique_per_residue)} sequences per_residue")
-        embeddings_file_per_residue = embedder.per_residue_path(
-            [seq_record.seq for _, seq_record in all_unique_per_residue.items()]
-        )
+        # Embed per-residue
+        embeddings_file_per_residue = None
+        n_per_res = len(all_unique_per_residue)
+        if n_per_res > 0:  # Can be zero sometimes (task filter, unsupervised)
+            print(f"Embedding {n_per_res} sequences per_residue")
+            embeddings_file_per_residue = embedder.per_residue_path(
+                [seq_record.seq for _, seq_record in all_unique_per_residue.items()]
+            )
+            check_h5_file(name="per-residue",
+                          h5_path=embeddings_file_per_residue,
+                          expected_length=n_per_res)
 
-        print(f"Embedding {len(all_unique_per_sequence)} sequences per_sequence")
-        embeddings_file_per_sequence = embedder.per_sequence_path(
-            [seq_record.seq for _, seq_record in all_unique_per_sequence.items()]
-        )
+        # Embed per-sequence
+        embeddings_file_per_sequence = None
+        n_per_seq = len(all_unique_per_sequence)
+        if n_per_seq > 0:
+            print(f"Embedding {n_per_seq} sequences per_sequence")
+            embeddings_file_per_sequence = embedder.per_sequence_path(
+                [seq_record.seq for _, seq_record in all_unique_per_sequence.items()]
+            )
+            check_h5_file(name="per-sequence", h5_path=embeddings_file_per_sequence,
+                      expected_length=n_per_seq)
 
-        check_h5_file(name="per-residue", h5_path=embeddings_file_per_residue,
-                      expected_length=len(all_unique_per_residue))
-        check_h5_file(name="per-sequence", h5_path=embeddings_file_per_sequence,
-                      expected_length=len(all_unique_per_sequence))
+        if n_per_res > 0 or n_per_seq > 0:
+            print("Calculated embeddings successfully!")
+        else:
+            assert False, f"Nothing to embed - so _pre_embed should not have been called!"
 
-        print("Calculated embeddings successfully!")
         return embeddings_file_per_residue, embeddings_file_per_sequence
 
     def _general_task_setup(self, available_framework: AvailableFramework,
@@ -332,6 +344,39 @@ class AutoEval:
         :return: The AutoEval instance for method chaining.
         """
         return self._supervised_task(AvailableFramework.FLIP, custom_output_observers, task_filter)
+
+    def pbc_unsupervised(self, task_filter: Optional[Callable[[AutoEvalTask], bool]] = None):
+        """
+        Add PBC Unsupervised evaluation tasks to the AutoEval pipeline.
+
+        Uses embedding-based annotation transfer (EAT) to evaluate model embeddings.
+
+        :param task_filter: Optional predicate restricting the run to the tasks it selects. Raises ValueError
+            if it selects no task. PGYM has only three tasks - "virus", "nonvirus" and "total" - each holding
+            many DMS assays, so individual assays cannot be selected this way.
+        :return: The AutoEval instance for method chaining.
+        """
+        framework_obj, maybe_framework_result, output_dir = self._general_task_setup(
+            AvailableFramework.PBC_UNSUPERVISED,
+        )
+        if maybe_framework_result:
+            return self
+        self._framework_task_filters[framework_obj] = task_filter
+
+        def runner_function(runner_params: _AutoEvalTaskRunnerParams):
+            return autoeval_unsupervised_pipeline(embedder_name=self.embedder_name,
+                                                  framework=framework_obj,
+                                                  embeddings_file_per_sequence=runner_params.embeddings_file_per_sequence,
+                                                  task_config_tuples=runner_params.task_config_tuples,
+                                                  output_dir=self.output_dir,
+                                                  min_seq_length=self.min_seq_length,
+                                                  max_seq_length=self.max_seq_length,
+                                                  device=runner_params.device)
+
+        self._frameworks_to_runners[framework_obj] = _AutoEvalTaskRunner(framework=framework_obj,
+                                                                         runner=runner_function
+                                                                         )
+        return self
 
     def pgym(self, zero_shot_method: ZeroShotMethod,
              task_filter: Optional[Callable[[AutoEvalTask], bool]] = None):

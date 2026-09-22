@@ -12,6 +12,7 @@ from .autoeval_task import AutoEvalTask
 from .autoeval_flip_datasets import all_flip_datasets
 from .autoeval_mode import AutoEvalMode, DEV_MODE_INDICATOR
 from .autoeval_pbc_datasets import all_pbc_supervised_datasets
+from .. import BootstrappedMetric
 
 from ..embedding_stats import EmbeddingStats
 from ..biotrainer_model_result import BiotrainerModelResult
@@ -66,12 +67,12 @@ class FrameworkReport(ABC, BaseModel):
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         """ Convert to pandas dataframe."""
         raise NotImplementedError
-    
+
     @staticmethod
     def is_task_dev(task: str):
         # Does not apply for the Supervised Framework
         return DEV_MODE_INDICATOR in task
-    
+
     def used_development_mode(self) -> bool:
         """ Whether development mode was used in the autoeval pipeline"""
         return False
@@ -118,7 +119,7 @@ class SupervisedFrameworkReport(FrameworkReport):
         print(f"Total tasks: {len(task_names)}")
         print("Results:")
         df = self.to_df(all_metrics=False, development_mode=development_mode)
-        print(df)
+        print(df.to_string(index=False))
 
     def extract_metrics(self, combined_task_name: str, development_mode: bool = False,
                         all_metrics: bool = False) -> list[dict]:
@@ -227,6 +228,61 @@ class SupervisedFrameworkReport(FrameworkReport):
         return list(self.results.keys())
 
 
+class UnsupervisedFrameworkReport(FrameworkReport):
+    min_seq_len: Optional[int] = Field(default=None, description="Minimum sequence length used during evaluation")
+    max_seq_len: Optional[int] = Field(default=None, description="Maximum sequence length used during evaluation")
+    task_results: Dict[str, Dict[str, List[BootstrappedMetric]]] = Field(description="Unsupervised autoeval results, "
+                                                                                     "task_name -> set_name -> list of bootstrapped metrics")
+
+    @classmethod
+    def empty(cls, min_seq_len: Optional[int], max_seq_len: Optional[int]) -> UnsupervisedFrameworkReport:
+        return cls(min_seq_len=min_seq_len, max_seq_len=max_seq_len, task_results={})
+
+    def update_result(self, combined_task_name: str, result: Dict[str, List[BootstrappedMetric]]):
+        self.task_results[combined_task_name] = result
+
+    def number_tasks(self):
+        return len(self.task_results.keys())
+
+    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
+        rows = []
+
+        for task in self.task_results.keys():
+            unsupervised_result = self.task_results.get(task, {})
+
+            for set_name, metrics in unsupervised_result.items():
+                if "random" in set_name:
+                    continue
+                validation_set = "validation" in set_name
+                if validation_set != development_mode:
+                    continue
+
+                for metric in metrics:
+                    name = metric.name
+                    mean, lower, upper = _maybe_metric_abs(name,
+                                                           mean=metric.mean,
+                                                           lower=metric.lower,
+                                                           upper=metric.upper)
+                    rows.append({
+                        "TaskLabel": f"{task}\n({name})",
+                        "Task": task,
+                        "Metric": name,
+                        "Mean": round(mean, 3),
+                        "Lower": round(lower, 3),
+                        "Upper": round(upper, 3),
+                    })
+        return pd.DataFrame(rows)
+
+    def get_task_names(self) -> List[str]:
+        return list(self.task_results.keys())
+
+    def summary(self, development_mode: bool = False):
+        print(f"Total tasks: {self.number_tasks()}")
+        print("Results:")
+        df = self.to_df(all_metrics=True, development_mode=development_mode)
+        print(df.to_string(index=False))
+
+
 class ZeroShotFrameworkReport(FrameworkReport):
     model_config = {"use_enum_values": True}
 
@@ -252,10 +308,10 @@ class ZeroShotFrameworkReport(FrameworkReport):
 
     def summary(self, development_mode: bool = False):
         print(f"Zero-shot method: {self.method.value}")
-        print(f"Total tasks: {len(self.task_results)}")
+        print(f"Total tasks: {self.number_tasks()}")
         print("Results:")
         df = self.to_df(all_metrics=True, development_mode=development_mode)
-        print(df)
+        print(df.to_string(index=False))
 
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
@@ -334,7 +390,7 @@ class ContactFrameworkReport(FrameworkReport):
         print(f"Total tasks: {len(self.task_results)}")
         print("Results:")
         df = self.to_df(all_metrics=False, development_mode=development_mode)
-        print(df)
+        print(df.to_string(index=False))
 
     def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
         rows = []
@@ -378,13 +434,22 @@ class AutoEvalReport(BaseModel):
     embedder_name: str = Field(description="Name of the embedder")
     training_date: str = Field(description="Date of training")
 
-    # Results
-    supervised_results: Dict[str, SupervisedFrameworkReport] = Field(description="Supervised autoeval results")
-    zeroshot_results: Dict[str, ZeroShotFrameworkReport] = Field(description="Zero-Shot autoeval results")
-    zeroshot_contact_results: Dict[str, ContactFrameworkReport] = Field(default_factory=dict,
-                                                                        description="Zero-Shot contact autoeval results")
-    supervised_contact_results: Dict[str, ContactFrameworkReport] = Field(default_factory=dict,
-                                                                          description="Supervised contact autoeval results")
+    # Results: Framework Name -> Report
+    supervised_results: Dict[str, SupervisedFrameworkReport] = Field(
+        default_factory=dict,
+        description="Supervised autoeval results")
+    unsupervised_results: Dict[str, UnsupervisedFrameworkReport] = Field(
+        default_factory=dict,
+        description="Unsupervised autoeval results")
+    zeroshot_results: Dict[str, ZeroShotFrameworkReport] = Field(
+        default_factory=dict,
+        description="Zero-Shot autoeval results")
+    zeroshot_contact_results: Dict[str, ContactFrameworkReport] = Field(
+        default_factory=dict,
+        description="Zero-Shot contact autoeval results")
+    supervised_contact_results: Dict[str, ContactFrameworkReport] = Field(
+        default_factory=dict,
+        description="Supervised contact autoeval results")
 
     @staticmethod
     def get_file_name(embedder_name):
@@ -416,6 +481,9 @@ class AutoEvalReport(BaseModel):
             case AutoEvalMode.SUPERVISED:
                 assert isinstance(report, SupervisedFrameworkReport)
                 self.supervised_results[framework_name] = report
+            case AutoEvalMode.UNSUPERVISED:
+                assert isinstance(report, UnsupervisedFrameworkReport)
+                self.unsupervised_results[framework_name] = report
             case AutoEvalMode.ZERO_SHOT:
                 assert isinstance(report, ZeroShotFrameworkReport)
                 self.zeroshot_results[framework_name] = report
@@ -430,6 +498,7 @@ class AutoEvalReport(BaseModel):
 
     def _all_results(self):
         return [self.supervised_results,
+                self.unsupervised_results,
                 self.zeroshot_results,
                 self.zeroshot_contact_results,
                 self.supervised_contact_results]
@@ -460,18 +529,26 @@ class AutoEvalReport(BaseModel):
 
     def summary(self, development_mode: bool = False):
         print(f"Autoeval report for {self.embedder_name} on {self.training_date}.")
-        for framework_name, report in self.supervised_results.items():
-            print(f"\n{framework_name} supervised results:")
-            report.summary(development_mode=development_mode)
-        for framework_name, report in self.zeroshot_results.items():
-            print(f"\n{framework_name} zero-shot results:")
-            report.summary(development_mode=development_mode)
-        for framework_name, report in self.zeroshot_contact_results.items():
-            print(f"\n{framework_name} zero-shot contact results:")
-            report.summary(development_mode=development_mode)
-        for framework_name, report in self.supervised_contact_results.items():
-            print(f"\n{framework_name} supervised contact results:")
-            report.summary(development_mode=development_mode)
+        if len(self.supervised_results) > 0:
+            for framework_name, report in self.supervised_results.items():
+                print(f"\n{framework_name} supervised results:")
+                report.summary(development_mode=development_mode)
+        if len(self.unsupervised_results) > 0:
+            for framework_name, report in self.unsupervised_results.items():
+                print(f"\n{framework_name} supervised results:")
+                report.summary(development_mode=development_mode)
+        if len(self.zeroshot_results) > 0:
+            for framework_name, report in self.zeroshot_results.items():
+                print(f"\n{framework_name} zero-shot results:")
+                report.summary(development_mode=development_mode)
+        if len(self.zeroshot_contact_results) > 0:
+            for framework_name, report in self.zeroshot_contact_results.items():
+                print(f"\n{framework_name} zero-shot contact results:")
+                report.summary(development_mode=development_mode)
+        if len(self.supervised_contact_results) > 0:
+            for framework_name, report in self.supervised_contact_results.items():
+                print(f"\n{framework_name} supervised contact results:")
+                report.summary(development_mode=development_mode)
 
     def embedding_stats(self):
         print(f"Embedding stats in autoeval report for {self.embedder_name} on {self.training_date}.")
