@@ -12,6 +12,6 @@ class PBCUnsupervisedConfigBank(AutoEvalConfigBank):
             return {
                     "protocol": "sequence_to_class",
                     "num_nn": 1,
-                    "threshold": 1.1,  # Euclidean distance threshold
+                    "threshold": None,  # Euclidean distance threshold, None means use THE nearest neighbor regardless of distance alternative: 1.1
             }
         assert False, f"Unknown dataset {task.dataset_name}"
