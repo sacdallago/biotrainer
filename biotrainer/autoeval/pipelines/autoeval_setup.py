@@ -1,6 +1,8 @@
 import os
 
 from pathlib import Path
+
+from biotrainer_core.utils import str2bool
 from biotrainer_core.input_files import read_FASTA
 from typing import Callable, List, Optional, Union, Any, Dict, Tuple
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalMode
@@ -76,8 +78,9 @@ def _apply_task_filter(tasks: List[AutoEvalTask],
 def get_unique_framework_sequences(framework: Union[str, AvailableFramework, AutoEvalFramework],
                                    min_seq_length: int,
                                    max_seq_length: int,
+                                   development_mode: bool,
                                    custom_storage_path: Optional[Union[Path, str]] = None,
-                                   force_download: Optional[bool] = False,
+                                   force_download: bool = False,
                                    task_filter: Optional[Callable[[AutoEvalTask], bool]] = None,
                                    ) -> Tuple[
     List[Tuple[AutoEvalTask, Dict[str, Any]]], Dict[str, SequenceData],
@@ -113,18 +116,24 @@ def get_unique_framework_sequences(framework: Union[str, AvailableFramework, Aut
     unique_per_sequence = {}
     if framework_obj.get_mode() in [AutoEvalMode.SUPERVISED, AutoEvalMode.UNSUPERVISED]:
         unique_per_residue, unique_per_sequence = _get_unique_sequences_for_all_tasks(
-            {str(t.input_files[0]): Protocol.from_string(c["protocol"]) for t, c in task_config_tuples}
+            {str(t.input_files[0]): Protocol.from_string(c["protocol"]) for t, c in task_config_tuples},
+            development_mode=development_mode,
         )
     return task_config_tuples, unique_per_residue, unique_per_sequence
 
 
-def _get_unique_sequences_for_all_tasks(tasks: Dict[str, Protocol]) -> Tuple[
-    Dict[str, SequenceData], Dict[str, SequenceData]]:
+def _get_unique_sequences_for_all_tasks(tasks: Dict[str, Protocol],
+                                        development_mode: bool) -> Tuple[Dict[str, SequenceData], Dict[str, SequenceData]]:
     unique_per_residue = {}
     unique_per_sequence = {}
     for task_input, protocol in tasks.items():
         seq_records = read_FASTA(task_input)
         for seq_record in seq_records:
+            seq_dev_mode = str2bool(seq_record.attributes.get("DEV_MODE", "True"))  # True because dev mode seqs are always embedded
+
+            if development_mode and not seq_dev_mode:
+                continue  # Skip sequences that are not in development mode when development mode is enabled
+
             if protocol in Protocol.using_per_sequence_embeddings():
                 unique_per_sequence[seq_record.get_hash()] = seq_record
             else:

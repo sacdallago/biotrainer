@@ -8,8 +8,9 @@ from pathlib import Path
 from dataclasses import dataclass
 from sklearn.metrics import accuracy_score, f1_score
 from biotrainer_core.data_classes import SequenceData, BootstrappedMetric
-from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, UnsupervisedFrameworkReport
-
+from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, UnsupervisedFrameworkReport, \
+    DEV_MODE_INDICATOR
+from biotrainer_core.utils import str2bool
 from biotrainer_core.input_files import read_FASTA
 from biotrainer_core.functions.bootstrapping import get_mean_and_confidence_bounds
 from typing import Optional, Dict, Tuple, List, Any, Generator
@@ -182,34 +183,20 @@ def eat(seq_records: List[SequenceData],
         embeddings_file_per_sequence: Path,
         config: Dict[str, Any]):
     lookup_seqs = {seq_record.get_hash(): seq_record for seq_record in seq_records if seq_record.set == "lookup"}
-    val_seqs = {seq_record.get_hash(): seq_record for seq_record in seq_records if seq_record.set == "val"}
     test_seqs = {seq_record.get_hash(): seq_record for seq_record in seq_records if seq_record.set == "test"}
 
     print("Loading embeddings..")
     with h5py.File(embeddings_file_per_sequence, "r") as embd_file:
         lookup_embeddings = torch.stack([torch.tensor(embd_file[seq_hash]) for seq_hash in lookup_seqs.keys()])
-        val_embeddings = torch.stack([torch.tensor(np.array(embd_file[seq_hash])) for seq_hash in val_seqs.keys()])
         test_embeddings = torch.stack([torch.tensor(embd_file[seq_hash]) for seq_hash in test_seqs.keys()])
 
     print("Calculating lookup predictions..")
-    val_predictions = _get_nearest_neighbours(lookup_embeddings=lookup_embeddings,
-                                              query_embeddings=val_embeddings,
-                                              lookup_seqs=list(lookup_seqs.values()),
-                                              query_seqs=list(val_seqs.values()),
-                                              config=config,
-                                              random=False)
     test_predictions = _get_nearest_neighbours(lookup_embeddings=lookup_embeddings,
                                                query_embeddings=test_embeddings,
                                                lookup_seqs=list(lookup_seqs.values()),
                                                query_seqs=list(test_seqs.values()),
                                                config=config,
                                                random=False)
-    random_val_predictions = _get_nearest_neighbours(lookup_embeddings=lookup_embeddings,
-                                                     query_embeddings=val_embeddings,
-                                                     lookup_seqs=list(lookup_seqs.values()),
-                                                     query_seqs=list(val_seqs.values()),
-                                                     config=config,
-                                                     random=True)
     random_test_predictions = _get_nearest_neighbours(lookup_embeddings=lookup_embeddings,
                                                       query_embeddings=test_embeddings,
                                                       lookup_seqs=list(lookup_seqs.values()),
@@ -217,17 +204,11 @@ def eat(seq_records: List[SequenceData],
                                                       config=config,
                                                       random=True)
     print("Evaluating predictions..")
-    val_evaluator = _EATEvaluator(predictions=val_predictions)
-    val_results = val_evaluator.evaluate(set_name="validation")
-    val_random_evaluator = _EATEvaluator(predictions=random_val_predictions)
-    val_random_results = val_random_evaluator.evaluate(set_name="validation_random")
     test_evaluator = _EATEvaluator(predictions=test_predictions)
     test_results = test_evaluator.evaluate(set_name="test")
     test_random_evaluator = _EATEvaluator(predictions=random_test_predictions)
     test_random_results = test_random_evaluator.evaluate(set_name="test_random")
-    return {"validation": val_results,
-            "validation_random": val_random_results,
-            "test": test_results,
+    return {"test": test_results,
             "test_random": test_random_results}
 
 
@@ -238,6 +219,7 @@ def autoeval_unsupervised_pipeline(embedder_name: str,
                                    output_dir: Path,
                                    min_seq_length: int,
                                    max_seq_length: int,
+                                   development_mode: bool,
                                    device=None,
                                    ) -> Generator[AutoEvalProgress, None, None]:
     assert embeddings_file_per_sequence is not None, f"Missing embeddings file for unsupervised pipeline!"
@@ -245,13 +227,14 @@ def autoeval_unsupervised_pipeline(embedder_name: str,
     # Framework results do not exist yet -> execute biotrainer
     unsupervised_framework_report = UnsupervisedFrameworkReport.empty(min_seq_len=min_seq_length,
                                                                       max_seq_len=max_seq_length)
-    task_names = [task.combined_name() for task, _ in task_config_tuples]
+    task_names = [task.combined_name() + (DEV_MODE_INDICATOR if development_mode else "")
+                  for task, _ in task_config_tuples]
     print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
     completed_tasks = 0
     total_tasks = len(task_config_tuples)
     current_task_name = ""
     for task, config in task_config_tuples:
-        current_task_name = task.combined_name()
+        current_task_name = task.combined_name() + (DEV_MODE_INDICATOR if development_mode else "")
         print(f"Running task {current_task_name}...")
         yield AutoEvalProgress(completed_tasks=completed_tasks, total_tasks=total_tasks,
                                current_task_name=current_task_name,
@@ -260,6 +243,11 @@ def autoeval_unsupervised_pipeline(embedder_name: str,
         fasta_file = task.input_files[0]
         seq_records = read_FASTA(fasta_file)
         assert len(seq_records) > 0, f"No sequences found in {fasta_file}!"
+
+        if development_mode:
+            dev_mode_subsample = [seq_record for seq_record in seq_records if str2bool(seq_record.get_attribute("DEV_MODE"))]
+            assert 0 < len(dev_mode_subsample) < len(seq_records), f"Development mode subsample size incorrect!"
+            seq_records = dev_mode_subsample
 
         result = eat(seq_records=seq_records,
                      embeddings_file_per_sequence=embeddings_file_per_sequence,

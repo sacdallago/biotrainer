@@ -174,7 +174,8 @@ class AutoEval:
                 max_seq_length=self.max_seq_length,
                 custom_storage_path=self.custom_storage_path,
                 force_download=self.force_download,
-                task_filter=self._framework_task_filters.get(framework_obj))
+                task_filter=self._framework_task_filters.get(framework_obj),
+                development_mode=self.development_mode)
             framework_to_tuples[framework_obj] = task_config_tuples
             all_to_embed_per_res.update(to_embed_per_res)
             all_to_embed_per_seq.update(to_embed_per_seq)
@@ -371,6 +372,7 @@ class AutoEval:
                                                   output_dir=self.output_dir,
                                                   min_seq_length=self.min_seq_length,
                                                   max_seq_length=self.max_seq_length,
+                                                  development_mode=self.development_mode,
                                                   device=runner_params.device)
 
         self._frameworks_to_runners[framework_obj] = _AutoEvalTaskRunner(framework=framework_obj,

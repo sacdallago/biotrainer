@@ -1,3 +1,5 @@
 import biotrainer_core.utils.constants
 
-__all__ = ["constants"]
+from .str2bool import str2bool
+
+__all__ = ["constants", "str2bool"]

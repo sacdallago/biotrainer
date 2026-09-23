@@ -248,13 +248,13 @@ class UnsupervisedFrameworkReport(FrameworkReport):
         rows = []
 
         for task in self.task_results.keys():
-            unsupervised_result = self.task_results.get(task, {})
+            task_is_dev = self.is_task_dev(task)
+            if development_mode != task_is_dev:  # Only get results for tasks that match the mode
+                continue
 
+            unsupervised_result = self.task_results.get(task, {})
             for set_name, metrics in unsupervised_result.items():
                 if "random" in set_name:
-                    continue
-                validation_set = "validation" in set_name
-                if validation_set != development_mode:
                     continue
 
                 for metric in metrics:
