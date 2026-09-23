@@ -245,7 +245,8 @@ def autoeval_unsupervised_pipeline(embedder_name: str,
         assert len(seq_records) > 0, f"No sequences found in {fasta_file}!"
 
         if development_mode:
-            dev_mode_subsample = [seq_record for seq_record in seq_records if str2bool(seq_record.get_attribute("DEV_MODE"))]
+            dev_mode_subsample = [seq_record for seq_record in seq_records
+                                  if str2bool(seq_record.get_attribute("DEV_MODE") or "False")]
             assert 0 < len(dev_mode_subsample) < len(seq_records), f"Development mode subsample size incorrect!"
             seq_records = dev_mode_subsample
 
