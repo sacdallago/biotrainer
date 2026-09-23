@@ -535,7 +535,7 @@ class AutoEvalReport(BaseModel):
                 report.summary(development_mode=development_mode)
         if len(self.unsupervised_results) > 0:
             for framework_name, report in self.unsupervised_results.items():
-                print(f"\n{framework_name} supervised results:")
+                print(f"\n{framework_name} unsupervised results:")
                 report.summary(development_mode=development_mode)
         if len(self.zeroshot_results) > 0:
             for framework_name, report in self.zeroshot_results.items():
