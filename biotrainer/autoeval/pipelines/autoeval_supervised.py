@@ -1,5 +1,6 @@
 import h5py
 
+from tqdm import tqdm
 from pathlib import Path
 from abc import ABC, abstractmethod
 from biotrainer_core.data_classes import Protocol, SequenceData
@@ -119,7 +120,7 @@ def check_h5_file(name: str, h5_path: Optional[Path], expected_length: int) -> N
         raise Exception(f"Did not find embeddings file for {name} after embedding calculation!")
     try:
         with h5py.File(h5_path, "r") as h5_file:
-            actual_length = len(h5_file.keys())
+            actual_length = len([k for k in tqdm(h5_file.keys(), desc=f"Checking {name} embeddings..")])
             if actual_length < expected_length:
                 raise ValueError(f"Expected {expected_length} entries in {name} h5 file but found {actual_length}!")
     except (OSError, IOError) as e:

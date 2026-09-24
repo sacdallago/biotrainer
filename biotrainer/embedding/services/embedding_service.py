@@ -104,7 +104,7 @@ class EmbeddingService:
 
         if not force_recomputing and embeddings_file_path.is_file():
             with h5py.File(embeddings_file_path, "r") as embeddings_file:
-                existing_keys = set(embeddings_file.keys())
+                existing_keys = set([k for k in tqdm(embeddings_file.keys(), desc=f"Looking up existing embeddings..")])
             if store_by_hash:
                 seq_records_not_existing_yet = [seq_record for seq_record in seq_records
                                                 if seq_record.get_hash() not in existing_keys]
