@@ -282,6 +282,8 @@ class UnsupervisedFrameworkReport(FrameworkReport):
         df = self.to_df(all_metrics=True, development_mode=development_mode)
         print(df.to_string(index=False))
 
+    def used_development_mode(self) -> bool:
+        return all([DEV_MODE_INDICATOR in task_name for task_name in self.task_results.keys()])
 
 class ZeroShotFrameworkReport(FrameworkReport):
     model_config = {"use_enum_values": True}
@@ -351,7 +353,6 @@ class ZeroShotFrameworkReport(FrameworkReport):
         return list(self.task_results.keys())
 
     def used_development_mode(self) -> bool:
-        # TODO Maybe delete
         return all([DEV_MODE_INDICATOR in task_name for task_name in self.task_results.keys()])
 
 
@@ -426,7 +427,6 @@ class ContactFrameworkReport(FrameworkReport):
         return [task_name.split("-")[-1] for task_name in self.task_results.keys()]
 
     def used_development_mode(self) -> bool:
-        # TODO Maybe delete
         return all([DEV_MODE_INDICATOR in task_name for task_name in self.task_results.keys()])
 
 
