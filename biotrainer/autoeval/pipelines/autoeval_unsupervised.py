@@ -1,9 +1,10 @@
-import random
-import h5py
-import numpy as np
-import torch
 import time
+import h5py
+import torch
+import random
+import numpy as np
 
+from tqdm import tqdm
 from pathlib import Path
 from dataclasses import dataclass
 from sklearn.metrics import accuracy_score, f1_score
@@ -187,8 +188,10 @@ def eat(seq_records: List[SequenceData],
 
     print("Loading embeddings..")
     with h5py.File(embeddings_file_per_sequence, "r") as embd_file:
-        lookup_embeddings = torch.stack([torch.tensor(embd_file[seq_hash]) for seq_hash in lookup_seqs.keys()])
-        test_embeddings = torch.stack([torch.tensor(embd_file[seq_hash]) for seq_hash in test_seqs.keys()])
+        lookup_embeddings = torch.stack([torch.tensor(embd_file[seq_hash])
+                                         for seq_hash in tqdm(lookup_seqs.keys(), desc="Loading lookup embeddings")])
+        test_embeddings = torch.stack([torch.tensor(embd_file[seq_hash])
+                                       for seq_hash in tqdm(test_seqs.keys(), desc="Loading test embeddings")])
 
     print("Calculating lookup predictions..")
     test_predictions = _get_nearest_neighbours(lookup_embeddings=lookup_embeddings,
