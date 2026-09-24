@@ -106,13 +106,20 @@ class EmbeddingService:
             with h5py.File(embeddings_file_path, "r") as embeddings_file:
                 existing_keys = set(embeddings_file.keys())
             if store_by_hash:
-                seq_records = [seq_record for seq_record in seq_records if seq_record.get_hash() not in existing_keys]
+                seq_records_not_existing_yet = [seq_record for seq_record in seq_records
+                                                if seq_record.get_hash() not in existing_keys]
             else:
-                seq_records = [seq_record for seq_record in seq_records if seq_record.seq_id not in existing_keys]
+                seq_records_not_existing_yet = [seq_record for seq_record in seq_records
+                                                if seq_record.seq_id not in existing_keys]
 
-            if len(seq_records) == 0:
+            if len(seq_records_not_existing_yet) == 0:
                 logger.info(f"Using existing embeddings file at {embeddings_file_path}")
                 return str(embeddings_file_path)
+
+            n_already_existing = len(seq_records) - len(seq_records_not_existing_yet)
+            logger.info(f"Using {n_already_existing} existing embeddings from file, "
+                        f"embedding {len(seq_records_not_existing_yet)} new sequences..")
+            seq_records = seq_records_not_existing_yet
 
         logger.info(f"Computing embeddings to: {str(embeddings_file_path)}")
 
