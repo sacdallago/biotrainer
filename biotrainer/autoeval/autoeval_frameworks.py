@@ -26,6 +26,7 @@ class AvailableFramework(Enum):
     @staticmethod
     def dashboard_frameworks():
         return [AvailableFramework.PBC_SUPERVISED,
+                AvailableFramework.PBC_UNSUPERVISED,
                 AvailableFramework.PGYM,
                 AvailableFramework.PBC_ZEROSHOT_CONTACT,
                 AvailableFramework.PBC_SUPERVISED_CONTACT,

@@ -10,3 +10,13 @@ class AutoEvalMode(Enum):
 
 
 DEV_MODE_INDICATOR = "§dev"
+
+class AutoEvalDevMode(Enum):
+    # Plain train-val-test split, evaluated in the pipeline regardless of dev_mode.
+    TRAIN_VAL_TEST = "TRAIN_VAL_TEST"
+    # Subsampled test development dataset (zeroshot, contact) -
+    # full evaluation contains dev but can also be evaluated on the disjunct set
+    DEV_DATASET_TEST = "DEV_DATASET_TEST"
+    # Subsampled training development dataset (unsupervised) -
+    # no substraction or ablation of the dev vs. eval performance possible
+    DEV_DATASET_TRAIN = "DEV_DATASET_TRAIN"
