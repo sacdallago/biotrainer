@@ -56,10 +56,11 @@ class _EATEvaluator:
         acc = accuracy_score(ys, yhats)
         f1 = f1_score(ys, yhats, average="weighted", labels=labels)
 
+        rng = random.Random(15)  # Arbitrary seed for bootstrapping
         accs_btrap = []
         f1s_btrap = []
         for _ in range(n_bootstrap_iterations):
-            rnd_subset = random.choices(idx_list, k=n_total)
+            rnd_subset = rng.choices(idx_list, k=n_total)
             acc_bt = accuracy_score(ys[rnd_subset], yhats[rnd_subset])
             accs_btrap.append(acc_bt)
             f1_bt = f1_score(ys[rnd_subset], yhats[rnd_subset], average="weighted", labels=labels, zero_division=0)
@@ -146,6 +147,7 @@ def _get_nearest_neighbours(
 
     if random:  # this is only needed for benchmarking against random background
         print("Doing random predictions!")
+        torch.manual_seed(87)  # Just an arbitrary seed
         nn_dists, nn_idxs = torch.topk(torch.rand_like(p_dist), num_nn, largest=False, dim=0)
     else:  # infer nearest neighbor indices
         nn_dists, nn_idxs = torch.topk(p_dist, num_nn, largest=False, dim=0)
