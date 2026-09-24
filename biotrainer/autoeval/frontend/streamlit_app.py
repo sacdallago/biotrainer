@@ -66,12 +66,17 @@ def _init_state() -> AutoevalSessionState:
     if "state" not in st.session_state:
         st.session_state.state = AutoevalSessionState()
         state: AutoevalSessionState = st.session_state.state
+
+        # Check for public reports
         public_reports = _download_public_reports()
         if len(public_reports) > 0:
             state.add_published_reports(public_reports)
+
+        # Check for comparison report via query url
         comparison_report = _maybe_download_comparison_report()
         if comparison_report is not None:
             state.add_loaded_report(comparison_report)
+
     return st.session_state.state
 
 

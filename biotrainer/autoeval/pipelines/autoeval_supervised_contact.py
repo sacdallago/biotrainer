@@ -16,7 +16,7 @@ from typing import Optional, List, Dict, Any, Tuple, Generator, Set
 from biotrainer_core.input_files import load_contact_map, read_FASTA
 from biotrainer_core.data_classes import SequenceData, ContactDatasetResult, ContactSingleProteinResult
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, ContactFrameworkReport, \
-    DEV_MODE_INDICATOR
+    DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR, AutoEvalDevMode
 
 from .autoeval_pipeline_utils import get_dataset_result_from_single_contact_results
 
@@ -49,6 +49,7 @@ class _PerProteinData:
     sequence: str
     ground_truth_contact_map: np.ndarray
     attention_map: Optional[np.ndarray] = None
+    dev_mode: bool = False
 
 
 @dataclass
@@ -107,6 +108,7 @@ def _generate_per_protein_dataset_input(seq_data: List[SequenceData],
                                            sequence=sequence,
                                            attention_map=attention_map,
                                            ground_truth_contact_map=ground_truth_contact_map,
+                                           dev_mode=record.get_attribute("DEV_MODE") == "True",
                                            )
         protein_inputs.append(per_protein_data)
 
@@ -285,11 +287,29 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
                                                                         per_protein_data=test_data,
                                                                         embedder=embedder,
                                                                         )
-        test_set_name = test_set_name + DEV_MODE_INDICATOR if development_mode else test_set_name
-        supervised_contact_framework_report.update_result(task_name=test_set_name,
+        final_test_set_name = test_set_name + DEV_MODE_INDICATOR if development_mode else test_set_name
+        supervised_contact_framework_report.update_result(task_name=final_test_set_name,
                                                           per_protein_results=per_protein_results,
                                                           dataset_result=dataset_result,
                                                           )
+
+        # Calculate ablated metrics without dev mode sequences after full evaluation
+        if not development_mode and framework.get_dev_mode() == AutoEvalDevMode.DEV_DATASET_TEST:
+            dev_seq_ids = {p.seq_id for p in test_data if p.dev_mode}
+            ablated_single_results = [res for seq_id, res in per_protein_results.items()
+                                      if seq_id not in dev_seq_ids]
+            if 0 < len(ablated_single_results) < len(per_protein_results):
+                ablated_task_name = test_set_name + DEV_MODE_ABLATED_INDICATOR
+                ablated_dataset_result = get_dataset_result_from_single_contact_results(
+                    dataset_name=ablated_task_name,
+                    single_results=ablated_single_results,
+                )
+                supervised_contact_framework_report.update_result(
+                    task_name=ablated_task_name,
+                    per_protein_results=per_protein_results,
+                    dataset_result=ablated_dataset_result,
+                )
+                print(f"Added ablated task result for {ablated_task_name} ({len(ablated_single_results)} proteins)")
     print(f"Finished task {current_task_name}!")
 
     print(f"Autoeval supervised contact pipeline on framework {framework.get_name()} "

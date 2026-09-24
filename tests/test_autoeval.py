@@ -6,7 +6,8 @@ from pathlib import Path
 from biotrainer.autoeval import AutoEval
 from biotrainer.autoeval.pipelines.autoeval_setup import _apply_task_filter
 from biotrainer_core.data_classes import ZeroShotMethod
-from biotrainer_core.data_classes.autoeval import AutoEvalTask, SupervisedFrameworkReport
+from biotrainer_core.data_classes.autoeval import AutoEvalTask, SupervisedFrameworkReport, \
+    DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR
 from biotrainer.bioengineer import BioEngineer, BioEngineerBaseline
 
 
@@ -63,7 +64,7 @@ class AutoevalTests(unittest.TestCase):
             self.assertTrue(len(report.supervised_results) > 0)
 
     def test_autoeval_zeroshot_contact_baseline(self):
-        """ Checks that autoeval pipeline runs correctly with zero-shot contact baseline """
+        """ Checks that autoeval pipeline runs correctly with zero-shot contact baseline in dev mode """
         TEST_CONTACT_STORAGE = Path(__file__).parent / "test_input_files"
 
         with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -73,11 +74,78 @@ class AutoevalTests(unittest.TestCase):
             autoeval = AutoEval(embedder_name="bioengineer_random_baseline",
                                 output_dir=tmp_dir_name,
                                 custom_bioengineer=bio_engineer,
-                                custom_storage_path=TEST_CONTACT_STORAGE, )
+                                custom_storage_path=TEST_CONTACT_STORAGE,
+                                development_mode=True)
             report = autoeval.pbc_zeroshot_contact(zero_shot_method=ZeroShotMethod.JACOBIAN_CONTACT).run()
 
             self.assertTrue(report is not None)
             self.assertTrue(len(report.zeroshot_contact_results) > 0)
+            contact_report = report.zeroshot_contact_results["PBC_ZEROSHOT_CONTACT"]
+            self.assertIn(f"PBC_ZEROSHOT_CONTACT-test_dataset{DEV_MODE_INDICATOR}", contact_report.task_results)
+            self.assertTrue(contact_report.used_development_mode())
+
+    def test_autoeval_zeroshot_contact_full_eval_ablation(self):
+        """ Checks that full eval computes both full task results and ablated task results """
+        TEST_CONTACT_STORAGE = Path(__file__).parent / "test_input_files"
+
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            print("Starting AutoEval pipeline...")
+
+            bio_engineer = BioEngineer.from_baseline(baseline=BioEngineerBaseline.RANDOM_BASELINE)
+            autoeval = AutoEval(embedder_name="bioengineer_random_baseline",
+                                output_dir=tmp_dir_name,
+                                custom_bioengineer=bio_engineer,
+                                custom_storage_path=TEST_CONTACT_STORAGE,
+                                development_mode=False)
+            report = autoeval.pbc_zeroshot_contact(zero_shot_method=ZeroShotMethod.JACOBIAN_CONTACT).run()
+
+            self.assertTrue(report is not None)
+            self.assertTrue(len(report.zeroshot_contact_results) > 0)
+            contact_report = report.zeroshot_contact_results["PBC_ZEROSHOT_CONTACT"]
+            self.assertIn("PBC_ZEROSHOT_CONTACT-test_dataset", contact_report.task_results)
+            self.assertIn(f"PBC_ZEROSHOT_CONTACT-test_dataset{DEV_MODE_ABLATED_INDICATOR}", contact_report.task_results)
+            self.assertFalse(contact_report.used_development_mode())
+            self.assertFalse(report.is_development())
+
+    def test_autoeval_zeroshot_pipeline_ablation(self):
+        """ Checks that autoeval_zeroshot_pipeline adds ablated results for DEV_DATASET_TEST frameworks """
+        import shutil
+        from biotrainer.autoeval.frameworks.pgym.pgym_framework import PGYMFramework
+        from biotrainer.autoeval.pipelines.autoeval_zeroshot import autoeval_zeroshot_pipeline
+
+        dataset_path = Path(__file__).parent / "test_input_files" / "pgym" / "B2L11_HUMAN_Dutta_2010_binding-Mcl-1.csv"
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            file1 = Path(tmp_dir) / "file1.csv"
+            file2 = Path(tmp_dir) / "file2.csv"
+            shutil.copyfile(dataset_path, file1)
+            shutil.copyfile(dataset_path, file2)
+
+            task_full = AutoEvalTask(framework_name="PGYM", dataset_name="virus",
+                                     input_files=[file1, file2], type="Protein")
+            task_dev = AutoEvalTask(framework_name="PGYM", dataset_name=f"virus{DEV_MODE_INDICATOR}",
+                                    input_files=[file1], type="Protein")
+
+            bio_engineer = BioEngineer.from_baseline(baseline=BioEngineerBaseline.RANDOM_BASELINE)
+            generator = autoeval_zeroshot_pipeline(
+                framework=PGYMFramework(),
+                embedder_name="bioengineer_random_baseline",
+                zero_shot_method=ZeroShotMethod.WT_MARGINALS,
+                output_dir=Path(tmp_dir),
+                autoeval_tasks=[(task_full, {}), (task_dev, {})],
+                development_mode=False,
+                bioengineer=bio_engineer,
+            )
+            final_progress = None
+            for progress in generator:
+                final_progress = progress
+
+            self.assertIsNotNone(final_progress)
+            self.assertIsNotNone(final_progress.final_report)
+            report = final_progress.final_report
+            self.assertIn("PGYM-virus", report.task_results)
+            self.assertIn(f"PGYM-virus{DEV_MODE_ABLATED_INDICATOR}", report.task_results)
+            self.assertFalse(report.used_development_mode())
 
     def test_autoeval_task_filter_matching_nothing_raises(self):
         """ A filter that selects no task must fail the run instead of writing an empty report """

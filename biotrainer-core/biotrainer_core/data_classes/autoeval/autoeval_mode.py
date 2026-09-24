@@ -10,6 +10,7 @@ class AutoEvalMode(Enum):
 
 
 DEV_MODE_INDICATOR = "§dev"
+DEV_MODE_ABLATED_INDICATOR = "§ablated"  # Can only exist after full evaluation
 
 class AutoEvalDevMode(Enum):
     # Plain train-val-test split, evaluated in the pipeline regardless of dev_mode.

@@ -2,7 +2,8 @@ from pathlib import Path
 from typing import Tuple, List, Dict, Any, Optional, Generator
 from biotrainer_core.data_classes import ZeroShotMethod, ContactSingleProteinResult
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, \
-    ContactFrameworkReport, ZeroShotContactCachedResults, DEV_MODE_INDICATOR
+    ContactFrameworkReport, ZeroShotContactCachedResults, DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR, \
+    AutoEvalDevMode
 
 from biotrainer_core.input_files import read_FASTA, load_contact_map
 
@@ -113,6 +114,25 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                          per_protein_results=zero_shot_contact_cached_results.per_protein_results,
                                                          dataset_result=dataset_result,
                                                          )
+
+        # Calculate ablated metrics without dev mode sequences after full evaluation
+        if not development_mode and framework.get_dev_mode() == AutoEvalDevMode.DEV_DATASET_TEST:
+            dev_seq_ids = {seq_r.seq_id for seq_r in seq_records if seq_r.get_attribute("DEV_MODE") == "True"}
+            ablated_single_results = [res for res in single_results if res.protein_name not in dev_seq_ids]
+            if 0 < len(ablated_single_results) < len(single_results):
+                ablated_task_name = task.combined_name() + DEV_MODE_ABLATED_INDICATOR
+                ablated_dataset_name = dataset_name + DEV_MODE_ABLATED_INDICATOR
+                ablated_dataset_result = get_dataset_result_from_single_contact_results(
+                    dataset_name=ablated_dataset_name,
+                    single_results=ablated_single_results,
+                )
+                zero_shot_contact_framework_report.update_result(
+                    task_name=ablated_task_name,
+                    per_protein_results=zero_shot_contact_cached_results.per_protein_results,
+                    dataset_result=ablated_dataset_result,
+                )
+                print(f"Added ablated task result for {ablated_task_name} ({len(ablated_single_results)} proteins)")
+
         completed_tasks += 1
         print(f"Finished task {current_task_name}!")
 

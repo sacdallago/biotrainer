@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional, List, Tuple, Dict, Any
 from biotrainer_core.data_classes import ZeroShotMethod
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, \
-    ZeroShotFrameworkReport, ZeroShotCachedResults, DEV_MODE_INDICATOR
+    ZeroShotFrameworkReport, ZeroShotCachedResults, DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR, AutoEvalDevMode
 
 from ..core import AutoEvalFramework
 
@@ -28,19 +28,19 @@ def autoeval_zeroshot_pipeline(framework: AutoEvalFramework,
     # Execute bioengineer
     zero_shot_framework_report = ZeroShotFrameworkReport.empty(method=zero_shot_method)
 
-    autoeval_tasks = [task for task, _ in autoeval_tasks]  # Ignore config for zeroshot contact
+    all_tasks = [task for task, _ in autoeval_tasks]  # Ignore config for zeroshot contact
     if development_mode:
-        autoeval_tasks = [task for task in autoeval_tasks if DEV_MODE_INDICATOR in task.combined_name()]
+        tasks_to_run = [task for task in all_tasks if DEV_MODE_INDICATOR in task.combined_name()]
     else:
-        autoeval_tasks = [task for task in autoeval_tasks if DEV_MODE_INDICATOR not in task.combined_name()]
+        tasks_to_run = [task for task in all_tasks if DEV_MODE_INDICATOR not in task.combined_name()]
 
-    task_names = [task.combined_name() for task in autoeval_tasks]
+    task_names = [task.combined_name() for task in tasks_to_run]
     print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
 
     completed_tasks = 0
     total_tasks = len(task_names)
     current_task_name = ""
-    for task in autoeval_tasks:
+    for task in tasks_to_run:
         current_task_name = task.combined_name()
 
         print(f"Running task {current_task_name}...")
@@ -68,6 +68,31 @@ def autoeval_zeroshot_pipeline(framework: AutoEvalFramework,
 
         # Aggregate results
         zero_shot_framework_report.aggregate(task_name=current_task_name, individual_results=individual_results)
+
+        # Calculate ablated metrics without dev mode datasets after full evaluation
+        if not development_mode and framework.get_dev_mode() == AutoEvalDevMode.DEV_DATASET_TEST:
+            dev_task = next((t for t in all_tasks if t.dataset_name == task.dataset_name + DEV_MODE_INDICATOR), None)
+            if dev_task is None:
+                try:
+                    all_dh_tasks = framework.get_data_handler().get_tasks(
+                        base_path=framework.get_data_handler().get_framework_base_path(),
+                        min_seq_length=None,
+                        max_seq_length=None
+                    )
+                    dev_task = next((t for t in all_dh_tasks if t.dataset_name == task.dataset_name + DEV_MODE_INDICATOR), None)
+                except Exception:
+                    dev_task = None
+
+            if dev_task is not None:
+                dev_files = {f.name for f in dev_task.input_files}
+                ablated_individual_results = {f_name: res for f_name, res in individual_results.items()
+                                              if f_name not in dev_files}
+                if len(ablated_individual_results) > 0:
+                    ablated_task_name = task.combined_name() + DEV_MODE_ABLATED_INDICATOR
+                    zero_shot_framework_report.aggregate(task_name=ablated_task_name,
+                                                         individual_results=ablated_individual_results)
+                    print(f"Added ablated task result for {ablated_task_name} ({len(ablated_individual_results)} datasets)")
+
         completed_tasks += 1
         print(f"Finished task {current_task_name}!")
 

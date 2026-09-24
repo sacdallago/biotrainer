@@ -10,7 +10,7 @@ from typing import Dict, Union, Optional, List, Tuple
 
 from .autoeval_task import AutoEvalTask
 from .autoeval_flip_datasets import all_flip_datasets
-from .autoeval_mode import AutoEvalMode, DEV_MODE_INDICATOR
+from .autoeval_mode import AutoEvalMode, DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR
 from .autoeval_pbc_datasets import all_pbc_supervised_datasets
 from .. import BootstrappedMetric
 
@@ -72,6 +72,10 @@ class FrameworkReport(ABC, BaseModel):
     def is_task_dev(task: str):
         # Does not apply for the Supervised Framework
         return DEV_MODE_INDICATOR in task
+
+    @staticmethod
+    def is_task_ablated(task: str):
+        return DEV_MODE_ABLATED_INDICATOR in task
 
     def used_development_mode(self) -> bool:
         """ Whether development mode was used in the autoeval pipeline"""
