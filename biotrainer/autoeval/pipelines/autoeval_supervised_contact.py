@@ -226,6 +226,7 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
                                          output_dir: Path,
                                          autoeval_tasks: List[Tuple[AutoEvalTask, Dict[str, Any]]],
                                          development_mode: bool,
+                                         framework_report: ContactFrameworkReport,
                                          custom_embedder: Optional[CustomEmbedder] = None,
                                          device=None):
     embedder = custom_embedder
@@ -268,8 +269,6 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
     assert dataset_map["val"] is not None, f"Missing val dataset for task: {current_task_name}"
     assert len(dataset_map["test"] or []) > 0, f"Missing test datasets for task: {current_task_name}"
 
-    supervised_contact_framework_report = ContactFrameworkReport.empty()
-
     # (2) Data Collection
     input_dataset = _load_data_and_generate_attention_maps(dataset_map=dataset_map,
                                                            embedder=embedder,
@@ -288,10 +287,10 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
                                                                         embedder=embedder,
                                                                         )
         final_test_set_name = test_set_name + DEV_MODE_INDICATOR if development_mode else test_set_name
-        supervised_contact_framework_report.update_result(task_name=final_test_set_name,
-                                                          per_protein_results=per_protein_results,
-                                                          dataset_result=dataset_result,
-                                                          )
+        framework_report.update_result(task_name=final_test_set_name,
+                                       per_protein_results=per_protein_results,
+                                       dataset_result=dataset_result,
+                                       )
 
         # Calculate ablated metrics without dev mode sequences after full evaluation
         if not development_mode and framework.get_dev_mode() == AutoEvalDevMode.DEV_DATASET_TEST:
@@ -304,7 +303,7 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
                     dataset_name=ablated_task_name,
                     single_results=ablated_single_results,
                 )
-                supervised_contact_framework_report.update_result(
+                framework_report.update_result(
                     task_name=ablated_task_name,
                     per_protein_results=per_protein_results,
                     dataset_result=ablated_dataset_result,
@@ -317,4 +316,4 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
     yield AutoEvalProgress(completed_tasks=total_tasks, total_tasks=total_tasks,
                            current_task_name=current_task_name,
                            current_framework_name=framework.get_name(),
-                           final_report=supervised_contact_framework_report)
+                           final_report=framework_report)

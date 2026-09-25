@@ -167,14 +167,10 @@ def autoeval_supervised_pipeline(embedder_name: str,
                                  embeddings_file_per_residue: Optional[Path],
                                  task_config_tuples: List[Tuple[AutoEvalTask, Dict[str, Any]]],
                                  output_dir: Path,
-                                 min_seq_length: int,
-                                 max_seq_length: int,
+                                 framework_report: SupervisedFrameworkReport,
                                  custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
                                  device=None,
                                  ) -> Generator[AutoEvalProgress, None, None]:
-    # Framework results do not exist yet -> execute biotrainer
-    supervised_framework_report = SupervisedFrameworkReport.empty(min_seq_len=min_seq_length,
-                                                                  max_seq_len=max_seq_length)
     task_names = [task.combined_name() for task, _ in task_config_tuples]
     print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
     completed_tasks = 0
@@ -189,11 +185,11 @@ def autoeval_supervised_pipeline(embedder_name: str,
 
         task_output_dir = output_dir / current_task_name
         # Check if result already exists -> skip (Framework run was interrupted)
-        maybe_result = supervised_framework_report.maybe_load_existing_result(embedder_name=embedder_name,
-                                                                              task_output_dir=task_output_dir)
+        maybe_result = framework_report.maybe_load_existing_result(embedder_name=embedder_name,
+                                                                   task_output_dir=task_output_dir)
         if maybe_result:
             print(f"Loaded existing result for task {current_task_name}, skipping execution..")
-            supervised_framework_report.update_result(combined_task_name=current_task_name, result=maybe_result)
+            framework_report.update_result(combined_task_name=current_task_name, result=maybe_result)
             continue
 
         # No result exists yet -> execute biotrainer
@@ -212,7 +208,7 @@ def autoeval_supervised_pipeline(embedder_name: str,
         result = parse_config_file_and_execute_run(config=config,
                                                    custom_output_observers=custom_output_observers)
 
-        supervised_framework_report.update_result(combined_task_name=current_task_name, result=result)
+        framework_report.update_result(combined_task_name=current_task_name, result=result)
 
         completed_tasks += 1
         print(f"Finished task execution for {current_task_name}!")
@@ -222,4 +218,4 @@ def autoeval_supervised_pipeline(embedder_name: str,
     yield AutoEvalProgress(completed_tasks=total_tasks, total_tasks=total_tasks,
                            current_task_name=current_task_name,
                            current_framework_name=framework.get_name(),
-                           final_report=supervised_framework_report)
+                           final_report=framework_report)

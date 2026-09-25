@@ -16,6 +16,7 @@ def autoeval_zeroshot_pipeline(framework: AutoEvalFramework,
                                output_dir: Path,
                                autoeval_tasks: List[Tuple[AutoEvalTask, Dict[str, Any]]],
                                development_mode: bool,
+                               framework_report: ZeroShotFrameworkReport,
                                bioengineer: Optional[BioEngineer] = None,
                                device=None):
     if not bioengineer:
@@ -26,8 +27,6 @@ def autoeval_zeroshot_pipeline(framework: AutoEvalFramework,
                                                            method=zero_shot_method,
                                                            output_dir=output_dir)
     # Execute bioengineer
-    zero_shot_framework_report = ZeroShotFrameworkReport.empty(method=zero_shot_method)
-
     all_tasks = [task for task, _ in autoeval_tasks]  # Ignore config for zeroshot contact
     if development_mode:
         tasks_to_run = [task for task in all_tasks if DEV_MODE_INDICATOR in task.combined_name()]
@@ -67,7 +66,7 @@ def autoeval_zeroshot_pipeline(framework: AutoEvalFramework,
             individual_results[file_name] = ranking_result
 
         # Aggregate results
-        zero_shot_framework_report.aggregate(task_name=current_task_name, individual_results=individual_results)
+        framework_report.aggregate(task_name=current_task_name, individual_results=individual_results)
 
         # Calculate ablated metrics without dev mode datasets after full evaluation
         if not development_mode and framework.get_dev_mode() == AutoEvalDevMode.DEV_DATASET_TEST:
@@ -89,8 +88,8 @@ def autoeval_zeroshot_pipeline(framework: AutoEvalFramework,
                                               if f_name not in dev_files}
                 if len(ablated_individual_results) > 0:
                     ablated_task_name = task.combined_name() + DEV_MODE_ABLATED_INDICATOR
-                    zero_shot_framework_report.aggregate(task_name=ablated_task_name,
-                                                         individual_results=ablated_individual_results)
+                    framework_report.aggregate(task_name=ablated_task_name,
+                                               individual_results=ablated_individual_results)
                     print(f"Added ablated task result for {ablated_task_name} ({len(ablated_individual_results)} datasets)")
 
         completed_tasks += 1
@@ -101,4 +100,4 @@ def autoeval_zeroshot_pipeline(framework: AutoEvalFramework,
     yield AutoEvalProgress(completed_tasks=total_tasks, total_tasks=total_tasks,
                            current_task_name=current_task_name,
                            current_framework_name=framework.get_name(),
-                           final_report=zero_shot_framework_report)
+                           final_report=framework_report)

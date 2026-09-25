@@ -222,16 +222,12 @@ def autoeval_unsupervised_pipeline(embedder_name: str,
                                    embeddings_file_per_sequence: Optional[Path],
                                    task_config_tuples: List[Tuple[AutoEvalTask, Dict[str, Any]]],
                                    output_dir: Path,
-                                   min_seq_length: int,
-                                   max_seq_length: int,
-                                   development_mode: bool,
+                                   framework_report: UnsupervisedFrameworkReport,
+                                   development_mode: bool = False,
                                    device=None,
                                    ) -> Generator[AutoEvalProgress, None, None]:
     assert embeddings_file_per_sequence is not None, f"Missing embeddings file for unsupervised pipeline!"
 
-    # Framework results do not exist yet -> execute biotrainer
-    unsupervised_framework_report = UnsupervisedFrameworkReport.empty(min_seq_len=min_seq_length,
-                                                                      max_seq_len=max_seq_length)
     task_names = [task.combined_name() + (DEV_MODE_INDICATOR if development_mode else "")
                   for task, _ in task_config_tuples]
     print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
@@ -259,14 +255,14 @@ def autoeval_unsupervised_pipeline(embedder_name: str,
                      embeddings_file_per_sequence=embeddings_file_per_sequence,
                      config=config)
 
-        unsupervised_framework_report.update_result(combined_task_name=current_task_name, result=result)
+        framework_report.update_result(combined_task_name=current_task_name, result=result)
 
         completed_tasks += 1
         print(f"Finished task execution for {current_task_name}!")
 
-    print(f"Autoeval supervised pipeline on framework {framework.get_name()} "
+    print(f"Autoeval unsupervised pipeline on framework {framework.get_name()} "
           f"for {embedder_name} finished successfully!")
     yield AutoEvalProgress(completed_tasks=total_tasks, total_tasks=total_tasks,
                            current_task_name=current_task_name,
                            current_framework_name=framework.get_name(),
-                           final_report=unsupervised_framework_report)
+                           final_report=framework_report)

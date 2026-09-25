@@ -22,6 +22,7 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                        autoeval_tasks: List[Tuple[AutoEvalTask, Dict[str, Any]]],
                                        bioengineer: Optional[BioEngineer],
                                        development_mode: bool,
+                                       framework_report: ContactFrameworkReport,
                                        device=None,
                                        batch_size: int = 32,
                                        ):
@@ -33,7 +34,6 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                                                     output_dir=output_dir)
     # Execute bioengineer
     autoeval_tasks = [task for task, _ in autoeval_tasks]  # Ignore config for zeroshot contact
-    zero_shot_contact_framework_report = ContactFrameworkReport.empty(method=zero_shot_method)
 
     task_names = [task.combined_name() + (DEV_MODE_INDICATOR if development_mode else "") for task in autoeval_tasks]
     print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
@@ -101,32 +101,32 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                 )
 
         # Run Evaluation of zero-shot contact maps
-        single_results = []
         for single_result in evaluate():
             zero_shot_contact_cached_results.update_and_sync(result=single_result,
                                                              output_dir=output_dir)
-            single_results.append(single_result)
 
+        all_single_results = [zero_shot_contact_cached_results.per_protein_results[seq_r.seq_id]
+                              for seq_r in seq_records]
         dataset_result = get_dataset_result_from_single_contact_results(dataset_name=dataset_name,
-                                                                        single_results=single_results,
+                                                                        single_results=all_single_results,
                                                                         )
-        zero_shot_contact_framework_report.update_result(task_name=current_task_name,
-                                                         per_protein_results=zero_shot_contact_cached_results.per_protein_results,
-                                                         dataset_result=dataset_result,
-                                                         )
+        framework_report.update_result(task_name=current_task_name,
+                                       per_protein_results=zero_shot_contact_cached_results.per_protein_results,
+                                       dataset_result=dataset_result,
+                                       )
 
         # Calculate ablated metrics without dev mode sequences after full evaluation
         if not development_mode and framework.get_dev_mode() == AutoEvalDevMode.DEV_DATASET_TEST:
             dev_seq_ids = {seq_r.seq_id for seq_r in seq_records if seq_r.get_attribute("DEV_MODE") == "True"}
-            ablated_single_results = [res for res in single_results if res.protein_name not in dev_seq_ids]
-            if 0 < len(ablated_single_results) < len(single_results):
+            ablated_single_results = [res for res in all_single_results if res.protein_name not in dev_seq_ids]
+            if 0 < len(ablated_single_results) < len(all_single_results):
                 ablated_task_name = task.combined_name() + DEV_MODE_ABLATED_INDICATOR
                 ablated_dataset_name = dataset_name + DEV_MODE_ABLATED_INDICATOR
                 ablated_dataset_result = get_dataset_result_from_single_contact_results(
                     dataset_name=ablated_dataset_name,
                     single_results=ablated_single_results,
                 )
-                zero_shot_contact_framework_report.update_result(
+                framework_report.update_result(
                     task_name=ablated_task_name,
                     per_protein_results=zero_shot_contact_cached_results.per_protein_results,
                     dataset_result=ablated_dataset_result,
@@ -142,4 +142,4 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                            total_tasks=total_tasks,
                            current_task_name=current_task_name,
                            current_framework_name=framework.get_name(),
-                           final_report=zero_shot_contact_framework_report)
+                           final_report=framework_report)

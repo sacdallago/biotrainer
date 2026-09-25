@@ -7,7 +7,11 @@ from datetime import datetime
 from dataclasses import dataclass
 from biotrainer_core.data_classes import ZeroShotMethod
 from typing import Optional, Callable, Tuple, List, Union, Generator, Dict, Any
-from biotrainer_core.data_classes.autoeval import AutoEvalProgress, AutoEvalReport, FrameworkReport, AutoEvalTask
+from biotrainer_core.data_classes.autoeval import (
+    AutoEvalProgress, AutoEvalReport, FrameworkReport, AutoEvalTask,
+    AutoEvalMode, SupervisedFrameworkReport, UnsupervisedFrameworkReport,
+    ZeroShotFrameworkReport, ContactFrameworkReport
+)
 
 from .core import AutoEvalFramework
 from .pipelines import (setup_output_dir, validate_input, autoeval_supervised_pipeline,
@@ -237,8 +241,26 @@ class AutoEval:
 
         return embeddings_file_per_residue, embeddings_file_per_sequence
 
+    def _create_empty_framework_report(self, framework_obj: AutoEvalFramework,
+                                       zero_shot_method: Optional[ZeroShotMethod] = None) -> FrameworkReport:
+        match framework_obj.get_mode():
+            case AutoEvalMode.SUPERVISED:
+                return SupervisedFrameworkReport.empty(min_seq_len=self.min_seq_length, max_seq_len=self.max_seq_length)
+            case AutoEvalMode.UNSUPERVISED:
+                return UnsupervisedFrameworkReport.empty(min_seq_len=self.min_seq_length, max_seq_len=self.max_seq_length)
+            case AutoEvalMode.ZERO_SHOT:
+                assert zero_shot_method is not None, "zero_shot_method must be provided for zero-shot framework!"
+                return ZeroShotFrameworkReport.empty(method=zero_shot_method)
+            case AutoEvalMode.ZERO_SHOT_CONTACT:
+                assert zero_shot_method is not None, "zero_shot_method must be provided for zero-shot contact framework!"
+                return ContactFrameworkReport.empty(method=zero_shot_method)
+            case AutoEvalMode.SUPERVISED_CONTACT_ATTENTION:
+                return ContactFrameworkReport.empty()
+            case _:
+                raise ValueError(f"Unknown framework mode: {framework_obj.get_mode()}")
+
     def _general_task_setup(self, available_framework: AvailableFramework,
-                            zero_shot_method: Optional[ZeroShotMethod] = None) -> Optional:
+                            zero_shot_method: Optional[ZeroShotMethod] = None) -> Tuple[AutoEvalFramework, bool, Path, FrameworkReport]:
         framework_obj: AutoEvalFramework = validate_input(available_framework,
                                                           zero_shot_method=zero_shot_method,
                                                           min_seq_length=self.min_seq_length,
@@ -259,13 +281,13 @@ class AutoEval:
         # Framework results already exist -> skip execution
         assert self.autoeval_report is not None
         maybe_framework_result = self.autoeval_report.maybe_framework_result(framework_name=framework_obj.get_name())
+        skip_execution = False
         if maybe_framework_result:
             if maybe_framework_result.task_filter_applied:
                 # A filtered report only covers a subset of the framework, so it can never stand in for this run.
                 # Predicates cannot be compared, so even an identical subset is run again rather than reused.
                 print(f"Autoeval report for framework {available_framework} exists, but only for a subset of "
                       f"tasks. Running now!")
-                maybe_framework_result = None
             else:
                 dev_mode = maybe_framework_result.used_development_mode()
                 full_evaluation_exists = not dev_mode  # Full evaluation always contains development mode so can be skipped
@@ -274,24 +296,28 @@ class AutoEval:
                     print(f"Autoeval report for framework {available_framework} already exists, "
                           f"execution will be skipped!")
                     self._results[framework_obj] = maybe_framework_result
+                    skip_execution = True
                 elif full_evaluation_desired:
                     print(f"Autoeval report for framework exists, but only in development mode. "
                           f"Running full evaluation now!")
-                    maybe_framework_result = None
                 else:  # Dev mode requested and exists
                     print(
                         f"Autoeval development report for framework {available_framework} already exists, "
                         f"execution will be skipped!")
                     self._results[framework_obj] = maybe_framework_result
+                    skip_execution = True
 
-        return framework_obj, maybe_framework_result, output_dir
+        framework_report = maybe_framework_result if maybe_framework_result is not None else self._create_empty_framework_report(
+            framework_obj=framework_obj, zero_shot_method=zero_shot_method)
+
+        return framework_obj, skip_execution, output_dir, framework_report
 
     def _supervised_task(self,
                          available_framework: AvailableFramework,
                          custom_output_observers: List[BiotrainerOutputObserver] = None,
                          task_filter: Optional[Callable[[AutoEvalTask], bool]] = None, ):
-        framework_obj, maybe_framework_result, output_dir = self._general_task_setup(available_framework)
-        if maybe_framework_result:
+        framework_obj, skip_execution, output_dir, framework_report = self._general_task_setup(available_framework)
+        if skip_execution:
             return self
         self._framework_task_filters[framework_obj] = task_filter
 
@@ -305,8 +331,7 @@ class AutoEval:
                 embeddings_file_per_sequence=runner_params.embeddings_file_per_sequence,
                 output_dir=output_dir,
                 task_config_tuples=runner_params.task_config_tuples,
-                min_seq_length=self.min_seq_length,
-                max_seq_length=self.max_seq_length,
+                framework_report=framework_report,
                 custom_output_observers=custom_output_observers,
                 device=runner_params.device)
 
@@ -357,10 +382,10 @@ class AutoEval:
             many DMS assays, so individual assays cannot be selected this way.
         :return: The AutoEval instance for method chaining.
         """
-        framework_obj, maybe_framework_result, output_dir = self._general_task_setup(
+        framework_obj, skip_execution, output_dir, framework_report = self._general_task_setup(
             AvailableFramework.PBC_UNSUPERVISED,
         )
-        if maybe_framework_result:
+        if skip_execution:
             return self
         self._framework_task_filters[framework_obj] = task_filter
 
@@ -369,9 +394,8 @@ class AutoEval:
                                                   framework=framework_obj,
                                                   embeddings_file_per_sequence=runner_params.embeddings_file_per_sequence,
                                                   task_config_tuples=runner_params.task_config_tuples,
-                                                  output_dir=self.output_dir,
-                                                  min_seq_length=self.min_seq_length,
-                                                  max_seq_length=self.max_seq_length,
+                                                  output_dir=output_dir,
+                                                  framework_report=framework_report,
                                                   development_mode=self.development_mode,
                                                   device=runner_params.device)
 
@@ -392,9 +416,9 @@ class AutoEval:
             many DMS assays, so individual assays cannot be selected this way.
         :return: The AutoEval instance for method chaining.
         """
-        framework_obj, maybe_framework_result, output_dir = self._general_task_setup(AvailableFramework.PGYM,
+        framework_obj, skip_execution, output_dir, framework_report = self._general_task_setup(AvailableFramework.PGYM,
                                                                                      zero_shot_method=zero_shot_method)
-        if maybe_framework_result:
+        if skip_execution:
             return self
         self._framework_task_filters[framework_obj] = task_filter
 
@@ -408,6 +432,7 @@ class AutoEval:
                 autoeval_tasks=runner_params.task_config_tuples,
                 zero_shot_method=zero_shot_method,
                 output_dir=output_dir,
+                framework_report=framework_report,
                 bioengineer=bioengineer,
                 development_mode=self.development_mode,
                 device=runner_params.device,
@@ -433,10 +458,10 @@ class AutoEval:
         :param batch_size: Batch size to be used when computing the categorical Jacobian.
         :return: The AutoEval instance for method chaining.
         """
-        framework_obj, maybe_framework_result, output_dir = self._general_task_setup(
+        framework_obj, skip_execution, output_dir, framework_report = self._general_task_setup(
             AvailableFramework.PBC_ZEROSHOT_CONTACT,
             zero_shot_method=zero_shot_method)
-        if maybe_framework_result:
+        if skip_execution:
             return self
         self._framework_task_filters[framework_obj] = task_filter
 
@@ -450,6 +475,7 @@ class AutoEval:
                 zero_shot_method=zero_shot_method,
                 autoeval_tasks=runner_params.task_config_tuples,
                 output_dir=output_dir,
+                framework_report=framework_report,
                 bioengineer=bioengineer,
                 device=runner_params.device,
                 development_mode=self.development_mode,
@@ -471,9 +497,9 @@ class AutoEval:
             filtering can only keep or reject the whole framework.
         :return: The AutoEval instance for method chaining.
         """
-        framework_obj, maybe_framework_result, output_dir = self._general_task_setup(
+        framework_obj, skip_execution, output_dir, framework_report = self._general_task_setup(
             AvailableFramework.PBC_SUPERVISED_CONTACT)
-        if maybe_framework_result:
+        if skip_execution:
             return self
         self._framework_task_filters[framework_obj] = task_filter
         self._frameworks_to_runners[framework_obj] = _AutoEvalTaskRunner(framework=framework_obj, runner=
@@ -482,6 +508,7 @@ class AutoEval:
             embedder_name=self.embedder_name,
             autoeval_tasks=task_params.task_config_tuples,
             output_dir=output_dir,
+            framework_report=framework_report,
             device=task_params.device,
             custom_embedder=self.custom_embedder,
             development_mode=self.development_mode)
