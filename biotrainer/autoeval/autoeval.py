@@ -145,6 +145,7 @@ class AutoEval:
         Use the recommended development pipeline for AutoEval.
 
         Uses PBC_Supervised for supervised structure and function task prediction.
+        Uses PBC_Unsupervised for unsupervised embedding annotation transfer (EAT) analysis.
         Uses PGYM for zeroshot variant effect prediction.
         Uses PBC_Supervised_contact for supervised contact prediction (faster and similarly accurate as zeroshot contact prediction).
 
@@ -163,6 +164,7 @@ class AutoEval:
                          custom_bioengineer=custom_bioengineer,
                          development_mode=True).
                 pbc_supervised().
+                pbc_unsupervised().
                 pgym(zero_shot_method=ZeroShotMethod.MASKED_MARGINALS).
                 pbc_supervised_contact())
 
