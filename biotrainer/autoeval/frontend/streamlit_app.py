@@ -6,6 +6,22 @@ from biotrainer_core.data_classes.autoeval import AutoEvalReport, AutoEvalPublis
 
 try:
     import streamlit as st
+    import streamlit.components.v1 as components
+
+    meta_tags = """
+    <script>
+        const metaDesc = document.createElement('meta');
+        metaDesc.name = "description";
+        metaDesc.content = "The biotrainer Autoeval Dashboard provides automated evaluation, visualization, benchmarking, and leaderboards for protein language models.";
+        document.head.appendChild(metaDesc);
+
+        const ogTitle = document.createElement('meta');
+        ogTitle.property = "og:title";
+        ogTitle.content = "Autoeval Dashboard";
+        document.head.appendChild(ogTitle);
+    </script>
+    """
+    components.html(meta_tags, height=0)
 except Exception as _e:
     raise SystemExit(
         "Streamlit is required to run this app. Install with `pip install streamlit` - "
@@ -81,13 +97,15 @@ def _init_state() -> AutoevalSessionState:
 
 
 def run(start_path: Optional[Path] = None):
-    st.set_page_config(page_title="Autoeval Dashboard",
+    st.set_page_config(page_title="Autoeval - Benchmark & Compare Protein Language Models",
                        page_icon="🏆",
                        initial_sidebar_state="expanded",
                        layout="wide")
 
     st.title("Autoeval Dashboard")
-    st.caption("Visualize and compare Autoeval reports.")
+    st.caption("Benchmark & Compare Protein Language Models. "
+               "Evaluate your own models and compare them against the state of the "
+               "art in protein language modeling on downstream tasks.")
 
     state = _init_state()
 
