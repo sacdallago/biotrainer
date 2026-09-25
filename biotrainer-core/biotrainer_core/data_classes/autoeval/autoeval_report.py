@@ -6,14 +6,14 @@ import pandas as pd
 from pathlib import Path
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field, model_validator
-from typing import Dict, Union, Optional, List, Tuple
+from typing import Dict, Union, Optional, List, Tuple, Any, Callable
 
 from .autoeval_task import AutoEvalTask
 from .autoeval_flip_datasets import all_flip_datasets
 from .autoeval_mode import AutoEvalMode, DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR
 from .autoeval_pbc_datasets import all_pbc_supervised_datasets
-from .. import BootstrappedMetric
 
+from ..metrics import BootstrappedMetric
 from ..embedding_stats import EmbeddingStats
 from ..biotrainer_model_result import BiotrainerModelResult
 from ..contact import ContactDatasetResult, ContactSingleProteinResult
@@ -47,6 +47,9 @@ def _maybe_metric_abs(metric_name: str, mean: float, lower: float, upper: float)
 
 
 class FrameworkReport(ABC, BaseModel):
+    # Generic task_results dict, bust be overwritten by subclasses with concrete typing
+    task_results: Dict = Field(default_factory=dict,
+                               description="Task results for this framework (task_name -> result)")
     task_filter_applied: bool = Field(default=False,
                                       description="Whether a task filter reduced this run to a subset of "
                                                   "the framework's tasks")
@@ -62,16 +65,71 @@ class FrameworkReport(ABC, BaseModel):
     @abstractmethod
     def get_task_names(self) -> List[str]:
         raise NotImplementedError
-
+    
     @abstractmethod
-    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
-        """ Convert to pandas dataframe."""
+    def task_to_df_rows(self, task_name: str, all_metrics: bool, development_mode: bool) -> List[Dict[str, Any]]:
         raise NotImplementedError
+    
+    def to_df(self, all_metrics: bool, development_mode: bool = False,
+              task_name_filter: Callable[[str], bool] = lambda _: False) -> pd.DataFrame:
+        """
+        Converts task results to a pandas DataFrame format.
+
+        Parameters:
+        all_metrics: bool
+            If True, includes all available performance metrics for each task in the
+            resulting DataFrame. If False, only a subset of the metrics will be included.
+        development_mode: bool, defaults to False
+            Determines whether to include results for tasks marked as development tasks.
+            If True, includes only development tasks. If False, includes only production tasks.
+        task_name_filter: Callable[[str], bool], defaults to lambda _: False, so no filtering
+            A filtering function that operates on task names. If the function returns True
+            for a given task name, that task will be excluded from the DataFrame.
+
+        Returns:
+        pd.DataFrame
+            A DataFrame containing the aggregated rows of task results, filtered and processed
+            according to the specified parameters.
+        """
+        rows = []
+        for task in self.task_results.keys():
+            filter_task = task_name_filter(task)
+            if filter_task:
+                continue
+            task_is_dev = self.is_task_dev(task)
+            if development_mode != task_is_dev:  # Only get results for tasks that match the mode
+                continue
+            rows.extend(self.task_to_df_rows(task, all_metrics, development_mode))
+        return pd.DataFrame(rows)
+
+    def to_task_comparison_df(self, task_name: str) -> pd.DataFrame:
+        plain_task_name = task_name.replace(DEV_MODE_INDICATOR, "").replace(DEV_MODE_ABLATED_INDICATOR, "")
+        dev_task_name = plain_task_name + DEV_MODE_INDICATOR
+        ablated_task_name = plain_task_name + DEV_MODE_ABLATED_INDICATOR
+        candidates = (plain_task_name, dev_task_name, ablated_task_name)
+        all_tasks = []
+        for t in candidates:
+            if t in self.task_results:
+                all_tasks.append(t)
+            else:
+                for k in self.task_results.keys():
+                    if k == t or k.endswith(f"-{t}"):
+                        all_tasks.append(k)
+                        break
+        rows = []
+        for task in all_tasks:
+            rows.extend(self.task_to_df_rows(task, all_metrics=False, development_mode=self.is_task_dev(task)))
+        return pd.DataFrame(rows)
 
     @staticmethod
     def is_task_dev(task: str):
         # Does not apply for the Supervised Framework
         return DEV_MODE_INDICATOR in task
+
+    def filter_tasks_by_mode(self, development_mode: bool):
+        include = lambda task: (FrameworkReport.is_task_dev(task) == development_mode
+                                and not FrameworkReport.is_task_ablated(task))
+        return list(filter(include, self.task_results.keys()))
 
     @staticmethod
     def is_task_ablated(task: str):
@@ -85,14 +143,14 @@ class FrameworkReport(ABC, BaseModel):
 class SupervisedFrameworkReport(FrameworkReport):
     min_seq_len: Optional[int] = Field(default=None, description="Minimum sequence length used during evaluation")
     max_seq_len: Optional[int] = Field(default=None, description="Maximum sequence length used during evaluation")
-    results: Dict[str, BiotrainerModelResult] = Field(description="Supervised autoeval results")
+    task_results: Dict[str, BiotrainerModelResult] = Field(description="Supervised autoeval results")
 
     @classmethod
     def empty(cls, min_seq_len: Optional[int], max_seq_len: Optional[int]) -> SupervisedFrameworkReport:
-        return cls(min_seq_len=min_seq_len, max_seq_len=max_seq_len, results={})
+        return cls(min_seq_len=min_seq_len, max_seq_len=max_seq_len, task_results={})
 
     def update_result(self, combined_task_name: str, result: BiotrainerModelResult):
-        self.results[combined_task_name] = result
+        self.task_results[combined_task_name] = result
 
     @staticmethod
     def maybe_load_existing_result(embedder_name: str, task_output_dir: Path):
@@ -106,10 +164,13 @@ class SupervisedFrameworkReport(FrameworkReport):
             return None  # File does not seem to be valid
         except Exception:
             return None
+    
+    def filter_tasks_by_mode(self, development_mode: bool):
+        return self.task_results  # No filtering for supervised mode
 
     def accumulated_embedding_stats(self) -> Optional[EmbeddingStats]:
         embedding_stats = None
-        for result in self.results.values():
+        for result in self.task_results.values():
             result_stats = EmbeddingStats.from_biotrainer_result(result)
             if embedding_stats is None:
                 embedding_stats = result_stats
@@ -119,7 +180,7 @@ class SupervisedFrameworkReport(FrameworkReport):
 
     def summary(self, development_mode: bool = False):
         print(f"(Minimum sequence length: {self.min_seq_len}, Maximum sequence length: {self.max_seq_len})")
-        task_names = self.results.keys()
+        task_names = self.task_results.keys()
         print(f"Total tasks: {len(task_names)}")
         print("Results:")
         df = self.to_df(all_metrics=False, development_mode=development_mode)
@@ -148,7 +209,7 @@ class SupervisedFrameworkReport(FrameworkReport):
                                  combined_task_name: str,
                                  evaluation_metric: Optional[str],
                                  protocol: str) -> list[dict]:
-        val_results = self.results[combined_task_name].training_results["hold_out"].best_epoch_metrics.validation
+        val_results = self.task_results[combined_task_name].training_results["hold_out"].best_epoch_metrics.validation
         metric_values = {evaluation_metric: val_results[evaluation_metric]} if evaluation_metric else val_results
 
         metrics = []
@@ -173,7 +234,7 @@ class SupervisedFrameworkReport(FrameworkReport):
                                   combined_task_name: str,
                                   evaluation_metric: Optional[str],
                                   protocol: str):
-        test_results = self.results[combined_task_name].test_results
+        test_results = self.task_results[combined_task_name].test_results
 
         metrics = []
         for test_set_name, test_set_result in test_results.items():
@@ -196,40 +257,54 @@ class SupervisedFrameworkReport(FrameworkReport):
                     "upper": metric_upper
                 })
         return metrics
-
-    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
+    
+    def task_to_df_rows(self, task_name: str, all_metrics: bool, development_mode: bool) -> List[Dict[str, Any]]:
+        framework_name, dataset_name, _ = AutoEvalTask.split_combined_name(task_name)
         rows = []
+        for m in self.extract_metrics(task_name, development_mode=development_mode, all_metrics=all_metrics):
+            # Label like: Task\n(TestSet - Metric) if test set != 'test' else Task\n(Metric)
+            test_set = m["test_set_name"]
+            metric_name = m["evaluation_metric"]
+            if test_set != "test":
+                label = f"{dataset_name}\n({test_set} - {metric_name})"
+            else:
+                label = f"{dataset_name}\n({metric_name})"
+            mean, lower, upper = _maybe_metric_abs(metric_name,
+                                                   mean=m["mean"], lower=m["lower"], upper=m["upper"])
+            rows.append({
+                "TaskLabel": label,
+                "Task": task_name,
+                'Protocol': m['protocol'],
+                "Test Set": test_set,
+                "Metric": metric_name,
+                "Mean": mean,
+                "Lower": lower,
+                "Upper": upper
+            })
+        return rows
 
-        for task in self.get_task_names():
-            framework_name, dataset_name, _ = AutoEvalTask.split_combined_name(task)
-            for m in self.extract_metrics(task, development_mode=development_mode, all_metrics=all_metrics):
-                # Label like: Task\n(TestSet - Metric) if test set != 'test' else Task\n(Metric)
-                test_set = m["test_set_name"]
-                metric_name = m["evaluation_metric"]
-                if test_set != "test":
-                    label = f"{dataset_name}\n({test_set} - {metric_name})"
-                else:
-                    label = f"{dataset_name}\n({metric_name})"
-                mean, lower, upper = _maybe_metric_abs(metric_name,
-                                                       mean=m["mean"], lower=m["lower"], upper=m["upper"])
-                rows.append({
-                    "TaskLabel": label,
-                    "Task": task,
-                    'Protocol': m['protocol'],
-                    "Test Set": test_set,
-                    "Metric": metric_name,
-                    "Mean": mean,
-                    "Lower": lower,
-                    "Upper": upper
-                })
-        df = pd.DataFrame(rows)
-        return df
+    def to_task_comparison_df(self, task_name: str) -> pd.DataFrame:
+        rows = []
+        for dev_mode in [True, False]:
+            rows.extend(self.task_to_df_rows(task_name, all_metrics=False, development_mode=dev_mode))
+        return pd.DataFrame(rows)
 
+    def to_df(self, all_metrics: bool, development_mode: bool = False,
+              task_name_filter: Callable[[str], bool] = lambda _: False) -> pd.DataFrame:
+        # Needs to overwrite base method because development mode check needs to be skipped in task filtering
+        rows = []
+        for task in self.task_results.keys():
+            filter_task = task_name_filter(task)
+            if filter_task:
+                continue
+            rows.extend(self.task_to_df_rows(task, all_metrics, development_mode))
+        return pd.DataFrame(rows)
+    
     def number_tasks(self):
-        return len(self.results.keys())
+        return len(self.task_results.keys())
 
     def get_task_names(self) -> List[str]:
-        return list(self.results.keys())
+        return list(self.task_results.keys())
 
 
 class UnsupervisedFrameworkReport(FrameworkReport):
@@ -247,35 +322,29 @@ class UnsupervisedFrameworkReport(FrameworkReport):
 
     def number_tasks(self):
         return len(self.task_results.keys())
-
-    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
+    
+    def task_to_df_rows(self, task_name: str, all_metrics: bool, development_mode: bool) -> List[Dict[str, Any]]:
+        unsupervised_result = self.task_results.get(task_name, {})
         rows = []
-
-        for task in self.task_results.keys():
-            task_is_dev = self.is_task_dev(task)
-            if development_mode != task_is_dev:  # Only get results for tasks that match the mode
+        for set_name, metrics in unsupervised_result.items():
+            if "random" in set_name:
                 continue
 
-            unsupervised_result = self.task_results.get(task, {})
-            for set_name, metrics in unsupervised_result.items():
-                if "random" in set_name:
-                    continue
-
-                for metric in metrics:
-                    name = metric.name
-                    mean, lower, upper = _maybe_metric_abs(name,
-                                                           mean=metric.mean,
-                                                           lower=metric.lower,
-                                                           upper=metric.upper)
-                    rows.append({
-                        "TaskLabel": f"{task}\n({name})",
-                        "Task": task,
-                        "Metric": name,
-                        "Mean": round(mean, 3),
-                        "Lower": round(lower, 3),
-                        "Upper": round(upper, 3),
-                    })
-        return pd.DataFrame(rows)
+            for metric in metrics:
+                name = metric.name
+                mean, lower, upper = _maybe_metric_abs(name,
+                                                       mean=metric.mean,
+                                                       lower=metric.lower,
+                                                       upper=metric.upper)
+                rows.append({
+                    "TaskLabel": f"{task_name}\n({name})",
+                    "Task": task_name,
+                    "Metric": name,
+                    "Mean": round(mean, 3),
+                    "Lower": round(lower, 3),
+                    "Upper": round(upper, 3),
+                })
+        return rows
 
     def get_task_names(self) -> List[str]:
         return list(self.task_results.keys())
@@ -318,36 +387,37 @@ class ZeroShotFrameworkReport(FrameworkReport):
         print("Results:")
         df = self.to_df(all_metrics=True, development_mode=development_mode)
         print(df.to_string(index=False))
-
-    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
+    
+    def task_to_df_rows(self, task_name: str, all_metrics: bool, development_mode: bool) -> List[Dict[str, Any]]:
         rows = []
+        ranking_result = self.task_results.get(task_name, {})
+        if ranking_result is None:
+            return rows
 
-        for task in self.task_results.keys():
-            task_is_dev = self.is_task_dev(task)
-            if development_mode != task_is_dev:  # Only get results for tasks that match the mode
-                continue
-
-            ranking_result = self.task_results.get(task)
-            if ranking_result is None:
-                continue
-            all_zs_metrics = [ranking_result.scc,
-                              ranking_result.ndcg]  # Only two metrics for zero shot so we always keep both
-            for metric in all_zs_metrics:
-                name = metric.name
-                mean, lower, upper = _maybe_metric_abs(name,
-                                                       mean=metric.mean,
-                                                       lower=metric.lower,
-                                                       upper=metric.upper)
-                rows.append({
-                    "TaskLabel": f"{task}\n({name})",
-                    "Task": task,
-                    "Metric": name,
-                    "Mean": round(mean, 3),
-                    "Lower": round(lower, 3),
-                    "Upper": round(upper, 3),
-                })
-        rows = sorted(rows, key=lambda x: 'virus' in x['Task'], reverse=True)
-        return pd.DataFrame(rows)
+        all_zs_metrics = [ranking_result.scc,
+                          ranking_result.ndcg]  # Only two metrics for zero shot so we always keep both
+        for metric in all_zs_metrics:
+            name = metric.name
+            mean, lower, upper = _maybe_metric_abs(name,
+                                                   mean=metric.mean,
+                                                   lower=metric.lower,
+                                                   upper=metric.upper)
+            rows.append({
+                "TaskLabel": f"{task_name}\n({name})",
+                "Task": task_name,
+                "Metric": name,
+                "Mean": round(mean, 3),
+                "Lower": round(lower, 3),
+                "Upper": round(upper, 3),
+            })
+            
+        return rows
+    
+    def to_df(self, all_metrics: bool, development_mode: bool = False,
+              task_name_filter: Callable[[str], bool] = lambda _: False) -> pd.DataFrame:
+        df = super().to_df(all_metrics, development_mode, task_name_filter)
+        df = df.sort_values(by='Task', key=lambda x: x.str.contains('virus'), ascending=False)
+        return df
 
     def number_tasks(self):
         return len(self.task_results)
@@ -396,33 +466,30 @@ class ContactFrameworkReport(FrameworkReport):
         print("Results:")
         df = self.to_df(all_metrics=False, development_mode=development_mode)
         print(df.to_string(index=False))
-
-    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
+    
+    def task_to_df_rows(self, task_name: str, all_metrics: bool, development_mode: bool) -> List[Dict[str, Any]]:
         rows = []
         primary_evaluation_metric = "long_P@L2"  # TODO Find better place for this constant
-        for task, rr in self.task_results.items():
-            task_is_dev = self.is_task_dev(task)
-            if development_mode != task_is_dev:  # Only get results for tasks that match the mode
-                continue
 
-            task = task.split("-")[-1]
-            contact_metrics = rr.aggregated_result
-            contact_metrics = contact_metrics if all_metrics else [m for m in contact_metrics
-                                                                   if m.name == primary_evaluation_metric]
-            for metric in contact_metrics:
-                name = metric.name
-                mean, lower, upper = _maybe_metric_abs(name,
-                                                       mean=metric.mean, lower=metric.lower,
-                                                       upper=metric.upper)
-                rows.append({
-                    "TaskLabel": f"{task}\n({name})",
-                    "Task": task,
-                    "Metric": name,
-                    "Mean": round(mean, 3),
-                    "Lower": round(lower, 3),
-                    "Upper": round(upper, 3),
-                })
-        return pd.DataFrame(rows)
+        contact_result = self.task_results[task_name]
+        task = task_name.split("-")[-1]
+        contact_metrics = contact_result.aggregated_result
+        contact_metrics = contact_metrics if all_metrics else [m for m in contact_metrics
+                                                               if m.name == primary_evaluation_metric]
+        for metric in contact_metrics:
+            name = metric.name
+            mean, lower, upper = _maybe_metric_abs(name,
+                                                   mean=metric.mean, lower=metric.lower,
+                                                   upper=metric.upper)
+            rows.append({
+                "TaskLabel": f"{task}\n({name})",
+                "Task": task,
+                "Metric": name,
+                "Mean": round(mean, 3),
+                "Lower": round(lower, 3),
+                "Upper": round(upper, 3),
+            })
+        return rows
 
     def number_tasks(self):
         return len(self.task_results)
