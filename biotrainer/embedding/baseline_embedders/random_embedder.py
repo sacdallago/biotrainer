@@ -19,3 +19,6 @@ class RandomEmbedder(BaselineEmbedder):
 
     def _embed_single(self, sequence: str) -> torch.Tensor:
         return torch.tensor(self.rng.random((len(sequence), self.embedding_dimension), dtype=np.float32))
+
+    def compute_attention_map(self, sequence: str) -> torch.Tensor:
+        return torch.tensor(self.rng.random((len(sequence), len(sequence), 1), dtype=np.float32))
