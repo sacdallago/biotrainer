@@ -35,7 +35,7 @@ class CustomEmbedderWrapper(_PipelineEmbedder):
         self.output_path_per_seq = output_path_per_seq
 
     @staticmethod
-    def _wrap(embeddings_file_path: Path, sequences: List[str], custom_embedding_function: Callable):
+    def _wrap(name: str, embeddings_file_path: Path, sequences: List[str], custom_embedding_function: Callable):
         existing_hashes = set()
         if embeddings_file_path.is_file():
             with h5py.File(embeddings_file_path, "r") as embeddings_file:
@@ -47,7 +47,9 @@ class CustomEmbedderWrapper(_PipelineEmbedder):
         if len(seqs_to_compute) > 0:
             with h5py.File(embeddings_file_path, "a") as embeddings_file:
                 idx = 0
-                for sequence, embedding in custom_embedding_function(seqs_to_compute):
+                for sequence, embedding in tqdm(custom_embedding_function(seqs_to_compute),
+                                                desc=f"Computing {name} embeddings..",
+                                                total=len(seqs_to_compute)):
                     if len(embedding.shape) > 1 and embedding.shape[0] != len(sequence):
                         raise Exception(f"Per-residue embedding shape does not match sequence length - "
                                         f"Embedding Shape: {embedding.shape}, Sequence Length: {len(sequence)}!")
@@ -60,11 +62,14 @@ class CustomEmbedderWrapper(_PipelineEmbedder):
         return embeddings_file_path
 
     def per_residue_path(self, seqs: List[str]) -> Path:
-        return self._wrap(embeddings_file_path=self.output_path_per_res, sequences=seqs,
+        return self._wrap(name="per-residue",
+                          embeddings_file_path=self.output_path_per_res,
+                          sequences=seqs,
                           custom_embedding_function=self.custom_embedder.per_residue)
 
     def per_sequence_path(self, seqs: List[str]) -> Path:
-        return self._wrap(embeddings_file_path=self.output_path_per_seq, sequences=seqs,
+        return self._wrap(name="per-sequence",
+                          embeddings_file_path=self.output_path_per_seq, sequences=seqs,
                           custom_embedding_function=self.custom_embedder.per_sequence)
 
 
