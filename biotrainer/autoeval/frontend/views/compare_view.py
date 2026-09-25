@@ -142,6 +142,7 @@ def render_compare(state: AutoevalSessionState, active: List[DashboardReport]):
     # Define the framework configurations
     frameworks = [
         ("Supervised", AvailableFramework.PBC_SUPERVISED.name),
+        ("Unsupervised", AvailableFramework.PBC_UNSUPERVISED.name),
         ("Zero-Shot", AvailableFramework.PGYM.name),
         ("Zero-Shot Contact", AvailableFramework.PBC_ZEROSHOT_CONTACT.name),
         ("Supervised Contact", AvailableFramework.PBC_SUPERVISED_CONTACT.name),

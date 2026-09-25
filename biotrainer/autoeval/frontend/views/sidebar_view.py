@@ -97,7 +97,7 @@ def _select_paths_ui(state: AutoevalSessionState, start_path: Optional[Path]) ->
         "Upload autoeval_report_*.json files",
         type=["json"],
         accept_multiple_files=True,
-        max_upload_size=3,
+        max_upload_size=10,
     )
     if uploaded:
         tmp_dir = Path(st.session_state.get("_autoeval_tmp_dir", ".st_autoeval_uploads"))
