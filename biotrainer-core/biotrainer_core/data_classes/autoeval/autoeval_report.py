@@ -121,6 +121,9 @@ class FrameworkReport(ABC, BaseModel):
             rows.extend(self.task_to_df_rows(task, all_metrics=False, development_mode=self.is_task_dev(task)))
         return pd.DataFrame(rows)
 
+    def to_delta_stats_dict(self) -> Dict[str, Dict[str, float]]:
+        raise NotImplementedError("Framework not supported for compared_paired_delta_stats!")
+
     @staticmethod
     def is_task_dev(task: str):
         # Does not apply for the Supervised Framework
@@ -311,7 +314,7 @@ class UnsupervisedFrameworkReport(FrameworkReport):
     min_seq_len: Optional[int] = Field(default=None, description="Minimum sequence length used during evaluation")
     max_seq_len: Optional[int] = Field(default=None, description="Maximum sequence length used during evaluation")
     task_results: Dict[str, Dict[str, List[BootstrappedMetric]]] = Field(description="Unsupervised autoeval results, "
-                                                                                     "task_name -> set_name -> list of bootstrapped metrics")
+                                                                             "task_name -> set_name -> list of bootstrapped metrics")
 
     @classmethod
     def empty(cls, min_seq_len: Optional[int], max_seq_len: Optional[int]) -> UnsupervisedFrameworkReport:
@@ -362,10 +365,15 @@ class ZeroShotFrameworkReport(FrameworkReport):
     model_config = {"use_enum_values": True}
 
     method: ZeroShotMethod = Field(description="Scoring method used")
-    task_results: Dict[str, AggregatedRankingResult] = Field(description="Aggregated ranking results "
+    task_results: Dict[str, AggregatedRankingResult] = Field(default_factory=dict,
+                                                             description="Aggregated ranking results "
                                                                          "(task_name -> AggregatedRankingResult)")
-    individual_results: Dict[str, RankingResult] = Field(description="Individual autoeval task results "
+    individual_results: Dict[str, RankingResult] = Field(default_factory=dict,
+                                                         description="Individual autoeval task results "
                                                                      "(dataset_name -> RankingResult)")
+    task_members: Dict[str, List[str]] = Field(default_factory=dict,
+        description="Task members for each task to compute delta stats "
+                                                           "in the autoeval dashboard.")
 
     @model_validator(mode='after')
     def check_method(self):
@@ -375,11 +383,12 @@ class ZeroShotFrameworkReport(FrameworkReport):
 
     @classmethod
     def empty(cls, method: ZeroShotMethod) -> ZeroShotFrameworkReport:
-        return cls(method=method, task_results={}, individual_results={})
+        return cls(method=method, task_results={}, individual_results={}, task_members={})
 
     def aggregate(self, task_name: str, individual_results: Dict[str, RankingResult]):
         self.individual_results.update(individual_results)
         self.task_results[task_name] = AggregatedRankingResult.aggregate(list(individual_results.values()))
+        self.task_members[task_name] = list(individual_results.keys())
 
     def summary(self, development_mode: bool = False):
         print(f"Zero-shot method: {self.method.value}")
@@ -419,6 +428,11 @@ class ZeroShotFrameworkReport(FrameworkReport):
         df = df.sort_values(by='Task', key=lambda x: x.str.contains('virus'), ascending=False)
         return df
 
+    def to_delta_stats_dict(self) -> Dict[str, Dict[str, float]]:
+        return {individual_id: {ranking_result.scc.name: ranking_result.scc.mean,
+                                ranking_result.ndcg.name: ranking_result.ndcg.mean} for individual_id, ranking_result in
+                self.individual_results.items()}
+
     def number_tasks(self):
         return len(self.task_results)
 
@@ -440,6 +454,9 @@ class ContactFrameworkReport(FrameworkReport):
     per_protein_results: Dict[str, ContactSingleProteinResult] = Field(
         description="Cached per protein results, stacking"
                     " up to the final dataset result (seq_id -> ContactSingleProteinResult)")
+    task_members: Dict[str, List[str]] = Field(default_factory=dict,
+        description="Task members for each task to compute delta stats "
+                                                            "in the autoeval dashboard.")
 
     @model_validator(mode='after')
     def check_method(self):
@@ -451,12 +468,15 @@ class ContactFrameworkReport(FrameworkReport):
 
     @classmethod
     def empty(cls, method: Optional[ZeroShotMethod] = None) -> ContactFrameworkReport:
-        return cls(method=method, task_results={}, per_protein_results={})
+        return cls(method=method, task_results={}, per_protein_results={}, task_members={})
 
     def update_result(self, task_name: str,
                       per_protein_results: Dict[str, ContactSingleProteinResult],
                       dataset_result: ContactDatasetResult):
         self.task_results[task_name] = dataset_result
+        new_keys = set(per_protein_results.keys()) - set(self.per_protein_results.keys())
+        self.task_members[task_name] = list(new_keys)
+        self.task_members[task_name] = list(per_protein_results.keys())
         self.per_protein_results.update(per_protein_results)
 
     def summary(self, development_mode: bool = False):
@@ -472,7 +492,6 @@ class ContactFrameworkReport(FrameworkReport):
         primary_evaluation_metric = "long_P@L2"  # TODO Find better place for this constant
 
         contact_result = self.task_results[task_name]
-        task = task_name.split("-")[-1]
         contact_metrics = contact_result.aggregated_result
         contact_metrics = contact_metrics if all_metrics else [m for m in contact_metrics
                                                                if m.name == primary_evaluation_metric]
@@ -482,14 +501,18 @@ class ContactFrameworkReport(FrameworkReport):
                                                    mean=metric.mean, lower=metric.lower,
                                                    upper=metric.upper)
             rows.append({
-                "TaskLabel": f"{task}\n({name})",
-                "Task": task,
+                "TaskLabel": f"{task_name}\n({name})",
+                "Task": task_name,
                 "Metric": name,
                 "Mean": round(mean, 3),
                 "Lower": round(lower, 3),
                 "Upper": round(upper, 3),
             })
         return rows
+
+    def to_delta_stats_dict(self) -> Dict[str, Dict[str, float]]:
+        return {individual_id: single_result.precision_scores for individual_id, single_result in
+                self.per_protein_results.items()}
 
     def number_tasks(self):
         return len(self.task_results)

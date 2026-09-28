@@ -78,7 +78,7 @@ def _render_framework_comparison(chosen_reports: List[AutoEvalReport],
         return
 
     # Delta Plots
-    if framework_name != "PBC_SUPERVISED":
+    if framework_name not in ["PBC_SUPERVISED", "PBC_UNSUPERVISED"]:
         st.markdown(f"**Delta Comparison (Baseline: {baseline_model})**")
         paired_stats = compute_paired_delta_stats(
             {report.embedder_name: report.maybe_framework_result(framework_name)

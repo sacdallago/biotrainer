@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 from io import BytesIO
-from typing import Dict, Union
-from biotrainer_core.data_classes.autoeval import ZeroShotFrameworkReport, ContactFrameworkReport
+from typing import Dict, Optional
+from biotrainer_core.data_classes.autoeval import FrameworkReport
 
 
 def _get_palette(n_models: int):
@@ -121,22 +123,7 @@ def plot_comparison(df: pd.DataFrame):
     fig.tight_layout()
     return fig, ax
 
-
-def _get_generic_result_dict(report_by_model: Union[ZeroShotFrameworkReport, ContactFrameworkReport]) -> Dict[
-    str, Dict[str, float]]:
-    """ Convert the framework report to a dict of individual_id -> {metric_name -> metric_value } """
-    if isinstance(report_by_model, ZeroShotFrameworkReport):
-        return {individual_id: {ranking_result.scc.name: ranking_result.scc.mean,
-                                ranking_result.ndcg.name: ranking_result.ndcg.mean} for individual_id, ranking_result in
-                report_by_model.individual_results.items()}
-    elif isinstance(report_by_model, ContactFrameworkReport):
-        return {individual_id: single_result.precision_scores for individual_id, single_result in
-                report_by_model.per_protein_results.items()}
-    else:
-        raise ValueError("Framework not supported for compared_paired_delta_stats!")
-
-
-def compute_paired_delta_stats(reports_by_model: Dict[str, Union[ZeroShotFrameworkReport, ContactFrameworkReport]],
+def compute_paired_delta_stats(reports_by_model: Dict[str, Optional[FrameworkReport]],
                                baseline_model: str,
                                z: float = 1.96) -> dict:
     """Confidence interval of the *paired* per-dataset score difference (model - baseline).
@@ -160,37 +147,40 @@ def compute_paired_delta_stats(reports_by_model: Dict[str, Union[ZeroShotFramewo
     if baseline is None:
         return stats
 
-    base_members = baseline.task_members
-    base_dict = _get_generic_result_dict(baseline)
-
-    for model_name, report in reports_by_model.items():
-        if model_name == baseline_model:
-            continue
-        members_by_task = report.task_members
-        individual_dict = _get_generic_result_dict(report)
-        for task, members in members_by_task.items():
-            base_task_members = set(base_members.get(task, []))
-            shared = [d for d in members
-                      if d in base_task_members and d in individual_dict and d in base_dict]
-            if len(shared) < 2:
+    try:
+        base_members = baseline.task_members
+        base_dict = baseline.to_delta_stats_dict()
+        for model_name, report in reports_by_model.items():
+            if model_name == baseline_model:
                 continue
-            for metric in ("scc", "ndcg", "long_P@L2"):
-                try:
-                    # Collect all scores for the respective individual members and metric
-                    m_scores = np.array([individual_dict[d][metric] for d in shared], dtype=float)
-                    b_scores = np.array([base_dict[d][metric] for d in shared], dtype=float)
-                except KeyError:
+            members_by_task = report.task_members
+            individual_dict = report.to_delta_stats_dict()
+            for task, members in members_by_task.items():
+                base_task_members = set(base_members.get(task, []))
+                shared = [d for d in members
+                          if d in base_task_members and d in individual_dict and d in base_dict]
+                if len(shared) < 2:
                     continue
-                # Calculate deltas
-                deltas = m_scores - b_scores
-                # Calculate CI based on deltas
-                n = len(deltas)
-                se = float(np.std(deltas, ddof=1)) / (n ** 0.5)
-                stats[(model_name, task, metric)] = {
-                    "mean_pp": float(deltas.mean()) * 100.0,
-                    "ci_pp": z * se * 100.0,
-                    "n": n,
-                }
+                for metric in ("scc", "ndcg", "long_P@L2"):
+                    try:
+                        # Collect all scores for the respective individual members and metric
+                        m_scores = np.array([individual_dict[d][metric] for d in shared], dtype=float)
+                        b_scores = np.array([base_dict[d][metric] for d in shared], dtype=float)
+                    except KeyError:
+                        continue
+                    # Calculate deltas
+                    deltas = m_scores - b_scores
+                    # Calculate CI based on deltas
+                    n = len(deltas)
+                    se = float(np.std(deltas, ddof=1)) / (n ** 0.5)
+                    stats[(model_name, task, metric)] = {
+                        "mean_pp": float(deltas.mean()) * 100.0,
+                        "ci_pp": z * se * 100.0,
+                        "n": n,
+                    }
+    except (NotImplementedError, AttributeError):
+        return {}  # No stats because comparison is not supported
+
     return stats
 
 
@@ -203,14 +193,7 @@ def plot_delta_comparison(df: pd.DataFrame, baseline_model: str, paired_stats: d
 
     Returns: (fig, ax)
     """
-    if df is None or df.empty or baseline_model not in df["Model"].unique():
-        return None, None
-
-    try:
-        import seaborn as sns
-        import matplotlib.pyplot as plt
-        import numpy as np
-    except Exception:
+    if df is None or df.empty or baseline_model not in df["Model"].unique() or len(paired_stats) == 0:
         return None, None
 
     # Calculate deltas
