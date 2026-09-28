@@ -9,16 +9,16 @@ from ...core import AutoEvalDataHandler
 class PBCSupervisedDataHandler(AutoEvalDataHandler):
     """Handles PBC dataset related operations"""
 
-    def __init__(self, mode: str = "supervised"):
-        self.mode = mode
-
     @staticmethod
     def get_framework_name() -> str:
         return "PBC_SUPERVISED"
 
+    def get_framework_subdirectory(self) -> str:
+        return "supervised"  # PBC/supervised
+
     @staticmethod
     def get_download_urls():
-        return ["https://nextcloud.cit.tum.de/index.php/s/gLGarZgmBEDPFJE/download"]
+        return ["https://nextcloud.cit.tum.de/index.php/s/N83oNAnwHznziLg/download"]
 
     def _get_all_dataset_and_split_names(self) -> List[Tuple[str, Optional[str]]]:
         dataset_and_split_names = []
@@ -44,7 +44,7 @@ class PBCSupervisedDataHandler(AutoEvalDataHandler):
         """ Filters all dataset splits for sequences that fulfill the length requirements """
         for dataset, split_name in tqdm(self._get_all_dataset_and_split_names(), desc="Preprocessing datasets"):
             dataset_name, split_file_name = self._get_dataset_dir_name_and_split_file_name(dataset, split_name)
-            dataset_dir = base_path / self.mode / dataset_name
+            dataset_dir = base_path / self.get_framework_subdirectory() / dataset_name
             self._ensure_preprocessed_file(dataset_dir=dataset_dir,
                                            name=split_file_name,
                                            min_seq_length=min_seq_length,
@@ -58,7 +58,7 @@ class PBCSupervisedDataHandler(AutoEvalDataHandler):
         tasks = []
 
         for dataset, split_name in self._get_all_dataset_and_split_names():
-            dataset_dir = base_path / self.mode
+            dataset_dir = base_path / self.get_framework_subdirectory()
             dataset_name, split_file_name = self._get_dataset_dir_name_and_split_file_name(dataset, split_name)
             dataset_dir /= dataset_name
 

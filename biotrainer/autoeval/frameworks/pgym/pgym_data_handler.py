@@ -15,6 +15,9 @@ class PGYMDataHandler(AutoEvalDataHandler):
     def get_framework_name() -> str:
         return "PGYM"
 
+    def get_framework_subdirectory(self) -> str:
+        return "DMS_ProteinGym_substitutions"
+
     @staticmethod
     def get_download_urls():
         return [
@@ -26,7 +29,7 @@ class PGYMDataHandler(AutoEvalDataHandler):
     def get_reference_file_urls() -> List[str]:
         return [
             "https://nextcloud.cit.tum.de/index.php/s/9tsiQtn3TwpS2wF/download",
-            "https://marks.hms.harvard.edu/proteingym/ProteinGym_v1.3/DMS_substitutions.csv"
+            "https://marks.hms.harvard.edu/proteingym/ProteinGym_v1.3/DMS_substitutions.csv"  # Does not include DEV_MODE
         ]
 
     @staticmethod
@@ -42,7 +45,7 @@ class PGYMDataHandler(AutoEvalDataHandler):
             -> List[AutoEvalTask]:
         """Build tasks for all PGYM datasets"""
         virus_identifier = "virus"
-        substitutions_path = base_path / "DMS_ProteinGym_substitutions"
+        substitutions_path = base_path / self.get_framework_subdirectory()
         reference_df = pd.read_csv(self.get_reference_file_path(base_path))
 
         file2taxon = {row["DMS_id"] + ".csv": row["taxon"] for _, row in reference_df.iterrows()}

@@ -80,7 +80,6 @@ def get_unique_framework_sequences(framework: Union[str, AvailableFramework, Aut
                                    max_seq_length: int,
                                    development_mode: bool,
                                    custom_storage_path: Optional[Union[Path, str]] = None,
-                                   force_download: bool = False,
                                    task_filter: Optional[Callable[[AutoEvalTask], bool]] = None,
                                    ) -> Tuple[
     List[Tuple[AutoEvalTask, Dict[str, Any]]], Dict[str, SequenceData],
@@ -98,7 +97,6 @@ def get_unique_framework_sequences(framework: Union[str, AvailableFramework, Aut
                                      min_seq_length=min_seq_length,
                                      max_seq_length=max_seq_length,
                                      custom_storage_path=custom_storage_path,
-                                     force_download=force_download,
                                      )
     if task_filter:
         # Filter before the configs and the unique sequences are collected, so that pre-embedding shrinks with
@@ -145,13 +143,9 @@ def setup_pipeline(data_handler: AutoEvalDataHandler,
                    min_seq_length: Optional[int] = None,
                    max_seq_length: Optional[int] = None,
                    custom_storage_path: Optional[Union[Path, str]] = None,
-                   force_download: Optional[bool] = False,
                    ) -> List[AutoEvalTask]:
     framework_base_path = data_handler.get_framework_base_path(
         custom_storage_path=custom_storage_path)
-
-    if force_download:
-        data_handler.clear_autoeval_cache()
 
     if not os.path.exists(framework_base_path):
         os.makedirs(framework_base_path, exist_ok=True)
