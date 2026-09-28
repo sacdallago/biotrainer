@@ -18,6 +18,7 @@ def get_autoeval_path() -> Path:
 
 
 def clear_autoeval_cache():
+    print("Clearing autoeval cache..")
     shutil.rmtree(get_autoeval_path(), ignore_errors=True)
 
 
