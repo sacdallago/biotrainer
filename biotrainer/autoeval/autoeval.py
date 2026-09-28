@@ -13,7 +13,7 @@ from biotrainer_core.data_classes.autoeval import (
     ZeroShotFrameworkReport, ContactFrameworkReport
 )
 
-from .core import AutoEvalFramework
+from .core import AutoEvalFramework, clear_autoeval_cache
 from .pipelines import (setup_output_dir, validate_input, autoeval_supervised_pipeline,
                         autoeval_zeroshot_pipeline, autoeval_zeroshot_contact_pipeline,
                         autoeval_unsupervised_pipeline,
@@ -39,7 +39,6 @@ class _AutoEvalTaskRunnerParams:
 class _AutoEvalTaskRunner:
     framework: AutoEvalFramework
     runner: Callable[[_AutoEvalTaskRunnerParams], Generator[AutoEvalProgress, None, None]]
-
 
 class AutoEval:
     def __init__(self,
@@ -170,6 +169,10 @@ class AutoEval:
 
     def _setup_runner_params(self, devices: Optional[List[Union[str, torch.device]]] = None) -> Dict[
         AutoEvalFramework, _AutoEvalTaskRunnerParams]:
+        # Clear cache if requested
+        if self.force_download:
+            clear_autoeval_cache()
+
         all_to_embed_per_res = {}
         all_to_embed_per_seq = {}
         framework_to_tuples = {}
@@ -179,7 +182,6 @@ class AutoEval:
                 min_seq_length=self.min_seq_length,
                 max_seq_length=self.max_seq_length,
                 custom_storage_path=self.custom_storage_path,
-                force_download=self.force_download,
                 task_filter=self._framework_task_filters.get(framework_obj),
                 development_mode=self.development_mode)
             framework_to_tuples[framework_obj] = task_config_tuples
@@ -316,7 +318,7 @@ class AutoEval:
 
     def _supervised_task(self,
                          available_framework: AvailableFramework,
-                         custom_output_observers: List[BiotrainerOutputObserver] = None,
+                         custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
                          task_filter: Optional[Callable[[AutoEvalTask], bool]] = None, ):
         framework_obj, skip_execution, output_dir, framework_report = self._general_task_setup(available_framework)
         if skip_execution:
@@ -342,7 +344,7 @@ class AutoEval:
         return self
 
     def pbc_supervised(self,
-                       custom_output_observers: List[BiotrainerOutputObserver] = None,
+                       custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
                        task_filter: Optional[Callable[[AutoEvalTask], bool]] = None,
                        ) -> AutoEval:
         """
