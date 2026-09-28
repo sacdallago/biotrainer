@@ -12,7 +12,7 @@ from ..interfaces import BioEngineerModelWrapper
 
 class ConstantEngineerBaseline(BioEngineerModelWrapper):
     _log_prob = np.log(0.05)
-
+    
     @classmethod
     def detect(cls, embedder_name: str, device: torch.device):
         if embedder_name in [BioEngineerBaseline.CONSTANT_BASELINE.value, BioEngineerBaseline.CONSTANT_BASELINE.name]:
@@ -24,6 +24,7 @@ class ConstantEngineerBaseline(BioEngineerModelWrapper):
 
     def supported_methods(self) -> List[ZeroShotMethod]:
         return [ZeroShotMethod.WT_MARGINALS, ZeroShotMethod.MASKED_MARGINALS, ZeroShotMethod.PSEUDOPERPLEXITY,
+                ZeroShotMethod.JACOBIAN_CONTACT,
                 ZeroShotMethod.PERPLEXITY]
 
     def _model_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
@@ -50,4 +51,11 @@ class ConstantEngineerBaseline(BioEngineerModelWrapper):
         return self._compute_pseudoperplexity(sequence)  # No difference here
 
     def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
-        raise NotImplementedError("Categorical Jacobian is not defined for constant baseline")
+        """
+        Return constant Jacobian (same for any sequence).
+        """
+        L = len(sequence)
+        # only ranking matters for P@L evals, so scale ignored
+        # Return constant zero matrix for all sequences
+        jac = np.zeros((L, 20, L, 20), dtype=np.float32)
+        return torch.from_numpy(jac)

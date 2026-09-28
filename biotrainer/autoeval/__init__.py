@@ -1,10 +1,11 @@
 from .pipelines import get_unique_framework_sequences
 from .autoeval import AutoEval
 from .autoeval_frameworks import AvailableFramework
-from .baseline_models import AutoEvalRandomBaseline
+from .baseline_models import AutoEvalRandomBaseline, AutoEvalConstantBaseline
 
 __all__ = ["AutoEval",
            "AvailableFramework",
            "get_unique_framework_sequences",
            "AutoEvalRandomBaseline",
+           "AutoEvalConstantBaseline",
            ]
