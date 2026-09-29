@@ -425,7 +425,8 @@ class ZeroShotFrameworkReport(FrameworkReport):
     def to_df(self, all_metrics: bool, development_mode: bool = False,
               task_name_filter: Callable[[str], bool] = lambda _: False) -> pd.DataFrame:
         df = super().to_df(all_metrics, development_mode, task_name_filter)
-        df = df.sort_values(by='Task', key=lambda x: x.str.contains('virus'), ascending=False)
+        if not df.empty:
+            df = df.sort_values(by='Task', key=lambda x: x.str.contains('virus'), ascending=False)
         return df
 
     def to_delta_stats_dict(self) -> Dict[str, Dict[str, float]]:
