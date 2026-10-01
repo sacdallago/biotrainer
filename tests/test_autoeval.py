@@ -8,7 +8,7 @@ from biotrainer.autoeval.pipelines.autoeval_setup import _apply_task_filter
 from biotrainer_core.data_classes import ZeroShotMethod, BootstrappedMetric
 from biotrainer_core.data_classes.autoeval import (
     AutoEvalTask, SupervisedFrameworkReport, UnsupervisedFrameworkReport,
-    DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR
+    DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR, ZeroShotFrameworkReport
 )
 from biotrainer.autoeval.pipelines.autoeval_unsupervised import autoeval_unsupervised_pipeline
 from biotrainer.autoeval.frameworks import PBCUnsupervisedFramework
@@ -130,11 +130,13 @@ class AutoevalTests(unittest.TestCase):
             task_dev = AutoEvalTask(framework_name="PGYM", dataset_name=f"virus{DEV_MODE_INDICATOR}",
                                     input_files=[file1], type="Protein")
 
+            method = ZeroShotMethod.WT_MARGINALS
             bio_engineer = BioEngineer.from_baseline(baseline=BioEngineerBaseline.RANDOM_BASELINE)
             generator = autoeval_zeroshot_pipeline(
                 framework=PGYMFramework(),
+                framework_report=ZeroShotFrameworkReport.empty(method=method),
                 embedder_name="bioengineer_random_baseline",
-                zero_shot_method=ZeroShotMethod.WT_MARGINALS,
+                zero_shot_method=method,
                 output_dir=Path(tmp_dir),
                 autoeval_tasks=[(task_full, {}), (task_dev, {})],
                 development_mode=False,
