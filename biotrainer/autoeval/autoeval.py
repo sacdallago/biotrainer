@@ -144,7 +144,6 @@ class AutoEval:
         Use the recommended development pipeline for AutoEval.
 
         Uses PBC_Supervised for supervised structure and function task prediction.
-        Uses PBC_Unsupervised for unsupervised embedding annotation transfer (EAT) analysis.
         Uses PGYM for zeroshot variant effect prediction.
         Uses PBC_Supervised_contact for supervised contact prediction (faster and similarly accurate as zeroshot contact prediction).
 
@@ -163,7 +162,6 @@ class AutoEval:
                          custom_bioengineer=custom_bioengineer,
                          development_mode=True).
                 pbc_supervised().
-                pbc_unsupervised().
                 pgym(zero_shot_method=ZeroShotMethod.MASKED_MARGINALS).
                 pbc_supervised_contact())
 
@@ -379,13 +377,18 @@ class AutoEval:
         """
         Add PBC Unsupervised evaluation tasks to the AutoEval pipeline.
 
-        Uses embedding-based annotation transfer (EAT) to evaluate model embeddings.
+        Uses embedding-based annotation transfer (EAT) to evaluate model embeddings. Does not allow development
+        mode at the moment (raises ValueError).
 
         :param task_filter: Optional predicate restricting the run to the tasks it selects. Raises ValueError
             if it selects no task. PGYM has only three tasks - "virus", "nonvirus" and "total" - each holding
             many DMS assays, so individual assays cannot be selected this way.
         :return: The AutoEval instance for method chaining.
         """
+        if self.development_mode:
+            raise ValueError("Development mode is not allowed for PBC Unsupervised evaluation at the moment."
+                             "It can be forced to run via removing this check.")
+
         framework_obj, skip_execution, output_dir, framework_report = self._general_task_setup(
             AvailableFramework.PBC_UNSUPERVISED,
         )
