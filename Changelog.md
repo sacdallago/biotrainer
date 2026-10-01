@@ -6,6 +6,7 @@
   - Resolved typos, incorrect paths, and function naming issues.
   - Improved handling of datasets, logging, and performance with unsupervised and supervised pipelines.
   - Fixed bugs in framework reports, leaderboard display, summary calls, and ESM-C engineer setup.
+  - Fixing Dockerfile build issues.
 
 - **Features**:
   - Introduced new frameworks (`AutoEvalRandomBaseline`, `PBC_Unsupervised`).
