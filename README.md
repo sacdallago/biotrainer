@@ -1,7 +1,7 @@
 # Biotrainer
 
 [![License](https://img.shields.io/github/license/sacdallago/biotrainer)](https://github.com/sacdallago/biotrainer/blob/main/LICENSE)
-[![Documentation](https://img.shields.io/badge/docs-biocentral-blue)](https://biocentral.cloud/docs/biotrainer/config_file_options)
+[![Documentation](https://img.shields.io/badge/docs-biocentral-blue)](https://docs.biocentral.cloud/docs/biotrainer)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/sacdallago/biotrainer)](https://github.com/sacdallago/biotrainer/releases)
 
 <p align="center">
@@ -11,10 +11,13 @@ Biological prediction models made simple.
 </p>
 
 ## Overview
-*Biotrainer* is an open-source framework that simplifies machine learning model development for protein analysis. 
+
+*Biotrainer* is an open-source framework that simplifies machine learning model development for protein analysis.
 It provides the following modules:
+
 - **Training**: Easy to use training and inference pipelines for protein feature prediction
-- **Embedding**: Built-in support for protein language models (ProtT5, ESM-2, ESM-C, ...) and baselines (blosum62, one_hot_encoding, ...)
+- **Embedding**: Built-in support for protein language models (ProtT5, ESM-2, ESM-C, ...) and baselines (blosum62,
+  one_hot_encoding, ...)
 - **BioEngineer**: Zero-shot predictions and mutation generation of protein sequences
 - **AutoEval**: Automated evaluation of protein language models on curated downstream tasks
 
@@ -23,11 +26,13 @@ It provides the following modules:
 ### 1. Installation
 
 Install using pip:
+
 ```shell
 pip install biotrainer
 ```
 
 Manual installation using [uv](https://github.com/astral-sh/uv):
+
 ```shell
 # First, install uv if you haven't already:
 pip install uv
@@ -58,9 +63,10 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 ```
 
 ### 2. Basic Usage
+
 ```shell
 # Training
-biotrainer train --config examples/sequence_to_class/config.yml
+biotrainer train --config examples/training/sequence_to_class/config.yml
 
 # Inference after Training
 python3
@@ -78,18 +84,23 @@ autoeval_report = (AutoEval(embedder_name="facebook/esm2_t6_8M_UR50D", developme
 autoeval_report.summary(development_mode=False)
 ```
 
-### 3. Quick Start Datasets
-- **Subcellular Localization Prediction**
-  - *Protocol*: `sequence_to_class`/`residues_to_class`
-  - [Citations and Download](https://github.com/Rostlab/pbc/tree/main/supervised/scl)
-- **Secondary Structure Prediction** 
-  - *Protocol*: `residue_to_class`
-  - [Citations and Download](https://github.com/Rostlab/pbc/tree/main/supervised/secondary_structure)
+*Note: [Biocentral](https://pypi.org/project/biocentral/) provides a more powerful CLI
+that uses biotrainer for local or remote model training. The biotrainer CLI is marked as deprecated and might be removed
+in a future release.*
 
+### 3. Quick Start Datasets
+
+- **Subcellular Localization Prediction**
+    - *Protocol*: `sequence_to_class`/`residues_to_class`
+    - [Citations and Download](https://github.com/Rostlab/pbc/tree/main/supervised/scl)
+- **Secondary Structure Prediction**
+    - *Protocol*: `residue_to_class`
+    - [Citations and Download](https://github.com/Rostlab/pbc/tree/main/supervised/secondary_structure)
 
 ## Features
 
 ### Supported Training Protocols
+
 - **Residue-level classification** (`residue_to_class`)
 - **Residue-level regression** (`residue_to_value`) *[BETA]*
 - **Sequence-level classification** (`sequence_to_class`)
@@ -106,17 +117,20 @@ to your own. Learn more in the [autoeval examples](examples/autoeval).
 ## Documentation
 
 ### Tutorials
-- [First Steps Guide](docs/first_steps.md)
+
+- [First Steps Guide](https://docs.biocentral.cloud/docs/biotrainer/training_first_steps)
 - [Interactive Training Tutorial](examples/training/biotrainer_training_tutorial.ipynb)
-- [Config Options Overview](docs/config_file_options_overview.md)
-- [Biocentral Web Interface](https://biocentral.cloud/app)
+- [Config Options Overview](https://docs.biocentral.cloud/docs/biotrainer/training_config_file_options_overview)
+- [Biocentral Web Interface (Biotrainer Frontend)](https://app.biocentral.cloud/)
 
 ### Detailed Guides
-- [Data Standards](docs/data_standardization.md)
-- [Configuration Options](docs/config_file_options.md)
-- [Troubleshooting](docs/troubleshooting.md)
+
+- [Data Standards](https://docs.biocentral.cloud/docs/biotrainer/training_data_standardization)
+- [Configuration Options](https://docs.biocentral.cloud/docs/biotrainer/training_config_file_options)
+- [Troubleshooting](https://docs.biocentral.cloud/docs/biotrainer/troubleshooting)
 
 ## Example Training Configuration
+
 ```yaml
 protocol: residue_to_class
 input_file: input.fasta
@@ -131,6 +145,7 @@ embedder_name: Rostlab/prot_t5_xl_uniref50
 ```
 
 ## Docker Support
+
 ```shell
 # Run using pre-built image
 docker run --gpus all --rm \
@@ -139,15 +154,17 @@ docker run --gpus all --rm \
     ghcr.io/sacdallago/biotrainer:latest /mnt/config.yml
 ```
 
-More information on running docker with gpus: 
+More information on running docker with gpus:
 [Nvidia container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
 
 ## Getting Help
+
 - Check our [Troubleshooting Guide](docs/troubleshooting.md)
 - [Create an issue](https://github.com/sacdallago/biotrainer/issues/new)
 - Visit [biocentral.cloud](https://biocentral.cloud/docs/biotrainer/config_file_options)
 
 ## Citation
+
 ```bibtex
 @inproceedings{
 sanchez2022standards,
