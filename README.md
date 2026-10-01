@@ -44,18 +44,10 @@ source .venv/bin/activate  # On Unix/macOS
 .venv\Scripts\activate  # On Windows
 
 # Basic installation
-uv pip install -e .
+uv sync
 
-# Installing with jupyter notebook support:
-uv pip install -e ".[jupyter]"
-
-# Installing with onnxruntime support (for onnx embedders and inference):
-uv pip install -e ".[onnx-cpu]"    # CPU version
-uv pip install -e ".[onnx-gpu]"    # CUDA version
-uv pip install -e ".[onnx-mac]"    # CoreML version (for Apple Silicon)
-
-# You can also combine extras:
-uv pip install -e ".[jupyter,onnx-cpu]"
+# Installation with extras (jupyter, onnx, tensorboard)
+uv sync --all-extras
 
 # For Windows users with CUDA support:
 # Visit https://pytorch.org/get-started/locally/ and follow GPU-specific installation, e.g.:
