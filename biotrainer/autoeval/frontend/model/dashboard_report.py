@@ -22,3 +22,7 @@ class DashboardReport(AutoEvalPublishedReport):
         return (f"Published by: {self.name}\n\n"
                 f"{citation_string}\n\n"
                 f"Official: {self.official}")
+
+    def downloadable_json(self):
+        report_json = self.report.model_dump_json(indent=4)
+        return report_json

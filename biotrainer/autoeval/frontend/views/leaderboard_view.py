@@ -114,7 +114,7 @@ def _group_by_place(ranking_list: List[Tuple[int, RankingEntry, float]]):
 
 
 def _ranking_row_cols_spec(any_local_reports: bool):
-    return [0.2, 0.5, 0.2, 0.1] if any_local_reports else [0.2, 0.6, 0.2]
+    return [0.2, 0.4, 0.2, 0.1, 0.1] if any_local_reports else [0.2, 0.5, 0.2, 0.1]
 
 
 def _ranking_entry_tile(ranking: Ranking, entry: Tuple[int, RankingEntry, float],
@@ -141,8 +141,13 @@ def _ranking_entry_tile(ranking: Ranking, entry: Tuple[int, RankingEntry, float]
         with st.popover(score):
             st.markdown(verbose)
 
+    with cols[3]:
+        if db_report:
+            downloadable_json = db_report.downloadable_json()
+            st.download_button("Download", downloadable_json, file_name=f"autoeval_report_{embedder_name}.json")
+
     if any_local_reports:
-        with cols[3]:
+        with cols[4]:
             if db_report and db_report.is_loaded:
                 if st.button("Publish!", key=f"publish_btn_{place}_{embedder_name}_{db_report.report.get_uid()}",
                              use_container_width=True):
@@ -164,9 +169,11 @@ def _build_ranking_visualization(ranking: Ranking, ranking_list: List[Tuple[int,
         st.markdown("**Model**")
     with cols[2]:
         st.markdown("**Score**")
+    with cols[3]:
+        st.markdown("**Download**")
 
     if any_local_reports:
-        with cols[3]:
+        with cols[4]:
             st.markdown("**Publish**")
 
     grouped = _group_by_place(ranking_list)
