@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from .autoeval_config_bank import AutoEvalConfigBank
 from .autoeval_data_handler import AutoEvalDataHandler
 
-from biotrainer_core.data_classes.autoeval import AutoEvalMode
+from biotrainer_core.data_classes.autoeval import AutoEvalMode, AutoEvalDevMode
 
 
 class AutoEvalFramework(ABC):
@@ -29,6 +29,11 @@ class AutoEvalFramework(ABC):
     @staticmethod
     @abstractmethod
     def get_mode() -> AutoEvalMode:
+        raise NotImplementedError
+
+    @staticmethod
+    @abstractmethod
+    def get_dev_mode() -> AutoEvalDevMode:
         raise NotImplementedError
 
     @abstractmethod

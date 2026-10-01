@@ -13,6 +13,15 @@ from biotrainer_core.input_files import filter_FASTA
 from biotrainer_core.data_classes.autoeval import AutoEvalTask
 
 
+def get_autoeval_path() -> Path:
+    return Path(user_cache_dir('biotrainer')) / "autoeval"
+
+
+def clear_autoeval_cache():
+    print("Clearing autoeval cache..")
+    shutil.rmtree(get_autoeval_path(), ignore_errors=True)
+
+
 class AutoEvalDataHandler(ABC):
 
     def download_data(self, data_dir: Path) -> None:
@@ -103,14 +112,15 @@ class AutoEvalDataHandler(ABC):
     def get_framework_name():
         raise NotImplementedError
 
-    def clear_autoeval_cache(self):
-        framework_path = self.get_framework_base_path()  # custom_storage_path is excluded for force download / clearing
-        shutil.rmtree(framework_path, ignore_errors=True)
-
     def get_framework_base_path(self, custom_storage_path: Optional[Union[str, Path]] = None) -> Path:
+        meta_framework_name = self.get_framework_name().split("_")[0]
         if custom_storage_path:
-            return Path(custom_storage_path) / self.get_framework_name()
-        return Path(user_cache_dir('biotrainer')) / "autoeval" / self.get_framework_name()
+            return Path(custom_storage_path) / meta_framework_name
+        return get_autoeval_path() / meta_framework_name
+
+    @abstractmethod
+    def get_framework_subdirectory(self) -> str:
+        raise NotImplementedError
 
     @staticmethod
     def get_preprocessed_file_dir_name(min_seq_length: int, max_seq_length: int):
@@ -145,8 +155,8 @@ class AutoEvalDataHandler(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int],
-                  development_mode: bool) -> List[AutoEvalTask]:
+    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) \
+            -> List[AutoEvalTask]:
         """
         Get tasks to execute in the autoeval pipeline via biotrainer.
 
@@ -156,7 +166,7 @@ class AutoEvalDataHandler(ABC):
 
     @staticmethod
     def _get_input_file_path(dataset_dir: Path, name: str, min_seq_length: int, max_seq_length: int) -> Path:
-        """Get the appropriate input file path (preprocessed if available)"""
+        """Get the appropriate input file path (preprocessed if available), (un)supervised frameworks"""
         raw_path = dataset_dir / f"{name}.fasta"
         preprocessed_dir_name = AutoEvalDataHandler.get_preprocessed_file_dir_name(min_seq_length=min_seq_length,
                                                                                    max_seq_length=max_seq_length)

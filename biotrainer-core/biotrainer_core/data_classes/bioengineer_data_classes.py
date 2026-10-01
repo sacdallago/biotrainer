@@ -125,6 +125,9 @@ class Variant(BaseModel):
 
         return ''.join(mutant_seq)
 
+    def mutation_depth(self) -> int:
+        return len(self.mutations)
+
     def __str__(self) -> str:
         return self.to_string()
 
@@ -161,7 +164,9 @@ class VariantScore(BaseModel):
     """
     variant: Variant = Field(description="The variant being scored")
 
-    strategy: ZeroShotMethod = Field(description="Scoring strategy used")
+    strategy: Optional[ZeroShotMethod] = Field(default=None,
+                                               description="Scoring strategy used. "
+                                                           "Can be None (e.g. for ground truth / experimental data)")
 
     mutation_scores: List[SingleMutationScore] = Field(
         description="Individual mutation scores (for decomposition/analysis, can be empty for global scores)"
@@ -171,8 +176,9 @@ class VariantScore(BaseModel):
         description="Total variant score (interpretation depends on strategy)"
     )
 
-    model_name: str = Field(
-        description="Model name used for scoring"
+    model_name: Optional[str] = Field(
+        default=None,
+        description="Model name used for scoring. Can be None (e.g. for ground truth / experimental data)"
     )
 
     @classmethod
@@ -214,6 +220,13 @@ class VariantScore(BaseModel):
             total_score=mutation_score,
             model_name=model_name,
         )
+
+    @classmethod
+    def from_experimental(cls,
+                          variant: Variant,
+                          experimental_score: float):
+        """ Create VariantScore from experimental score (might be from a file directly) """
+        return cls(variant=variant, total_score=experimental_score, mutation_scores=[])
 
 
 class RankingResult(BaseModel):

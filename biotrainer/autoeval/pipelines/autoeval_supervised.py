@@ -1,8 +1,10 @@
 import h5py
 
+from tqdm import tqdm
 from pathlib import Path
 from abc import ABC, abstractmethod
 from biotrainer_core.data_classes import Protocol, SequenceData
+from biotrainer_core.functions.hashing import calculate_sequence_hash
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, SupervisedFrameworkReport
 
 from typing import Optional, Callable, Dict, Tuple, List, Any, Generator
@@ -33,27 +35,41 @@ class CustomEmbedderWrapper(_PipelineEmbedder):
         self.output_path_per_seq = output_path_per_seq
 
     @staticmethod
-    def _wrap(embeddings_file_path: Path, sequences: List[str], custom_embedding_function: Callable):
-        with h5py.File(embeddings_file_path, "a") as embeddings_file:
-            idx = 0
-            for sequence, embedding in custom_embedding_function(sequences):
-                if len(embedding.shape) > 1 and embedding.shape[0] != len(sequence):
-                    raise Exception(f"Per-residue embedding shape does not match sequence length - "
-                                    f"Embedding Shape: {embedding.shape}, Sequence Length: {len(sequence)}!")
-                emb_record = SequenceData(seq_id=f"Seq{idx}", seq=sequence, embedding=embedding)
-                EmbeddingService.store_embedding(embeddings_file_handle=embeddings_file,
-                                                 emb_record=emb_record,
-                                                 store_by_hash=True)
-                idx += 1
+    def _wrap(name: str, embeddings_file_path: Path, sequences: List[str], custom_embedding_function: Callable):
+        existing_hashes = set()
+        if embeddings_file_path.is_file():
+            with h5py.File(embeddings_file_path, "r") as embeddings_file:
+                existing_hashes = set(embeddings_file.keys())
+
+        # Filter out already existing sequences by hash
+        seqs_to_compute = [seq for seq in sequences if calculate_sequence_hash(seq) not in existing_hashes]
+
+        if len(seqs_to_compute) > 0:
+            with h5py.File(embeddings_file_path, "a") as embeddings_file:
+                idx = 0
+                for sequence, embedding in tqdm(custom_embedding_function(seqs_to_compute),
+                                                desc=f"Computing {name} embeddings..",
+                                                total=len(seqs_to_compute)):
+                    if len(embedding.shape) > 1 and embedding.shape[0] != len(sequence):
+                        raise Exception(f"Per-residue embedding shape does not match sequence length - "
+                                        f"Embedding Shape: {embedding.shape}, Sequence Length: {len(sequence)}!")
+                    emb_record = SequenceData(seq_id=f"Seq{idx}", seq=sequence, embedding=embedding)
+                    EmbeddingService.store_embedding(embeddings_file_handle=embeddings_file,
+                                                     emb_record=emb_record,
+                                                     store_by_hash=True)
+                    idx += 1
 
         return embeddings_file_path
 
     def per_residue_path(self, seqs: List[str]) -> Path:
-        return self._wrap(embeddings_file_path=self.output_path_per_res, sequences=seqs,
+        return self._wrap(name="per-residue",
+                          embeddings_file_path=self.output_path_per_res,
+                          sequences=seqs,
                           custom_embedding_function=self.custom_embedder.per_residue)
 
     def per_sequence_path(self, seqs: List[str]) -> Path:
-        return self._wrap(embeddings_file_path=self.output_path_per_seq, sequences=seqs,
+        return self._wrap(name="per-sequence",
+                          embeddings_file_path=self.output_path_per_seq, sequences=seqs,
                           custom_embedding_function=self.custom_embedder.per_sequence)
 
 
@@ -109,7 +125,7 @@ def check_h5_file(name: str, h5_path: Optional[Path], expected_length: int) -> N
         raise Exception(f"Did not find embeddings file for {name} after embedding calculation!")
     try:
         with h5py.File(h5_path, "r") as h5_file:
-            actual_length = len(h5_file.keys())
+            actual_length = len([k for k in tqdm(h5_file.keys(), desc=f"Checking {name} embeddings..")])
             if actual_length < expected_length:
                 raise ValueError(f"Expected {expected_length} entries in {name} h5 file but found {actual_length}!")
     except (OSError, IOError) as e:
@@ -156,14 +172,10 @@ def autoeval_supervised_pipeline(embedder_name: str,
                                  embeddings_file_per_residue: Optional[Path],
                                  task_config_tuples: List[Tuple[AutoEvalTask, Dict[str, Any]]],
                                  output_dir: Path,
-                                 min_seq_length: int,
-                                 max_seq_length: int,
+                                 framework_report: SupervisedFrameworkReport,
                                  custom_output_observers: Optional[List[BiotrainerOutputObserver]] = None,
                                  device=None,
                                  ) -> Generator[AutoEvalProgress, None, None]:
-    # Framework results do not exist yet -> execute biotrainer
-    supervised_framework_report = SupervisedFrameworkReport.empty(min_seq_len=min_seq_length,
-                                                                  max_seq_len=max_seq_length)
     task_names = [task.combined_name() for task, _ in task_config_tuples]
     print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
     completed_tasks = 0
@@ -178,11 +190,11 @@ def autoeval_supervised_pipeline(embedder_name: str,
 
         task_output_dir = output_dir / current_task_name
         # Check if result already exists -> skip (Framework run was interrupted)
-        maybe_result = supervised_framework_report.maybe_load_existing_result(embedder_name=embedder_name,
-                                                                              task_output_dir=task_output_dir)
+        maybe_result = framework_report.maybe_load_existing_result(embedder_name=embedder_name,
+                                                                   task_output_dir=task_output_dir)
         if maybe_result:
             print(f"Loaded existing result for task {current_task_name}, skipping execution..")
-            supervised_framework_report.update_result(combined_task_name=current_task_name, result=maybe_result)
+            framework_report.update_result(combined_task_name=current_task_name, result=maybe_result)
             continue
 
         # No result exists yet -> execute biotrainer
@@ -201,7 +213,7 @@ def autoeval_supervised_pipeline(embedder_name: str,
         result = parse_config_file_and_execute_run(config=config,
                                                    custom_output_observers=custom_output_observers)
 
-        supervised_framework_report.update_result(combined_task_name=current_task_name, result=result)
+        framework_report.update_result(combined_task_name=current_task_name, result=result)
 
         completed_tasks += 1
         print(f"Finished task execution for {current_task_name}!")
@@ -211,4 +223,4 @@ def autoeval_supervised_pipeline(embedder_name: str,
     yield AutoEvalProgress(completed_tasks=total_tasks, total_tasks=total_tasks,
                            current_task_name=current_task_name,
                            current_framework_name=framework.get_name(),
-                           final_report=supervised_framework_report)
+                           final_report=framework_report)

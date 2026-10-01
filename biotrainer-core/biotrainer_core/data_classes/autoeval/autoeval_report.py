@@ -6,13 +6,14 @@ import pandas as pd
 from pathlib import Path
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field, model_validator
-from typing import Dict, Any, Union, Optional, List, Tuple
+from typing import Dict, Union, Optional, List, Tuple, Any, Callable
 
-from .autoeval_mode import AutoEvalMode
 from .autoeval_task import AutoEvalTask
 from .autoeval_flip_datasets import all_flip_datasets
+from .autoeval_mode import AutoEvalMode, DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR
 from .autoeval_pbc_datasets import all_pbc_supervised_datasets
 
+from ..metrics import BootstrappedMetric
 from ..embedding_stats import EmbeddingStats
 from ..biotrainer_model_result import BiotrainerModelResult
 from ..contact import ContactDatasetResult, ContactSingleProteinResult
@@ -46,6 +47,13 @@ def _maybe_metric_abs(metric_name: str, mean: float, lower: float, upper: float)
 
 
 class FrameworkReport(ABC, BaseModel):
+    # Generic task_results dict, bust be overwritten by subclasses with concrete typing
+    task_results: Dict = Field(default_factory=dict,
+                               description="Task results for this framework (task_name -> result)")
+    task_filter_applied: bool = Field(default=False,
+                                      description="Whether a task filter reduced this run to a subset of "
+                                                  "the framework's tasks")
+
     @abstractmethod
     def summary(self, development_mode: bool = False):
         raise NotImplementedError
@@ -57,28 +65,95 @@ class FrameworkReport(ABC, BaseModel):
     @abstractmethod
     def get_task_names(self) -> List[str]:
         raise NotImplementedError
-
+    
     @abstractmethod
-    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
-        """ Convert to pandas dataframe."""
+    def task_to_df_rows(self, task_name: str, all_metrics: bool, development_mode: bool) -> List[Dict[str, Any]]:
         raise NotImplementedError
+    
+    def to_df(self, all_metrics: bool, development_mode: bool = False,
+              task_name_filter: Callable[[str], bool] = lambda _: False) -> pd.DataFrame:
+        """
+        Converts task results to a pandas DataFrame format.
+
+        Parameters:
+        all_metrics: bool
+            If True, includes all available performance metrics for each task in the
+            resulting DataFrame. If False, only a subset of the metrics will be included.
+        development_mode: bool, defaults to False
+            Determines whether to include results for tasks marked as development tasks.
+            If True, includes only development tasks. If False, includes only production tasks.
+        task_name_filter: Callable[[str], bool], defaults to lambda _: False, so no filtering
+            A filtering function that operates on task names. If the function returns True
+            for a given task name, that task will be excluded from the DataFrame.
+
+        Returns:
+        pd.DataFrame
+            A DataFrame containing the aggregated rows of task results, filtered and processed
+            according to the specified parameters.
+        """
+        rows = []
+        for task in self.task_results.keys():
+            filter_task = task_name_filter(task)
+            if filter_task:
+                continue
+            task_is_dev = self.is_task_dev(task)
+            if development_mode != task_is_dev:  # Only get results for tasks that match the mode
+                continue
+            rows.extend(self.task_to_df_rows(task, all_metrics, development_mode))
+        return pd.DataFrame(rows)
+
+    def to_task_comparison_df(self, task_name: str) -> pd.DataFrame:
+        plain_task_name = task_name.replace(DEV_MODE_INDICATOR, "").replace(DEV_MODE_ABLATED_INDICATOR, "")
+        dev_task_name = plain_task_name + DEV_MODE_INDICATOR
+        ablated_task_name = plain_task_name + DEV_MODE_ABLATED_INDICATOR
+        candidates = (plain_task_name, dev_task_name, ablated_task_name)
+        all_tasks = []
+        for t in candidates:
+            if t in self.task_results:
+                all_tasks.append(t)
+            else:
+                for k in self.task_results.keys():
+                    if k == t or k.endswith(f"-{t}"):
+                        all_tasks.append(k)
+                        break
+        rows = []
+        for task in all_tasks:
+            rows.extend(self.task_to_df_rows(task, all_metrics=False, development_mode=self.is_task_dev(task)))
+        return pd.DataFrame(rows)
+
+    def to_delta_stats_dict(self) -> Dict[str, Dict[str, float]]:
+        raise NotImplementedError("Framework not supported for compared_paired_delta_stats!")
+
+    @staticmethod
+    def is_task_dev(task: str):
+        # Does not apply for the Supervised Framework
+        return DEV_MODE_INDICATOR in task
+
+    def filter_tasks_by_mode(self, development_mode: bool):
+        include = lambda task: (FrameworkReport.is_task_dev(task) == development_mode
+                                and not FrameworkReport.is_task_ablated(task))
+        return list(filter(include, self.task_results.keys()))
+
+    @staticmethod
+    def is_task_ablated(task: str):
+        return DEV_MODE_ABLATED_INDICATOR in task
 
     def used_development_mode(self) -> bool:
         """ Whether development mode was used in the autoeval pipeline"""
-        return False
+        return False  # Default for supervised and unsupervised, as they always evaluate both (val/test sets)
 
 
 class SupervisedFrameworkReport(FrameworkReport):
     min_seq_len: Optional[int] = Field(default=None, description="Minimum sequence length used during evaluation")
     max_seq_len: Optional[int] = Field(default=None, description="Maximum sequence length used during evaluation")
-    results: Dict[str, BiotrainerModelResult] = Field(description="Supervised autoeval results")
+    task_results: Dict[str, BiotrainerModelResult] = Field(description="Supervised autoeval results")
 
     @classmethod
     def empty(cls, min_seq_len: Optional[int], max_seq_len: Optional[int]) -> SupervisedFrameworkReport:
-        return cls(min_seq_len=min_seq_len, max_seq_len=max_seq_len, results={})
+        return cls(min_seq_len=min_seq_len, max_seq_len=max_seq_len, task_results={})
 
     def update_result(self, combined_task_name: str, result: BiotrainerModelResult):
-        self.results[combined_task_name] = result
+        self.task_results[combined_task_name] = result
 
     @staticmethod
     def maybe_load_existing_result(embedder_name: str, task_output_dir: Path):
@@ -92,10 +167,13 @@ class SupervisedFrameworkReport(FrameworkReport):
             return None  # File does not seem to be valid
         except Exception:
             return None
+    
+    def filter_tasks_by_mode(self, development_mode: bool):
+        return self.task_results  # No filtering for supervised mode
 
     def accumulated_embedding_stats(self) -> Optional[EmbeddingStats]:
         embedding_stats = None
-        for result in self.results.values():
+        for result in self.task_results.values():
             result_stats = EmbeddingStats.from_biotrainer_result(result)
             if embedding_stats is None:
                 embedding_stats = result_stats
@@ -105,17 +183,11 @@ class SupervisedFrameworkReport(FrameworkReport):
 
     def summary(self, development_mode: bool = False):
         print(f"(Minimum sequence length: {self.min_seq_len}, Maximum sequence length: {self.max_seq_len})")
-        task_names = self.results.keys()
+        task_names = self.task_results.keys()
         print(f"Total tasks: {len(task_names)}")
         print("Results:")
-
-        for task_name in task_names:
-            metrics = self.extract_metrics(task_name, development_mode=development_mode, all_metrics=False)
-            for metric in metrics:
-                print(
-                    f"{metric['task_name']} ({metric['protocol']}) - {metric['test_set_name']} - "
-                    f"{metric['evaluation_metric']}: {metric['mean']} ({metric['lower']} - {metric['upper']})"
-                )
+        df = self.to_df(all_metrics=False, development_mode=development_mode)
+        print(df.to_string(index=False))
 
     def extract_metrics(self, combined_task_name: str, development_mode: bool = False,
                         all_metrics: bool = False) -> list[dict]:
@@ -140,7 +212,7 @@ class SupervisedFrameworkReport(FrameworkReport):
                                  combined_task_name: str,
                                  evaluation_metric: Optional[str],
                                  protocol: str) -> list[dict]:
-        val_results = self.results[combined_task_name].training_results["hold_out"].best_epoch_metrics.validation
+        val_results = self.task_results[combined_task_name].training_results["hold_out"].best_epoch_metrics.validation
         metric_values = {evaluation_metric: val_results[evaluation_metric]} if evaluation_metric else val_results
 
         metrics = []
@@ -165,7 +237,7 @@ class SupervisedFrameworkReport(FrameworkReport):
                                   combined_task_name: str,
                                   evaluation_metric: Optional[str],
                                   protocol: str):
-        test_results = self.results[combined_task_name].test_results
+        test_results = self.task_results[combined_task_name].test_results
 
         metrics = []
         for test_set_name, test_set_result in test_results.items():
@@ -188,55 +260,120 @@ class SupervisedFrameworkReport(FrameworkReport):
                     "upper": metric_upper
                 })
         return metrics
-
-    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
+    
+    def task_to_df_rows(self, task_name: str, all_metrics: bool, development_mode: bool) -> List[Dict[str, Any]]:
+        framework_name, dataset_name, _ = AutoEvalTask.split_combined_name(task_name)
         rows = []
+        for m in self.extract_metrics(task_name, development_mode=development_mode, all_metrics=all_metrics):
+            # Label like: Task\n(TestSet - Metric) if test set != 'test' else Task\n(Metric)
+            test_set = m["test_set_name"]
+            metric_name = m["evaluation_metric"]
+            if test_set != "test":
+                label = f"{dataset_name}\n({test_set} - {metric_name})"
+            else:
+                label = f"{dataset_name}\n({metric_name})"
+            mean, lower, upper = _maybe_metric_abs(metric_name,
+                                                   mean=m["mean"], lower=m["lower"], upper=m["upper"])
+            rows.append({
+                "TaskLabel": label,
+                "Task": task_name,
+                'Protocol': m['protocol'],
+                "Test Set": test_set,
+                "Metric": metric_name,
+                "Mean": mean,
+                "Lower": lower,
+                "Upper": upper
+            })
+        return rows
 
-        for task in self.get_task_names():
-            framework_name, dataset_name, _ = AutoEvalTask.split_combined_name(task)
-            for m in self.extract_metrics(task, development_mode=development_mode, all_metrics=all_metrics):
-                # Label like: Task\n(TestSet - Metric) if test set != 'test' else Task\n(Metric)
-                test_set = m["test_set_name"]
-                metric_name = m["evaluation_metric"]
-                if test_set != "test":
-                    label = f"{dataset_name}\n({test_set} - {metric_name})"
-                else:
-                    label = f"{dataset_name}\n({metric_name})"
-                mean, lower, upper = _maybe_metric_abs(metric_name,
-                                                       mean=m["mean"], lower=m["lower"], upper=m["upper"])
-                rows.append({
-                    "TaskLabel": label,
-                    "Task": task,
-                    'Protocol': m['protocol'],
-                    "Test Set": test_set,
-                    "Metric": metric_name,
-                    "Mean": mean,
-                    "Lower": lower,
-                    "Upper": upper
-                })
-        df = pd.DataFrame(rows)
-        return df
+    def to_task_comparison_df(self, task_name: str) -> pd.DataFrame:
+        rows = []
+        for dev_mode in [True, False]:
+            rows.extend(self.task_to_df_rows(task_name, all_metrics=False, development_mode=dev_mode))
+        return pd.DataFrame(rows)
 
+    def to_df(self, all_metrics: bool, development_mode: bool = False,
+              task_name_filter: Callable[[str], bool] = lambda _: False) -> pd.DataFrame:
+        # Needs to overwrite base method because development mode check needs to be skipped in task filtering
+        rows = []
+        for task in self.task_results.keys():
+            filter_task = task_name_filter(task)
+            if filter_task:
+                continue
+            rows.extend(self.task_to_df_rows(task, all_metrics, development_mode))
+        return pd.DataFrame(rows)
+    
     def number_tasks(self):
-        return len(self.results.keys())
+        return len(self.task_results.keys())
 
     def get_task_names(self) -> List[str]:
-        return list(self.results.keys())
+        return list(self.task_results.keys())
 
+
+class UnsupervisedFrameworkReport(FrameworkReport):
+    min_seq_len: Optional[int] = Field(default=None, description="Minimum sequence length used during evaluation")
+    max_seq_len: Optional[int] = Field(default=None, description="Maximum sequence length used during evaluation")
+    task_results: Dict[str, Dict[str, List[BootstrappedMetric]]] = Field(description="Unsupervised autoeval results, "
+                                                                             "task_name -> set_name -> list of bootstrapped metrics")
+
+    @classmethod
+    def empty(cls, min_seq_len: Optional[int], max_seq_len: Optional[int]) -> UnsupervisedFrameworkReport:
+        return cls(min_seq_len=min_seq_len, max_seq_len=max_seq_len, task_results={})
+
+    def update_result(self, combined_task_name: str, result: Dict[str, List[BootstrappedMetric]]):
+        self.task_results[combined_task_name] = result
+
+    def number_tasks(self):
+        return len(self.task_results.keys())
+    
+    def task_to_df_rows(self, task_name: str, all_metrics: bool, development_mode: bool) -> List[Dict[str, Any]]:
+        unsupervised_result = self.task_results.get(task_name, {})
+        rows = []
+        for set_name, metrics in unsupervised_result.items():
+            if "random" in set_name:
+                continue
+
+            for metric in metrics:
+                name = metric.name
+                mean, lower, upper = _maybe_metric_abs(name,
+                                                       mean=metric.mean,
+                                                       lower=metric.lower,
+                                                       upper=metric.upper)
+                rows.append({
+                    "TaskLabel": f"{task_name}\n({name})",
+                    "Task": task_name,
+                    "Metric": name,
+                    "Mean": round(mean, 3),
+                    "Lower": round(lower, 3),
+                    "Upper": round(upper, 3),
+                })
+        return rows
+
+    def get_task_names(self) -> List[str]:
+        return list(self.task_results.keys())
+
+    def summary(self, development_mode: bool = False):
+        print(f"Total tasks: {self.number_tasks()}")
+        print("Results:")
+        df = self.to_df(all_metrics=True, development_mode=development_mode)
+        print(df.to_string(index=False))
+
+    def used_development_mode(self) -> bool:
+        return all([DEV_MODE_INDICATOR in task_name for task_name in self.task_results.keys()])
 
 class ZeroShotFrameworkReport(FrameworkReport):
     model_config = {"use_enum_values": True}
 
     method: ZeroShotMethod = Field(description="Scoring method used")
-    task_results: Dict[str, AggregatedRankingResult] = Field(description="Aggregated ranking results "
+    task_results: Dict[str, AggregatedRankingResult] = Field(default_factory=dict,
+                                                             description="Aggregated ranking results "
                                                                          "(task_name -> AggregatedRankingResult)")
-    task_results_dev: Dict[str, AggregatedRankingResult] = Field(description="Aggregated ranking results "
-                                                                             "task results for development mode")
-    task_members: Dict[str, List[str]] = Field(description="Datasets contributing to each aggregated task "
-                                                           "(task_name -> [dataset_name]).")
-    individual_results: Dict[str, RankingResult] = Field(description="Individual autoeval task results "
+    individual_results: Dict[str, RankingResult] = Field(default_factory=dict,
+                                                         description="Individual autoeval task results "
                                                                      "(dataset_name -> RankingResult)")
-    development_ids: List[str] = Field(default=list, description="All protein ids that are used in development mode")
+    task_members: Dict[str, List[str]] = Field(default_factory=dict,
+        description="Task members for each task to compute delta stats "
+                                                           "in the autoeval dashboard.")
 
     @model_validator(mode='after')
     def check_method(self):
@@ -245,106 +382,67 @@ class ZeroShotFrameworkReport(FrameworkReport):
         return self
 
     @classmethod
-    def empty(cls, method: ZeroShotMethod, development_ids: List[str]) -> ZeroShotFrameworkReport:
-        return cls(method=method, task_results={}, task_results_dev={}, individual_results={},
-                   task_members={}, development_ids=development_ids)
+    def empty(cls, method: ZeroShotMethod) -> ZeroShotFrameworkReport:
+        return cls(method=method, task_results={}, individual_results={}, task_members={})
 
     def aggregate(self, task_name: str, individual_results: Dict[str, RankingResult]):
         self.individual_results.update(individual_results)
-        self.task_members[task_name] = list(individual_results.keys())
         self.task_results[task_name] = AggregatedRankingResult.aggregate(list(individual_results.values()))
-        individual_results_dev = {dataset_name: result for dataset_name, result in individual_results.items()
-                                  if dataset_name in self.development_ids}
-        self.task_results_dev[task_name] = AggregatedRankingResult.aggregate(list(individual_results_dev.values()))
+        self.task_members[task_name] = list(individual_results.keys())
 
     def summary(self, development_mode: bool = False):
         print(f"Zero-shot method: {self.method.value}")
-        print(f"Total tasks: {len(self.task_results)}")
+        print(f"Total tasks: {self.number_tasks()}")
         print("Results:")
-        for combined_task_name, result in self.task_results.items():
-            print(f"{combined_task_name}: "
-                  f"\t SCC:  {result.scc_score()}"
-                  f"\t NDCG: {result.ndcg_score()}")
-
-    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
+        df = self.to_df(all_metrics=True, development_mode=development_mode)
+        print(df.to_string(index=False))
+    
+    def task_to_df_rows(self, task_name: str, all_metrics: bool, development_mode: bool) -> List[Dict[str, Any]]:
         rows = []
-        result_dict = self.task_results_dev if development_mode else self.task_results
-        for task in self.get_task_names():
-            framework_name, _, _ = AutoEvalTask.split_combined_name(task)
-            ranking_result = result_dict.get(task)
-            if ranking_result is None:
-                continue
-            all_zs_metrics = [ranking_result.scc,
-                              ranking_result.ndcg]  # Only two metrics for zero shot so we always keep both
-            for metric in all_zs_metrics:
-                name = metric.name
-                mean, lower, upper = _maybe_metric_abs(name,
-                                                       mean=metric.mean, lower=metric.lower, upper=metric.upper)
-                rows.append({
-                    "TaskLabel": f"{task}\n({name})",
-                    "Task": task,
-                    "Metric": name,
-                    "Mean": round(mean, 3),
-                    "Lower": round(lower, 3),
-                    "Upper": round(upper, 3),
-                })
-        rows = sorted(rows, key=lambda x: 'virus' in x['Task'], reverse=True)
-        return pd.DataFrame(rows)
+        ranking_result = self.task_results.get(task_name, {})
+        if ranking_result is None:
+            return rows
+
+        all_zs_metrics = [ranking_result.scc,
+                          ranking_result.ndcg]  # Only two metrics for zero shot so we always keep both
+        for metric in all_zs_metrics:
+            name = metric.name
+            mean, lower, upper = _maybe_metric_abs(name,
+                                                   mean=metric.mean,
+                                                   lower=metric.lower,
+                                                   upper=metric.upper)
+            rows.append({
+                "TaskLabel": f"{task_name}\n({name})",
+                "Task": task_name,
+                "Metric": name,
+                "Mean": round(mean, 3),
+                "Lower": round(lower, 3),
+                "Upper": round(upper, 3),
+            })
+            
+        return rows
+    
+    def to_df(self, all_metrics: bool, development_mode: bool = False,
+              task_name_filter: Callable[[str], bool] = lambda _: False) -> pd.DataFrame:
+        df = super().to_df(all_metrics, development_mode, task_name_filter)
+        if not df.empty:
+            df = df.sort_values(by='Task', key=lambda x: x.str.contains('virus'), ascending=False)
+        return df
+
+    def to_delta_stats_dict(self) -> Dict[str, Dict[str, float]]:
+        return {individual_id: {ranking_result.scc.name: ranking_result.scc.mean,
+                                ranking_result.ndcg.name: ranking_result.ndcg.mean} for individual_id, ranking_result in
+                self.individual_results.items()}
 
     def number_tasks(self):
         return len(self.task_results)
 
     def get_task_names(self) -> List[str]:
+        # TODO Check how this function is used
         return list(self.task_results.keys())
 
     def used_development_mode(self) -> bool:
-        return len(self.individual_results) == len(self.development_ids)
-
-
-class ZeroShotCachedResults(BaseModel):
-    """ Utility class for storing cached results for zero-shot evaluation """
-    embedder_name: str = Field(description="Name of the embedder")
-    method: ZeroShotMethod = Field(description="Scoring method used")
-    individual_results: Dict[str, RankingResult] = Field(description="Individual autoeval task results "
-                                                                     "(dataset_name -> RankingResult)")
-
-    @staticmethod
-    def get_file_name(method: ZeroShotMethod):
-        return f"zero_shot_cached_results_{method.value}.json"
-
-    @classmethod
-    def from_json_file(cls, file_path: Union[Path, str]) -> ZeroShotCachedResults:
-        """Load ZeroShotCachedResults from a JSON file."""
-        with open(file_path, 'r') as f:
-            return cls.model_validate_json(f.read())
-
-    @classmethod
-    def empty(cls, embedder_name: str, method: ZeroShotMethod) -> ZeroShotCachedResults:
-        return cls(embedder_name=embedder_name, method=method, individual_results={})
-
-    @classmethod
-    def loaded_or_empty(cls,
-                        embedder_name: str,
-                        method: ZeroShotMethod,
-                        output_dir: Path) -> ZeroShotCachedResults:
-        report_file_path = output_dir / cls.get_file_name(method)
-        if report_file_path.exists():
-            report = cls.from_json_file(report_file_path)
-            assert report.embedder_name == embedder_name and report.method == method
-            return report
-        return cls.empty(embedder_name, method)
-
-    def maybe_cached_result(self, dataset_name: str) -> Optional[RankingResult]:
-        return self.individual_results.get(dataset_name, None)
-
-    def update_and_sync(self, dataset_name: str, result: RankingResult, output_dir: Path):
-        self.individual_results[dataset_name] = result
-        self._write_to_file(output_dir=output_dir)
-
-    def _write_to_file(self, output_dir: Union[Path, str]):
-        file_path = output_dir / self.get_file_name(method=self.method)
-        with open(file_path, 'w') as f:
-            f.write(self.model_dump_json(indent=4))
+        return all([DEV_MODE_INDICATOR in task_name for task_name in self.task_results.keys()])
 
 
 class ContactFrameworkReport(FrameworkReport):
@@ -354,14 +452,12 @@ class ContactFrameworkReport(FrameworkReport):
                                              description="Contact method used. "
                                                          "Only applicable for zero-shot contact prediction")
     task_results: Dict[str, ContactDatasetResult] = Field(description="Results per tasks, i.e. per dataset (e.g. casp)")
-    task_results_dev: Dict[str, ContactDatasetResult] = Field(description="Results per tasks for development mode, "
-                                                                          "i.e. per dataset (e.g. casp)")
-    task_members: Dict[str, List[str]] = Field(description="Datasets contributing to each "
-                                                           "task (e.g. casp -> protein_id)")
     per_protein_results: Dict[str, ContactSingleProteinResult] = Field(
         description="Cached per protein results, stacking"
                     " up to the final dataset result (seq_id -> ContactSingleProteinResult)")
-    development_ids: List[str] = Field(default=list, description="All protein ids that are used in development mode")
+    task_members: Dict[str, List[str]] = Field(default_factory=dict,
+        description="Task members for each task to compute delta stats "
+                                                            "in the autoeval dashboard.")
 
     @model_validator(mode='after')
     def check_method(self):
@@ -373,55 +469,51 @@ class ContactFrameworkReport(FrameworkReport):
 
     @classmethod
     def empty(cls, method: Optional[ZeroShotMethod] = None) -> ContactFrameworkReport:
-        return cls(method=method, task_results={}, task_results_dev={},
-                   task_members={}, per_protein_results={}, development_ids=[])
+        return cls(method=method, task_results={}, per_protein_results={}, task_members={})
 
     def update_result(self, task_name: str,
                       per_protein_results: Dict[str, ContactSingleProteinResult],
-                      dataset_result: ContactDatasetResult,
-                      dataset_result_dev: ContactDatasetResult):
+                      dataset_result: ContactDatasetResult):
         self.task_results[task_name] = dataset_result
-        self.task_results_dev[task_name] = dataset_result_dev
         new_keys = set(per_protein_results.keys()) - set(self.per_protein_results.keys())
         self.task_members[task_name] = list(new_keys)
+        self.task_members[task_name] = list(per_protein_results.keys())
         self.per_protein_results.update(per_protein_results)
-
-    def update_development_ids(self, development_ids: List[str]):
-        self.development_ids.extend(development_ids)
 
     def summary(self, development_mode: bool = False):
         if self.method is not None:
             print(f"Zero-shot contact method: {self.method.value}")
         print(f"Total tasks: {len(self.task_results)}")
         print("Results:")
-        for combined_task_name, result in self.task_results.items():
-            print(f"{combined_task_name}: "
-                  f"\t Results:  {result}")
-            # TODO: add detailed print of metrics!!
-
-    def to_df(self, all_metrics: bool, development_mode: bool = False) -> pd.DataFrame:
+        df = self.to_df(all_metrics=False, development_mode=development_mode)
+        print(df.to_string(index=False))
+    
+    def task_to_df_rows(self, task_name: str, all_metrics: bool, development_mode: bool) -> List[Dict[str, Any]]:
         rows = []
         primary_evaluation_metric = "long_P@L2"  # TODO Find better place for this constant
-        result_dict = self.task_results_dev if development_mode else self.task_results
-        for task, rr in result_dict.items():
-            task = task.split("-")[-1]
-            contact_metrics = rr.aggregated_result
-            contact_metrics = contact_metrics if all_metrics else [m for m in contact_metrics
-                                                                   if m.name == primary_evaluation_metric]
-            for metric in contact_metrics:
-                name = metric.name
-                mean, lower, upper = _maybe_metric_abs(name,
-                                                       mean=metric.mean, lower=metric.lower,
-                                                       upper=metric.upper)
-                rows.append({
-                    "TaskLabel": f"{task}\n({name})",
-                    "Task": task,
-                    "Metric": name,
-                    "Mean": round(mean, 3),
-                    "Lower": round(lower, 3),
-                    "Upper": round(upper, 3),
-                })
-        return pd.DataFrame(rows)
+
+        contact_result = self.task_results[task_name]
+        contact_metrics = contact_result.aggregated_result
+        contact_metrics = contact_metrics if all_metrics else [m for m in contact_metrics
+                                                               if m.name == primary_evaluation_metric]
+        for metric in contact_metrics:
+            name = metric.name
+            mean, lower, upper = _maybe_metric_abs(name,
+                                                   mean=metric.mean, lower=metric.lower,
+                                                   upper=metric.upper)
+            rows.append({
+                "TaskLabel": f"{task_name}\n({name})",
+                "Task": task_name,
+                "Metric": name,
+                "Mean": round(mean, 3),
+                "Lower": round(lower, 3),
+                "Upper": round(upper, 3),
+            })
+        return rows
+
+    def to_delta_stats_dict(self) -> Dict[str, Dict[str, float]]:
+        return {individual_id: single_result.precision_scores for individual_id, single_result in
+                self.per_protein_results.items()}
 
     def number_tasks(self):
         return len(self.task_results)
@@ -430,68 +522,29 @@ class ContactFrameworkReport(FrameworkReport):
         return [task_name.split("-")[-1] for task_name in self.task_results.keys()]
 
     def used_development_mode(self) -> bool:
-        return len(self.task_results) == len(self.development_ids)
-
-
-class ZeroShotContactCachedResults(BaseModel):
-    """ Utility class for storing cached results for zero-shot contact evaluation """
-    embedder_name: str = Field(description="Name of the embedder")
-    method: ZeroShotMethod = Field(
-        description="Contact method used")  # Note - only one applicable zeroshot contact method as of now!
-    per_protein_results: Dict[str, ContactSingleProteinResult] = Field(
-        description="Cached per protein results, stacking"
-                    " up to the final dataset result (seq_id -> ContactSingleProteinResult)")
-
-    @staticmethod
-    def get_file_name(method: ZeroShotMethod):
-        return f"zero_shot_contact_cached_results_{method.value}.json"
-
-    @classmethod
-    def from_json_file(cls, file_path: Union[Path, str]) -> ZeroShotContactCachedResults:
-        """Load ZeroShotContactCachedResults from a JSON file."""
-        with open(file_path, 'r') as f:
-            return cls.model_validate_json(f.read())
-
-    @classmethod
-    def empty(cls, embedder_name: str, method: ZeroShotMethod) -> ZeroShotContactCachedResults:
-        return cls(embedder_name=embedder_name, method=method, per_protein_results={})
-
-    @classmethod
-    def loaded_or_empty(cls,
-                        embedder_name: str,
-                        method: ZeroShotMethod,
-                        output_dir: Path) -> ZeroShotContactCachedResults:
-        report_file_path = output_dir / cls.get_file_name(method)
-        if report_file_path.exists():
-            report = cls.from_json_file(report_file_path)
-            assert report.embedder_name == embedder_name and report.method == method
-            return report
-        return cls.empty(embedder_name, method)
-
-    def maybe_cached_result(self, seq_id: str) -> Optional[ContactSingleProteinResult]:
-        return self.per_protein_results.get(seq_id, None)
-
-    def update_and_sync(self, result: ContactSingleProteinResult, output_dir: Path):
-        self.per_protein_results[result.protein_name] = result
-        self._write_to_file(output_dir=output_dir)
-
-    def _write_to_file(self, output_dir: Union[Path, str]):
-        file_path = output_dir / self.get_file_name(method=self.method)
-        with open(file_path, 'w') as f:
-            f.write(self.model_dump_json(indent=4))
+        return all([DEV_MODE_INDICATOR in task_name for task_name in self.task_results.keys()])
 
 
 class AutoEvalReport(BaseModel):
     embedder_name: str = Field(description="Name of the embedder")
     training_date: str = Field(description="Date of training")
 
-    # Results
-    supervised_results: Dict[str, SupervisedFrameworkReport] = Field(description="Supervised autoeval results")
-    zeroshot_results: Dict[str, ZeroShotFrameworkReport] = Field(description="Zero-Shot autoeval results")
-    zeroshot_contact_results: Dict[str, ContactFrameworkReport] = Field(default_factory=dict,
-                                                                        description="Zero-Shot contact autoeval results")
-    supervised_contact_results: Dict[str, ContactFrameworkReport] = Field(default_factory=dict,
-                                                                          description="Supervised contact autoeval results")
+    # Results: Framework Name -> Report
+    supervised_results: Dict[str, SupervisedFrameworkReport] = Field(
+        default_factory=dict,
+        description="Supervised autoeval results")
+    unsupervised_results: Dict[str, UnsupervisedFrameworkReport] = Field(
+        default_factory=dict,
+        description="Unsupervised autoeval results")
+    zeroshot_results: Dict[str, ZeroShotFrameworkReport] = Field(
+        default_factory=dict,
+        description="Zero-Shot autoeval results")
+    zeroshot_contact_results: Dict[str, ContactFrameworkReport] = Field(
+        default_factory=dict,
+        description="Zero-Shot contact autoeval results")
+    supervised_contact_results: Dict[str, ContactFrameworkReport] = Field(
+        default_factory=dict,
+        description="Supervised contact autoeval results")
 
     @staticmethod
     def get_file_name(embedder_name):
@@ -523,6 +576,9 @@ class AutoEvalReport(BaseModel):
             case AutoEvalMode.SUPERVISED:
                 assert isinstance(report, SupervisedFrameworkReport)
                 self.supervised_results[framework_name] = report
+            case AutoEvalMode.UNSUPERVISED:
+                assert isinstance(report, UnsupervisedFrameworkReport)
+                self.unsupervised_results[framework_name] = report
             case AutoEvalMode.ZERO_SHOT:
                 assert isinstance(report, ZeroShotFrameworkReport)
                 self.zeroshot_results[framework_name] = report
@@ -537,6 +593,7 @@ class AutoEvalReport(BaseModel):
 
     def _all_results(self):
         return [self.supervised_results,
+                self.unsupervised_results,
                 self.zeroshot_results,
                 self.zeroshot_contact_results,
                 self.supervised_contact_results]
@@ -567,18 +624,26 @@ class AutoEvalReport(BaseModel):
 
     def summary(self, development_mode: bool = False):
         print(f"Autoeval report for {self.embedder_name} on {self.training_date}.")
-        for framework_name, report in self.supervised_results.items():
-            print(f"\n{framework_name} supervised results:")
-            report.summary(development_mode=development_mode)
-        for framework_name, report in self.zeroshot_results.items():
-            print(f"\n{framework_name} zero-shot results:")
-            report.summary(development_mode=development_mode)
-        for framework_name, report in self.zeroshot_contact_results.items():
-            print(f"\n{framework_name} zero-shot contact results:")
-            report.summary()
-        for framework_name, report in self.supervised_contact_results.items():
-            print(f"\n{framework_name} supervised contact results:")
-            report.summary()
+        if len(self.supervised_results) > 0:
+            for framework_name, report in self.supervised_results.items():
+                print(f"\n{framework_name} supervised results:")
+                report.summary(development_mode=development_mode)
+        if len(self.unsupervised_results) > 0:
+            for framework_name, report in self.unsupervised_results.items():
+                print(f"\n{framework_name} unsupervised results:")
+                report.summary(development_mode=development_mode)
+        if len(self.zeroshot_results) > 0:
+            for framework_name, report in self.zeroshot_results.items():
+                print(f"\n{framework_name} zero-shot results:")
+                report.summary(development_mode=development_mode)
+        if len(self.zeroshot_contact_results) > 0:
+            for framework_name, report in self.zeroshot_contact_results.items():
+                print(f"\n{framework_name} zero-shot contact results:")
+                report.summary(development_mode=development_mode)
+        if len(self.supervised_contact_results) > 0:
+            for framework_name, report in self.supervised_contact_results.items():
+                print(f"\n{framework_name} supervised contact results:")
+                report.summary(development_mode=development_mode)
 
     def embedding_stats(self):
         print(f"Embedding stats in autoeval report for {self.embedder_name} on {self.training_date}.")
@@ -591,28 +656,3 @@ class AutoEvalReport(BaseModel):
         all_results = self._all_results()
         all_reports = [r for results in all_results for r in results.values()]
         return any(rep.used_development_mode() for rep in all_reports)
-
-    ## TODO Move to client
-    # def compare_with_public_leaderboard(self):
-    #    """
-    #    Compare this report to the public leaderboard. This implies uploading the report to the autoeval service
-    #    temporarily. The report will automatically be deleted after one day.
-    #    """
-    #    client = AutoEvalServiceClient.default_service()
-    #    uid = client.store_comparison_report(report=self.model_dump())
-    #    if uid is not None:
-    #        print(f"Report stored in the autoeval service with UID: {uid}\n"
-    #              f"Open https://autoeval.biocentral.cloud/?uid={uid} to compare.")
-#
-## TODO Move to client
-# def publish(self, name: str, email: str, citation: Optional[str] = None):
-#    """
-#    Publish this report to the public autoeval dashboard.
-#
-#    :param name: Name of the publisher
-#    :param email: E-Mail of the publisher
-#    :param citation: Optional citation for the report. Should have https://doi.org/... format.
-#    """
-#    client = AutoEvalServiceClient.default_service()
-#    client.publish_report(report=self.model_dump(), name=name, email=email, citation=citation)
-#

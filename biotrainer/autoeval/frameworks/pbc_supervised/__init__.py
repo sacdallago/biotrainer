@@ -1,3 +1,3 @@
-from .pbc_framework import PBCSupervisedFramework
+from .pbc_supervised_framework import PBCSupervisedFramework
 
 __all__ = ["PBCSupervisedFramework"]

@@ -8,17 +8,17 @@ from pathlib import Path
 from typing import List, Optional, Dict, Union, Tuple
 from biotrainer_core.data_classes import Variant, VariantScore, RankingResult, ZeroShotMethod
 
-from .bioengineer_interfaces import BioEngineerModelWrapper
-from .bioengineer_models import ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer
-from .bioengineer_custom_model import CustomBioEngineerModel, CustomBioEngineerModelWrapper
-from .bioengineer_baselines import BioEngineerBaseline, ConstantEngineerBaseline, RandomEngineerBaseline
+from .interfaces import BioEngineerModelWrapper
+from .models import (ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer, ESMCEngineer, CustomBioEngineerModel,
+                     CustomBioEngineerModelWrapper)
+from .baselines import BioEngineerBaseline, ConstantEngineerBaseline, RandomEngineerBaseline
 
 from ..shared import get_device, Bootstrapper
 from ..shared.metrics.metrics_calculator import SequenceRegressionMetricsCalculator
 
 
 class BioEngineer:
-    __available_models = [ESM2Engineer, ProtBertEngineer, ProtGPT2Engineer]
+    __available_models = [ESM2Engineer, ESMCEngineer, ProtBertEngineer, ProtGPT2Engineer]
     __available_baselines = [ConstantEngineerBaseline, RandomEngineerBaseline]
 
     def __init__(self, model_wrapper: BioEngineerModelWrapper):
@@ -73,7 +73,8 @@ class BioEngineer:
     def zero_shot_masked_marginals(self,
                                    wt_sequence: str,
                                    mutations: List[str],
-                                   one_indexed: Optional[bool] = True) -> List[VariantScore]:
+                                   one_indexed: Optional[bool] = True,
+                                   batch_size: int = 32) -> List[VariantScore]:
         """
         Compute zero-shot masked marginals for specific mutations in the given sequence.
         All positions in the sequence are masked sequentially.
@@ -83,13 +84,14 @@ class BioEngineer:
         :param mutations: List of mutations: Can be single mutations ('A15G')
                 or multiple mutations separated by ':' ('A15G:L20P')
         :param one_indexed: Offset for mutation positions (1-indexed by default)
+        :param batch_size: Number of masked positions to score per forward pass
 
         :return: List of scores or probabilities associated with the specified
             mutations in the sequence.
         :raises:
             NotImplementedError: If masked logits calculation is not available
         """
-        return self.model_wrapper.zero_shot_masked_marginals(wt_sequence, mutations, one_indexed)
+        return self.model_wrapper.zero_shot_masked_marginals(wt_sequence, mutations, one_indexed, batch_size)
 
     def zero_shot_pseudoperplexity(self,
                                    wt_sequence: str,
@@ -253,6 +255,10 @@ class BioEngineer:
 
         Returns:
             np.ndarray: [L, L] (L = sequence length)
+
+        Raises:
+            SequenceTooLongError: If the sequence exceeds the model's context length - the Jacobian has no
+                windowed variant, so it is not computed at all
         """
         if method not in self.model_wrapper.supported_methods():
             raise ValueError(f"Method {method} not supported by this model!")

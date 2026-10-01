@@ -1,9 +1,65 @@
 import re
 
 from pathlib import Path
-from typing import Union, List, Callable
+from typing import Union, List, Callable, Iterator
 
 from ..data_classes import SequenceData
+
+
+def iter_FASTA(path: Union[str, Path]) -> Iterator[SequenceData]:
+    """
+    Lazily parse a FASTA file.
+
+    Yields one SequenceData record at a time, so memory usage stays low.
+    """
+    attributes_pattern = re.compile(r"([A-Z_]+)=([^ ]+)")
+
+    try:
+        with open(path, "r") as file:
+            current_id = ""
+            current_attributes = {}
+            current_seq_parts: list[str] = []
+
+            for line in file:
+                line = line.strip()
+                if not line:
+                    continue
+
+                if line.startswith(">"):
+                    if current_id:
+                        yield SequenceData(
+                            seq_id=current_id,
+                            attributes=current_attributes,
+                            seq="".join(current_seq_parts),
+                        )
+
+                    header = line[1:].strip()
+                    parts = header.split(maxsplit=1)
+                    current_id = parts[0]
+                    current_description = parts[1] if len(parts) > 1 else ""
+                    current_attributes = {
+                        key: value
+                        for key, value in attributes_pattern.findall(current_description)
+                    }
+                    current_seq_parts = []
+                else:
+                    current_seq_parts.append(line)
+
+            if current_id:
+                yield SequenceData(
+                    seq_id=current_id,
+                    attributes=current_attributes,
+                    seq="".join(current_seq_parts),
+                )
+
+    except FileNotFoundError:
+        raise
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(
+            f"Could not parse '{path}'. Are you sure this is a valid fasta file?"
+        ) from e
 
 
 def read_FASTA(path: Union[str, Path]) -> List[SequenceData]:

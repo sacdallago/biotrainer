@@ -58,19 +58,19 @@ class MetricsCalculator(ABC):
 
 
 class SimpleCustomMetricsCalculator(MetricsCalculator):
-    """ A simple metrics calculator that computes a single custom metric. Useful for interaction with the bootstrapper. """
+    """ A simple metrics calculator that computes a given custom metrics. Useful for interaction with the bootstrapper. """
 
-    def __init__(self, device, name: str,
-                 metric_function: Callable[[Optional[torch.Tensor], Optional[torch.Tensor]], torch.Tensor]):
+    def __init__(self, device,
+                 metric_functions_dict: Dict[
+                     str, Callable[[Optional[torch.Tensor], Optional[torch.Tensor]], torch.Tensor]]):
         super().__init__(device, -1)
-        self._name = name
-        self._metric_function = metric_function
+        self.metric_functions_dict = metric_functions_dict
 
     def compute_metrics(
             self, predicted: Optional[torch.Tensor] = None,
             labels: Optional[torch.Tensor] = None) -> Dict[str, Union[int, float]]:
-        res = self._metric_function(predicted, labels)
-        return {self._name: res.item()}
+        return {name: metric_function(predicted, labels).item() for name, metric_function
+                in self.metric_functions_dict.items()}
 
 
 class SimpleTorchMetricsCalculator(MetricsCalculator):

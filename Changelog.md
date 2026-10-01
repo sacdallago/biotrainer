@@ -1,5 +1,32 @@
 # Biotrainer Changelog
 
+## Version 2.1.0
+
+- **Bug Fixes**:
+  - Resolved typos, incorrect paths, and function naming issues.
+  - Improved handling of datasets, logging, and performance with unsupervised and supervised pipelines.
+  - Fixed bugs in framework reports, leaderboard display, summary calls, and ESM-C engineer setup.
+  - Fixing Dockerfile build issues.
+
+- **Features**:
+  - Introduced new frameworks (`AutoEvalRandomBaseline`, `PBC_Unsupervised`).
+  - Enhanced pipelines with logging outputs, download indicators, and improved embedding handling.
+  - Added support for ablation mode and mutation depth functionality.
+  - Developed a publishing logic mechanism for loaded reports and an AutoEvalPublishedReport class.
+
+- **Refactoring**:
+  - Reorganized modules for readability and maintainability.
+  - Improved caching and report handling processes.
+  - Transitioned dashboard documentation to external resources.
+
+- **Chores**:
+  - Updated dependencies, core libraries, and Python version compatibility.
+  - Transitioned project license to MIT.
+
+### Known Issues / Limitations
+- Ablation mode for DEV_MODE_TRAIN is still marked as work-in-progress (wip).
+
+
 ## Version 2.0.0
 
 - **Version Update**: Upgraded to version 2.0.0 for Biotrainer and Python versions to 3.12/3.13.

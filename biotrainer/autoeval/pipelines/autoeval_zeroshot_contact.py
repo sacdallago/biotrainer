@@ -1,13 +1,13 @@
 from pathlib import Path
 from typing import Tuple, List, Dict, Any, Optional, Generator
-from biotrainer_core.data_classes import ZeroShotMethod, ContactSingleProteinResult, ContactDatasetResult
+from biotrainer_core.data_classes import ZeroShotMethod, ContactSingleProteinResult
 from biotrainer_core.data_classes.autoeval import AutoEvalTask, AutoEvalProgress, \
-    ContactFrameworkReport, ZeroShotContactCachedResults
+    ContactFrameworkReport, ZeroShotContactCachedResults, DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR, \
+    AutoEvalDevMode
 
 from biotrainer_core.input_files import read_FASTA, load_contact_map
 
-from .autoeval_pipeline_utils import subsample_seq_records_for_contact_development_mode, \
-    get_dataset_and_dev_result_from_single_contact_results
+from .autoeval_pipeline_utils import get_dataset_result_from_single_contact_results
 
 from ..core import AutoEvalFramework
 
@@ -22,7 +22,9 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                        autoeval_tasks: List[Tuple[AutoEvalTask, Dict[str, Any]]],
                                        bioengineer: Optional[BioEngineer],
                                        development_mode: bool,
+                                       framework_report: ContactFrameworkReport,
                                        device=None,
+                                       batch_size: int = 32,
                                        ):
     assert bioengineer is not None, f"BioEngineer could not be initialized for embedder {embedder_name}!"
 
@@ -32,15 +34,15 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                                                     output_dir=output_dir)
     # Execute bioengineer
     autoeval_tasks = [task for task, _ in autoeval_tasks]  # Ignore config for zeroshot contact
-    zero_shot_contact_framework_report = ContactFrameworkReport.empty(method=zero_shot_method)
 
-    task_names = [task.combined_name() for task in autoeval_tasks]
+    task_names = [task.combined_name() + (DEV_MODE_INDICATOR if development_mode else "") for task in autoeval_tasks]
     print(f"The following tasks will be executed in order: {task_names} (total {len(task_names)})")
     total_tasks = len(task_names)
+
     current_task_name = ""
     completed_tasks = 0
     for task in autoeval_tasks:
-        current_task_name = task.combined_name()
+        current_task_name = task.combined_name() + (DEV_MODE_INDICATOR if development_mode else "")
         dataset_name = task.dataset_name
         print(f"Running task {current_task_name}...")
         yield AutoEvalProgress(completed_tasks=completed_tasks,
@@ -60,13 +62,9 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
         if len(seq_records) == 0:
             raise ValueError(f"Fasta file {fasta_file_path} is empty!")
 
-        seq_records_subsampled = subsample_seq_records_for_contact_development_mode(seq_records)
-        development_ids = [seq_record.seq_id for seq_record in seq_records_subsampled]
-        development_ids_set = set(development_ids)
-        assert len(development_ids_set) == len(development_ids), "Duplicate IDs in development set!"
-        development_ids = development_ids_set
-        zero_shot_contact_framework_report.update_development_ids(development_ids=list(development_ids))
         if development_mode:
+            seq_records_subsampled = [seq_r for seq_r in seq_records if seq_r.get_attribute("DEV_MODE") == "True"]
+            assert len(seq_records_subsampled) > 0, "No sequences found in development mode!"
             seq_records = seq_records_subsampled
 
         # Check for cached results
@@ -95,27 +93,47 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                 predict_func=lambda
                                                     seq_record: bioengineer.zero_shot_contact_map(
                                                     method=zero_shot_method,
-                                                    sequence=seq_record.seq),
+                                                    sequence=seq_record.seq,
+                                                    batch_size=batch_size),
                                                 get_ground_truth_func=load_gt_contact_map,
                                                 get_seq_id_func=lambda d: d.seq_id,
                                                 cached_results=cached_results,
                                                 )
 
         # Run Evaluation of zero-shot contact maps
-        single_results = []
         for single_result in evaluate():
             zero_shot_contact_cached_results.update_and_sync(result=single_result,
                                                              output_dir=output_dir)
-            single_results.append(single_result)
 
-        dataset_result, dataset_result_dev = get_dataset_and_dev_result_from_single_contact_results(dataset_name=dataset_name,
-                                                                                                    single_results=single_results,
-                                                                                                    development_ids=development_ids)
-        zero_shot_contact_framework_report.update_result(task_name=dataset_name,
-                                                         per_protein_results=zero_shot_contact_cached_results.per_protein_results,
-                                                         dataset_result=dataset_result,
-                                                         dataset_result_dev=dataset_result_dev)
+        all_single_results = [zero_shot_contact_cached_results.per_protein_results[seq_r.seq_id]
+                              for seq_r in seq_records]
+        dataset_result = get_dataset_result_from_single_contact_results(dataset_name=dataset_name,
+                                                                        single_results=all_single_results,
+                                                                        )
+        framework_report.update_result(task_name=current_task_name,
+                                       per_protein_results=zero_shot_contact_cached_results.per_protein_results,
+                                       dataset_result=dataset_result,
+                                       )
 
+        # Calculate ablated metrics without dev mode sequences after full evaluation
+        if not development_mode and framework.get_dev_mode() == AutoEvalDevMode.DEV_DATASET_TEST:
+            dev_seq_ids = {seq_r.seq_id for seq_r in seq_records if seq_r.get_attribute("DEV_MODE") == "True"}
+            ablated_single_results = [res for res in all_single_results if res.protein_name not in dev_seq_ids]
+            if 0 < len(ablated_single_results) < len(all_single_results):
+                ablated_task_name = task.combined_name() + DEV_MODE_ABLATED_INDICATOR
+                ablated_dataset_name = dataset_name + DEV_MODE_ABLATED_INDICATOR
+                ablated_dataset_result = get_dataset_result_from_single_contact_results(
+                    dataset_name=ablated_dataset_name,
+                    single_results=ablated_single_results,
+                )
+                framework_report.update_result(
+                    task_name=ablated_task_name,
+                    per_protein_results=zero_shot_contact_cached_results.per_protein_results,
+                    dataset_result=ablated_dataset_result,
+                )
+                print(f"Added ablated task result for {ablated_task_name} ({len(ablated_single_results)} proteins)")
+
+        completed_tasks += 1
         print(f"Finished task {current_task_name}!")
 
     print(f"Autoeval zeroshot contact pipeline on framework {framework.get_name()} "
@@ -124,4 +142,4 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                            total_tasks=total_tasks,
                            current_task_name=current_task_name,
                            current_framework_name=framework.get_name(),
-                           final_report=zero_shot_contact_framework_report)
+                           final_report=framework_report)

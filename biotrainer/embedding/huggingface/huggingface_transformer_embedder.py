@@ -82,13 +82,10 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         [embedding] = self._embed_batch([sequence])
         return embedding
 
-    def _remove_special_tokens(self, embedding: torch.Tensor, input_id: torch.Tensor) -> torch.Tensor:
+    def _get_keep_mask(self, mask_length: int, input_id: torch.Tensor, device: torch.device) -> torch.Tensor:
         """
-        Remove special tokens from the embedding.
-
-        :param embedding: The per-residue embedding for a single sequence
-        :param input_id: The input ids for the sequence
-        :return: The embedding with special token indices removed
+        Get a boolean mask for indices to keep in the attention map or embeddings,
+        excluding special tokens and the mask token.
         """
         special_tokens_mask = self._tokenizer.get_special_tokens_mask(input_id, already_has_special_tokens=True)
         # Replace all special tokens but the mask token for MLM
@@ -98,10 +95,9 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         indices_to_remove = list(set(indices_to_remove))
 
         # Create a boolean mask for indices to keep
-        keep_mask = torch.ones(embedding.size(0), dtype=torch.bool, device=embedding.device)
+        keep_mask = torch.ones(mask_length, dtype=torch.bool, device=device)
         keep_mask[indices_to_remove] = False
-
-        return embedding[keep_mask]
+        return keep_mask
 
     def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[
         torch.Tensor, None, None]:
@@ -118,7 +114,9 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         processed_embeddings = []
         for seq_num in range(len(embeddings)):
             input_id = tokenized_sequences[seq_num]
-            embedding = self._remove_special_tokens(embeddings[seq_num], input_id)
+            embedding = embeddings[seq_num]
+            keep_mask = self._get_keep_mask(embedding.size(0), input_id, embedding.device)
+            embedding = embedding[keep_mask]
             processed_embeddings.append(embedding)
 
         # Yield all at once
@@ -152,12 +150,18 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
 
-            x = torch.as_tensor(self._tokenizer.encode(sequence)).to(torch.long)  # tokenize the protein
-            x = x.unsqueeze(0).to(self._device)
-            attn_map = self._model(x, output_attentions=True)["attentions"]
-            attn_map = torch.stack(attn_map).detach().cpu()  # stack the attention maps and move to CPU
-            attn_map = attn_map.reshape(-1, x.size(-1), x.size(-1))  # (map, residues, residues)
-            attn_map = attn_map[:, 1:-1, 1:-1]  # remove special tokens <bos> and <eos>
+            tokenized_sequences, attention_mask = self._tokenize([sequence], preprocess=True)
+            input_ids = tokenized_sequences[0]
+
+            outputs = self._model(tokenized_sequences, attention_mask=attention_mask, output_attentions=True)
+            attn_map = torch.stack(outputs["attentions"]).detach().cpu()  # (layers, batch, heads, tokens, tokens)
+            attn_map = attn_map.squeeze(1).reshape(-1, input_ids.size(0), input_ids.size(0))  # (map, tokens, tokens)
+
+            keep_mask = self._get_keep_mask(attn_map.size(1), input_ids, attn_map.device)
+
+            # Filter out special tokens along both dimensions
+            attn_map = attn_map[:, keep_mask, :][:, :, keep_mask]
+
             attn_map = self._apc(self._symmetrize(attn_map))  # process the attention maps
             attn_map = attn_map.permute(1, 2, 0)  # (residues, residues, map)
             return attn_map

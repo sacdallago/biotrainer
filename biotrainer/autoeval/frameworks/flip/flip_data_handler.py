@@ -19,6 +19,9 @@ class FLIPDataHandler(AutoEvalDataHandler):
     def get_download_urls():
         return ["https://nextcloud.cit.tum.de/index.php/s/fqFEeCSpwTHkt8X/download"]
 
+    def get_framework_subdirectory(self) -> str:
+        return ""  # Not necessary for FLIP
+
     def preprocess(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) -> None:
         """ Filters all dataset splits for sequences that fulfill the length requirements """
         for dataset, dataset_info in tqdm(all_flip_datasets().items(), desc="Preprocessing datasets"):
@@ -36,11 +39,12 @@ class FLIPDataHandler(AutoEvalDataHandler):
 
         print("FLIP data preprocessing completed!")
 
-    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int],
-                  development_mode: bool) -> List[AutoEvalTask]:
+    def get_tasks(self, base_path: Path, min_seq_length: Optional[int], max_seq_length: Optional[int]) \
+            -> List[AutoEvalTask]:
         """Build tasks for all FLIP datasets"""
         print("WARNING: FLIP dataset support is currently deprecated in biotrainer - please refer to the PBC datasets "
               "instead!")
+        base_path = base_path / self.get_framework_subdirectory()
 
         tasks = []
 

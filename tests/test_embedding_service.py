@@ -3,10 +3,14 @@ import psutil
 import random
 import unittest
 import tempfile
+import h5py
+import torch
 
 from pathlib import Path
 from biotrainer_core.data_classes import Protocol, SequenceData
-from biotrainer.embedding import OneHotEncodingEmbedder, EmbeddingService
+from biotrainer_core.functions.hashing import calculate_sequence_hash
+from biotrainer.embedding import OneHotEncodingEmbedder, EmbeddingService, CustomEmbedder
+from biotrainer.autoeval.pipelines.autoeval_supervised import CustomEmbedderWrapper
 
 
 class TestEmbeddingService(unittest.TestCase):
@@ -116,6 +120,90 @@ class TestEmbeddingService(unittest.TestCase):
                                                           output_dir=Path(tmp_dir),
                                                           protocol=Protocol.sequence_to_class,
                                                           store_by_hash=False)
+
+    def test_incremental_embedding_computation_by_hash(self):
+        seq1 = "MMAAAG"
+        seq2 = "MMAAGX"
+        seq3 = "GGGGAA"
+
+        seq_records_part1 = [
+            SequenceData(seq_id="Seq1", seq=seq1),
+            SequenceData(seq_id="Seq2", seq=seq2)
+        ]
+        seq_records_all = [
+            SequenceData(seq_id="Seq1", seq=seq1),
+            SequenceData(seq_id="Seq2", seq=seq2),
+            SequenceData(seq_id="Seq3", seq=seq3)
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            out_dir = Path(tmp_dir)
+            result_path = self.embedding_service.compute_embeddings(
+                input_data=seq_records_part1,
+                output_dir=out_dir,
+                protocol=Protocol.sequence_to_class,
+                store_by_hash=True
+            )
+
+            with h5py.File(result_path, "r") as h5_file:
+                self.assertEqual(len(h5_file.keys()), 2)
+                self.assertIn(calculate_sequence_hash(seq1), h5_file)
+                self.assertIn(calculate_sequence_hash(seq2), h5_file)
+                self.assertNotIn(calculate_sequence_hash(seq3), h5_file)
+
+            # Compute with all sequences (seq1 and seq2 should be skipped, only seq3 computed)
+            result_path_2 = self.embedding_service.compute_embeddings(
+                input_data=seq_records_all,
+                output_dir=out_dir,
+                protocol=Protocol.sequence_to_class,
+                store_by_hash=True
+            )
+            self.assertEqual(result_path, result_path_2)
+
+            with h5py.File(result_path, "r") as h5_file:
+                self.assertEqual(len(h5_file.keys()), 3)
+                self.assertIn(calculate_sequence_hash(seq1), h5_file)
+                self.assertIn(calculate_sequence_hash(seq2), h5_file)
+                self.assertIn(calculate_sequence_hash(seq3), h5_file)
+
+    def test_custom_embedder_wrapper_filters_existing(self):
+        computed_seqs = []
+
+        class DummyCustomEmbedder(CustomEmbedder):
+            def per_residue(self, sequences):
+                for seq in sequences:
+                    computed_seqs.append(seq)
+                    yield seq, torch.zeros((len(seq), 5))
+
+            def per_sequence(self, sequences):
+                for seq in sequences:
+                    computed_seqs.append(seq)
+                    yield seq, torch.zeros(5)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            res_path = Path(tmp_dir) / "per_res.h5"
+            seq_path = Path(tmp_dir) / "per_seq.h5"
+            wrapper = CustomEmbedderWrapper(
+                custom_embedder=DummyCustomEmbedder(),
+                output_path_per_res=res_path,
+                output_path_per_seq=seq_path
+            )
+
+            seqs_initial = ["MKAL", "AAAA"]
+            wrapper.per_sequence_path(seqs_initial)
+            self.assertEqual(computed_seqs, ["MKAL", "AAAA"])
+
+            computed_seqs.clear()
+            seqs_next = ["MKAL", "AAAA", "CCCC"]
+            wrapper.per_sequence_path(seqs_next)
+            # Only CCCC should have been computed
+            self.assertEqual(computed_seqs, ["CCCC"])
+
+            with h5py.File(seq_path, "r") as h5_file:
+                self.assertEqual(len(h5_file.keys()), 3)
+                self.assertIn(calculate_sequence_hash("MKAL"), h5_file)
+                self.assertIn(calculate_sequence_hash("AAAA"), h5_file)
+                self.assertIn(calculate_sequence_hash("CCCC"), h5_file)
 
 
 if __name__ == '__main__':

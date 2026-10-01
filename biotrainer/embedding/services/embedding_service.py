@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import time
+import h5py
 import torch
 import multiprocessing as mp
 
@@ -94,15 +95,33 @@ class EmbeddingService:
             force_output_dir=force_output_dir
         )
 
-        # Avoid re-computation if file already exists
-        if not force_recomputing and embeddings_file_path.is_file():
-            logger.info(f"Using existing embeddings file at {embeddings_file_path}")
-            return str(embeddings_file_path)
-
-        logger.info(f"Computing embeddings to: {str(embeddings_file_path)}")
+        # Avoid re-computation if file already exists and all sequences are present
+        if force_recomputing and embeddings_file_path.is_file():
+            embeddings_file_path.unlink()
 
         # Process input data
         seq_records = self._process_input_data(input_data)
+
+        if not force_recomputing and embeddings_file_path.is_file():
+            with h5py.File(embeddings_file_path, "r") as embeddings_file:
+                existing_keys = set([k for k in tqdm(embeddings_file.keys(), desc=f"Looking up existing embeddings..")])
+            if store_by_hash:
+                seq_records_not_existing_yet = [seq_record for seq_record in seq_records
+                                                if seq_record.get_hash() not in existing_keys]
+            else:
+                seq_records_not_existing_yet = [seq_record for seq_record in seq_records
+                                                if seq_record.seq_id not in existing_keys]
+
+            if len(seq_records_not_existing_yet) == 0:
+                logger.info(f"Using existing embeddings file at {embeddings_file_path}")
+                return str(embeddings_file_path)
+
+            n_already_existing = len(seq_records) - len(seq_records_not_existing_yet)
+            logger.info(f"Using {n_already_existing} existing embeddings from file, "
+                        f"embedding {len(seq_records_not_existing_yet)} new sequences..")
+            seq_records = seq_records_not_existing_yet
+
+        logger.info(f"Computing embeddings to: {str(embeddings_file_path)}")
 
         # Check for not-allowed characters in sequence ids
         if not store_by_hash:

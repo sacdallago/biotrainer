@@ -313,7 +313,16 @@ class Ranking:
         n_competitors = int(self._result.number_competitors)
         max_category_score = self._format_ranking_score(self.max_category_score)
         maximum_ranking_value = self._format_ranking_score(self.maximum_ranking_value)
-        verbose_lines = []
+
+        start_string = (f"### {entry_name}\n"
+                        f"**Global Position:** {leaderboard_place} / {n_competitors} \n\n"
+                        f"**Total Score:** {total_score} / {maximum_ranking_value} \n")
+        table_lines = [
+            "#### Category Details",
+            "| Category | Score | Metric |",
+            "| :--- | :--- | :--- |"
+        ]
+        
         for category, ranking in self._result.ranking_map.items():
             # Find entry score in this category
             entry_score = 0.0
@@ -323,20 +332,14 @@ class Ranking:
                     break
 
             metric_val = ranking_entry.metrics.get(category)
-            metric_str = f"Metric: {metric_val}" if metric_val is not None else "Metric: combined task mean"
-            verbose_lines.append(f"{category}: \n\tScore: {entry_score}/{max_category_score} \n\t{metric_str}")
+            metric_str = f"{metric_val:.4f}" if isinstance(metric_val, (float, int)) else str(metric_val)
+            if metric_val is None:
+                metric_str = "combined task mean"
 
-        verbose_rank_string = "\n".join(verbose_lines)
+            category_str = category.split("\n")[0]
+            table_lines.append(f"| **{category_str}** | {entry_score}/{max_category_score} | {metric_str} |")
 
-        return (
-            f"{entry_name}:\n"
-            f"Global Position: {leaderboard_place}. Place\n\n"
-            f"Categories: \n"
-            f"{verbose_rank_string}\n\n"
-            f"Number of competitors: {n_competitors}\n"
-            f"Number of categories: {self._result.number_categories}\n"
-            f"Total score: {total_score}/{maximum_ranking_value}"
-        )
+        return start_string + "\n".join(table_lines)
 
     def copied_ranking(self) -> str:
         results = []

@@ -86,7 +86,8 @@ def setup_logging(output_dir: str, num_epochs: int):
 
 def clear_logging():
     biotrainer_logger = logging.getLogger('biotrainer')
+    current_handlers = list(biotrainer_logger.handlers)
 
-    for handler in biotrainer_logger.handlers:
+    for handler in current_handlers:
         biotrainer_logger.removeHandler(handler)
         handler.close()

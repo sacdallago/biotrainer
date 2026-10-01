@@ -2,5 +2,7 @@ from .pbc_contact import PBCZeroShotContactFramework, PBCSupervisedContactFramew
 from .flip import FLIPFramework
 from .pbc_supervised import PBCSupervisedFramework
 from .pgym import PGYMFramework
+from .pbc_unsupervised import PBCUnsupervisedFramework
 
-__all__ = ["PBCZeroShotContactFramework", "FLIPFramework", "PBCSupervisedFramework", "PGYMFramework", "PBCSupervisedContactFramework"]
+__all__ = ["PBCZeroShotContactFramework", "FLIPFramework", "PBCSupervisedFramework", "PGYMFramework",
+           "PBCSupervisedContactFramework", "PBCUnsupervisedFramework"]

@@ -1,21 +1,25 @@
 [project]
 name = "biotrainer-core"
-version = "2.0.0"
+version = "2.1.0"
 description = "Core data classes and I/O utilities for biotrainer."
 authors = [
     { name = "Sebastian Franz", email = "sebastian.franz@tum.de" },
 ]
 license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "pandas>=2.3.3",
     "pydantic>=2.12.3",
+    "email-validator>=2.3.0,<2.4.0",
     "ruamel.yaml>=0.17.40,<0.18.0",
     "numpy>=2.4.1,<2.5.0",
     "h5py>=3.15.0,<4.0.0",
     # only lightweight deps here — NO torch, transformers, etc.
 ]
+
+[tool.uv]
+exclude-newer = "7 days"  # Minimum release age of pypi packages: 7 days
 
 [build-system]
 requires = ["hatchling"]
