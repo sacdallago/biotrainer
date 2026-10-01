@@ -25,10 +25,11 @@ RUN pip install uv
 
 # Copy only requirements first to leverage Docker caching
 COPY pyproject.toml ./
+COPY biotrainer-core ./biotrainer-core
 RUN touch README.md
 
 # Install dependencies
-RUN uv pip install --system -e .
+RUN uv sync
 
 # Workaround for when switching the docker user
 RUN mkdir /tmp/numba_cache && chmod 777 /tmp/numba_cache
