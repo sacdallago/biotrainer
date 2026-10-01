@@ -78,7 +78,7 @@ Issues = "https://github.com/sacdallago/biotrainer/issues"
 Repository = "https://github.com/sacdallago/biotrainer"
 
 [project.scripts]
-biotrainer = "biotrainer.utilities.cli:app"
+biotrainer = "biotrainer.shared.cli:app"
 
 [build-system]
 requires = ["hatchling"]
