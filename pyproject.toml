@@ -49,6 +49,7 @@ dependencies = [
     "biotrainer-core>=2.0.0",
     "junban>=1.0.3,<1.1.0",
     "einops>=0.8.2,<0.9.0",
+    "transformers>=5.16.1,<5.20.0",
 ]
 
 [project.optional-dependencies]
@@ -67,10 +68,6 @@ dev = [
 autoeval-frontend = [
     "streamlit>=1.60.0,<1.61.0",
     "altair>=6.2.2,<6.3.0"
-]
-esm-c = [
-    "esm>=3.3.0,<3.4.0", # This will try to pull from PyPI if available, otherwise falls back to git
-    "xformers>=0.0.35,<0.1.0"
 ]
 
 [project.urls]
@@ -112,4 +109,3 @@ members = [
 
 [tool.uv.sources]
 biotrainer-core = { workspace = true }
-esm = { git = "https://github.com/Biohub/esm.git", branch = "main" }
