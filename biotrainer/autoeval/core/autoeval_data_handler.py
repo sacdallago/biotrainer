@@ -115,7 +115,7 @@ class AutoEvalDataHandler(ABC):
     def get_framework_base_path(self, custom_storage_path: Optional[Union[str, Path]] = None) -> Path:
         meta_framework_name = self.get_framework_name().split("_")[0]
         if custom_storage_path:
-            return Path(custom_storage_path) / meta_framework_name()
+            return Path(custom_storage_path) / meta_framework_name
         return get_autoeval_path() / meta_framework_name
 
     @abstractmethod
