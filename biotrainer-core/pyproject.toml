@@ -1,6 +1,6 @@
 [project]
 name = "biotrainer-core"
-version = "2.1.0"
+version = "2.1.1"
 description = "Core data classes and I/O utilities for biotrainer."
 authors = [
     { name = "Sebastian Franz", email = "sebastian.franz@tum.de" },
