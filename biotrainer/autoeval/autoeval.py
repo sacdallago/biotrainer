@@ -385,9 +385,9 @@ class AutoEval:
             many DMS assays, so individual assays cannot be selected this way.
         :return: The AutoEval instance for method chaining.
         """
-        if self.development_mode:
-            raise ValueError("Development mode is not allowed for PBC Unsupervised evaluation at the moment."
-                             "It can be forced to run via removing this check.")
+        #if self.development_mode:
+        #    raise ValueError("Development mode is not allowed for PBC Unsupervised evaluation at the moment."
+        #                     "It can be forced to run via removing this check.")
 
         framework_obj, skip_execution, output_dir, framework_report = self._general_task_setup(
             AvailableFramework.PBC_UNSUPERVISED,
