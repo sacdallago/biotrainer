@@ -1,5 +1,9 @@
 # Biotrainer Changelog
 
+## Version 2.1.1
+
+* Hotfix: Using same version of biotrainer-core in biotrainer main package
+
 ## Version 2.1.0
 
 - **Bug Fixes**:

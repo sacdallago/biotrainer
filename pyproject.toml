@@ -1,6 +1,6 @@
 [project]
 name = "biotrainer"
-version = "2.1.0"
+version = "2.1.1"
 description = "Biological prediction models made simple."
 authors = [
     {name = "Sebastian Franz", email = "sebastian.franz@tum.de"},
@@ -46,7 +46,7 @@ dependencies = [
     "aaanalysis>=1.1.0,<1.2.0",
     "blosum>=2.2.0,<2.3.0",
     "pydantic>=2.12.0,<2.15.0",
-    "biotrainer-core>=2.0.0",
+    "biotrainer-core==2.1.1",
     "junban>=1.0.3,<1.1.0",
     "einops>=0.8.2,<0.9.0",
     "transformers>=5.17.0,<5.20.0",
@@ -101,6 +101,7 @@ dependencies = [
 
 [tool.uv]
 exclude-newer = "7 days"  # Minimum release age of pypi packages: 7 days
+exclude-newer-package = { biotrainer-core = false }  # Except for biotrainer-core
 
 [tool.uv.workspace]
 members = [
