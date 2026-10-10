@@ -43,6 +43,12 @@ class ESM2(HuggingfaceTransformerEmbedder, BioOptEmbedder):
         logger.info(f"Chosen sequence pre-processing strategy: {strategy.__name__}")
         return strategy
 
+    def _get_keep_mask(self, mask_length: int, input_id: torch.Tensor, device: torch.device) -> torch.Tensor:
+        keep_mask = torch.ones(mask_length, dtype=torch.bool, device=device)
+        keep_mask[0] = False
+        keep_mask[-1] = False
+        return keep_mask
+
     def _embed_batch_implementation(self, batch: List[str], model: Any) -> Generator[
         torch.Tensor, None, None]:
         """
