@@ -30,8 +30,8 @@ from ...embedding import get_embedding_service, CustomEmbedder, EmbedderInterfac
 
 @dataclass
 class LogisticRegressionHyperParameters:
-    solver: str = "liblinear"
-    l1_ratio: float = 1
+    solver: str = "saga"
+    l1_ratio: float = 0
     C: float = 1  # Permutated
     seed: int = 0
 
@@ -81,8 +81,8 @@ def _generate_flat_pairwise_dataset_input(seq_data: List[SequenceData], embedder
         x.extend(attention_map[diag_idx, :].reshape(-1, attention_map.shape[-1]).to(torch.float32))
         y.extend(ground_truth_contact_map[diag_idx].reshape(-1))
 
-    x = np.asarray(x, dtype=np.float64)
-    y = np.asarray(y, dtype=np.float64)
+    x = np.asarray(x, dtype=np.float32)
+    y = np.asarray(y, dtype=np.float32)
     return x, y
 
 
@@ -167,7 +167,7 @@ def _train_logistic_regression(current_task_name: str, input_dataset: _InputData
         print(f"{current_task_name}: Training classifier {idx} (Total: {len(hyper_params)})")
         # Train classifier on training data
         # Logistic Regression (careful, liblinear does not support int64!)
-        clf = LogisticRegression(solver=hp.solver, l1_ratio=hp.l1_ratio, C=hp.C)
+        clf = LogisticRegression(solver=hp.solver, l1_ratio=hp.l1_ratio, C=hp.C, random_state=hp.seed)
         clf.fit(x_train, y_train)
 
         # Test on Val dataset
