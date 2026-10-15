@@ -9,7 +9,7 @@ from .embedding_service import EmbeddingService
 from .peft_embedding_service import PeftEmbeddingService
 
 from ..onnx import OnnxEmbedder
-from ..baseline_embedders import BASELINE_EMBEDDERS
+from ..baseline_embedders import BASELINE_EMBEDDERS, RandomEmbedder
 from ..interfaces import EmbedderInterface, CustomTokenizer
 from ..huggingface import OPTIMIZED_EMBEDDERS, HuggingfaceTransformerEmbedder
 
@@ -18,16 +18,21 @@ from ...shared import is_device_cpu, get_logger
 logger = get_logger(__name__)
 
 
-def get_embedding_service(embedder_name: str,
-                          custom_tokenizer_config: Optional[str],
-                          use_half_precision: Optional[bool] = False,
-                          device: Optional[Union[str, torch.device]] = None,
-                          finetuning_config: Optional[Dict[str, Any]] = None) -> Union[
-    EmbeddingService, PeftEmbeddingService]:
-    embedder: EmbedderInterface = _get_embedder(embedder_name=embedder_name,
-                                                custom_tokenizer_config=custom_tokenizer_config,
-                                                use_half_precision=use_half_precision,
-                                                device=device)
+def get_embedding_service(
+    embedder_name: str,
+    custom_tokenizer_config: Optional[str],
+    use_half_precision: Optional[bool] = False,
+    device: Optional[Union[str, torch.device]] = None,
+    finetuning_config: Optional[Dict[str, Any]] = None,
+    seed: Optional[int] = None,
+) -> Union[EmbeddingService, PeftEmbeddingService]:
+    embedder: EmbedderInterface = _get_embedder(
+        embedder_name=embedder_name,
+        custom_tokenizer_config=custom_tokenizer_config,
+        use_half_precision=use_half_precision,
+        device=device,
+        seed=seed,
+    )
     if finetuning_config:
         return PeftEmbeddingService(embedder=embedder, use_half_precision=use_half_precision,
                                     finetuning_config=finetuning_config)
@@ -71,16 +76,21 @@ def _determine_tokenizer_and_model(embedder_name: str) -> Tuple:
     return T5Tokenizer, T5EncoderModel
 
 
-def _get_embedder(embedder_name: Optional[str],
-                  custom_tokenizer_config: Optional[str],
-                  use_half_precision: Optional[bool],
-                  device: Optional[Union[str, torch.device]]) -> EmbedderInterface:
+def _get_embedder(
+    embedder_name: Optional[str],
+    custom_tokenizer_config: Optional[str],
+    use_half_precision: Optional[bool],
+    device: Optional[Union[str, torch.device]],
+    seed: Optional[int] = None,
+) -> EmbedderInterface:
     if embedder_name is None or embedder_name == "":
         raise ValueError("No embedder name provided!")
 
     # Predefined Embedders
     if embedder_name in BASELINE_EMBEDDERS.keys():
         logger.info(f"Using predefined embedder: {embedder_name}")
+        if embedder_name == RandomEmbedder.name:
+            return RandomEmbedder(seed=seed)
         return BASELINE_EMBEDDERS[embedder_name]()
 
     # Custom Embedders
