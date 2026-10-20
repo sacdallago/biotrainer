@@ -61,7 +61,8 @@ class EmbeddingStep(PipelineStep[BiotrainerPipelineContext]):
                 custom_tokenizer_config=context.config.get("custom_tokenizer_config"),
                 embedder_name=context.config["embedder_name"],
                 use_half_precision=context.config.get("use_half_precision"),
-                device=context.config["device"]
+                device=context.config["device"],
+                seed=context.config["seed"],
             )
             embeddings_file = embedding_service.compute_embeddings(
                 input_data=context.input_data,
@@ -138,7 +139,8 @@ class FineTuningEmbeddingStep(EmbeddingStep):
             embedder_name=context.config["embedder_name"],
             use_half_precision=context.config.get("use_half_precision"),
             device=context.config["device"],
-            finetuning_config=context.config["finetuning_config"]
+            finetuning_config=context.config["finetuning_config"],
+            seed=context.config["seed"],
         )
         context.embedding_service = embedding_service
         return context
