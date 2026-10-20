@@ -87,10 +87,13 @@ class BiotrainerModel:
         inf = self.inferencer()
         iom = self.inference_output_manager()
 
-        embedding_service = get_embedding_service(embedder_name=iom.embedder_name(),
-                                                  custom_tokenizer_config=None,  # TODO
-                                                  use_half_precision=iom.use_half_precision(),
-                                                  device=iom.device())
+        embedding_service = get_embedding_service(
+            embedder_name=iom.embedder_name(),
+            custom_tokenizer_config=None,  # TODO
+            use_half_precision=iom.use_half_precision(),
+            device=iom.device(),
+            seed=iom.seed(),
+        )
         adapter_path = iom.adapter_path()
         if adapter_path is not None:
             embedding_service.add_finetuned_adapter(adapter_path=adapter_path)
