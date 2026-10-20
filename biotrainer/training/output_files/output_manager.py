@@ -233,6 +233,10 @@ class InferenceOutputManager(OutputManager):
     def use_half_precision(self):
         return self._input_config["use_half_precision"]
 
+    def seed(self):
+        # None for output files that don't record one, which then embed unseeded as before
+        return self._input_config.get("seed")
+
     def log_dir(self):
         return self._input_config["log_dir"]
 

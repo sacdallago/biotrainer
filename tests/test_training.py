@@ -19,6 +19,32 @@ rs2c_config = {'protocol': 'residues_to_class',
                'embedder_name': 'one_hot_encoding',
                'input_file': "test_input_files/scl_subset/scl_rand.fasta"}
 
+s2v_random_config = {
+    "protocol": "sequence_to_value",
+    "model_choice": "FNN",
+    "embedder_name": "random_embedder",
+    "num_epochs": 2,
+    "seed": 1510,
+}
+
+s2v_input_data = [
+    SequenceData(
+        seq_id=f"Seq{i}", seq=seq, attributes={"TARGET": str(target), "SET": split}
+    )
+    for i, (seq, target, split) in enumerate(
+        [
+            ("MMALSLALM", 0.1, "train"),
+            ("PRTEIN", 0.4, "train"),
+            ("PRT", 0.9, "train"),
+            ("MKTAYIAK", 0.3, "train"),
+            ("SEQWENCE", 0.7, "val"),
+            ("PRTE", 0.2, "val"),
+            ("MMALSM", 0.5, "test"),
+            ("PRSEQ", 0.8, "test"),
+        ]
+    )
+]
+
 
 class TrainingTests(unittest.TestCase):
     error_tolerance = 0.01
@@ -110,3 +136,31 @@ class TrainingTests(unittest.TestCase):
                 config = deepcopy(s2c_config)
                 config.pop("input_file")
                 result = BiotrainerModel().train(config=config, input_data=input_data)
+
+    def test_training_embeds_with_the_config_seed(self):
+        """Two trainings with the same seed embed alike, so they reach the same training loss"""
+        losses = []
+        for _ in range(2):
+            with tempfile.TemporaryDirectory() as tmp_dir_name:
+                config = deepcopy(s2v_random_config)
+                config["output_dir"] = tmp_dir_name
+                result = BiotrainerModel().train(
+                    config=config, input_data=deepcopy(s2v_input_data)
+                )
+                losses.append(self._get_best_training_loss_from_result(result))
+        self.assertEqual(losses[0], losses[1])
+
+    def test_prediction_embeds_with_the_training_seed(self):
+        """Predicting twice with a random-embedder model embeds alike, so the predictions agree"""
+        new_sequences = [
+            SequenceData(seq_id="New1", seq="MKTAYIAKQR"),
+            SequenceData(seq_id="New2", seq="SEQVENCE"),
+        ]
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            config = deepcopy(s2v_random_config)
+            config["output_dir"] = tmp_dir_name
+            model = BiotrainerModel()
+            model.train(config=config, input_data=deepcopy(s2v_input_data))
+            first = model.predict(deepcopy(new_sequences)).predictions
+            second = model.predict(deepcopy(new_sequences)).predictions
+        self.assertEqual(first, second)
