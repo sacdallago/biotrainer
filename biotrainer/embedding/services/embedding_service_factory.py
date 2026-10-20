@@ -9,7 +9,7 @@ from .embedding_service import EmbeddingService
 from .peft_embedding_service import PeftEmbeddingService
 
 from ..onnx import OnnxEmbedder
-from ..baseline_embedders import BASELINE_EMBEDDERS, RandomEmbedder
+from ..baseline_embedders import BASELINE_EMBEDDERS
 from ..interfaces import EmbedderInterface, CustomTokenizer
 from ..huggingface import OPTIMIZED_EMBEDDERS, HuggingfaceTransformerEmbedder
 
@@ -89,9 +89,7 @@ def _get_embedder(
     # Predefined Embedders
     if embedder_name in BASELINE_EMBEDDERS.keys():
         logger.info(f"Using predefined embedder: {embedder_name}")
-        if embedder_name == RandomEmbedder.name:
-            return RandomEmbedder(seed=seed)
-        return BASELINE_EMBEDDERS[embedder_name]()
+        return BASELINE_EMBEDDERS[embedder_name](seed)
 
     # Custom Embedders
     if embedder_name.endswith(".py"):  # Check that file ends on .py => Python script
