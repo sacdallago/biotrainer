@@ -73,6 +73,27 @@ class Variant(BaseModel):
         mutations = [Mutation.parse(m, one_indexed=one_indexed) for m in mutation_strings]
         return cls(mutations=mutations, wt_sequence=wt_sequence)
 
+    @classmethod
+    def from_sequences(cls, reference: str, variant: str) -> Variant:
+        """
+        Derive the variant separating two equally long sequences, the inverse of get_mutant_sequence.
+
+        Args:
+            reference: Sequence the positions are numbered against, e.g. the wild type
+            variant: Equally long sequence carrying the substitutions
+        """
+        if len(reference) != len(variant):
+            raise ValueError("Variants do not support insertions or deletions")
+
+        mutations = [
+            Mutation(wt=wt, position=position, mt=mt)
+            for position, (wt, mt) in enumerate(zip(reference, variant), start=1)
+            if wt != mt
+        ]
+        if not mutations:
+            raise ValueError("A variant must differ from its reference sequence")
+        return cls(mutations=mutations, wt_sequence=reference)
+
     @field_validator('mutations')
     @classmethod
     def check_no_duplicate_positions(cls, mutations: List[Mutation]) -> List[Mutation]:
