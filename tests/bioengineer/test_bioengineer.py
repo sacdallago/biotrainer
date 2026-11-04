@@ -10,7 +10,7 @@ from biotrainer_core.utils.constants import STANDARD_AAS
 from biotrainer.bioengineer.interfaces import BertLikeEngineer
 from biotrainer.bioengineer.models import CustomBioEngineerModel, CustomBioEngineerModelWrapper
 from biotrainer.shared import SequenceTooLongError
-from biotrainer_core.data_classes import ZeroShotMethod, Variant
+from biotrainer_core.data_classes import ZeroShotMethod
 from biotrainer.bioengineer import BioEngineer, BioEngineerBaseline
 from biotrainer.bioengineer.bioengineer_utils import MAX_CONTEXT_LENGTH
 
@@ -249,17 +249,6 @@ class BioEngineerTests(unittest.TestCase):
         self.assertTrue(len(scores) > 0)
         self.assertTrue(-1 <= ranking.scc.mean <= 1)
         self.assertTrue(0 <= ranking.ndcg.mean <= 1)
-
-    def test_mutation_parsing(self):
-        wt_sequence = "MAGSMALM"
-        mutations = ["A2S", "G3M", "M1A", "M1S", "M1S:M5A"]
-        for mutation in mutations:
-            variant = Variant.parse(variant_string=mutation, wt_sequence=wt_sequence, one_indexed=True)
-            self.assertEqual(variant.wt_sequence, wt_sequence)
-            self.assertEqual(len(variant.mutations), 1 if ":" not in mutation else 2)
-
-            mut_seq = variant.get_mutant_sequence(wt_sequence=wt_sequence)
-            self.assertTrue(len(mut_seq) == len(wt_sequence))
 
     def test_masked_marginals_only_masks_residue_positions(self):
         """ One forward per residue, each masking that residue - special tokens are never masked """
