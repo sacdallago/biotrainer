@@ -86,7 +86,7 @@ class Variant(BaseModel):
             raise ValueError("Variants do not support insertions or deletions")
 
         mutations = [
-            Mutation(wt=wt, position=position, mt=mt)
+            Mutation(wt=wt, position=position, mt=mt, one_indexed=True)
             for position, (wt, mt) in enumerate(zip(reference, variant), start=1)
             if wt != mt
         ]
