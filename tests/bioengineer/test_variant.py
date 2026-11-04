@@ -1,4 +1,4 @@
-"""Contract tests for deriving variants from sequences."""
+"""Contract tests for Variant: parsing mutation strings and deriving variants from sequences."""
 
 import unittest
 
@@ -29,6 +29,27 @@ class TestVariantFromSequences(unittest.TestCase):
     def test_identical_sequences_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "must differ"):
             Variant.from_sequences("SEQV", "SEQV")
+
+
+class TestVariantParse(unittest.TestCase):
+    def test_mutation_parsing(self):
+        wt_sequence = "MAGSMALM"
+        mutations = {
+            "A2S": "MSGSMALM",
+            "G3M": "MAMSMALM",
+            "M1A": "AAGSMALM",
+            "M1S": "SAGSMALM",
+            "M1S:M5A": "SAGSAALM",
+        }
+        for mutation, expected in mutations.items():
+            variant = Variant.parse(
+                variant_string=mutation, wt_sequence=wt_sequence, one_indexed=True
+            )
+            self.assertEqual(variant.wt_sequence, wt_sequence)
+            self.assertEqual(len(variant.mutations), 1 if ":" not in mutation else 2)
+
+            mut_seq = variant.get_mutant_sequence(wt_sequence=wt_sequence)
+            self.assertEqual(mut_seq, expected)
 
 
 if __name__ == "__main__":
