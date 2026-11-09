@@ -1,5 +1,4 @@
 from pathlib import Path
-from datasets import load_dataset
 from typing import Any, Dict, List, Optional, Tuple
 
 from ...shared import get_logger
@@ -177,6 +176,7 @@ def _load_and_split_hf_dataset(hf_map: Dict) -> Tuple[List[str], List[Any], List
 
     # Load dataset
     try:
+        from datasets import load_dataset
         dataset = load_dataset(path, subset_name if subset_name is not None else 'default')
     except ValueError as e:
         error_msg = ("Loading the dataset from Hugging Face failed. "
