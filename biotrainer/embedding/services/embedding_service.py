@@ -65,7 +65,8 @@ class EmbeddingService:
         return self
 
     def compute_embeddings(self,
-                           input_data: Union[str, Path, List[str], List[SequenceData], Dict[str, SequenceData]],
+                           input_data: Union[str, Path, List[str], List[SequenceData],
+                           Dict[str, SequenceData], Dict[str, str]],
                            output_dir: Path,
                            protocol: Protocol,
                            force_output_dir: bool = False,
@@ -251,7 +252,13 @@ class EmbeddingService:
             else:
                 raise ValueError(f"Non-supported type for input_data: {type(input_data[0])}")
         elif isinstance(input_data, dict):
-            return [seq_record for seq_record in input_data.values()]
+            if isinstance(list(input_data.values())[0], SequenceData):
+                return [seq_record for seq_record in input_data.values()]
+            elif isinstance(list(input_data.values())[0], str):
+                return [SequenceData(seq_id=seq_id, seq=seq)
+                        for seq_id, seq in input_data.items()]
+            else:
+                raise ValueError(f"Non-supported type for input_data: {type(input_data[0])}")
         else:
             raise ValueError(f"Non-supported type for input_data: {type(input_data)}")
 
