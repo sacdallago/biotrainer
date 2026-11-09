@@ -1,6 +1,7 @@
 import torch
 
 from pathlib import Path
+from biotrainer.shared import get_device
 from typing import Optional, Union, Dict, Any, List, Generator
 from biotrainer_core.data_classes import SequenceData, Protocol
 
@@ -16,8 +17,14 @@ class EmbeddingAPI:
                  use_half_precision: Optional[bool] = False,
                  device: Optional[Union[str, torch.device]] = None,
                  finetuning_config: Optional[Dict[str, Any]] = None):
+        self._embedder_name = embedder_name
+        self._custom_tokenizer_config = custom_tokenizer_config
+        self._use_half_precision = use_half_precision
+        self._device = device
+        self._finetuning_config = finetuning_config
+
         self._embedding_service = get_embedding_service(embedder_name, custom_tokenizer_config, use_half_precision,
-                                                        device, finetuning_config)
+                                                        get_device(device), finetuning_config)
 
     def compute_embeddings(self, input_data: Union[str, Path, List[str], List[SequenceData], Dict[str, SequenceData]],
                            output_dir: Path,
