@@ -4,6 +4,8 @@ from datetime import datetime
 from dataclasses import dataclass
 from typing import Optional, Tuple, Callable
 
+from biotrainer_core.data_classes import SequenceData
+
 
 # Not using pydantic for faster transfer
 @dataclass(frozen=True)
@@ -18,6 +20,20 @@ class EmbeddingDatabaseDTO:
     embd_per_residue: Optional  # Can be numpy array or torch tensor or bytes (compressed)
     keep: bool  # Keep this embedding in the database and do not remove it via cleanup
 
+    @classmethod
+    def from_sequence_data(cls, sequence_data: SequenceData, embedder_name: str, reduce: bool):
+        return EmbeddingDatabaseDTO(
+            hash_key=sequence_data.get_hash(),
+            seq_len=len(sequence_data.seq),
+            access_count=0,
+            created_at=datetime.now(),
+            last_accessed=datetime.now(),
+            embedder_name=embedder_name,
+            embd_per_sequence=sequence_data.embedding if reduce else None,
+            embd_per_residue=sequence_data.embedding if not reduce else None,
+            keep=True,
+        )
+
     def reduced(self) -> bool:
         return self.embd_per_sequence is not None and self.embd_per_residue is None
 
@@ -31,6 +47,16 @@ class EmbeddingDatabaseDTO:
                 self.embd_per_sequence,
                 self.embd_per_residue,
                 self.keep)
+
+    def database_key(self) -> str:
+        return f"{self.hash_key}_{self.cleaned_embedder_name()}"
+
+    @staticmethod
+    def decompose_database_key(db_key: str) -> Tuple[str, str]:
+        vals = db_key.split("_")
+        hash_key = vals[0]
+        embedder_name = vals[1] + "/" + "_".join(vals[2:]) if len(vals) > 2 else vals[1]
+        return hash_key, embedder_name
 
     def cleaned_embedder_name(self) -> str:
         return self.embedder_name.replace('/', '_')
