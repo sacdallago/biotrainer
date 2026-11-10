@@ -148,9 +148,6 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
     def compute_attention_map(self, sequence: str) -> torch.Tensor:
         self._ensure_attention_backend()
         with torch.no_grad(), torch.autocast(device_type=str(self._device), dtype=torch.float16, enabled=True):
-            torch.backends.cuda.matmul.allow_tf32 = True
-            torch.backends.cudnn.allow_tf32 = True
-
             tokenized_sequences, attention_mask = self._tokenize([sequence], preprocess=True)
             input_ids = tokenized_sequences[0]
 

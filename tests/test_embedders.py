@@ -101,3 +101,16 @@ class EmbeddersTests(unittest.TestCase):
                 attention_map = _tiny_esm_embedder(embedder_class).compute_attention_map(sequence)
                 # 2 layers x 2 heads
                 self.assertEqual((len(sequence), len(sequence), 4), tuple(attention_map.shape))
+
+    def test_attention_map_does_not_enable_tf32(self):
+        # The TF32 flags are process-wide, enabling them would switch all later float32 computations to TF32
+        matmul_tf32, cudnn_tf32 = torch.backends.cuda.matmul.allow_tf32, torch.backends.cudnn.allow_tf32
+        try:
+            torch.backends.cuda.matmul.allow_tf32 = False
+            torch.backends.cudnn.allow_tf32 = False
+            _tiny_esm_embedder(ESM2).compute_attention_map(self._test_sequences[0])
+            self.assertFalse(torch.backends.cuda.matmul.allow_tf32)
+            self.assertFalse(torch.backends.cudnn.allow_tf32)
+        finally:
+            torch.backends.cuda.matmul.allow_tf32 = matmul_tf32
+            torch.backends.cudnn.allow_tf32 = cudnn_tf32
