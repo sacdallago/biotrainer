@@ -124,9 +124,22 @@ class AutoevalTests(unittest.TestCase):
 
     def test_autoeval_zeroshot_contact_full_eval_ablation(self):
         """ Checks that full eval computes both full task results and ablated task results """
+        from biotrainer.autoeval.pipelines.autoeval_setup import setup_output_dir
+        from biotrainer_core.data_classes import ContactSingleProteinResult
+        from biotrainer_core.data_classes.autoeval import ZeroShotContactCachedResults
+
         TEST_CONTACT_STORAGE = Path(__file__).parent / "test_input_files"
 
         with tempfile.TemporaryDirectory() as tmp_dir_name:
+            # Cached result of a protein from another dataset or an earlier run
+            cache = ZeroShotContactCachedResults.empty(embedder_name="bioengineer_random_baseline",
+                                                       method=ZeroShotMethod.JACOBIAN_CONTACT)
+            cache.update_and_sync(result=ContactSingleProteinResult(protein_name="OTHER",
+                                                                    precision_scores={"long_P@L2": 0.5}),
+                                  output_dir=setup_output_dir(base_dir=tmp_dir_name,
+                                                              embedder_name="bioengineer_random_baseline",
+                                                              framework_name="PBC_ZEROSHOT_CONTACT"))
+
             print("Starting AutoEval pipeline...")
 
             bio_engineer = BioEngineer.from_baseline(baseline=BioEngineerBaseline.RANDOM_BASELINE)
@@ -144,6 +157,35 @@ class AutoevalTests(unittest.TestCase):
             self.assertIn(f"PBC_ZEROSHOT_CONTACT-test_dataset{DEV_MODE_ABLATED_INDICATOR}", contact_report.task_results)
             self.assertFalse(contact_report.used_development_mode())
             self.assertFalse(report.is_development())
+            self.assertCountEqual(contact_report.task_members["PBC_ZEROSHOT_CONTACT-test_dataset"],
+                                  ["1GVFA", "1I9ZA", "1IX9A", "1US5A", "1VI6A"])
+            self.assertCountEqual(
+                contact_report.task_members[f"PBC_ZEROSHOT_CONTACT-test_dataset{DEV_MODE_ABLATED_INDICATOR}"],
+                ["1IX9A", "1US5A", "1VI6A"])
+            self.assertNotIn("OTHER", contact_report.per_protein_results)
+
+    def test_autoeval_supervised_contact_ablated_task_members(self):
+        """ Checks that the ablated supervised contact task only has the test proteins without dev mode as members """
+        import shutil
+        from biotrainer.autoeval import AutoEvalRandomBaseline
+
+        test_dataset = Path(__file__).parent / "test_input_files" / "PBC" / "contacts" / "zeroshot" / "test_dataset"
+
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            storage_path = Path(tmp_dir_name) / "storage"
+            for dataset_name in ["train", "val", "test_set"]:
+                shutil.copytree(test_dataset, storage_path / "PBC" / "contacts" / "supervised" / dataset_name)
+
+            autoeval = AutoEval(embedder_name="random_baseline",
+                                output_dir=Path(tmp_dir_name) / "output",
+                                custom_embedder=AutoEvalRandomBaseline().embedder(),
+                                custom_storage_path=storage_path,
+                                development_mode=False)
+            report = autoeval.pbc_supervised_contact().run()
+
+            task_members = report.supervised_contact_results["PBC_SUPERVISED_CONTACT"].task_members
+            self.assertCountEqual(task_members["test_set"], ["1GVFA", "1I9ZA", "1IX9A", "1US5A", "1VI6A"])
+            self.assertCountEqual(task_members[f"test_set{DEV_MODE_ABLATED_INDICATOR}"], ["1IX9A", "1US5A", "1VI6A"])
 
     def test_autoeval_zeroshot_pipeline_ablation(self):
         """ Checks that autoeval_zeroshot_pipeline adds ablated results for DEV_DATASET_TEST frameworks """

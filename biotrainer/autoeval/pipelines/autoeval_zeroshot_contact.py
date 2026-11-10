@@ -111,7 +111,7 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                                         single_results=all_single_results,
                                                                         )
         framework_report.update_result(task_name=current_task_name,
-                                       per_protein_results=zero_shot_contact_cached_results.per_protein_results,
+                                       per_protein_results={res.protein_name: res for res in all_single_results},
                                        dataset_result=dataset_result,
                                        )
 
@@ -128,7 +128,7 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                 )
                 framework_report.update_result(
                     task_name=ablated_task_name,
-                    per_protein_results=zero_shot_contact_cached_results.per_protein_results,
+                    per_protein_results={res.protein_name: res for res in ablated_single_results},
                     dataset_result=ablated_dataset_result,
                 )
                 print(f"Added ablated task result for {ablated_task_name} ({len(ablated_single_results)} proteins)")
