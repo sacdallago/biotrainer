@@ -18,6 +18,14 @@ from biotrainer.autoeval.pipelines.autoeval_supervised_contact import (
 )
 from biotrainer.autoeval.frameworks import PBCUnsupervisedFramework
 from biotrainer.bioengineer import BioEngineer, BioEngineerBaseline
+from biotrainer.bioengineer.baselines import RandomEngineerBaseline
+
+
+class _ShortContextRandomBaseline(RandomEngineerBaseline):
+    """ Random baseline whose context excludes the 336 and 297 residue test contact proteins """
+
+    def max_context_length(self) -> int:
+        return 280
 
 
 class TaskFilterTests(unittest.TestCase):
@@ -163,6 +171,27 @@ class AutoevalTests(unittest.TestCase):
                 contact_report.task_members[f"PBC_ZEROSHOT_CONTACT-test_dataset{DEV_MODE_ABLATED_INDICATOR}"],
                 ["1IX9A", "1US5A", "1VI6A"])
             self.assertNotIn("OTHER", contact_report.per_protein_results)
+
+    def test_autoeval_zeroshot_contact_too_long_sequences_fail_fast(self):
+        """ Checks that oversized contact proteins fail with all their ids before any protein is evaluated """
+        from biotrainer.bioengineer import SequenceTooLongError
+        from biotrainer_core.data_classes.autoeval import ZeroShotContactCachedResults
+
+        TEST_CONTACT_STORAGE = Path(__file__).parent / "test_input_files"
+
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            bio_engineer = BioEngineer(model_wrapper=_ShortContextRandomBaseline.detect(
+                embedder_name="bioengineer_random_baseline", device=None))
+            autoeval = AutoEval(embedder_name="bioengineer_random_baseline",
+                                output_dir=tmp_dir_name,
+                                custom_bioengineer=bio_engineer,
+                                custom_storage_path=TEST_CONTACT_STORAGE,
+                                development_mode=False)
+            with self.assertRaisesRegex(SequenceTooLongError, r"1I9ZA.*1US5A"):
+                autoeval.pbc_zeroshot_contact(zero_shot_method=ZeroShotMethod.JACOBIAN_CONTACT).run()
+
+            cache_file_name = ZeroShotContactCachedResults.get_file_name(method=ZeroShotMethod.JACOBIAN_CONTACT)
+            self.assertEqual(list(Path(tmp_dir_name).rglob(cache_file_name)), [])
 
     def test_autoeval_supervised_contact_ablated_task_members(self):
         """ Checks that the ablated supervised contact task only has the test proteins without dev mode as members """

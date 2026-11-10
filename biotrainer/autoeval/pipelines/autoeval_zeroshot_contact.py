@@ -13,6 +13,7 @@ from ..core import AutoEvalFramework
 
 from ...bioengineer import BioEngineer
 from ...shared.metrics import evaluate_contact_dataset
+from ...shared.sequence_exception import SequenceTooLongError
 
 
 def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
@@ -66,6 +67,13 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
             seq_records_subsampled = [seq_r for seq_r in seq_records if seq_r.get_attribute("DEV_MODE") == "True"]
             assert len(seq_records_subsampled) > 0, "No sequences found in development mode!"
             seq_records = seq_records_subsampled
+
+        # The categorical Jacobian has no windowed variant, so check all sequences before any computation
+        max_context_length = bioengineer.model_wrapper.max_context_length()
+        too_long_ids = [seq_r.seq_id for seq_r in seq_records if len(seq_r.seq) > max_context_length]
+        if len(too_long_ids) > 0:
+            raise SequenceTooLongError(f"{len(too_long_ids)} sequences of task {current_task_name} exceed the "
+                                       f"{max_context_length} token context of {embedder_name}: {too_long_ids}")
 
         # Check for cached results
         cached_results: Dict[str, ContactSingleProteinResult] = {}
