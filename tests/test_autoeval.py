@@ -374,6 +374,30 @@ class AutoevalTests(unittest.TestCase):
         self.assertIn("PBC_UNSUPERVISED-old_task (dev)", existing_report.task_results)
         self.assertIn("PBC_UNSUPERVISED-new_task", existing_report.task_results)
 
+    def test_zeroshot_contact_cache_survives_interrupted_write(self):
+        """ Checks that an interrupted cache write keeps the previous cache readable to resume from """
+        from unittest import mock
+        from biotrainer_core.data_classes import ContactSingleProteinResult
+        from biotrainer_core.data_classes.autoeval import ZeroShotContactCachedResults
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            cache = ZeroShotContactCachedResults.empty(embedder_name="test_embedder",
+                                                       method=ZeroShotMethod.JACOBIAN_CONTACT)
+            cache.update_and_sync(ContactSingleProteinResult(protein_name="p1", precision_scores={"long_P@L5": 0.5}),
+                                  output_dir=output_dir)
+
+            with mock.patch.object(ZeroShotContactCachedResults, "model_dump_json", side_effect=OSError("disk full")):
+                with self.assertRaises(OSError):
+                    cache.update_and_sync(ContactSingleProteinResult(protein_name="p2",
+                                                                     precision_scores={"long_P@L5": 0.7}),
+                                          output_dir=output_dir)
+
+            loaded_cache = ZeroShotContactCachedResults.loaded_or_empty(embedder_name="test_embedder",
+                                                                        method=ZeroShotMethod.JACOBIAN_CONTACT,
+                                                                        output_dir=output_dir)
+            self.assertEqual(["p1"], list(loaded_cache.per_protein_results.keys()))
+
     @unittest.skip(reason="Large test that should only be executed on demand")
     def test_autoeval_zeroshot_contact_ESM2_8M_UR50D(self):
         """ Checks that autoeval pipeline runs correctly with zero-shot contact ESM2_8M_UR50D """
