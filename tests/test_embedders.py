@@ -1,12 +1,34 @@
+import tempfile
 import unittest
 
 import torch
+
+from pathlib import Path
+from transformers import EsmConfig, EsmModel, EsmTokenizer
 
 from biotrainer.embedding import (
     OneHotEncodingEmbedder,
     RandomEmbedder,
     get_embedding_service,
 )
+from biotrainer.embedding.huggingface import ESM2, HuggingfaceTransformerEmbedder
+
+# Token order of the facebook/esm2_* vocab.txt
+_ESM2_VOCAB = ["<cls>", "<pad>", "<eos>", "<unk>", *"LAGVSERTIDPKQNFYMHWCXBUZO.-", "<null_1>", "<mask>"]
+
+
+def _tiny_esm_embedder(embedder_class):
+    """ Randomly initialised tiny ESM-2 model with the real EsmTokenizer, to test without downloading weights """
+    with tempfile.TemporaryDirectory() as tmp_dir_name:
+        vocab_file = Path(tmp_dir_name) / "vocab.txt"
+        vocab_file.write_text("\n".join(_ESM2_VOCAB))
+        tokenizer = EsmTokenizer(vocab_file=str(vocab_file))
+    torch.manual_seed(42)
+    model = EsmModel(EsmConfig(vocab_size=len(_ESM2_VOCAB), pad_token_id=1, mask_token_id=32, hidden_size=16,
+                               num_hidden_layers=2, num_attention_heads=2, intermediate_size=32,
+                               position_embedding_type="rotary")).eval()
+    return embedder_class(name="tiny_esm", model=model, tokenizer=tokenizer, use_half_precision=False,
+                          device=torch.device("cpu"))
 
 
 class EmbeddersTests(unittest.TestCase):
@@ -57,3 +79,25 @@ class EmbeddersTests(unittest.TestCase):
             ).embedding
 
         self.assertTrue(torch.equal(embed(1510), embed(1510)))
+
+    def test_huggingface_embedder_removes_esm_special_tokens(self):
+        """ Checks that the generic huggingface embedder removes the special tokens of the EsmTokenizer """
+        embedder = _tiny_esm_embedder(HuggingfaceTransformerEmbedder)
+        per_residue_embeddings = list(embedder.embed_many(self._test_sequences))
+        for sequence, per_residue_embedding in zip(self._test_sequences, per_residue_embeddings):
+            self.assertEqual((len(sequence), 16), tuple(per_residue_embedding.shape))
+
+    def test_huggingface_embedder_keeps_mask_token(self):
+        """ Checks that the generic huggingface embedder keeps the mask token, although it is a special token """
+        embedder = _tiny_esm_embedder(HuggingfaceTransformerEmbedder)
+        per_residue_embedding = next(embedder.embed_many(["SEQ<mask>NCE"]))
+        self.assertEqual((7, 16), tuple(per_residue_embedding.shape))
+
+    def test_attention_map_removes_esm_special_tokens(self):
+        """ Checks that the attention map only covers the residues of the sequence """
+        sequence = self._test_sequences[0]
+        for embedder_class in [HuggingfaceTransformerEmbedder, ESM2]:
+            with self.subTest(embedder=embedder_class.__name__):
+                attention_map = _tiny_esm_embedder(embedder_class).compute_attention_map(sequence)
+                # 2 layers x 2 heads
+                self.assertEqual((len(sequence), len(sequence), 4), tuple(attention_map.shape))
