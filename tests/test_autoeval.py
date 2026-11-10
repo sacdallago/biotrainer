@@ -78,6 +78,11 @@ class SupervisedContactClassifierTests(unittest.TestCase):
             coefs.append(clf.coef_)
         self.assertTrue(np.array_equal(coefs[0], coefs[1]), "Supervised contact training depends on the global RNG!")
 
+    def test_classifier_is_l1_regularised(self):
+        """ Checks that the classifier is L1 regularised - sklearn < 1.8 ignores l1_ratio and trains with L2 """
+        clf = _train_logistic_regression(current_task_name="test", input_dataset=self._input_dataset())
+        self.assertTrue(np.any(clf.coef_ == 0), "No coefficient is exactly 0 - not L1 regularised!")
+
 
 class AutoevalTests(unittest.TestCase):
 
