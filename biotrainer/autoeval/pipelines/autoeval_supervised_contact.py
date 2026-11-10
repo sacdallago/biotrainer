@@ -167,7 +167,8 @@ def _train_logistic_regression(current_task_name: str, input_dataset: _InputData
         print(f"{current_task_name}: Training classifier {idx} (Total: {len(hyper_params)})")
         # Train classifier on training data
         # Logistic Regression (careful, liblinear does not support int64!)
-        clf = LogisticRegression(solver=hp.solver, l1_ratio=hp.l1_ratio, C=hp.C)
+        # random_state: liblinear otherwise shuffles with the global numpy RNG
+        clf = LogisticRegression(solver=hp.solver, l1_ratio=hp.l1_ratio, C=hp.C, random_state=hp.seed)
         clf.fit(x_train, y_train)
 
         # Test on Val dataset

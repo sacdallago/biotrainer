@@ -2,6 +2,8 @@ import os
 import unittest
 import tempfile
 
+import numpy as np
+
 from pathlib import Path
 from biotrainer.autoeval import AutoEval
 from biotrainer.autoeval.pipelines.autoeval_setup import _apply_task_filter
@@ -11,6 +13,9 @@ from biotrainer_core.data_classes.autoeval import (
     DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR, ZeroShotFrameworkReport
 )
 from biotrainer.autoeval.pipelines.autoeval_unsupervised import autoeval_unsupervised_pipeline
+from biotrainer.autoeval.pipelines.autoeval_supervised_contact import (
+    _InputDataset, _PerProteinData, _train_logistic_regression
+)
 from biotrainer.autoeval.frameworks import PBCUnsupervisedFramework
 from biotrainer.bioengineer import BioEngineer, BioEngineerBaseline
 
@@ -48,6 +53,30 @@ class TaskFilterTests(unittest.TestCase):
         report.task_filter_applied = True
         # _general_task_setup skips a framework whose report is complete - a filtered one never is
         self.assertTrue(report.task_filter_applied)
+
+
+class SupervisedContactClassifierTests(unittest.TestCase):
+
+    @staticmethod
+    def _input_dataset() -> _InputDataset:
+        rng = np.random.default_rng(0)
+        length, n_features = 40, 8
+        x_train = rng.normal(size=(500, n_features)).astype(np.float32)
+        y_train = (x_train[:, 0] > 1).astype(np.float32)
+        contact_map = (rng.random(size=(length, length)) > 0.9).astype(np.float32)
+        contact_map = np.maximum(contact_map, contact_map.T)
+        val_dataset = [_PerProteinData(seq_id="val", sequence="A" * length, ground_truth_contact_map=contact_map,
+                                       attention_map=rng.normal(size=(length, length, n_features)))]
+        return _InputDataset(x_train=x_train, y_train=y_train, val_dataset=val_dataset, test_datasets={})
+
+    def test_training_is_independent_of_global_rng(self):
+        """ Checks that the supervised contact classifier does not depend on the global numpy RNG """
+        coefs = []
+        for global_seed in [1, 2]:
+            np.random.seed(global_seed)
+            clf = _train_logistic_regression(current_task_name="test", input_dataset=self._input_dataset())
+            coefs.append(clf.coef_)
+        self.assertTrue(np.array_equal(coefs[0], coefs[1]), "Supervised contact training depends on the global RNG!")
 
 
 class AutoevalTests(unittest.TestCase):
