@@ -88,7 +88,7 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         Compute categorical Jacobian from logits per sequence (L x 20 mutations).
 
         Returns:
-            torch.Tensor (on CPU): [L, 20, L, 20]
+            torch.Tensor: [L, 20, L, 20]
         """
 
         raise NotImplementedError
@@ -227,5 +227,12 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
             np.ndarray: [L, L]
         """
         categorical_jacobian = self._compute_categorical_jacobian(sequence, batch_size)
-        contact_map = convert_cat_jac_to_contact_map(categorical_jacobian.double().numpy())
-        return contact_map
+        # MPS has no float64, so the conversion runs on the CPU there
+        if categorical_jacobian.device.type == "mps":
+            categorical_jacobian = categorical_jacobian.cpu()
+        try:
+            contact_map = convert_cat_jac_to_contact_map(categorical_jacobian.double())
+        except torch.OutOfMemoryError:
+            # Not enough device memory for the float64 conversion, so it runs on the CPU
+            contact_map = convert_cat_jac_to_contact_map(categorical_jacobian.cpu().double())
+        return contact_map.cpu().numpy()

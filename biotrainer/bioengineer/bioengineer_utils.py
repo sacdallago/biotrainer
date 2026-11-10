@@ -1,6 +1,5 @@
 import math
 import torch
-import numpy as np
 
 from typing import Optional, Tuple
 
@@ -267,35 +266,35 @@ def prepare_cat_jac_mutations(
     return all_ids, all_mask
 
 
-def convert_cat_jac_to_contact_map(jac: np.ndarray) -> np.ndarray:
+def convert_cat_jac_to_contact_map(jac: torch.Tensor) -> torch.Tensor:
     """
     Convert categorical Jacobian to contact map.
     Reference 1: https://github.com/chandar-lab/AMPLIFY/blob/main/examples/contact_prediction.ipynb 
     Reference 2: https://github.com/zzhangzzhang/pLMs-interpretability/tree/main 
 
     Returns:
-        np.ndarray: [L, L]
+        torch.Tensor: [L, L] on the device of jac
     """
     # Symmetrize the jacobian
     # NOTE: symmetrize before converting to contacts as per Reference 1, but Reference 2 converts to contacts before symmetrizing.
-    jac = (jac + jac.transpose(2, 3, 0, 1)) / 2
+    jac = (jac + jac.permute(2, 3, 0, 1)) / 2
 
     # Center the jacobian
     for i in range(4):
-        jac -= jac.mean(i, keepdims=True)
+        jac -= jac.mean(i, keepdim=True)
 
     # Collapse (L, 20, L, 20) -> (L, L)
-    contacts = np.sqrt(np.square(jac).sum((1, 3)))
+    contacts = torch.sqrt(torch.square(jac).sum((1, 3)))
 
     # Remove diagonal (contacts with itself)
-    np.fill_diagonal(contacts, 0)
+    contacts.fill_diagonal_(0)
 
     # APC
-    a1 = contacts.sum(0, keepdims=True)
-    a2 = contacts.sum(1, keepdims=True)
+    a1 = contacts.sum(0, keepdim=True)
+    a2 = contacts.sum(1, keepdim=True)
     contacts = contacts - (a1 * a2) / contacts.sum()
 
     # Remove diagonal (contacts with itself)
-    np.fill_diagonal(contacts, 0)
+    contacts.fill_diagonal_(0)
 
     return contacts

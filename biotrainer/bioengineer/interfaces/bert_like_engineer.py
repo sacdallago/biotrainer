@@ -212,13 +212,13 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         # Get the model's logits without mutations
         ref_logits = self._model_forward_fn(input_ids, attention_mask)
         # Remove the special tokens and keep only the logits for amino acids
-        ref_logits = ref_logits[residue_positions][:, aa_token_ids].cpu()
+        ref_logits = ref_logits[residue_positions][:, aa_token_ids]
         # Compute the logits for all mutations
         mutated_logits = []
         for batch_ids, batch_mask in zip(torch.split(mutated_inputs, batch_size),
                                          torch.split(mutated_mask, batch_size)):
             mut_logits = self._model_batched_forward_fn(batch_ids, batch_mask)
-            mutated_logits.append(mut_logits[:, residue_positions][:, :, aa_token_ids].cpu())
+            mutated_logits.append(mut_logits[:, residue_positions][:, :, aa_token_ids])
         L = residue_positions.numel()
         # [L*20, L, 20] -> [L, 20, L, 20] in order of aa_token_ids/STANDARD_AAS
         mutated_logits = torch.cat(mutated_logits, dim=0).reshape(L, 20, L, 20)
