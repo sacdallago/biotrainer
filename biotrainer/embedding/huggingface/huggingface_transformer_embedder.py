@@ -87,7 +87,8 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
         Get a boolean mask for indices to keep in the attention map or embeddings,
         excluding special tokens and the mask token.
         """
-        special_tokens_mask = self._tokenizer.get_special_tokens_mask(input_id, already_has_special_tokens=True)
+        # EsmTokenizer does not detect special tokens in a tensor
+        special_tokens_mask = self._tokenizer.get_special_tokens_mask(input_id.tolist(), already_has_special_tokens=True)
         # Replace all special tokens but the mask token for MLM
         indices_to_remove = [index for index, mask in enumerate(special_tokens_mask)
                              if mask != 0 and input_id[index] != self._mask_token_id]
@@ -147,9 +148,6 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
     def compute_attention_map(self, sequence: str) -> torch.Tensor:
         self._ensure_attention_backend()
         with torch.no_grad(), torch.autocast(device_type=str(self._device), dtype=torch.float16, enabled=True):
-            torch.backends.cuda.matmul.allow_tf32 = True
-            torch.backends.cudnn.allow_tf32 = True
-
             tokenized_sequences, attention_mask = self._tokenize([sequence], preprocess=True)
             input_ids = tokenized_sequences[0]
 

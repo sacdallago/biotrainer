@@ -13,6 +13,7 @@ from ..core import AutoEvalFramework
 
 from ...bioengineer import BioEngineer
 from ...shared.metrics import evaluate_contact_dataset
+from ...shared.sequence_exception import SequenceTooLongError
 
 
 def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
@@ -67,6 +68,13 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
             assert len(seq_records_subsampled) > 0, "No sequences found in development mode!"
             seq_records = seq_records_subsampled
 
+        # The categorical Jacobian has no windowed variant, so check all sequences before any computation
+        max_context_length = bioengineer.model_wrapper.max_context_length()
+        too_long_ids = [seq_r.seq_id for seq_r in seq_records if len(seq_r.seq) > max_context_length]
+        if len(too_long_ids) > 0:
+            raise SequenceTooLongError(f"{len(too_long_ids)} sequences of task {current_task_name} exceed the "
+                                       f"{max_context_length} token context of {embedder_name}: {too_long_ids}")
+
         # Check for cached results
         cached_results: Dict[str, ContactSingleProteinResult] = {}
         for seq_record in seq_records:
@@ -111,7 +119,7 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                                         single_results=all_single_results,
                                                                         )
         framework_report.update_result(task_name=current_task_name,
-                                       per_protein_results=zero_shot_contact_cached_results.per_protein_results,
+                                       per_protein_results={res.protein_name: res for res in all_single_results},
                                        dataset_result=dataset_result,
                                        )
 
@@ -128,7 +136,7 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                 )
                 framework_report.update_result(
                     task_name=ablated_task_name,
-                    per_protein_results=zero_shot_contact_cached_results.per_protein_results,
+                    per_protein_results={res.protein_name: res for res in ablated_single_results},
                     dataset_result=ablated_dataset_result,
                 )
                 print(f"Added ablated task result for {ablated_task_name} ({len(ablated_single_results)} proteins)")
