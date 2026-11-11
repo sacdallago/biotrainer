@@ -462,6 +462,22 @@ class BioEngineerTests(unittest.TestCase):
         engineer.zero_shot_contact_map_jacobian(self.jacobian_sequence, batch_size=8, jacobian_precision="fp16")
         self.assertEqual(engineer.last_jacobian_precision, "fp32")
 
+    def test_zeroshot_contact_results_record_fp32_off_cuda(self):
+        """ The zero-shot contact pipeline records the precision the Jacobian was computed in, not the requested one """
+        import tempfile
+        from biotrainer.autoeval import AutoEval
+
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            autoeval = AutoEval(embedder_name="standard",
+                                output_dir=tmp_dir_name,
+                                custom_bioengineer=BioEngineer(_StandardEngineer()),
+                                custom_storage_path=Path(__file__).parent.parent / "test_input_files",
+                                development_mode=True)
+            report = autoeval.pbc_zeroshot_contact(jacobian_precision="fp16").run()
+
+        per_protein_results = report.zeroshot_contact_results["PBC_ZEROSHOT_CONTACT"].per_protein_results
+        self.assertEqual({result.jacobian_precision for result in per_protein_results.values()}, {"fp32"})
+
     def test_contact_map_jacobian_rejects_an_unknown_precision(self):
         with self.assertRaises(ValueError):
             _StandardEngineer().zero_shot_contact_map_jacobian(self.jacobian_sequence, jacobian_precision="fp8")

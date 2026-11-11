@@ -112,6 +112,8 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
 
         # Run Evaluation of zero-shot contact maps
         for single_result in evaluate():
+            # Each result is yielded right after its prediction, so the last Jacobian precision is this protein's
+            single_result.jacobian_precision = bioengineer.model_wrapper.last_jacobian_precision
             zero_shot_contact_cached_results.update_and_sync(result=single_result,
                                                              output_dir=output_dir)
 

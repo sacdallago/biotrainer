@@ -129,6 +129,8 @@ class AutoevalTests(unittest.TestCase):
             contact_report = report.zeroshot_contact_results["PBC_ZEROSHOT_CONTACT"]
             self.assertIn(f"PBC_ZEROSHOT_CONTACT-test_dataset{DEV_MODE_INDICATOR}", contact_report.task_results)
             self.assertTrue(contact_report.used_development_mode())
+            # Baselines run no forward passes
+            self.assertEqual({res.jacobian_precision for res in contact_report.per_protein_results.values()}, {None})
 
     def test_autoeval_zeroshot_contact_full_eval_ablation(self):
         """ Checks that full eval computes both full task results and ablated task results """
