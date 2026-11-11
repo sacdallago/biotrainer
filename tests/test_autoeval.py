@@ -273,6 +273,19 @@ class AutoevalTests(unittest.TestCase):
                     zero_shot_method=ZeroShotMethod.JACOBIAN_CONTACT,
                     task_filter=lambda task: task.dataset_name == "no_such_dataset").run()
 
+    def test_autoeval_zeroshot_contact_rejects_an_unknown_jacobian_precision(self):
+        """ An unknown jacobian_precision must fail when the framework is added, before any model is loaded """
+        TEST_CONTACT_STORAGE = Path(__file__).parent / "test_input_files"
+
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            autoeval = AutoEval(embedder_name="bioengineer_random_baseline",
+                                output_dir=tmp_dir_name,
+                                custom_bioengineer=BioEngineer.from_baseline(
+                                    baseline=BioEngineerBaseline.RANDOM_BASELINE),
+                                custom_storage_path=TEST_CONTACT_STORAGE)
+            with self.assertRaisesRegex(ValueError, "fp8"):
+                autoeval.pbc_zeroshot_contact(jacobian_precision="fp8")
+
     def test_autoeval_dev_then_full_eval_preserves_framework_reports(self):
         """ Checks that running dev mode followed by full eval mode preserves all results in the framework report """
         TEST_CONTACT_STORAGE = Path(__file__).parent / "test_input_files"

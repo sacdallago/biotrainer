@@ -184,6 +184,17 @@ class _Bf16Engineer(_StandardEngineer):
         self._model = _Bf16LocalModel()
 
 
+class _LinearLocalModel(_LocalModel):
+    """ Adds a linear layer on top of the lookup, so the logits change under fp16 and bf16 autocast """
+
+    def __init__(self):
+        super().__init__()
+        self.linear = torch.nn.Linear(_VOCAB_SIZE, _VOCAB_SIZE)
+
+    def forward(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None):
+        return SimpleNamespace(logits=self.linear(super().forward(input_ids, attention_mask).logits))
+
+
 class _MinimalCustomModel(CustomBioEngineerModel):
     """ A custom model that implements nothing but its name - only the context length is exercised here """
 
@@ -390,6 +401,70 @@ class BioEngineerTests(unittest.TestCase):
         self.assertEqual(contact_map.shape, (len(sequence), len(sequence)))
         self.assertEqual(contact_map.dtype, np.float64)
         self.assertTrue(np.isfinite(contact_map).all(), "The contact map holds non-finite values!")
+
+    def test_categorical_jacobian_in_fp32_is_unchanged(self):
+        """ In fp32, the Jacobian is the plain fp32 difference of the mutated and reference logits """
+        engineer = _StandardEngineer()
+        sequence = self.jacobian_sequence
+        aa_ids = torch.tensor(list(engineer.aa_to_idx().values()))
+
+        jac = engineer._compute_categorical_jacobian(sequence, batch_size=8, jacobian_precision="fp32")
+
+        expected = torch.zeros(len(sequence), 20, len(sequence), 20)
+        for i, residue in enumerate(sequence):
+            wt_id = engineer.aa_to_idx()[residue]
+            expected[i, :, i, :] = _TOKEN_LOGITS[aa_ids][:, aa_ids] - _TOKEN_LOGITS[wt_id, aa_ids]
+        self.assertTrue(torch.equal(jac, expected))
+
+    def test_categorical_jacobian_in_fp16_and_bf16_is_close_to_fp32(self):
+        """ The fp16 and bf16 forward passes give an fp32 Jacobian close to, but not equal to, the fp32 one """
+        torch.manual_seed(0)
+        engineer = _StandardEngineer()
+        engineer._model = _LinearLocalModel()
+        sequence = self.jacobian_sequence
+        jac_fp32 = engineer._compute_categorical_jacobian(sequence, batch_size=8, jacobian_precision="fp32")
+
+        jacs = {}
+        for precision in ["fp16", "bf16"]:
+            with self.subTest(precision=precision):
+                jac = engineer._compute_categorical_jacobian(sequence, batch_size=8, jacobian_precision=precision)
+                jacs[precision] = jac
+
+                self.assertEqual(jac.dtype, torch.float32)
+                self.assertEqual(engineer.last_jacobian_precision, precision)
+                self.assertFalse(torch.equal(jac, jac_fp32), f"The forward passes did not run in {precision}!")
+                torch.testing.assert_close(jac, jac_fp32, rtol=0, atol=1e-2)
+        self.assertFalse(torch.equal(jacs["fp16"], jacs["bf16"]))
+
+    def test_categorical_jacobian_auto_falls_back_to_fp32_for_the_rest_of_the_run(self):
+        """ "auto" recomputes a non-finite fp16 Jacobian in fp32 with one warning, and skips fp16 afterwards """
+        from biotrainer.bioengineer.interfaces import bert_like_engineer
+        torch.manual_seed(0)
+        engineer = _StandardEngineer()
+        engineer._model = _LinearLocalModel()
+        # Weights this large overflow fp16, but not fp32
+        engineer._model.linear.weight.data.mul_(1e5)
+        sequences = [self.jacobian_sequence, self.jacobian_sequence[::-1]]
+
+        with self.assertLogs(bert_like_engineer.logger, level="WARNING") as logs:
+            jacs = [engineer._compute_categorical_jacobian(sequence, batch_size=8, jacobian_precision="auto")
+                    for sequence in sequences]
+
+        # Both sequences overflow in fp16, so a second warning would mean the second one tried fp16 again
+        self.assertEqual(len(logs.records), 1)
+        self.assertEqual(engineer.last_jacobian_precision, "fp32")
+        for sequence, jac in zip(sequences, jacs):
+            self.assertTrue(torch.equal(jac, engineer._compute_categorical_jacobian(sequence, batch_size=8)))
+
+    def test_contact_map_jacobian_is_in_fp32_off_cuda(self):
+        """ Off CUDA the contact map is computed in fp32, whatever jacobian_precision asks for """
+        engineer = _StandardEngineer()
+        engineer.zero_shot_contact_map_jacobian(self.jacobian_sequence, batch_size=8, jacobian_precision="fp16")
+        self.assertEqual(engineer.last_jacobian_precision, "fp32")
+
+    def test_contact_map_jacobian_rejects_an_unknown_precision(self):
+        with self.assertRaises(ValueError):
+            _StandardEngineer().zero_shot_contact_map_jacobian(self.jacobian_sequence, jacobian_precision="fp8")
 
     def test_contact_map_conversion_matches_numpy_reference(self):
         """ Checks that the torch contact map conversion matches the numpy implementation it was ported from """

@@ -26,6 +26,7 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                        framework_report: ContactFrameworkReport,
                                        device=None,
                                        batch_size: int = 32,
+                                       jacobian_precision: str = "auto",
                                        ):
     assert bioengineer is not None, f"BioEngineer could not be initialized for embedder {embedder_name}!"
 
@@ -102,7 +103,8 @@ def autoeval_zeroshot_contact_pipeline(framework: AutoEvalFramework,
                                                     seq_record: bioengineer.zero_shot_contact_map(
                                                     method=zero_shot_method,
                                                     sequence=seq_record.seq,
-                                                    batch_size=batch_size),
+                                                    batch_size=batch_size,
+                                                    jacobian_precision=jacobian_precision),
                                                 get_ground_truth_func=load_gt_contact_map,
                                                 get_seq_id_func=lambda d: d.seq_id,
                                                 cached_results=cached_results,

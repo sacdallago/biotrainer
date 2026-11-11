@@ -23,6 +23,7 @@ from .autoeval_frameworks import AvailableFramework
 
 from ..shared import get_device
 from ..bioengineer import BioEngineer
+from ..bioengineer.bioengineer_utils import JACOBIAN_PRECISIONS
 from ..embedding import CustomEmbedder, EmbeddingService
 from ..training.output_files import BiotrainerOutputObserver
 
@@ -453,6 +454,7 @@ class AutoEval:
     def pbc_zeroshot_contact(self, zero_shot_method: ZeroShotMethod = ZeroShotMethod.JACOBIAN_CONTACT,
                              task_filter: Optional[Callable[[AutoEvalTask], bool]] = None,
                              batch_size: int = 32,
+                             jacobian_precision: str = "auto",
                              ):
         """
         Add PBC zero-shot contact prediction evaluation tasks to the AutoEval pipeline.
@@ -463,8 +465,14 @@ class AutoEval:
             ``lambda task: task.dataset_name == "casp14"``. Raises ValueError if it selects no task.
             One task per contact dataset.
         :param batch_size: Batch size to be used when computing the categorical Jacobian.
+        :param jacobian_precision: Precision of the categorical Jacobian's forward passes on CUDA: "auto", "fp16",
+            "bf16" or "fp32". fp16 and bf16 fall back to fp32 if the Jacobian is not finite, "auto" is fp16 until
+            that happens once. Always fp32 on other devices.
         :return: The AutoEval instance for method chaining.
         """
+        if jacobian_precision not in JACOBIAN_PRECISIONS:
+            raise ValueError(f"Jacobian precision {jacobian_precision} not supported, "
+                             f"must be one of {JACOBIAN_PRECISIONS}!")
         framework_obj, skip_execution, output_dir, framework_report = self._general_task_setup(
             AvailableFramework.PBC_ZEROSHOT_CONTACT,
             zero_shot_method=zero_shot_method)
@@ -487,6 +495,7 @@ class AutoEval:
                 device=runner_params.device,
                 development_mode=self.development_mode,
                 batch_size=batch_size,
+                jacobian_precision=jacobian_precision,
             )
 
         self._frameworks_to_runners[framework_obj] = _AutoEvalTaskRunner(framework=framework_obj,

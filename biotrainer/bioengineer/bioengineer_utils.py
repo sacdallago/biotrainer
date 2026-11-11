@@ -237,6 +237,10 @@ def get_optimal_window(
     return start, end
 
 
+# Precisions the forward passes of the categorical Jacobian can run in
+JACOBIAN_PRECISIONS = ("auto", "fp16", "bf16", "fp32")
+
+
 def prepare_cat_jac_mutations(
     orig_ids: torch.Tensor,
     orig_mask: torch.Tensor,

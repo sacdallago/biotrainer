@@ -24,7 +24,8 @@ class GPTLikeEngineer(BioEngineerModelWrapper, ABC):
                                   attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         raise NotImplementedError("Batched forward pass is not defined for causal LMs")
 
-    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
+    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32,
+                                      jacobian_precision: str = "fp32") -> torch.Tensor:
         raise NotImplementedError("Categorical Jacobian is not defined for causal LMs")
 
     def _model_forward_fn(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
