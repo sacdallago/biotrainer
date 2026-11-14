@@ -44,6 +44,9 @@ class CustomEmbedderWrapper(_PipelineEmbedder):
         # Filter out already existing sequences by hash
         seqs_to_compute = [seq for seq in sequences if calculate_sequence_hash(seq) not in existing_hashes]
 
+        # Sort sequences by length in descending order
+        seqs_to_compute = list(sorted(seqs_to_compute, key=len, reverse=True))
+
         if len(seqs_to_compute) > 0:
             with h5py.File(embeddings_file_path, "a") as embeddings_file:
                 idx = 0
