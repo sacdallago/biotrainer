@@ -6,8 +6,9 @@ from typing import List, Optional
 from abc import ABC, abstractmethod
 from biotrainer_core.data_classes import VariantScore, Variant, SingleMutationScore, ZeroShotMethod
 
-from ..bioengineer_utils import MAX_CONTEXT_LENGTH, convert_cat_jac_to_contact_map
+from ..bioengineer_utils import MAX_CONTEXT_LENGTH, JACOBIAN_PRECISIONS, convert_cat_jac_to_contact_map
 
+from ...shared import is_device_cuda
 from ...embedding.interfaces import BiotrainerTokenizerMixin
 
 
@@ -18,6 +19,10 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         self._model = model
         self._tokenizer = tokenizer
         self._device = device
+        # Set once a categorical Jacobian overflowed in fp16, so jacobian_precision="auto" stops trying fp16
+        self._jacobian_fp16_overflowed = False
+        # Precision the last categorical Jacobian was computed in
+        self.last_jacobian_precision = None
 
     def max_context_length(self) -> int:
         """ Maximum number of tokens the model can process in one forward pass, including special tokens
@@ -83,12 +88,13 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         raise NotImplementedError
 
     @abstractmethod
-    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
+    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32,
+                                      jacobian_precision: str = "fp32") -> torch.Tensor:
         """
         Compute categorical Jacobian from logits per sequence (L x 20 mutations).
 
         Returns:
-            torch.Tensor (on CPU): [L, 20, L, 20]
+            torch.Tensor: [L, 20, L, 20]
         """
 
         raise NotImplementedError
@@ -219,13 +225,27 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
             results.append(variant_score)
         return results
 
-    def zero_shot_contact_map_jacobian(self, sequence: str, batch_size: int = 32) -> np.ndarray:
+    def zero_shot_contact_map_jacobian(self, sequence: str, batch_size: int = 32,
+                                       jacobian_precision: str = "auto") -> np.ndarray:
         """
         Derive contact map from categorical Jacobian.
 
         Returns:
             np.ndarray: [L, L]
         """
-        categorical_jacobian = self._compute_categorical_jacobian(sequence, batch_size)
-        contact_map = convert_cat_jac_to_contact_map(categorical_jacobian.double().numpy())
-        return contact_map
+        if jacobian_precision not in JACOBIAN_PRECISIONS:
+            raise ValueError(f"Jacobian precision {jacobian_precision} not supported, "
+                             f"must be one of {JACOBIAN_PRECISIONS}!")
+        # Reduced precision only pays off on CUDA
+        if not is_device_cuda(self._device):
+            jacobian_precision = "fp32"
+        categorical_jacobian = self._compute_categorical_jacobian(sequence, batch_size, jacobian_precision)
+        # MPS has no float64, so the conversion runs on the CPU there
+        if categorical_jacobian.device.type == "mps":
+            categorical_jacobian = categorical_jacobian.cpu()
+        try:
+            contact_map = convert_cat_jac_to_contact_map(categorical_jacobian.double())
+        except torch.OutOfMemoryError:
+            # Not enough device memory for the float64 conversion, so it runs on the CPU
+            contact_map = convert_cat_jac_to_contact_map(categorical_jacobian.cpu().double())
+        return contact_map.cpu().numpy()

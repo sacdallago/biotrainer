@@ -10,7 +10,10 @@ from .base import BioEngineerModelWrapper
 from ..bioengineer_utils import compute_windowed_logits, get_optimal_window, WINDOW_SIZE, \
     prepare_cat_jac_mutations
 
+from ...shared import get_logger
 from ...shared.sequence_exception import SequenceTooLongError
+
+logger = get_logger(__name__)
 
 
 class BertLikeEngineer(BioEngineerModelWrapper, ABC):
@@ -190,7 +193,8 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
     def _compute_perplexity(self, sequence: str) -> float:
         raise NotImplementedError
 
-    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
+    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32,
+                                      jacobian_precision: str = "fp32") -> torch.Tensor:
         # Tokenize the sequence
         input_ids, attention_mask = self._tokenize([sequence], preprocess=True)
         # Get the IDs of the amino acids in order of STANDARD_AAS, on input_ids' device: they are written into
@@ -209,20 +213,34 @@ class BertLikeEngineer(BioEngineerModelWrapper, ABC):
         mutated_inputs, mutated_mask = prepare_cat_jac_mutations(input_ids, attention_mask, aa_token_ids,
                                                                  residue_positions)
 
-        # Get the model's logits without mutations
-        ref_logits = self._model_forward_fn(input_ids, attention_mask)
-        # Remove the special tokens and keep only the logits for amino acids
-        ref_logits = ref_logits[residue_positions][:, aa_token_ids].cpu()
-        # Compute the logits for all mutations
-        mutated_logits = []
-        for batch_ids, batch_mask in zip(torch.split(mutated_inputs, batch_size),
-                                         torch.split(mutated_mask, batch_size)):
-            mut_logits = self._model_batched_forward_fn(batch_ids, batch_mask)
-            mutated_logits.append(mut_logits[:, residue_positions][:, :, aa_token_ids].cpu())
-        L = residue_positions.numel()
-        # [L*20, L, 20] -> [L, 20, L, 20] in order of aa_token_ids/STANDARD_AAS
-        mutated_logits = torch.cat(mutated_logits, dim=0).reshape(L, 20, L, 20)
+        # "auto" is fp16 until the Jacobian was not finite in fp16 once, then fp32 for the rest of the run
+        if jacobian_precision == "auto":
+            jacobian_precision = "fp32" if self._jacobian_fp16_overflowed else "fp16"
+        # Run the forward passes in the requested precision, and recompute them in fp32 if that overflows
+        for precision in [jacobian_precision, "fp32"]:
+            dtype = torch.bfloat16 if precision == "bf16" else torch.float16
+            with torch.autocast(device_type=self._device.type, dtype=dtype, enabled=precision != "fp32"):
+                # Get the model's logits without mutations
+                ref_logits = self._model_forward_fn(input_ids, attention_mask)
+                # Remove the special tokens and keep only the logits for amino acids, in fp32 for the subtraction
+                ref_logits = ref_logits[residue_positions][:, aa_token_ids].float()
+                # Compute the logits for all mutations
+                mutated_logits = []
+                for batch_ids, batch_mask in zip(torch.split(mutated_inputs, batch_size),
+                                                 torch.split(mutated_mask, batch_size)):
+                    mut_logits = self._model_batched_forward_fn(batch_ids, batch_mask)
+                    mutated_logits.append(mut_logits[:, residue_positions][:, :, aa_token_ids].float())
+            L = residue_positions.numel()
+            # [L*20, L, 20] -> [L, 20, L, 20] in order of aa_token_ids/STANDARD_AAS
+            mutated_logits = torch.cat(mutated_logits, dim=0).reshape(L, 20, L, 20)
 
-        # Compute the jacobian
-        jac = mutated_logits - ref_logits
+            # Compute the jacobian
+            jac = mutated_logits - ref_logits
+            if precision == "fp32" or torch.isfinite(jac).all():
+                break
+            if precision == "fp16":
+                self._jacobian_fp16_overflowed = True
+            logger.warning(f"Categorical Jacobian of {self._name} is not finite in {precision}, "
+                           f"recomputing it in fp32")
+        self.last_jacobian_precision = precision
         return jac

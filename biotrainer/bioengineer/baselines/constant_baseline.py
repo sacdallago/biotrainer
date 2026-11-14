@@ -50,7 +50,8 @@ class ConstantEngineerBaseline(BioEngineerModelWrapper):
     def _compute_perplexity(self, sequence: str) -> float:
         return self._compute_pseudoperplexity(sequence)  # No difference here
 
-    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
+    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32,
+                                      jacobian_precision: str = "fp32") -> torch.Tensor:
         """
         Return constant Jacobian (same for any sequence).
         """

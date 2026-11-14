@@ -50,8 +50,11 @@ class ZeroShotCachedResults(BaseModel):
 
     def _write_to_file(self, output_dir: Union[Path, str]):
         file_path = output_dir / self.get_file_name(method=self.method)
-        with open(file_path, 'w') as f:
+        # Write to a temporary file first, so an interrupted write does not corrupt the existing cache
+        tmp_file_path = file_path.with_suffix('.json.tmp')
+        with open(tmp_file_path, 'w') as f:
             f.write(self.model_dump_json(indent=4))
+        tmp_file_path.replace(file_path)
 
 
 class ZeroShotContactCachedResults(BaseModel):
@@ -98,5 +101,8 @@ class ZeroShotContactCachedResults(BaseModel):
 
     def _write_to_file(self, output_dir: Union[Path, str]):
         file_path = output_dir / self.get_file_name(method=self.method)
-        with open(file_path, 'w') as f:
+        # Write to a temporary file first, so an interrupted write does not corrupt the existing cache
+        tmp_file_path = file_path.with_suffix('.json.tmp')
+        with open(tmp_file_path, 'w') as f:
             f.write(self.model_dump_json(indent=4))
+        tmp_file_path.replace(file_path)

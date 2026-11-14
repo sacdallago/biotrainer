@@ -11,6 +11,8 @@ class ContactSingleProteinResult(BaseModel):
     protein_name: str = Field(description="Name of the protein")
     precision_scores: Dict[str, float] = Field(
         description="Precision scores for the protein's predicted contacts")  # e.g. {"short_P@L2": 0.83, "short_P@L5": 0.78, "long_P@L2": 0.81, "long_P@L5": 0.76}
+    jacobian_precision: Optional[str] = Field(default=None,
+                                              description="Precision of the categorical Jacobian (fp16, bf16 or fp32)")
 
 
 class ContactDatasetResult(BaseModel):
