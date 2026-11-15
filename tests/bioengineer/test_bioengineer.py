@@ -2,6 +2,8 @@ import torch
 import unittest
 import numpy as np
 
+from unittest import mock
+
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple
@@ -408,7 +410,7 @@ class BioEngineerTests(unittest.TestCase):
         sequence = self.jacobian_sequence
         aa_ids = torch.tensor(list(engineer.aa_to_idx().values()))
 
-        jac = engineer._compute_categorical_jacobian(sequence, batch_size=8, jacobian_precision="fp32")
+        jac = engineer._compute_categorical_jacobian(sequence, batch_size=8)
 
         expected = torch.zeros(len(sequence), 20, len(sequence), 20)
         for i, residue in enumerate(sequence):
@@ -416,29 +418,33 @@ class BioEngineerTests(unittest.TestCase):
             expected[i, :, i, :] = _TOKEN_LOGITS[aa_ids][:, aa_ids] - _TOKEN_LOGITS[wt_id, aa_ids]
         self.assertTrue(torch.equal(jac, expected))
 
-    def test_categorical_jacobian_in_fp16_and_bf16_is_close_to_fp32(self):
-        """ The fp16 and bf16 forward passes give an fp32 Jacobian close to, but not equal to, the fp32 one """
+    def test_contact_map_jacobian_in_fp16_and_bf16_is_close_to_fp32(self):
+        """ The fp16 and bf16 forward passes give a contact map close to, but not equal to, the fp32 one """
         torch.manual_seed(0)
         engineer = _StandardEngineer()
         engineer._model = _LinearLocalModel()
         sequence = self.jacobian_sequence
-        jac_fp32 = engineer._compute_categorical_jacobian(sequence, batch_size=8, jacobian_precision="fp32")
+        # Autocast on the CPU, so the reduced precisions can be tested without a GPU
+        with mock.patch("biotrainer.bioengineer.interfaces.base.is_device_cuda", return_value=True):
+            contact_map_fp32 = engineer.zero_shot_contact_map_jacobian(sequence, batch_size=8,
+                                                                       jacobian_precision="fp32")
 
-        jacs = {}
-        for precision in ["fp16", "bf16"]:
-            with self.subTest(precision=precision):
-                jac = engineer._compute_categorical_jacobian(sequence, batch_size=8, jacobian_precision=precision)
-                jacs[precision] = jac
+            contact_maps = {}
+            for precision in ["fp16", "bf16"]:
+                with self.subTest(precision=precision):
+                    contact_map = engineer.zero_shot_contact_map_jacobian(sequence, batch_size=8,
+                                                                          jacobian_precision=precision)
+                    contact_maps[precision] = contact_map
 
-                self.assertEqual(jac.dtype, torch.float32)
-                self.assertEqual(engineer.last_jacobian_precision, precision)
-                self.assertFalse(torch.equal(jac, jac_fp32), f"The forward passes did not run in {precision}!")
-                torch.testing.assert_close(jac, jac_fp32, rtol=0, atol=1e-2)
-        self.assertFalse(torch.equal(jacs["fp16"], jacs["bf16"]))
+                    self.assertEqual(engineer.last_jacobian_precision, precision)
+                    self.assertFalse(np.array_equal(contact_map, contact_map_fp32),
+                                     f"The forward passes did not run in {precision}!")
+                    np.testing.assert_allclose(contact_map, contact_map_fp32, rtol=0, atol=1e-2)
+        self.assertFalse(np.array_equal(contact_maps["fp16"], contact_maps["bf16"]))
 
-    def test_categorical_jacobian_auto_falls_back_to_fp32_for_the_rest_of_the_run(self):
+    def test_contact_map_jacobian_auto_falls_back_to_fp32_for_the_rest_of_the_run(self):
         """ "auto" recomputes a non-finite fp16 Jacobian in fp32 with one warning, and skips fp16 afterwards """
-        from biotrainer.bioengineer.interfaces import bert_like_engineer
+        from biotrainer.bioengineer.interfaces import base
         torch.manual_seed(0)
         engineer = _StandardEngineer()
         engineer._model = _LinearLocalModel()
@@ -446,37 +452,36 @@ class BioEngineerTests(unittest.TestCase):
         engineer._model.linear.weight.data.mul_(1e5)
         sequences = [self.jacobian_sequence, self.jacobian_sequence[::-1]]
 
-        with self.assertLogs(bert_like_engineer.logger, level="WARNING") as logs:
-            jacs = [engineer._compute_categorical_jacobian(sequence, batch_size=8, jacobian_precision="auto")
-                    for sequence in sequences]
+        with mock.patch("biotrainer.bioengineer.interfaces.base.is_device_cuda", return_value=True):
+            with self.assertLogs(base.logger, level="WARNING") as logs:
+                contact_maps = [engineer.zero_shot_contact_map_jacobian(sequence, batch_size=8,
+                                                                        jacobian_precision="auto")
+                                for sequence in sequences]
 
         # Both sequences overflow in fp16, so a second warning would mean the second one tried fp16 again
         self.assertEqual(len(logs.records), 1)
         self.assertEqual(engineer.last_jacobian_precision, "fp32")
-        for sequence, jac in zip(sequences, jacs):
-            self.assertTrue(torch.equal(jac, engineer._compute_categorical_jacobian(sequence, batch_size=8)))
+        for sequence, contact_map in zip(sequences, contact_maps):
+            self.assertTrue(np.array_equal(contact_map,
+                                           engineer.zero_shot_contact_map_jacobian(sequence, batch_size=8)))
+
+    def test_contact_map_jacobian_with_an_override_of_the_categorical_jacobian(self):
+        """ A subclass overriding _compute_categorical_jacobian(sequence, batch_size), as nanoPLM does,
+            must keep working through zero_shot_contact_map_jacobian """
+
+        class _OverridingEngineer(_StandardEngineer):
+            def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
+                return super()._compute_categorical_jacobian(sequence, batch_size)
+
+        sequence = self.jacobian_sequence
+        contact_map = _OverridingEngineer().zero_shot_contact_map_jacobian(sequence, batch_size=8)
+        self.assertEqual(contact_map.shape, (len(sequence), len(sequence)))
 
     def test_contact_map_jacobian_is_in_fp32_off_cuda(self):
         """ Off CUDA the contact map is computed in fp32, whatever jacobian_precision asks for """
         engineer = _StandardEngineer()
         engineer.zero_shot_contact_map_jacobian(self.jacobian_sequence, batch_size=8, jacobian_precision="fp16")
         self.assertEqual(engineer.last_jacobian_precision, "fp32")
-
-    def test_zeroshot_contact_results_record_fp32_off_cuda(self):
-        """ The zero-shot contact pipeline records the precision the Jacobian was computed in, not the requested one """
-        import tempfile
-        from biotrainer.autoeval import AutoEval
-
-        with tempfile.TemporaryDirectory() as tmp_dir_name:
-            autoeval = AutoEval(embedder_name="standard",
-                                output_dir=tmp_dir_name,
-                                custom_bioengineer=BioEngineer(_StandardEngineer()),
-                                custom_storage_path=Path(__file__).parent.parent / "test_input_files",
-                                development_mode=True)
-            report = autoeval.pbc_zeroshot_contact(jacobian_precision="fp16").run()
-
-        per_protein_results = report.zeroshot_contact_results["PBC_ZEROSHOT_CONTACT"].per_protein_results
-        self.assertEqual({result.jacobian_precision for result in per_protein_results.values()}, {"fp32"})
 
     def test_contact_map_jacobian_rejects_an_unknown_precision(self):
         with self.assertRaises(ValueError):

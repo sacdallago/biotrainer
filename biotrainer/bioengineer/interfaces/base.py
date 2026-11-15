@@ -8,8 +8,10 @@ from biotrainer_core.data_classes import VariantScore, Variant, SingleMutationSc
 
 from ..bioengineer_utils import MAX_CONTEXT_LENGTH, JACOBIAN_PRECISIONS, convert_cat_jac_to_contact_map
 
-from ...shared import is_device_cuda
+from ...shared import is_device_cuda, get_logger
 from ...embedding.interfaces import BiotrainerTokenizerMixin
+
+logger = get_logger(__name__)
 
 
 class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
@@ -88,8 +90,7 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         raise NotImplementedError
 
     @abstractmethod
-    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32,
-                                      jacobian_precision: str = "fp32") -> torch.Tensor:
+    def _compute_categorical_jacobian(self, sequence: str, batch_size: int = 32) -> torch.Tensor:
         """
         Compute categorical Jacobian from logits per sequence (L x 20 mutations).
 
@@ -239,7 +240,22 @@ class BioEngineerModelWrapper(ABC, BiotrainerTokenizerMixin):
         # Reduced precision only pays off on CUDA
         if not is_device_cuda(self._device):
             jacobian_precision = "fp32"
-        categorical_jacobian = self._compute_categorical_jacobian(sequence, batch_size, jacobian_precision)
+        # "auto" is fp16 until the Jacobian was not finite in fp16 once, then fp32 for the rest of the run
+        if jacobian_precision == "auto":
+            jacobian_precision = "fp32" if self._jacobian_fp16_overflowed else "fp16"
+        # Run the forward passes in the requested precision, and recompute them in fp32 if that overflows
+        for precision in [jacobian_precision, "fp32"]:
+            dtype = torch.bfloat16 if precision == "bf16" else torch.float16
+            with torch.autocast(device_type=torch.device(self._device or "cpu").type, dtype=dtype,
+                                enabled=precision != "fp32"):
+                categorical_jacobian = self._compute_categorical_jacobian(sequence, batch_size)
+            if precision == "fp32" or torch.isfinite(categorical_jacobian).all():
+                break
+            if precision == "fp16":
+                self._jacobian_fp16_overflowed = True
+            logger.warning(f"Categorical Jacobian of {self._name} is not finite in {precision}, "
+                           f"recomputing it in fp32")
+        self.last_jacobian_precision = precision
         # MPS has no float64, so the conversion runs on the CPU there
         if categorical_jacobian.device.type == "mps":
             categorical_jacobian = categorical_jacobian.cpu()
