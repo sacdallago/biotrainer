@@ -85,7 +85,7 @@ class Solver(ABC):
             for i, (_, X, y, lengths) in enumerate(validation_dataloader):
                 iteration_result = self._training_iteration(
                     X, y, step=len(epoch_iterations) * len(validation_dataloader) + len(validation_iterations) + 1,
-                    context=torch.no_grad, lengths=lengths
+                    context=torch.no_grad, lengths=lengths, return_predictions=False
                 )
                 validation_iterations.append(iteration_result)
             validation_epoch_metrics = self.metrics_calculator.compute_metrics()
@@ -94,7 +94,7 @@ class Solver(ABC):
             for i, (_, X, y, lengths) in enumerate(training_dataloader):
                 iteration_result = self._training_iteration(
                     X, y, step=len(epoch_iterations) * len(training_dataloader) + len(train_iterations) + 1,
-                    lengths=lengths
+                    lengths=lengths, return_predictions=False
                 )
                 train_iterations.append(iteration_result)
             train_epoch_metrics = self.metrics_calculator.compute_metrics()
@@ -446,7 +446,7 @@ class Solver(ABC):
 
     def _training_iteration(
             self, x: torch.Tensor, y: torch.Tensor, step=1, context: Optional[Callable] = None,
-            lengths: Optional[torch.LongTensor] = None
+            lengths: Optional[torch.LongTensor] = None, return_predictions: bool = True
     ) -> Dict[str, Union[float, list, Dict[str, Union[float, int]]]]:
         do_loss_propagation = False
 
@@ -485,6 +485,10 @@ class Solver(ABC):
                 self.optimizer.zero_grad()  # clear gradients for next train
                 loss.backward()  # backpropagation, compute gradients
                 self.optimizer.step()  # apply gradients
+
+            # Training and validation only need the loss, converting predictions to lists is expensive
+            if not return_predictions:
+                return {'loss': loss.item()}
 
             return {
                 'loss': loss.item(),
