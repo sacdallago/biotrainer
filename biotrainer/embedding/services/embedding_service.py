@@ -392,7 +392,7 @@ class EmbeddingService:
 
         # Sequence hash from embeddings file -> Embedding
         id2emb = read_id2emb(embeddings_file_path, ids_to_load)
-        id2emb = {idx: torch.tensor(embedding).float() for (idx, embedding) in id2emb.items()}
+        id2emb = {idx: torch.from_numpy(embedding).float() for (idx, embedding) in id2emb.items()}
 
         # Logging
         logger.info(f"Read {len(id2emb)} entries.")
