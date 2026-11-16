@@ -9,7 +9,7 @@ from torch import Tensor
 from ..interfaces import EmbedderWithFallback
 
 
-from ...shared import get_logger
+from ...shared import get_logger, is_device_cuda
 
 logger = get_logger(__name__)
 
@@ -147,7 +147,8 @@ class HuggingfaceTransformerEmbedder(EmbedderWithFallback):
     # Adapted from https://github.com/chandar-lab/AMPLIFY/blob/main/examples/contact_prediction.ipynb
     def compute_attention_map(self, sequence: str) -> torch.Tensor:
         self._ensure_attention_backend()
-        with torch.no_grad(), torch.autocast(device_type=str(self._device), dtype=torch.float16, enabled=True):
+        with torch.no_grad(), torch.autocast(device_type=str(self._device), dtype=torch.float16,
+                                             enabled=is_device_cuda(self._device)):
             tokenized_sequences, attention_mask = self._tokenize([sequence], preprocess=True)
             input_ids = tokenized_sequences[0]
 
