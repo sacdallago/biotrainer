@@ -194,7 +194,15 @@ class _LinearLocalModel(_LocalModel):
         self.linear = torch.nn.Linear(_VOCAB_SIZE, _VOCAB_SIZE)
 
     def forward(self, input_ids: torch.Tensor, attention_mask: Optional[torch.Tensor] = None):
-        return SimpleNamespace(logits=self.linear(super().forward(input_ids, attention_mask).logits))
+        logits = super().forward(input_ids, attention_mask).logits
+        if not torch.is_autocast_enabled("cpu"):
+            return SimpleNamespace(logits=self.linear(logits))
+        # Rounds to the autocast dtype but multiplies in fp32: not every CPU has fp16 and bf16 matmul kernels
+        dtype = torch.get_autocast_dtype("cpu")
+        weight, bias = (param.to(dtype).float() for param in (self.linear.weight, self.linear.bias))
+        with torch.autocast("cpu", enabled=False):
+            logits = torch.nn.functional.linear(logits.to(dtype).float(), weight, bias)
+        return SimpleNamespace(logits=logits.to(dtype))
 
 
 class _MinimalCustomModel(CustomBioEngineerModel):
