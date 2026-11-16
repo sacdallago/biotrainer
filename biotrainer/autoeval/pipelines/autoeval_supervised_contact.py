@@ -167,7 +167,9 @@ def _train_logistic_regression(current_task_name: str, input_dataset: _InputData
         print(f"{current_task_name}: Training classifier {idx} (Total: {len(hyper_params)})")
         # Train classifier on training data
         # Logistic Regression (careful, liblinear does not support int64!)
-        clf = LogisticRegression(solver=hp.solver, l1_ratio=hp.l1_ratio, C=hp.C)
+        # random_state: liblinear otherwise shuffles with the global numpy RNG
+        # sklearn >= 1.8: l1_ratio=1 selects L1 (before 1.8 penalty defaulted to "l2" and l1_ratio was ignored)
+        clf = LogisticRegression(solver=hp.solver, l1_ratio=hp.l1_ratio, C=hp.C, random_state=hp.seed)
         clf.fit(x_train, y_train)
 
         # Test on Val dataset
@@ -305,7 +307,7 @@ def autoeval_supervised_contact_pipeline(framework: AutoEvalFramework,
                 )
                 framework_report.update_result(
                     task_name=ablated_task_name,
-                    per_protein_results=per_protein_results,
+                    per_protein_results={res.protein_name: res for res in ablated_single_results},
                     dataset_result=ablated_dataset_result,
                 )
                 print(f"Added ablated task result for {ablated_task_name} ({len(ablated_single_results)} proteins)")

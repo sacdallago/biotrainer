@@ -611,8 +611,11 @@ class AutoEvalReport(BaseModel):
         report_name = output_dir / self.get_file_name(self.embedder_name)
 
         print(f'Writing autoeval report to: {report_name}')
-        with open(report_name, 'w') as report_file:
+        # Write to a temporary file first, so an interrupted write does not corrupt the existing report
+        tmp_report_name = report_name.with_suffix('.json.tmp')
+        with open(tmp_report_name, 'w') as report_file:
             report_file.write(self.model_dump_json(indent=4))
+        tmp_report_name.replace(report_name)
 
     def get_uid(self) -> str:
         h = hashlib.sha1()
