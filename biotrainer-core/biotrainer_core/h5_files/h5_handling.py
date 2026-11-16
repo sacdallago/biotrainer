@@ -37,7 +37,7 @@ def store_embedding_to_path(h5_file_path: Union[str, Path], seq_hash: str, seq_i
 
 def store_embedding_to_handle(h5_file_handle: h5py.File, seq_hash: str, seq_id: str, embedding_data):
     """ Store embedding in h5_file via h5py.File handle """
-    h5_file_handle.create_dataset(seq_hash, data=embedding_data, compression="gzip", chunks=True)
+    h5_file_handle.create_dataset(seq_hash, data=embedding_data)
     h5_file_handle[seq_hash].attrs["original_id"] = seq_id
     return True
 

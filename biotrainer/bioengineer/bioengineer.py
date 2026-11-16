@@ -249,7 +249,8 @@ class BioEngineer:
     # Zero-shot contact task entry point
     # ============================================================================
 
-    def zero_shot_contact_map(self, method: ZeroShotMethod, sequence: str, batch_size: int = 32) -> np.ndarray:
+    def zero_shot_contact_map(self, method: ZeroShotMethod, sequence: str, batch_size: int = 32,
+                              jacobian_precision: str = "auto") -> np.ndarray:
         """
         Derive contact map (currently only supported: from categorical Jacobian).
 
@@ -264,4 +265,4 @@ class BioEngineer:
             raise ValueError(f"Method {method} not supported by this model!")
         if method != ZeroShotMethod.JACOBIAN_CONTACT:
             raise ValueError(f"Method {method} not supported for contact map computation!")
-        return self.model_wrapper.zero_shot_contact_map_jacobian(sequence, batch_size)
+        return self.model_wrapper.zero_shot_contact_map_jacobian(sequence, batch_size, jacobian_precision)

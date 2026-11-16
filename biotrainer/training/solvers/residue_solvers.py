@@ -29,9 +29,11 @@ class ResidueSolver(Solver):
     # Gets overwritten to shorten prediction lengths if necessary
     def _training_iteration(
             self, x: torch.Tensor, y: torch.Tensor, step=1, context: Optional[Callable] = None,
-            lengths: Optional[torch.LongTensor] = None
+            lengths: Optional[torch.LongTensor] = None, return_predictions: bool = True
     ) -> Dict[str, Union[float, list, Dict[str, Union[float, int]]]]:
-        result_dict = super()._training_iteration(x, y, step, context, lengths)
+        result_dict = super()._training_iteration(x, y, step, context, lengths, return_predictions)
+        if not return_predictions:
+            return result_dict
         if not context:
             context = _nullcontext
 
