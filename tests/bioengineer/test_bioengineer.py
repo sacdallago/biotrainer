@@ -462,13 +462,15 @@ class BioEngineerTests(unittest.TestCase):
 
         with mock.patch("biotrainer.bioengineer.interfaces.base.is_device_cuda", return_value=True):
             with self.assertLogs(base.logger, level="WARNING") as logs:
-                contact_maps = [engineer.zero_shot_contact_map_jacobian(sequence, batch_size=8,
-                                                                        jacobian_precision="auto")
-                                for sequence in sequences]
+                contact_maps = []
+                for sequence in sequences:
+                    contact_maps.append(engineer.zero_shot_contact_map_jacobian(sequence, batch_size=8,
+                                                                                jacobian_precision="auto"))
+                    # The first sequence falls back to fp32 and the second skips fp16, so both record fp32
+                    self.assertEqual(engineer.last_jacobian_precision, "fp32")
 
         # Both sequences overflow in fp16, so a second warning would mean the second one tried fp16 again
         self.assertEqual(len(logs.records), 1)
-        self.assertEqual(engineer.last_jacobian_precision, "fp32")
         for sequence, contact_map in zip(sequences, contact_maps):
             self.assertTrue(np.array_equal(contact_map,
                                            engineer.zero_shot_contact_map_jacobian(sequence, batch_size=8)))
