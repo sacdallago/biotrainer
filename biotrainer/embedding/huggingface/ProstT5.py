@@ -30,6 +30,9 @@ class ProstT5(HuggingfaceTransformerEmbedder, BioOptEmbedder):
     def embedding_dim(self) -> int:
         return 1024
 
+    def _get_custom_indices_to_remove(self) -> List[int]:
+        return [0]  # <AA2fold>
+
     def _find_preprocessing_strategy(self):
         strategy = preprocess_sequences_for_prostt5
         logger.info(f"Chosen sequence pre-processing strategy: {strategy.__name__}")
