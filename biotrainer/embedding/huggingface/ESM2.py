@@ -22,10 +22,15 @@ _esm2_family_dict = {'facebook/esm2_t6_8M_UR50D': 320,
 
 
 class ESM2(HuggingfaceTransformerEmbedder, BioOptEmbedder):
+    SUPPORTED_MODELS = list(_esm2_family_dict.keys())
+
+    @classmethod
+    def supported_models(cls) -> List[str]:
+        return list(cls.SUPPORTED_MODELS)
 
     @classmethod
     def detect(cls, embedder_name: str, use_half_precision: bool, dtype: torch.dtype, device: torch.device):
-        esm2_family = _esm2_family_dict.keys()
+        esm2_family = cls.SUPPORTED_MODELS
         if embedder_name in esm2_family:
             # Load the tokenizer
             tokenizer = EsmTokenizer.from_pretrained(embedder_name, do_lower_case=False, dtype=dtype)
@@ -91,10 +96,15 @@ _esmc_family_dict = {'biohub/ESMC-300M': 960,
                      }
 
 class ESMC(ESM2):
+    SUPPORTED_MODELS = list(_esmc_family_dict.keys())
+
+    @classmethod
+    def supported_models(cls) -> List[str]:
+        return list(cls.SUPPORTED_MODELS)
 
     @classmethod
     def detect(cls, embedder_name: str, use_half_precision: bool, dtype: torch.dtype, device: torch.device):
-        if embedder_name in _esmc_family_dict.keys():
+        if embedder_name in cls.SUPPORTED_MODELS:
             # Load the tokenizer
             tokenizer = AutoTokenizer.from_pretrained(embedder_name, dtype=dtype)
             # Load the model

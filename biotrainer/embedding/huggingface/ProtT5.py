@@ -13,10 +13,15 @@ logger = get_logger(__name__)
 
 
 class ProtT5(HuggingfaceTransformerEmbedder, BioOptEmbedder):
+    SUPPORTED_MODELS = ['Rostlab/prot_t5_xl_half_uniref50-enc', 'Rostlab/prot_t5_xl_uniref50']
+
+    @classmethod
+    def supported_models(cls) -> List[str]:
+        return list(cls.SUPPORTED_MODELS)
+
     @classmethod
     def detect(cls, embedder_name: str, use_half_precision: bool, dtype: torch.dtype, device: torch.device):
-        prott5_names = ['Rostlab/prot_t5_xl_half_uniref50-enc', 'Rostlab/prot_t5_xl_uniref50']
-        if embedder_name in prott5_names:
+        if embedder_name in cls.SUPPORTED_MODELS:
             # Load the tokenizer
             tokenizer = T5Tokenizer.from_pretrained(embedder_name, do_lower_case=False, dtype=dtype)
             # Load the model
