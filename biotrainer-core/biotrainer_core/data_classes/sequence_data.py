@@ -4,7 +4,9 @@ import ast
 import hashlib
 
 from typing import Dict, Any, Union, Optional, List, Tuple, Iterable
-from pydantic import BaseModel, Field, model_validator, field_serializer
+from pydantic import Field, model_validator, field_serializer
+
+from .base import OpenAPISerializableBaseModel
 
 from ..functions.hashing import calculate_sequence_hash
 from ..utils.constants import RESIDUE_TO_VALUE_TARGET_DELIMITER
@@ -24,7 +26,7 @@ except ImportError:
     _NUMPY_AVAILABLE = False
 
 
-class SequenceData(BaseModel):
+class SequenceData(OpenAPISerializableBaseModel):
     seq_id: str = Field(description="Sequence id", min_length=1)
     seq: str = Field(description="Sequence")
 

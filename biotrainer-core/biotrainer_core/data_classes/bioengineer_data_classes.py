@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import math
-import numpy as np
 
 from enum import Enum
-from typing import Optional, List, Dict
-from pydantic import BaseModel, Field, field_validator, computed_field, SerializeAsAny
+from typing import Optional, List
+from pydantic import Field, field_validator, computed_field, SerializeAsAny
 
-from .metrics import MetricEstimate, BootstrappedMetric
+from .metrics import MetricEstimate
+from .base import OpenAPISerializableBaseModel
 
 
 class ZeroShotMethod(Enum):
@@ -18,7 +18,7 @@ class ZeroShotMethod(Enum):
     JACOBIAN_CONTACT = "JACOBIAN_CONTACT"
 
 
-class Mutation(BaseModel):
+class Mutation(OpenAPISerializableBaseModel):
     """ Represents a single mutation (e.g. A15G)"""
     wt: str = Field(description="Wild type residue")
     position: int = Field(description="Position of the mutation")
@@ -48,7 +48,7 @@ class Mutation(BaseModel):
         return f"{self.wt}{self.position}{self.mt}"
 
 
-class Variant(BaseModel):
+class Variant(OpenAPISerializableBaseModel):
     """
     Represents one or more mutations that define a variant sequence.
     Examples:
@@ -153,7 +153,7 @@ class Variant(BaseModel):
         return self.to_string()
 
 
-class SingleMutationScore(BaseModel):
+class SingleMutationScore(OpenAPISerializableBaseModel):
     """Score for a single mutation (can be part of a larger variant)."""
     mutation: Mutation = Field(description="The mutation being scored")
     wt_log_prob: float = Field(description="Log probability of wild-type residue")
@@ -178,7 +178,7 @@ class SingleMutationScore(BaseModel):
         return self.mt_log_prob - self.wt_log_prob
 
 
-class VariantScore(BaseModel):
+class VariantScore(OpenAPISerializableBaseModel):
     """
     Score for a mutation variant (single or multiple mutations).
     Can represent different scoring strategies.
@@ -250,7 +250,7 @@ class VariantScore(BaseModel):
         return cls(variant=variant, total_score=experimental_score, mutation_scores=[])
 
 
-class RankingResult(BaseModel):
+class RankingResult(OpenAPISerializableBaseModel):
     """ Ranking result for variants of a single protein """
     scc: SerializeAsAny[MetricEstimate] = Field(
         description="Spearmans correlation coefficient (overall ranking quality)")
