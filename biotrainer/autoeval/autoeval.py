@@ -532,6 +532,7 @@ class AutoEval:
         :raises RuntimeError: If no progress or final report is returned from a task.
         :raises AssertionError: If the autoeval report is None before task execution.
         """
+        print("*** Running autoeval pipeline... ***")
         framework_to_params = self._setup_runner_params(devices=[device] if device else None)
 
         # Make sure that autoeval report exists and all existing results are added and synced to disk
@@ -562,4 +563,5 @@ class AutoEval:
                                                       report=final_report)
             self.autoeval_report.write(self.output_dir)
 
+        print("*** Finished autoeval pipeline! ***")
         return self.autoeval_report
