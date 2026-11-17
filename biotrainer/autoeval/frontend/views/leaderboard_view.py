@@ -178,12 +178,13 @@ def _build_ranking_visualization(ranking: Ranking, ranking_list: List[Tuple[int,
 
     grouped = _group_by_place(ranking_list)
     for place, entries in grouped.items():
-        if len(entries) > 1:
+        is_tied = len(entries) > 1
+        if is_tied:
             st.markdown(f"— Tie for place {place} —", help="Multiple entries tied.")
         for e in entries:
             _ranking_entry_tile(ranking, e, embedder_name_to_db_report, any_local_reports, state=state, client=client)
         # Use a thinner divider or conditional spacing for the next row
-        if place < len(grouped):
+        if place < len(grouped) or is_tied:
             st.markdown("<hr style='margin:4px 0;'>", unsafe_allow_html=True)  # Minimal divider spacing
 
 
