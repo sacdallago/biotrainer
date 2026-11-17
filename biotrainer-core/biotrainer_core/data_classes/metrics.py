@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 from typing import Dict
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-class EpochMetrics(BaseModel):
+from .base import OpenAPISerializableBaseModel
+
+
+class EpochMetrics(OpenAPISerializableBaseModel):
     epoch: int = Field(description="Epoch number")
     training: Dict = Field(description="Training metrics")
     validation: Dict = Field(description="Validation metrics")
 
-    def to_dict(self):
-        return {"epoch": self.epoch, "training": self.training, "validation": self.validation}
 
-
-class MetricEstimate(BaseModel):
+class MetricEstimate(OpenAPISerializableBaseModel):
     name: str = Field(description="Name of the metric")
     mean: float = Field(description="Mean of the metric values")
     lower: float = Field(description="Lower bound of the metric values")

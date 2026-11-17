@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 from ruamel import yaml
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Any, Dict, Optional, List, Union, Tuple
 
 from .embedding_stats import EmbeddingStats
+from .base import OpenAPISerializableBaseModel
 from .metrics import EpochMetrics, BootstrappedMetric
 from .biotrainer_prediction import BiotrainerPrediction, BiotrainerInferenceResult
 
 
-class DerivedValues(BaseModel):
+class DerivedValues(OpenAPISerializableBaseModel):
     """ Derived values calculated during the training process. """
     biotrainer_version: Optional[str] = Field(default=None, description="Version of BioTrainer used for training")
     class_int2str: Optional[Dict[int, str]] = Field(default=None,
@@ -29,7 +32,7 @@ class DerivedValues(BaseModel):
     training_elapsed_time: Optional[float] = Field(default=None, description="Elapsed time in seconds for training")
 
 
-class TrainingResult(BaseModel):
+class TrainingResult(OpenAPISerializableBaseModel):
     """ Training results for each cross-validation split. """
     n_training_ids: Optional[int] = Field(default=None, description="Number of sequences in the training set")
     n_validation_ids: Optional[int] = Field(default=None, description="Number of sequences in the validation set")
@@ -46,9 +49,11 @@ class TrainingResult(BaseModel):
     best_epoch_metrics: Optional[EpochMetrics] = Field(default=None, description="Best training epoch metrics")
     sanity_check_warnings: Optional[List[str]] = Field(default=None, description="Warnings from sanity checks")
 
-class TestResult(BaseModel):
+
+class TestResult(OpenAPISerializableBaseModel):
     """ Test results after training. """
-    inference_result: Optional[BiotrainerInferenceResult] = Field(default=None, description="Plain test inference result")
+    inference_result: Optional[BiotrainerInferenceResult] = Field(default=None,
+                                                                  description="Plain test inference result")
     bootstrapped_metrics: Optional[List[BootstrappedMetric]] = Field(default=None,
                                                                      description="Bootstrapped test metrics")
     baselines: Optional[Dict[str, List[BootstrappedMetric]]] = Field(default=None,
@@ -56,7 +61,7 @@ class TestResult(BaseModel):
     sanity_check_warnings: Optional[List[str]] = Field(default=None, description="Warnings from sanity checks")
 
 
-class BiotrainerModelResult(BaseModel):
+class BiotrainerModelResult(OpenAPISerializableBaseModel):
     config: Dict[str, Any] = Field(default_factory=dict, description="Training configuration parameters")
     derived_values: Optional[DerivedValues] = Field(default=None,
                                                     description="Values derived during the training process")
@@ -81,7 +86,7 @@ class BiotrainerModelResult(BaseModel):
             raise ValueError(f"Unsupported file type: {file_path.suffix}")
 
 
-class BiotrainerModelUpdate(BaseModel):
+class BiotrainerModelUpdate(OpenAPISerializableBaseModel):
     current_model_result: BiotrainerModelResult = Field(description="Current model result")
     training_iteration: Optional[Tuple[str, EpochMetrics]] = Field(default=None,
                                                                    description="Current training iteration for fast "
