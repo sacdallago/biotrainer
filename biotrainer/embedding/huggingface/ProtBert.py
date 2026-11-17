@@ -13,9 +13,15 @@ logger = get_logger(__name__)
 
 
 class ProtBert(HuggingfaceTransformerEmbedder, BioOptEmbedder):
+    SUPPORTED_MODELS = ["Rostlab/prot_bert"]
+
+    @classmethod
+    def supported_models(cls) -> List[str]:
+        return list(cls.SUPPORTED_MODELS)
+
     @classmethod
     def detect(cls, embedder_name: str, use_half_precision: bool, dtype: torch.dtype, device: torch.device):
-        if embedder_name == "Rostlab/prot_bert":
+        if embedder_name in cls.SUPPORTED_MODELS:
             # Load the tokenizer
             tokenizer = BertTokenizer.from_pretrained(embedder_name, do_lower_case=False, dtype=dtype)
             # Load the model
