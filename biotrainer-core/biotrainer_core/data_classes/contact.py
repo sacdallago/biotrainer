@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
+from .base import OpenAPISerializableBaseModel
 from .metrics import BootstrappedMetric
 
 
-class ContactSingleProteinResult(BaseModel):
+class ContactSingleProteinResult(OpenAPISerializableBaseModel):
     """Required for bootstrapping and for caching and resuming from mid-dataset!"""
     protein_name: str = Field(description="Name of the protein")
     precision_scores: Dict[str, float] = Field(
         description="Precision scores for the protein's predicted contacts")  # e.g. {"short_P@L2": 0.83, "short_P@L5": 0.78, "long_P@L2": 0.81, "long_P@L5": 0.76}
 
 
-class ContactDatasetResult(BaseModel):
+class ContactDatasetResult(OpenAPISerializableBaseModel):
     dataset_name: str = Field(description="Name of the dataset")
     aggregated_result: List[BootstrappedMetric] = Field(description="Aggregated and bootstrapped "
                                                                     "precision scores for the dataset")

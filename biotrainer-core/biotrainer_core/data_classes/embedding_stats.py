@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from typing import Optional
-from pydantic import BaseModel
+
+from .base import OpenAPISerializableBaseModel
 
 
-class EmbeddingStats(BaseModel):
+class EmbeddingStats(OpenAPISerializableBaseModel):
     embedder_name: str
     dims: int
     n_tracked: int

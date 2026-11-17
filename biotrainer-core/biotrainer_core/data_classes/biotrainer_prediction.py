@@ -4,10 +4,11 @@ from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Union, Any
 
 from ..data_classes import Protocol
+from .base import OpenAPISerializableBaseModel
 from ..utils import constants as biotrainer_constants
 
 
-class BiotrainerInferenceResult(BaseModel):
+class BiotrainerInferenceResult(OpenAPISerializableBaseModel):
     predictions: List[BiotrainerPrediction] = Field(description="List of predictions")
     metrics: Optional[Dict[str, float]] = Field(default=None, description="Metrics")
 
@@ -28,7 +29,7 @@ class BiotrainerInferenceResult(BaseModel):
             metrics=self.metrics)
 
 
-class BiotrainerPrediction(BaseModel):
+class BiotrainerPrediction(OpenAPISerializableBaseModel):
     seq_id: str = Field(description="Sequence identifier")
     prediction: Union[str, float, list] = Field(description="Predicted value")
     is_aggregated: bool = Field(default=False,
