@@ -610,7 +610,7 @@ class AutoEvalReport(BaseModel):
     def write(self, output_dir: Path):
         report_name = output_dir / self.get_file_name(self.embedder_name)
 
-        print(f'Writing autoeval report to: {report_name}')
+        print(f'Storing autoeval report at: {report_name}')
         with open(report_name, 'w') as report_file:
             report_file.write(self.model_dump_json(indent=4))
 
