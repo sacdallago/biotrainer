@@ -97,7 +97,7 @@ class FrameworkReport(ABC, BaseModel):
             if filter_task:
                 continue
             task_is_dev = self.is_task_dev(task)
-            if development_mode != task_is_dev:  # Only get results for tasks that match the mode
+            if development_mode != task_is_dev or self.is_task_ablated(task):  # Only tasks matching the mode
                 continue
             rows.extend(self.task_to_df_rows(task, all_metrics, development_mode))
         return pd.DataFrame(rows)
@@ -298,7 +298,7 @@ class SupervisedFrameworkReport(FrameworkReport):
         rows = []
         for task in self.task_results.keys():
             filter_task = task_name_filter(task)
-            if filter_task:
+            if filter_task or self.is_task_ablated(task):
                 continue
             rows.extend(self.task_to_df_rows(task, all_metrics, development_mode))
         return pd.DataFrame(rows)
