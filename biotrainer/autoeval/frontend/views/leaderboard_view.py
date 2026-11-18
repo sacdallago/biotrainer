@@ -120,8 +120,10 @@ def _ranking_row_cols_spec(any_local_reports: bool):
     return [0.2, 0.4, 0.2, 0.1, 0.1] if any_local_reports else [0.2, 0.5, 0.2, 0.1]
 
 
-def _ranking_entry_tile(ranking: Ranking, entry: Tuple[int, RankingEntry, float],
+def _ranking_entry_tile(ranking: Ranking,
+                        entry: Tuple[int, RankingEntry, float],
                         embedder_name_to_db_report: Dict[str, DashboardReport],
+                        scope: str,
                         any_local_reports: bool,
                         state: Optional[AutoevalSessionState] = None,
                         client: Optional[AutoEvalClient] = None):
@@ -147,20 +149,24 @@ def _ranking_entry_tile(ranking: Ranking, entry: Tuple[int, RankingEntry, float]
     with cols[3]:
         if db_report:
             downloadable_json = db_report.downloadable_json()
-            st.download_button("Download", downloadable_json, file_name=f"autoeval_report_{embedder_name}.json")
+            st.download_button("Download", downloadable_json, file_name=f"autoeval_report_{embedder_name}.json",
+                               key=f"download_btn_{scope}_{place}_{embedder_name}_{db_report.report.get_uid()}")
 
     if any_local_reports:
         with cols[4]:
             if db_report and db_report.is_loaded:
-                if st.button("Publish!", key=f"publish_btn_{place}_{embedder_name}_{db_report.report.get_uid()}",
+                if st.button("Publish!",
+                             key=f"publish_btn_{scope}_{place}_{embedder_name}_{db_report.report.get_uid()}",
                              use_container_width=True):
                     publish_dialog(db_report.report, state=state, client=client)
             else:
                 st.markdown("")
 
 
-def _build_ranking_visualization(ranking: Ranking, ranking_list: List[Tuple[int, RankingEntry, float]],
+def _build_ranking_visualization(ranking: Ranking,
+                                 ranking_list: List[Tuple[int, RankingEntry, float]],
                                  embedder_name_to_db_report: Dict[str, DashboardReport],
+                                 scope: str,
                                  state: Optional[AutoevalSessionState] = None,
                                  client: Optional[AutoEvalClient] = None):
     any_local_reports = any([db_report.is_loaded for db_report in embedder_name_to_db_report.values()])
@@ -185,28 +191,36 @@ def _build_ranking_visualization(ranking: Ranking, ranking_list: List[Tuple[int,
         if is_tied:
             st.markdown(f"— Tie for place {place} —", help="Multiple entries tied.")
         for e in entries:
-            _ranking_entry_tile(ranking, e, embedder_name_to_db_report, any_local_reports, state=state, client=client)
+            _ranking_entry_tile(ranking, e, embedder_name_to_db_report, scope=scope,
+                                any_local_reports=any_local_reports, state=state, client=client)
         # Use a thinner divider or conditional spacing for the next row
         if place < len(grouped) or is_tied:
             st.markdown("<hr style='margin:4px 0;'>", unsafe_allow_html=True)  # Minimal divider spacing
 
 
-def _build_leaderboard_visualization(ranking: Ranking, leaderboard,
+def _build_leaderboard_visualization(ranking: Ranking,
+                                     leaderboard,
                                      embedder_name_to_db_report: Dict[str, DashboardReport],
+                                     scope: str,
                                      state: Optional[AutoevalSessionState] = None,
-                                     client: Optional[AutoEvalClient] = None):
-    _build_ranking_visualization(ranking, leaderboard, embedder_name_to_db_report, state=state, client=client)
+                                     client: Optional[AutoEvalClient] = None,
+                                     ):
+    _build_ranking_visualization(ranking, leaderboard, embedder_name_to_db_report,
+                                 scope=scope, state=state, client=client)
 
 
-def _build_category_visualization(category: str, ranking: Ranking,
+def _build_category_visualization(category: str,
+                                  ranking: Ranking,
                                   embedder_name_to_db_report: Dict[str, DashboardReport],
+                                  scope: str,
                                   state: Optional[AutoevalSessionState] = None,
                                   client: Optional[AutoEvalClient] = None):
     category_ranking = ranking.get_category_ranking(category=category)
     if category_ranking is None:
         st.warning(f"ERROR: No ranking found for category {category}!")
         return
-    _build_ranking_visualization(ranking, category_ranking, embedder_name_to_db_report, state=state, client=client)
+    _build_ranking_visualization(ranking, category_ranking, embedder_name_to_db_report,
+                                 scope=scope, state=state, client=client)
 
 
 def _copy_ranking_controls(ranking: Ranking, scope: str):
@@ -252,11 +266,11 @@ def _build_leaderboard_by_scope(state: AutoevalSessionState,
     leaderboard = weighted_ranking.get_leaderboard_ranking()
 
     if selected_ranking_category == "global":
-        _build_leaderboard_visualization(weighted_ranking, leaderboard, embedder_name_to_db_report, state=state,
-                                         client=client)
+        _build_leaderboard_visualization(weighted_ranking, leaderboard, embedder_name_to_db_report,
+                                         scope=scope, state=state, client=client)
     else:
         _build_category_visualization(selected_ranking_category, weighted_ranking, embedder_name_to_db_report,
-                                      state=state, client=client)
+                                      scope=scope, state=state, client=client)
 
     if selected_ranking_category == "global":
         cols = st.columns([1, 1])
