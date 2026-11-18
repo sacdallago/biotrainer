@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import pandas as pd
+import altair as alt
 import streamlit as st
 
 from typing import List, Optional
 from biotrainer_core.data_classes.autoeval import AutoEvalReport
 
 from biotrainer_core.data_classes.autoeval.autoeval_report import _aggregate_dfs
+from biotrainer_core.data_classes.autoeval import DEV_MODE_INDICATOR, DEV_MODE_ABLATED_INDICATOR
 from ..model import DashboardReport
 
 from ..state import AutoevalSessionState
+from .detailed_view import _add_mode_column, _postprocess_task_df
 
 from ..plots import (
     plot_comparison,
@@ -112,6 +115,66 @@ def _aggregate_for_comparison(framework_name: str,
     return df
 
 
+def _plain_task_name(task: str) -> str:
+    return task.replace(DEV_MODE_INDICATOR, "").replace(DEV_MODE_ABLATED_INDICATOR, "")
+
+
+def _render_mode_comparison(chosen_reports: List[AutoEvalReport], framework_name: str):
+    """ Compares dev vs. eval vs. ablated performance of a single task across models, if available. """
+    fw_results = {report.embedder_name: report.maybe_framework_result(framework_name) for report in chosen_reports}
+    fw_results = {name: res for name, res in fw_results.items() if res is not None}
+    task_names = sorted({_plain_task_name(task) for res in fw_results.values() for task in res.task_results.keys()})
+    if len(task_names) == 0:
+        return
+
+    st.markdown("**Mode Comparison (Dev vs. Eval vs. Ablation)**")
+    task = st.selectbox("Task", options=task_names, key=f"mode_comp_task_{framework_name}")
+
+    frames = []
+    for model_name, res in fw_results.items():
+        try:
+            df_task = res.to_task_comparison_df(task)
+        except Exception:
+            continue
+        if df_task is None or df_task.empty:
+            continue
+        frames.append(_add_mode_column(df_task).assign(Model=model_name))
+    if len(frames) == 0:
+        st.caption("No mode comparison available for this task.")
+        return
+    df = _postprocess_task_df(pd.concat(frames, ignore_index=True))
+    if "Mode" not in df.columns or df["Mode"].nunique() < 2:
+        st.caption("Results for only one mode available for this task, no comparison possible.")
+        return
+
+    df["CI"] = df.apply(lambda r: f"[{r['Lower']}, {r['Upper']}]", axis=1)
+    modes_order = [m for m in ["Dev", "Eval", "Ablation"] if m in df["Mode"].unique()]
+    colors = {"Dev": "#1f77b4", "Eval": "#2ca02c", "Ablation": "#d62728"}
+    color = alt.Color("Mode:N", sort=modes_order,
+                      scale=alt.Scale(domain=modes_order, range=[colors[m] for m in modes_order]))
+    tooltip = [alt.Tooltip("Model"), alt.Tooltip("Mode"), alt.Tooltip("Metric"),
+               alt.Tooltip("Mean"), alt.Tooltip("CI", title="95% CI")]
+    metrics = list(df["Metric"].unique())
+    for metric in metrics:
+        df_metric = df[df["Metric"] == metric]
+        if len(metrics) > 1:
+            st.caption(metric)
+        bars = alt.Chart(df_metric).mark_bar().encode(
+            x=alt.X("Model:N", title="Model"),
+            xOffset=alt.XOffset("Mode:N", sort=modes_order),
+            y=alt.Y("Mean:Q", title="Score"),
+            color=color,
+            tooltip=tooltip,
+        )
+        error_bars = alt.Chart(df_metric).mark_errorbar().encode(
+            x=alt.X("Model:N"),
+            xOffset=alt.XOffset("Mode:N", sort=modes_order),
+            y=alt.Y("Lower:Q", title=""),
+            y2="Upper:Q",
+        )
+        st.altair_chart((bars + error_bars).properties(height=320), use_container_width=True)
+
+
 def render_compare(state: AutoevalSessionState, active: List[DashboardReport]):
     active = [db_report.report for db_report in active]
 
@@ -164,3 +227,4 @@ def render_compare(state: AutoevalSessionState, active: List[DashboardReport]):
                 df_fw=df_fw,
                 baseline_model=baseline_model
             )
+            _render_mode_comparison(chosen_reports, framework_name)
