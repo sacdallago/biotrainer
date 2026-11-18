@@ -75,13 +75,16 @@ def _build_information(ranking: Ranking):
 
 def _build_ranking_category_selection(state: AutoevalSessionState, ranking: Ranking, scope: str) -> str:
     options = ["global"] + list(sorted(ranking.raw_categories | ranking.ranking_categories))
-    currently_selected = state.get_lb_ranking_category()
-    idx = options.index(currently_selected) if currently_selected in options else 0
+    key = f"ranking_category_selector_{state.get_lb_framework().name}_{scope}"
+    # The widget key must be stable across reruns (the ranking object is rebuilt on every rerun), otherwise the
+    # selection is lost. Only initialize the widget value if it is missing or invalid for this framework.
+    if st.session_state.get(key) not in options:
+        stored = state.get_lb_ranking_category()
+        st.session_state[key] = stored if stored in options else "global"
     selected_ranking_category = st.selectbox(
         "Select ranking category",
         options=options,
-        index=idx,
-        key=f"ranking_category_selector_{ranking.__hash__()}_{scope}"
+        key=key
     )
     state.select_lb_ranking_category(selected_ranking_category)
     return selected_ranking_category
@@ -98,7 +101,7 @@ def _build_weights_selection(state: AutoevalSessionState, ranking: Ranking, scop
                 )
                 new_val = st.number_input(
                     f"{cat}", min_value=0, max_value=10, step=1, value=int(current),
-                    key=f"w_{cat}_{ranking.__hash__()}_{scope}"
+                    key=f"w_{cat}_{state.get_lb_framework().name}_{scope}"
                 )
                 new_val = int(str(new_val))
                 state.set_lb_weight(cat, new_val)
@@ -210,7 +213,7 @@ def _copy_ranking_controls(ranking: Ranking, scope: str):
     # Clipboard access is restricted in browsers; provide a download + selectable text
     text = ranking.copied_ranking()
     st.download_button("⬇️ Download ranking.txt", data=text, file_name="ranking.txt", mime="text/plain",
-                       key=f"download_ranking_{ranking.__hash__()}_{scope}")
+                       key=f"download_ranking_{scope}")
 
 
 # =========================
