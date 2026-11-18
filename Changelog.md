@@ -1,5 +1,15 @@
 # Biotrainer Changelog
 
+## Version 2.1.2
+
+- Add compare-mode plots for dev, eval, and ablation results.
+- Improve leaderboard, ranking, download, and autoeval behavior.
+- Add ONNX embedder example and supported model discovery.
+- Extend embedding APIs with reusable parameter handling, seed support (@JSchlensok), and broader input support.
+- Add variant derivation from two sequences.
+- Improve database, OpenAPI serialization, and supervised contact prediction support.
+- Update dependencies and project version.
+
 ## Version 2.1.1
 
 * Hotfix: Using same version of biotrainer-core in biotrainer main package
