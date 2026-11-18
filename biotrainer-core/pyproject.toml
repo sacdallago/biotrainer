@@ -9,8 +9,8 @@ license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "pandas>=2.3.3",
-    "pydantic>=2.12.3",
+    "pandas>=2.3.3,<3.0.0",
+    "pydantic>=2.0.0,<3.0.0",
     "email-validator>=2.3.0,<2.4.0",
     "ruamel.yaml>=0.17.40,<0.18.0",
     "numpy>=2.4.1,<2.5.0",
